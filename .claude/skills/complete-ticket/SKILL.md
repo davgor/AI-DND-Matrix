@@ -55,6 +55,15 @@ If something fails, fix it — don't check off a criterion that doesn't actually
 - If the ticket is a sub-ticket (`NNN.M`), check whether every other `NNN.*` sub-ticket is already in `/board/done/`. If this was the last one, also move the parent epic file `NNN-*.md` to `/board/done/` (the epic file's job is just to index its sub-tickets, so it's done when they all are).
 - If only some criteria could be completed (e.g. genuinely blocked on something), leave the ticket in `/board/in-progress/`, leave the unmet boxes unchecked, and clearly tell the user what's blocking it instead of force-completing.
 
-## 6. Report back
+## 6. Spin off follow-up tickets for anything out of scope
 
-Summarize concisely: what was implemented, which files changed, what test/lint/build output confirmed it, and which ticket(s) moved to `done`. Do not create a git commit unless the user explicitly asks for one — staging the `git mv` of ticket files is fine, but committing is a separate, explicit step per this project's git safety rules.
+While implementing, you'll sometimes notice real work that doesn't belong in *this* ticket — a shortcut taken for now that needs hardening later (e.g. a dev-only CSP allowance that must be stripped before release), a TODO that needs its own pass, a gap the ticket's acceptance criteria didn't anticipate. Don't silently let it slide, and don't scope-creep the current ticket to cover it either.
+
+- Write a new sub-ticket file in `/board/backlog/` following the existing format (Description + checkable Acceptance Criteria), numbered as the next `NNN.M` under whichever epic it logically belongs to (bump `M` past the highest existing sub-ticket for that epic; don't renumber existing ones).
+- Reference the originating ticket in the new ticket's Description so the "why" isn't lost (e.g. "Ticket 001.3 added a baseline CSP that allowlists the dev server... should be removed before release").
+- Update that epic's index file (`NNN-*.md`) to include the new sub-ticket in its list and range.
+- Only do this for genuinely real, scoped follow-up work — not vague "consider revisiting X someday" notes. If you're not sure it's worth a ticket, mention it in your report instead of creating one.
+
+## 7. Report back
+
+Summarize concisely: what was implemented, which files changed, what test/lint/build output confirmed it, and which ticket(s) moved to `done`. Call out any new follow-up ticket(s) you created per step 6, by id. Do not create a git commit unless the user explicitly asks for one — staging the `git mv` of ticket files is fine, but committing is a separate, explicit step per this project's git safety rules.

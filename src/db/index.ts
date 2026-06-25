@@ -1,2 +1,1 @@
-// SQLite persistence layer entry point placeholder.
-export {}
+export { getDatabasePath } from './paths'
