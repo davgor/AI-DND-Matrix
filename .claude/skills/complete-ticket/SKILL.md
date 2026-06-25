@@ -52,8 +52,10 @@ If something fails, fix it — don't check off a criterion that doesn't actually
 
 ```
 ACT="/c/Users/davgo/AppData/Local/Microsoft/WinGet/Packages/nektos.act_Microsoft.Winget.Source_8wekyb3d8bbwe/act.exe"
-"$ACT" pull_request -W .github/workflows/pr-checks.yml -P windows-latest=catthehacker/ubuntu:act-latest --container-architecture linux/amd64
+"$ACT" pull_request -W .github/workflows/pr-checks.yml -P windows-latest=catthehacker/ubuntu:act-latest --container-architecture linux/amd64 --pull=false
 ```
+
+- `--pull=false` uses the already-cached runner image instead of re-checking Docker Hub on every run. Without it, `act` occasionally fails every job at "Set up job" with `Error response from daemon: authentication required` — a transient Docker Hub pull/rate-limit hiccup, not a real failure. If that happens (with or without `--pull=false`), run `docker pull catthehacker/ubuntu:act-latest` once to refresh the image, then retry with `--pull=false`.
 
 - Confirm the output ends with `🏁 Job succeeded` for every job in the workflow (test, lint, build, and any others added later) — a job that errors or any job reporting `🏁 Job failed` means the work is not done yet, fix it and rerun.
 - A `Failed to save: "/usr/bin/tar" ...` warning from the `Post actions/setup-node` cache-save step is a known harmless quirk (the repo path contains a space) — it does not affect job success and is not a failure to chase.
