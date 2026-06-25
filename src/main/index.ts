@@ -1,7 +1,9 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'node:path'
+import { loadConfig } from './config'
 
 Menu.setApplicationMenu(null)
+loadConfig()
 
 function createMainWindow(): void {
   const mainWindow = new BrowserWindow({
