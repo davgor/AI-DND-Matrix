@@ -1,3 +1,10 @@
+import { Titlebar } from './titlebar/Titlebar'
+
 export function App(): JSX.Element {
-  return <div>Hello World</div>
+  return (
+    <div>
+      <Titlebar />
+      <div>Hello World</div>
+    </div>
+  )
 }

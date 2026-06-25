@@ -1,10 +1,13 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'node:path'
+
+Menu.setApplicationMenu(null)
 
 function createMainWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    frame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js')
     }
@@ -17,7 +20,29 @@ function createMainWindow(): void {
   }
 }
 
-app.whenReady().then(createMainWindow)
+function registerWindowControlHandlers(): void {
+  ipcMain.on('window:minimize', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+
+  ipcMain.on('window:maximize', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (window?.isMaximized()) {
+      window.unmaximize()
+    } else {
+      window?.maximize()
+    }
+  })
+
+  ipcMain.on('window:close', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+}
+
+app.whenReady().then(() => {
+  registerWindowControlHandlers()
+  createMainWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

@@ -1,3 +1,11 @@
-// Preload entry point placeholder.
-// contextBridge-exposed IPC channels are added in ticket 001.3 (security baseline).
-export {}
+import { contextBridge, ipcRenderer } from 'electron'
+
+const windowControls = {
+  minimize: (): void => ipcRenderer.send('window:minimize'),
+  maximize: (): void => ipcRenderer.send('window:maximize'),
+  close: (): void => ipcRenderer.send('window:close')
+}
+
+contextBridge.exposeInMainWorld('windowControls', windowControls)
+
+export type WindowControls = typeof windowControls
