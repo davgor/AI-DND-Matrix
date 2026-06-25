@@ -9,7 +9,10 @@ function createMainWindow(): void {
     height: 800,
     frame: false,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js')
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
     }
   })
 
