@@ -1,9 +1,11 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'node:path'
 import { loadConfig } from './config'
+import { setupGlobalErrorLogging } from './logger'
 
 Menu.setApplicationMenu(null)
 loadConfig()
+setupGlobalErrorLogging()
 
 function createMainWindow(): void {
   const mainWindow = new BrowserWindow({
