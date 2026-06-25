@@ -139,3 +139,6 @@ dist
 .data/
 *.sqlite
 *.sqlite-journal
+
+# electron-builder packaged output
+release/
