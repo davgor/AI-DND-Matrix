@@ -48,6 +48,17 @@ Run the project's checks and only proceed once they're clean:
 
 If something fails, fix it — don't check off a criterion that doesn't actually pass, and don't mark the ticket done with failing checks.
 
+**Once `.github/workflows/pr-checks.yml` exists** (from ticket 002.x onward), no body of work is complete until the actual PR-checks workflow has been run and is passing — not just the equivalent local commands. Run it via `act`:
+
+```
+ACT="/c/Users/davgo/AppData/Local/Microsoft/WinGet/Packages/nektos.act_Microsoft.Winget.Source_8wekyb3d8bbwe/act.exe"
+"$ACT" pull_request -W .github/workflows/pr-checks.yml -P windows-latest=catthehacker/ubuntu:act-latest --container-architecture linux/amd64
+```
+
+- Confirm the output ends with `🏁 Job succeeded` for every job in the workflow (test, lint, build, and any others added later) — a job that errors or any job reporting `🏁 Job failed` means the work is not done yet, fix it and rerun.
+- A `Failed to save: "/usr/bin/tar" ...` warning from the `Post actions/setup-node` cache-save step is a known harmless quirk (the repo path contains a space) — it does not affect job success and is not a failure to chase.
+- If `act`/Docker aren't available in a given environment, fall back to running the equivalent commands locally and say explicitly that the real workflow wasn't exercised — don't silently skip this and call the ticket done.
+
 ## 5. Check off acceptance criteria and close out the ticket
 
 - Edit the ticket file: change `- [ ]` to `- [x]` for each criterion you've actually verified (test passes, or you've manually confirmed the behavior per the criterion's wording). Don't check off something you didn't verify.
