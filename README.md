@@ -11,7 +11,7 @@ Pre-implementation. See `/board` for the ticket backlog and the full design plan
 - **Engine and database are the source of truth.** AI agents read state to produce narration and propose actions; a deterministic rules engine validates and resolves everything (dice, checks, damage, death) before it's persisted. Agents never decide outcomes themselves.
 - **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick.
 - **NPCs have isolated memory.** Each NPC has its own private memory log; it only ever sees its own memories plus world facts explicitly tagged to its region/faction. No NPC can "know" something only another NPC experienced.
-- **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — initial target is [Player2](http://127.0.0.1:4315) (local), swappable to Claude or others via runtime config, no code changes required.
+- **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — initial target is Claude (Anthropic Messages API), swappable to [Player2](http://127.0.0.1:4315) (local) or others via runtime config, no code changes required. The Player2 adapter is deferred (ticket board epic 014) until after v1's Claude-backed definition of done.
 
 ## Tech Stack
 
@@ -33,7 +33,7 @@ Pre-implementation. See `/board` for the ticket backlog and the full design plan
                    /play          side-by-side DM narration panel + player speech/action panel
                    /setup         campaign generation review, character creation
   /engine        Pure TS, no Electron/LLM deps: rules engine (checks, combat, dice), world-state model
-  /agents        Agent orchestration: dm.ts, npc.ts, partyMember.ts, provider interface + Player2 adapter
+  /agents        Agent orchestration: dm.ts, npc.ts, partyMember.ts, provider interface + Claude adapter
   /db            SQLite schema, migrations, repository layer
   /shared        Types shared between main/renderer/engine/agents
 ```
