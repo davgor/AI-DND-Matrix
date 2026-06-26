@@ -31,5 +31,19 @@ export const migrations: Migration[] = [
         )
       `)
     }
+  },
+  {
+    version: 3,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE region_history (
+          id TEXT PRIMARY KEY,
+          region_id TEXT NOT NULL REFERENCES regions(id),
+          in_game_date INTEGER NOT NULL,
+          content TEXT NOT NULL,
+          is_compressed INTEGER NOT NULL DEFAULT 0
+        )
+      `)
+    }
   }
 ]

@@ -14,14 +14,14 @@ describe('the real app migrations registry', () => {
   it('applies cleanly to a fresh database and creates every expected table', () => {
     const db = new Database(':memory:')
     runMigrations(db, migrations)
-    expect(tableNames(db)).toEqual(['campaigns', 'regions'])
+    expect(tableNames(db)).toEqual(['campaigns', 'region_history', 'regions'])
   })
 
   it('is idempotent when run twice', () => {
     const db = new Database(':memory:')
     runMigrations(db, migrations)
     expect(() => runMigrations(db, migrations)).not.toThrow()
-    expect(tableNames(db)).toEqual(['campaigns', 'regions'])
+    expect(tableNames(db)).toEqual(['campaigns', 'region_history', 'regions'])
   })
 
   it('applies only pending migrations when reopened partway through the registry', () => {
@@ -31,6 +31,6 @@ describe('the real app migrations registry', () => {
     expect(tableNames(db)).toEqual(['campaigns'])
 
     runMigrations(db, migrations)
-    expect(tableNames(db)).toEqual(['campaigns', 'regions'])
+    expect(tableNames(db)).toEqual(['campaigns', 'region_history', 'regions'])
   })
 })
