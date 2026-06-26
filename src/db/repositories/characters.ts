@@ -146,6 +146,28 @@ export function listCharactersByCampaign(db: Database.Database, campaignId: stri
   return rows.map(rowToCharacter)
 }
 
+export type AdjustCurrencyResult =
+  | { success: true; newBalance: number }
+  | { success: false; reason: 'insufficient_funds' }
+
+export function adjustCharacterCurrency(
+  db: Database.Database,
+  id: string,
+  delta: number
+): AdjustCurrencyResult {
+  const row = db
+    .prepare(
+      'UPDATE characters SET currency = currency + ? WHERE id = ? AND currency + ? >= 0 RETURNING currency'
+    )
+    .get(delta, id, delta) as { currency: number } | undefined
+
+  if (!row) {
+    return { success: false, reason: 'insufficient_funds' }
+  }
+
+  return { success: true, newBalance: row.currency }
+}
+
 export function updateCharacter(
   db: Database.Database,
   id: string,

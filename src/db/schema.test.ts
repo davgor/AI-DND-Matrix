@@ -10,18 +10,32 @@ function tableNames(db: Database.Database): string[] {
     .map((row) => (row as { name: string }).name)
 }
 
+const ALL_TABLE_NAMES = [
+  'campaigns',
+  'characters',
+  'events',
+  'npc_memories',
+  'npcs',
+  'region_history',
+  'regions',
+  'saves',
+  'sessions',
+  'story_threads',
+  'world_facts'
+]
+
 describe('the real app migrations registry', () => {
   it('applies cleanly to a fresh database and creates every expected table', () => {
     const db = new Database(':memory:')
     runMigrations(db, migrations)
-    expect(tableNames(db)).toEqual(['campaigns', 'characters', 'npcs', 'region_history', 'regions'])
+    expect(tableNames(db)).toEqual(ALL_TABLE_NAMES)
   })
 
   it('is idempotent when run twice', () => {
     const db = new Database(':memory:')
     runMigrations(db, migrations)
     expect(() => runMigrations(db, migrations)).not.toThrow()
-    expect(tableNames(db)).toEqual(['campaigns', 'characters', 'npcs', 'region_history', 'regions'])
+    expect(tableNames(db)).toEqual(ALL_TABLE_NAMES)
   })
 
   it('applies only pending migrations when reopened partway through the registry', () => {
@@ -31,6 +45,6 @@ describe('the real app migrations registry', () => {
     expect(tableNames(db)).toEqual(['campaigns'])
 
     runMigrations(db, migrations)
-    expect(tableNames(db)).toEqual(['campaigns', 'characters', 'npcs', 'region_history', 'regions'])
+    expect(tableNames(db)).toEqual(ALL_TABLE_NAMES)
   })
 })

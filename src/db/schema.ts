@@ -85,5 +85,88 @@ export const migrations: Migration[] = [
         )
       `)
     }
+  },
+  {
+    version: 6,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE saves (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          created_at TEXT NOT NULL,
+          snapshot TEXT NOT NULL
+        )
+      `)
+    }
+  },
+  {
+    version: 7,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE npc_memories (
+          id TEXT PRIMARY KEY,
+          npc_id TEXT NOT NULL REFERENCES npcs(id),
+          timestamp TEXT NOT NULL,
+          content TEXT NOT NULL,
+          tags TEXT NOT NULL DEFAULT '[]'
+        )
+      `)
+    }
+  },
+  {
+    version: 8,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE world_facts (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          region_id TEXT REFERENCES regions(id),
+          faction_tag TEXT,
+          content TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      `)
+    }
+  },
+  {
+    version: 9,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE story_threads (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          title TEXT NOT NULL,
+          state TEXT NOT NULL,
+          summary TEXT NOT NULL DEFAULT ''
+        )
+      `)
+    }
+  },
+  {
+    version: 10,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE events (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          timestamp TEXT NOT NULL,
+          type TEXT NOT NULL,
+          payload TEXT NOT NULL DEFAULT '{}'
+        )
+      `)
+    }
+  },
+  {
+    version: 11,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE sessions (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL UNIQUE REFERENCES campaigns(id),
+          started_at TEXT NOT NULL,
+          last_played_at TEXT NOT NULL
+        )
+      `)
+    }
   }
 ]
