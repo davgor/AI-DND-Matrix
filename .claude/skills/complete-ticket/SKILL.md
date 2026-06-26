@@ -61,6 +61,14 @@ ACT="/c/Users/davgo/AppData/Local/Microsoft/WinGet/Packages/nektos.act_Microsoft
 - A `Failed to save: "/usr/bin/tar" ...` warning from the `Post actions/setup-node` cache-save step is a known harmless quirk (the repo path contains a space) — it does not affect job success and is not a failure to chase.
 - If `act`/Docker aren't available in a given environment, fall back to running the equivalent commands locally and say explicitly that the real workflow wasn't exercised — don't silently skip this and call the ticket done.
 
+**If the ticket touches a native Node module (anything with a compiled `.node` binary — `better-sqlite3` today, possibly others later) or wires new code into `main/index.ts`/`preload/index.ts` for the first time**, passing `npm test` is not sufficient proof it works — Vitest runs under plain system Node, but the real app runs under Electron's bundled Node, which has a different ABI. A native module built for one will throw `NODE_MODULE_VERSION` errors in the other. This already happened once with `better-sqlite3` (Node ABI 137 vs Electron's 146) — all 54 tests passed while the real app crashed on first use. Before considering such a ticket done:
+
+1. `npm run rebuild:electron` (rebuilds native deps for Electron's ABI — this is also what `predev` runs automatically).
+2. Launch the real app (`env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron.cmd .` after `npm run build`, or `npm run dev`) and actually exercise the new code path inside it — not just confirm the window opens. For DB/native-module code with no UI hook yet, temporarily wire a minimal call into `main/index.ts` (e.g. run migrations + one repository round-trip, `console.log` the result), confirm it inside the running app via the log output or a CDP `Runtime.evaluate` check, then revert the temporary wiring before finishing.
+3. `npm test` afterward to confirm `pretest`'s `npm rebuild better-sqlite3` correctly restores the Node-ABI build and the suite still passes — proving the dev/test ABI round-trip stays intact, not just that it worked once.
+
+Skip this step only for tickets that add no native module and don't touch `main`/`preload` (e.g. most `/engine` logic, pure UI components, ticket-board/docs work) — say so rather than running it pointlessly.
+
 ## 5. Check off acceptance criteria and close out the ticket
 
 - Edit the ticket file: change `- [ ]` to `- [x]` for each criterion you've actually verified (test passes, or you've manually confirmed the behavior per the criterion's wording). Don't check off something you didn't verify.

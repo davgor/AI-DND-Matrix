@@ -5,12 +5,16 @@
   "description": "AI-driven single-player text-adventure D&D desktop app",
   "main": "./out/main/index.js",
   "scripts": {
+    "predev": "npm run rebuild:electron",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "package": "electron-vite build && electron-builder --win",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "oxlint src",
-    "test": "vitest run"
+    "pretest": "npm run rebuild:node",
+    "test": "vitest run",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+    "rebuild:node": "npm rebuild better-sqlite3"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
@@ -20,6 +24,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
