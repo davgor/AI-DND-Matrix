@@ -62,5 +62,28 @@ export const migrations: Migration[] = [
         )
       `)
     }
+  },
+  {
+    version: 5,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE characters (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          name TEXT NOT NULL,
+          class TEXT NOT NULL,
+          stats TEXT NOT NULL DEFAULT '{}',
+          inventory TEXT NOT NULL DEFAULT '[]',
+          hp INTEGER NOT NULL DEFAULT 0,
+          xp INTEGER NOT NULL DEFAULT 0,
+          level INTEGER NOT NULL DEFAULT 1,
+          currency INTEGER NOT NULL DEFAULT 0,
+          kind TEXT NOT NULL CHECK (kind IN ('player', 'ai_party_member')),
+          source_npc_id TEXT REFERENCES npcs(id),
+          portrait_path TEXT,
+          sheet_background_path TEXT
+        )
+      `)
+    }
   }
 ]
