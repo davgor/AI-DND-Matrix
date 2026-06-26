@@ -45,5 +45,22 @@ export const migrations: Migration[] = [
         )
       `)
     }
+  },
+  {
+    version: 4,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE npcs (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          region_id TEXT NOT NULL REFERENCES regions(id),
+          name TEXT NOT NULL,
+          role TEXT NOT NULL,
+          disposition TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT '{}',
+          is_party_member INTEGER NOT NULL DEFAULT 0
+        )
+      `)
+    }
   }
 ]
