@@ -1,6 +1,6 @@
 ---
 name: complete-ticket
-description: Implement a specific ticket from this repo's /board ticket board, identified by an id like "001.1", "1.1", "004.7", or "13.9". Use whenever the user says to complete/do/work on/implement/finish a ticket by number (including just the bare number, e.g. "do 1.1" or "complete 004.7"), or asks what's left on a ticket. Moves the ticket through backlog -> in-progress -> done, implements it TDD-first per this repo's engineering standards, runs lint/tests/build, and checks off acceptance criteria only once actually verified.
+description: Implement one ticket, a range of tickets, or a whole epic from this repo's /board ticket board, identified by an id like "001.1", "1.1", "004.7", "13.9", a bare epic id like "004", or a range like "4.1 through 4.12". Use whenever the user says to complete/do/work on/implement/finish a ticket or epic by number (including just the bare number, e.g. "do 1.1", "complete 004.7", "complete epic 4", "finish 4.1 through 4.12"), or asks what's left on a ticket/epic. Moves ticket(s) through backlog -> in-progress -> done, implements each TDD-first per this repo's engineering standards (parallelizing across sub-agents for whole-epic runs where safe), runs lint/tests/build, and checks off acceptance criteria only once actually verified.
 ---
 
 # Complete a board ticket
@@ -11,6 +11,7 @@ This repo tracks work as text-file tickets under `/board` (`backlog/`, `in-progr
 
 - Normalize the id the user gave you: `1.1` -> `001.1`, `4.7` -> `004.7`, a bare epic number like `3` -> `003`. Zero-pad to 3 digits before the dot.
 - Search `/board/backlog/`, `/board/in-progress/`, and `/board/done/` for a file starting with `<id>-` (sub-ticket) or matching `<id>-*.md` (epic).
+- If the user named a bare epic id ("complete epic 4", "do 004"), an explicit range of its sub-tickets ("4.1 through 4.12", "4.1-4.24"), or otherwise clearly means the whole epic rather than one sub-ticket, this is **epic mode** — skip to **section 8** instead of treating it as a single ticket. Epic mode still applies every rule in sections 2-7 to each sub-ticket; it only changes how the work is scheduled (in parallel across sub-agents where safe) and when the expensive whole-repo checks run (once, at the end, not per sub-ticket).
 - If the ticket is already in `/board/done/`, tell the user it's already done and stop — don't redo it without being asked.
 - If it's in `/board/backlog/`, move it to `/board/in-progress/` with `git mv` before starting work.
 - If you can't find a matching file, say so and ask for clarification rather than guessing.
@@ -88,3 +89,21 @@ While implementing, you'll sometimes notice real work that doesn't belong in *th
 ## 7. Report back
 
 Summarize concisely: what was implemented, which files changed, what test/lint/build output confirmed it, and which ticket(s) moved to `done`. Call out any new follow-up ticket(s) you created per step 6, by id. Do not create a git commit unless the user explicitly asks for one — staging the `git mv` of ticket files is fine, but committing is a separate, explicit step per this project's git safety rules.
+
+## 8. Epic mode: completing a whole epic in one shot
+
+When the user means the whole epic ("complete epic 4", "do 4.1 through 4.12", "close out epic 5"), don't run this skill N times sequentially. Treat it as one job that still gives every sub-ticket the full rigor of sections 2-6, but schedules the work efficiently:
+
+1. **Resolve the full scope up front.** Find the epic file and every backlog/in-progress sub-ticket under it (or just the named range, if the user gave one). Read all of them plus `README.md` before assigning any work — you need the whole set in view to spot cross-ticket dependencies, same as section 2 but for every sub-ticket at once.
+2. **Move everything to in-progress first**, one batch of `git mv`s, same as a single ticket would.
+3. **Map dependencies before splitting work.** Note which sub-tickets' acceptance criteria need a function/type another in-scope sub-ticket defines (e.g. saving throws need core check resolution; a death-mode ticket needs the dying-sequence ticket). Anything with a real dependency on another in-scope ticket must be implemented after it, not in parallel with it. Sub-tickets that touch disjoint files and have no such dependency can run concurrently.
+4. **Fan out independent sub-tickets to sub-agents.** For each parallelizable group, send one `Agent` call per sub-ticket (or a small cluster of trivially related ones) in a *single message* so they run concurrently — never split work across agents without saying so to the user. Each agent's prompt must be self-contained:
+   - The full text of the ticket(s) it owns (description + acceptance criteria) and any README excerpt it needs — don't make it re-derive ruleset details from scratch.
+   - The exact files it owns to create/edit, so two agents never touch the same file.
+   - The standing rules from section 3 (TDD-first, oxlint limits — complexity ≤10, ~50 lines/function, ≤4 params, depth ≤3 — no `any` escapes, no lint-relaxation, `/engine` import boundary).
+   - An instruction to self-check by running only its own new test file(s) (e.g. `npx vitest run src/engine/foo.test.ts`), and explicitly **not** to run the full suite, lint, build, or `act` — those are integration steps you run once, after every agent reports back, so parallel runs don't race each other against the same working tree.
+   - A request to report back what it created/changed, its test output, and anything it couldn't verify or had to deviate on.
+5. **Verify each sub-agent's work before trusting it** — skim the diff for scope creep, skipped TDD, or lint-shaped problems, per this project's "trust but verify" norm. Fix small issues yourself rather than re-dispatching an agent for them.
+6. **Run the whole-repo checks once, after every sub-ticket in scope is implemented**, exactly as section 4 describes: `npm test`, `npm run lint`, `npm run typecheck`, `npm run build` if relevant, the native-module/Electron verification from section 4 if any sub-ticket touched a native module or `main`/`preload`, and the real `act`-driven `pr-checks.yml` run confirming `🏁 Job succeeded` for every job. Fix integration fallout (e.g. two agents' work not composing cleanly) yourself.
+7. **Check off criteria and close out per section 5**, for every sub-ticket, then close the epic file once every sub-ticket under it is done.
+8. **Report back per section 7, organized by sub-ticket**, and note which ran in parallel vs. sequentially and why — if the epic's sub-tickets formed one long dependency chain with no parallelizable work, say so and explain you ran it sequentially instead of forcing sub-agents where they wouldn't help.
