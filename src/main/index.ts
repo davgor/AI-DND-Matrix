@@ -6,6 +6,9 @@ import { registerCharacterCreationHandlers } from './characterCreationIpc'
 import { loadConfig } from './config'
 import { registerFileUploadHandlers } from './fileUploadIpc'
 import { setupGlobalErrorLogging } from './logger'
+import { registerNarrationLogHandlers } from './narrationLog'
+import { registerRecapHandlers } from './recapIpc'
+import { registerTurnHandlers } from './turnIpc'
 
 Menu.setApplicationMenu(null)
 loadConfig()
@@ -56,6 +59,9 @@ app.whenReady().then(() => {
   registerCampaignEditHandlers()
   registerFileUploadHandlers()
   registerCharacterCreationHandlers()
+  registerTurnHandlers()
+  registerRecapHandlers()
+  registerNarrationLogHandlers()
   createMainWindow()
 })
 

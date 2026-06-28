@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
+import { createCharacter } from '../db/repositories/characters'
 import { appendEvent } from '../db/repositories/events'
-import { assemblePartyMemberContext } from './partyMember'
+import { createScriptedProvider } from './providers/mockHarness'
+import { assemblePartyMemberContext, decidePartyMemberAction } from './partyMember'
 
 function seedCampaign(db: ReturnType<typeof createTestDb>) {
   return createCampaign(db, {
@@ -57,5 +59,42 @@ describe('assemblePartyMemberContext', () => {
     const context = assemblePartyMemberContext(db, campaign.id, characterId)
 
     expect(context.relationshipEvents.map((e) => e.id)).toEqual([own.id])
+  })
+})
+
+describe('decidePartyMemberAction', () => {
+  it('generates an in-character action without any player direction', async () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const character = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Brom',
+      characterClass: 'ranger',
+      kind: 'ai_party_member',
+      stats: { personality: 'gruff but loyal' }
+    })
+    const context = assemblePartyMemberContext(db, campaign.id, character.id)
+    const provider = createScriptedProvider(['{"actionText":"Brom nocks an arrow and covers the rear."}'])
+
+    const action = await decidePartyMemberAction(provider, character, context, 'Goblins ambush the party.')
+
+    expect(action).toEqual({ actionText: 'Brom nocks an arrow and covers the rear.' })
+  })
+
+  it('falls back to the raw response text when the schema is malformed', async () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const character = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Brom',
+      characterClass: 'ranger',
+      kind: 'ai_party_member'
+    })
+    const context = assemblePartyMemberContext(db, campaign.id, character.id)
+    const provider = createScriptedProvider(['Brom just shrugs.'])
+
+    const action = await decidePartyMemberAction(provider, character, context, 'Nothing happens.')
+
+    expect(action).toEqual({ actionText: 'Brom just shrugs.' })
   })
 })

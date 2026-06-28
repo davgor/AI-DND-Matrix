@@ -10,6 +10,7 @@ import {
   type Campaign,
   type CampaignWithLastPlayed
 } from '../db/repositories/campaigns'
+import { listCharactersByCampaign, type Character } from '../db/repositories/characters'
 import { listNpcsByRegion, type Npc } from '../db/repositories/npcs'
 import { listRegionsByCampaign, type Region } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign, type StoryThread } from '../db/repositories/storyThreads'
@@ -25,6 +26,7 @@ export interface CampaignDetail {
   regions: Region[]
   npcs: Npc[]
   storyThreads: StoryThread[]
+  characters: Character[]
 }
 
 export function listCampaignsForSidebar(db: Database.Database): CampaignWithLastPlayed[] {
@@ -37,7 +39,8 @@ export function getCampaignDetail(db: Database.Database, campaignId: string): Ca
     campaign: getCampaignById(db, campaignId),
     regions,
     npcs: regions.flatMap((region) => listNpcsByRegion(db, region.id)),
-    storyThreads: listStoryThreadsByCampaign(db, campaignId)
+    storyThreads: listStoryThreadsByCampaign(db, campaignId),
+    characters: listCharactersByCampaign(db, campaignId)
   }
 }
 

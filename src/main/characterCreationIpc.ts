@@ -3,7 +3,11 @@ import type Database from 'better-sqlite3'
 import type { AbilityScores } from '../engine/abilities'
 import { computeAC } from '../engine/armorClass'
 import { computeHP, type Archetype } from '../engine/hp'
-import { createCharacter, type Character } from '../db/repositories/characters'
+import {
+  createCharacter,
+  listCharactersByCampaign,
+  type Character
+} from '../db/repositories/characters'
 import { getDb } from './db'
 
 const STARTING_CURRENCY = 100
@@ -71,5 +75,8 @@ export function registerCharacterCreationHandlers(): void {
   )
   ipcMain.handle('characters:createPartyMembers', (_event, input: CreatePartyMembersInput) =>
     createPartyMembers(getDb(), input)
+  )
+  ipcMain.handle('characters:listByCampaign', (_event, campaignId: string) =>
+    listCharactersByCampaign(getDb(), campaignId)
   )
 }

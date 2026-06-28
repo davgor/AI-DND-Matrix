@@ -5,7 +5,8 @@ import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createWorldFact } from '../db/repositories/worldFacts'
-import { assembleNpcContext } from './npc'
+import { createScriptedProvider } from './providers/mockHarness'
+import { assembleNpcContext, generateNpcReaction } from './npc'
 
 function seedTwoNpcs(db: ReturnType<typeof createTestDb>) {
   const campaign = createCampaign(db, {
@@ -71,5 +72,29 @@ describe('assembleNpcContext', () => {
     const context = assembleNpcContext(db, npcA)
 
     expect(context.worldFacts.map((f) => f.id)).toEqual([matchingFact.id])
+  })
+})
+
+describe('generateNpcReaction', () => {
+  it('returns the NPC dialogue with no attack when none is proposed', async () => {
+    const db = createTestDb()
+    const { npcA } = seedTwoNpcs(db)
+    const context = assembleNpcContext(db, npcA)
+    const provider = createScriptedProvider(['{"dialogue":"Welcome, traveler."}'])
+
+    const reaction = await generateNpcReaction(provider, npcA, context, 'The player enters the village.')
+
+    expect(reaction).toEqual({ dialogue: 'Welcome, traveler.' })
+  })
+
+  it('flags a hostile attack, leaving the actual resolution to the engine', async () => {
+    const db = createTestDb()
+    const { npcA } = seedTwoNpcs(db)
+    const context = assembleNpcContext(db, npcA)
+    const provider = createScriptedProvider(['{"dialogue":"Die!","attack":true}'])
+
+    const reaction = await generateNpcReaction(provider, npcA, context, 'The player attacks.')
+
+    expect(reaction).toEqual({ dialogue: 'Die!', attack: true })
   })
 })

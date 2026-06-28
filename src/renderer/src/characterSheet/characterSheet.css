@@ -1,0 +1,124 @@
+.character-sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100%;
+  background: #2f3136;
+  color: #dcddde;
+  font-size: 13px;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.4);
+  transform: translateX(100%);
+  transition: transform 0.25s ease-in-out;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.character-sheet-open {
+  transform: translateX(0);
+}
+
+.character-sheet-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.character-sheet-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.character-sheet-images {
+  position: relative;
+}
+
+.character-sheet-background {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+.character-sheet-portrait {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #36393f;
+  margin-top: -36px;
+  margin-left: 12px;
+}
+
+.character-sheet-name {
+  margin: 0;
+  font-size: 16px;
+}
+
+.character-sheet-class {
+  margin: 0;
+  color: #96989d;
+}
+
+.character-sheet-vitals,
+.character-sheet-abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+
+.character-sheet-stat {
+  background: #36393f;
+  border-radius: 4px;
+  padding: 4px 8px;
+  min-width: 56px;
+  text-align: center;
+}
+
+.character-sheet-stat dt {
+  font-size: 10px;
+  color: #96989d;
+  text-transform: uppercase;
+}
+
+.character-sheet-stat dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.character-sheet-inventory h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #96989d;
+  text-transform: uppercase;
+}
+
+.character-sheet-inventory ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.character-sheet-inventory li {
+  background: #36393f;
+  border-radius: 4px;
+  padding: 4px 8px;
+}
+
+.character-sheet-empty {
+  color: #96989d;
+  margin: 0;
+}

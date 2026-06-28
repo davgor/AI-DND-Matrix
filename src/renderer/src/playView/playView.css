@@ -1,0 +1,66 @@
+.play-view {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  color: #dcddde;
+}
+
+.play-view-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.play-view-dm-panel {
+  background: #36393f;
+  border-right: 1px solid #202225;
+}
+
+.play-view-player-panel {
+  background: #313338;
+}
+
+.play-view-log {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.play-view-log-entry {
+  margin-bottom: 8px;
+}
+
+.play-view-roll-toggle {
+  margin-bottom: 8px;
+}
+
+.play-view-input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.play-view-input-row input {
+  flex: 1;
+}
+
+.play-view-recap {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #202225;
+  color: #dcddde;
+  padding: 12px 16px;
+  border-radius: 6px;
+  z-index: 5;
+}
+
+.play-view-sheet-toggle {
+  position: absolute;
+  top: 40px;
+  right: 12px;
+  z-index: 5;
+}

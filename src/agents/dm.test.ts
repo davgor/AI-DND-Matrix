@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
+import { createNpc } from '../db/repositories/npcs'
 import { createRegion, updateRegionStatus } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listWorldFactsByRegionOrFaction } from '../db/repositories/worldFacts'
@@ -64,6 +65,28 @@ describe('interpretIntent (006.1 schema validation/retry + 006.2 DC clamp)', () 
     expect((await interpretIntent(tooHigh, 'x')).dc).toBe(30)
     expect((await interpretIntent(tooLow, 'x')).dc).toBe(5)
   })
+
+  it('recognizes a rest action via actionType, with checkNeeded false', async () => {
+    const provider = createScriptedProvider(['{"checkNeeded":false,"actionType":"restLong"}'])
+    const result = await interpretIntent(provider, 'I make camp for the night')
+    expect(result).toEqual({ checkNeeded: false, actionType: 'restLong' })
+  })
+
+  it('recognizes a travel action via actionType, requiring travelDays', async () => {
+    const provider = createScriptedProvider(['{"checkNeeded":false,"actionType":"travel","travelDays":3}'])
+    const result = await interpretIntent(provider, 'We travel to the next town')
+    expect(result).toEqual({ checkNeeded: false, actionType: 'travel', travelDays: 3 })
+  })
+
+  it('rejects a travel actionType missing travelDays, retrying instead', async () => {
+    const provider = createScriptedProvider([
+      '{"checkNeeded":false,"actionType":"travel"}',
+      '{"checkNeeded":false,"actionType":"travel","travelDays":1}'
+    ])
+    const result = await interpretIntent(provider, 'We travel')
+    expect(result.travelDays).toBe(1)
+    expect(provider.calls).toHaveLength(2)
+  })
 })
 
 describe('assembleNarrationContext + narrate (006.3)', () => {
@@ -80,6 +103,39 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     expect(after.regionStatus).toEqual({ destroyed: true, cause: 'firebomb' })
   })
 
+  it('includes the NPCs present in the region so the DM can only pick real ids to react', async () => {
+    const { db, campaign, region } = seedCampaignWithRegion()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+
+    const context = assembleNarrationContext(db, campaign.id, region.id)
+    expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira' }])
+  })
+
+  it('parses an optional reactingNpcIds field from the narration response', async () => {
+    const { db, campaign, region } = seedCampaignWithRegion()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      `{"narrationText":"Mira gasps.","reactingNpcIds":["${npc.id}"]}`
+    ])
+    const context = assembleNarrationContext(db, campaign.id, region.id)
+
+    const result = await narrate(provider, { success: true, total: 15, dc: 10 }, context)
+
+    expect(result.reactingNpcIds).toEqual([npc.id])
+  })
+
   it('never lets the narration call invent a different pass/fail/total than the engine produced', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
     const provider = createScriptedProvider(['{"narrationText":"The blade finds its mark."}'])
@@ -93,30 +149,30 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
 })
 
 describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', () => {
-  it('persists a world_fact when the narration response includes one', () => {
+  it('persists a world_fact tagged to the authoritative current region, ignoring anything the agent might claim', () => {
     const { db, campaign, region } = seedCampaignWithRegion()
-    persistNarrationSideEffects(db, campaign.id, {
+    persistNarrationSideEffects(db, campaign.id, region.id, {
       narrationText: 'The village burns.',
-      worldFact: { content: 'Oakhollow burned down', regionId: region.id }
+      worldFact: { content: 'Oakhollow burned down' }
     })
     expect(listWorldFactsByRegionOrFaction(db, campaign.id, region.id)).toHaveLength(1)
   })
 
   it('creates no world_fact row when the narration response omits one', () => {
     const { db, campaign, region } = seedCampaignWithRegion()
-    persistNarrationSideEffects(db, campaign.id, { narrationText: 'Nothing of note happens.' })
+    persistNarrationSideEffects(db, campaign.id, region.id, { narrationText: 'Nothing of note happens.' })
     expect(listWorldFactsByRegionOrFaction(db, campaign.id, region.id)).toHaveLength(0)
   })
 
   it('updates a story_thread when the narration response includes an update', () => {
-    const { db, campaign } = seedCampaignWithRegion()
+    const { db, campaign, region } = seedCampaignWithRegion()
     const thread = createStoryThread(db, {
       campaignId: campaign.id,
       title: 'Main Arc',
       state: 'rising',
       summary: 'so far...'
     })
-    persistNarrationSideEffects(db, campaign.id, {
+    persistNarrationSideEffects(db, campaign.id, region.id, {
       narrationText: 'The plot thickens.',
       storyThreadUpdate: { threadId: thread.id, state: 'climax', summary: 'updated summary' }
     })
@@ -125,14 +181,14 @@ describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', 
   })
 
   it('leaves the story_thread unchanged when the narration response omits an update', () => {
-    const { db, campaign } = seedCampaignWithRegion()
+    const { db, campaign, region } = seedCampaignWithRegion()
     const thread = createStoryThread(db, {
       campaignId: campaign.id,
       title: 'Main Arc',
       state: 'rising',
       summary: 'so far...'
     })
-    persistNarrationSideEffects(db, campaign.id, { narrationText: 'Nothing changes the plot.' })
+    persistNarrationSideEffects(db, campaign.id, region.id, { narrationText: 'Nothing changes the plot.' })
     const [unchanged] = listStoryThreadsByCampaign(db, campaign.id)
     expect(unchanged).toEqual(thread)
   })

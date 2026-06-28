@@ -1,4 +1,4 @@
-import type { CampaignsApi, CharactersApi, FilesApi, WindowControls } from '../../preload'
+import type { CampaignsApi, CharactersApi, FilesApi, TurnApi, WindowControls } from '../../preload'
 
 declare global {
   interface Window {
@@ -6,5 +6,6 @@ declare global {
     campaigns: CampaignsApi
     files: FilesApi
     characters: CharactersApi
+    turn: TurnApi
   }
 }
