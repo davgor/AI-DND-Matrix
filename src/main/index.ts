@@ -1,7 +1,10 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'node:path'
+import { registerCampaignEditHandlers } from './campaignEditIpc'
 import { registerCampaignHandlers } from './campaignIpc'
+import { registerCharacterCreationHandlers } from './characterCreationIpc'
 import { loadConfig } from './config'
+import { registerFileUploadHandlers } from './fileUploadIpc'
 import { setupGlobalErrorLogging } from './logger'
 
 Menu.setApplicationMenu(null)
@@ -50,6 +53,9 @@ function registerWindowControlHandlers(): void {
 app.whenReady().then(() => {
   registerWindowControlHandlers()
   registerCampaignHandlers()
+  registerCampaignEditHandlers()
+  registerFileUploadHandlers()
+  registerCharacterCreationHandlers()
   createMainWindow()
 })
 

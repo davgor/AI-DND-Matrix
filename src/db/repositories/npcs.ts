@@ -100,3 +100,7 @@ export function updateNpcStatus(db: Database.Database, id: string, status: NpcSt
 export function markNpcPromoted(db: Database.Database, id: string): void {
   db.prepare('UPDATE npcs SET is_party_member = 1 WHERE id = ?').run(id)
 }
+
+export function updateNpcDisposition(db: Database.Database, id: string, disposition: string): void {
+  db.prepare('UPDATE npcs SET disposition = ? WHERE id = ?').run(disposition, id)
+}

@@ -7,6 +7,7 @@ import {
   getCampaignById,
   listCampaigns,
   listCampaignsByLastPlayed,
+  updateCampaignDeathMode,
   updateCampaignStateSummary
 } from './campaigns'
 
@@ -145,5 +146,40 @@ describe('campaigns repository: updates', () => {
     expect(afterSecond).toBe(5)
 
     expect(getCampaignById(db, created.id)?.inGameDate).toBe(5)
+  })
+})
+
+describe('campaigns repository: updateCampaignDeathMode', () => {
+  it('switches death mode and clears respawn rules when not provided', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Test',
+      premisePrompt: '...',
+      deathMode: 'legendary'
+    })
+
+    updateCampaignDeathMode(db, created.id, { deathMode: 'standard' })
+
+    const updated = getCampaignById(db, created.id)
+    expect(updated?.deathMode).toBe('standard')
+    expect(updated?.respawnRules).toBeNull()
+  })
+
+  it('persists respawn rules when death mode is respawn', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Test',
+      premisePrompt: '...',
+      deathMode: 'legendary'
+    })
+
+    updateCampaignDeathMode(db, created.id, {
+      deathMode: 'respawn',
+      respawnRules: { location: 'Last Shrine', cost: 50, limit: 3 }
+    })
+
+    const updated = getCampaignById(db, created.id)
+    expect(updated?.deathMode).toBe('respawn')
+    expect(updated?.respawnRules).toEqual({ location: 'Last Shrine', cost: 50, limit: 3 })
   })
 })

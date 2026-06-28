@@ -127,6 +127,24 @@ export function updateCampaignStateSummary(
   db.prepare('UPDATE campaigns SET current_state_summary = ? WHERE id = ?').run(summary, id)
 }
 
+export interface UpdateCampaignDeathModeInput {
+  deathMode: DeathMode
+  respawnRules?: RespawnRules | null
+}
+
+export function updateCampaignDeathMode(
+  db: Database.Database,
+  id: string,
+  input: UpdateCampaignDeathModeInput
+): void {
+  const respawnRules = input.respawnRules ?? null
+  db.prepare('UPDATE campaigns SET death_mode = ?, respawn_rules = ? WHERE id = ?').run(
+    input.deathMode,
+    respawnRules ? JSON.stringify(respawnRules) : null,
+    id
+  )
+}
+
 export function advanceInGameDate(db: Database.Database, id: string, days: number): number {
   const row = db
     .prepare(

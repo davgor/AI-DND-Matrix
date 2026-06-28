@@ -1,0 +1,17 @@
+.character-setup {
+  flex: 1;
+  padding: 16px 24px;
+  overflow-y: auto;
+  color: #dcddde;
+  background: #36393f;
+}
+
+.character-setup-error {
+  color: #ed4245;
+}
+
+.party-member-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}

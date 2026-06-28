@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../testUtils'
 import { createCampaign } from './campaigns'
-import { createRegion, getRegionById, listRegionsByCampaign, updateRegionStatus } from './regions'
+import {
+  createRegion,
+  getRegionById,
+  listRegionsByCampaign,
+  updateRegionDescription,
+  updateRegionStatus
+} from './regions'
 
 function seedCampaign(db: ReturnType<typeof createTestDb>) {
   return createCampaign(db, {
@@ -64,5 +70,23 @@ describe('regions repository: updateStatus', () => {
     updateRegionStatus(db, created.id, { destroyed: true, cause: 'firebomb' })
 
     expect(getRegionById(db, created.id)?.status).toEqual({ destroyed: true, cause: 'firebomb' })
+  })
+})
+
+describe('regions repository: updateDescription', () => {
+  it('persists an edited description', () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const created = createRegion(db, {
+      campaignId: campaign.id,
+      name: 'Oakhollow',
+      description: 'A quiet logging village.'
+    })
+
+    updateRegionDescription(db, created.id, 'A bustling trade hub after the bridge was rebuilt.')
+
+    expect(getRegionById(db, created.id)?.description).toBe(
+      'A bustling trade hub after the bridge was rebuilt.'
+    )
   })
 })

@@ -14,7 +14,12 @@ export interface SidebarController {
   handleGenerate: () => Promise<void>
 }
 
-export function useSidebarController(onCampaignDetail: (detail: CampaignDetail) => void): SidebarController {
+export interface SidebarCallbacks {
+  onCampaignSelected: (detail: CampaignDetail) => void
+  onCampaignGenerated: (detail: CampaignDetail) => void
+}
+
+export function useSidebarController(callbacks: SidebarCallbacks): SidebarController {
   const [campaigns, setCampaigns] = useState<CampaignWithLastPlayed[]>([])
   const [collapsed, setCollapsed] = useState(() => getSidebarCollapsed(window.localStorage))
   const [premisePrompt, setPremisePrompt] = useState('')
@@ -36,7 +41,7 @@ export function useSidebarController(onCampaignDetail: (detail: CampaignDetail) 
 
   async function handleSelect(campaignId: string): Promise<void> {
     const detail = await window.campaigns.select(campaignId)
-    onCampaignDetail(detail)
+    callbacks.onCampaignSelected(detail)
     await refreshCampaigns()
   }
 
@@ -48,7 +53,7 @@ export function useSidebarController(onCampaignDetail: (detail: CampaignDetail) 
     try {
       const detail = await window.campaigns.generate(premisePrompt)
       setPremisePrompt('')
-      onCampaignDetail(detail)
+      callbacks.onCampaignGenerated(detail)
       await refreshCampaigns()
     } finally {
       setGenerating(false)

@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../testUtils'
 import { createCampaign } from './campaigns'
-import { createNpc, getNpcById, listNpcsByRegion, markNpcPromoted, updateNpcStatus } from './npcs'
+import {
+  createNpc,
+  getNpcById,
+  listNpcsByRegion,
+  markNpcPromoted,
+  updateNpcDisposition,
+  updateNpcStatus
+} from './npcs'
 import { createRegion } from './regions'
 
 function seedRegion(db: ReturnType<typeof createTestDb>) {
@@ -93,5 +100,21 @@ describe('npcs repository: updateStatus + markPromoted', () => {
     markNpcPromoted(db, created.id)
 
     expect(getNpcById(db, created.id)?.isPartyMember).toBe(true)
+  })
+
+  it('updates disposition', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+    const created = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Bram',
+      role: 'villager',
+      disposition: 'friendly'
+    })
+
+    updateNpcDisposition(db, created.id, 'wary, after the bandit raid')
+
+    expect(getNpcById(db, created.id)?.disposition).toBe('wary, after the bandit raid')
   })
 })

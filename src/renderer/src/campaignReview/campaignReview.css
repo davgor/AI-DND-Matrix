@@ -1,0 +1,21 @@
+.campaign-review {
+  flex: 1;
+  padding: 16px 24px;
+  overflow-y: auto;
+  color: #dcddde;
+  background: #36393f;
+}
+
+.campaign-review-item {
+  margin-bottom: 12px;
+}
+
+.campaign-review-item textarea {
+  width: 100%;
+  min-height: 48px;
+  font-family: inherit;
+}
+
+.campaign-review-continue {
+  margin-top: 16px;
+}

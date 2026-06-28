@@ -84,3 +84,11 @@ export function updateRegionStatus(
 ): void {
   db.prepare('UPDATE regions SET status = ? WHERE id = ?').run(JSON.stringify(status), id)
 }
+
+export function updateRegionDescription(
+  db: Database.Database,
+  id: string,
+  description: string
+): void {
+  db.prepare('UPDATE regions SET description = ? WHERE id = ?').run(description, id)
+}

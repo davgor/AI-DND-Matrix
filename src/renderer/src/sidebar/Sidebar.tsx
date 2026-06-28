@@ -5,7 +5,8 @@ import './sidebar.css'
 
 export interface SidebarProps {
   selectedCampaignId: string | null
-  onCampaignDetail: (detail: CampaignDetail) => void
+  onCampaignSelected: (detail: CampaignDetail) => void
+  onCampaignGenerated: (detail: CampaignDetail) => void
 }
 
 function formatLastPlayed(lastPlayedAt: string | null): string {
@@ -13,7 +14,10 @@ function formatLastPlayed(lastPlayedAt: string | null): string {
 }
 
 export function Sidebar(props: SidebarProps): JSX.Element {
-  const controller = useSidebarController(props.onCampaignDetail)
+  const controller = useSidebarController({
+    onCampaignSelected: props.onCampaignSelected,
+    onCampaignGenerated: props.onCampaignGenerated
+  })
 
   return (
     <div className={controller.collapsed ? 'sidebar sidebar-collapsed' : 'sidebar'}>
