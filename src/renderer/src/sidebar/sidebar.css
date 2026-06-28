@@ -1,0 +1,66 @@
+.sidebar {
+  width: 220px;
+  background: #2f3136;
+  color: #dcddde;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar-collapsed {
+  width: 36px;
+}
+
+.sidebar-toggle {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  height: 28px;
+}
+
+.sidebar-campaign-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sidebar-campaign-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.sidebar-campaign-button:hover {
+  background: #393c43;
+}
+
+.sidebar-campaign-active {
+  background: #42464d;
+}
+
+.sidebar-campaign-name {
+  font-weight: 600;
+}
+
+.sidebar-campaign-last-played {
+  font-size: 11px;
+  color: #96989d;
+}
+
+.sidebar-new-campaign {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+}

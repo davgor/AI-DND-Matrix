@@ -1,0 +1,14 @@
+.main-panel {
+  flex: 1;
+  padding: 16px 24px;
+  overflow-y: auto;
+  color: #dcddde;
+  background: #36393f;
+}
+
+.main-panel-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #96989d;
+}

@@ -95,6 +95,30 @@ export function listCampaigns(db: Database.Database): Campaign[] {
   return rows.map(rowToCampaign)
 }
 
+export interface CampaignWithLastPlayed extends Campaign {
+  lastPlayedAt: string | null
+}
+
+interface CampaignWithLastPlayedRow extends CampaignRow {
+  session_last_played_at: string | null
+}
+
+export function listCampaignsByLastPlayed(db: Database.Database): CampaignWithLastPlayed[] {
+  const rows = db
+    .prepare(
+      `SELECT c.*, s.last_played_at AS session_last_played_at
+       FROM campaigns c
+       LEFT JOIN sessions s ON s.campaign_id = c.id
+       ORDER BY COALESCE(s.last_played_at, c.created_at) DESC`
+    )
+    .all() as CampaignWithLastPlayedRow[]
+
+  return rows.map((row) => ({
+    ...rowToCampaign(row),
+    lastPlayedAt: row.session_last_played_at
+  }))
+}
+
 export function updateCampaignStateSummary(
   db: Database.Database,
   id: string,

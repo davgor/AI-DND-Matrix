@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'node:path'
+import { registerCampaignHandlers } from './campaignIpc'
 import { loadConfig } from './config'
 import { setupGlobalErrorLogging } from './logger'
 
@@ -48,6 +49,7 @@ function registerWindowControlHandlers(): void {
 
 app.whenReady().then(() => {
   registerWindowControlHandlers()
+  registerCampaignHandlers()
   createMainWindow()
 })
 

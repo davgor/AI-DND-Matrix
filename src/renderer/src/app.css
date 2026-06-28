@@ -1,0 +1,11 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+.app-body {
+  display: flex;
+  height: calc(100% - 32px);
+}

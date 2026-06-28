@@ -4,6 +4,7 @@ import { clampDC } from '../engine/checks'
 import type { DamageType } from '../engine/damage'
 import type { EmergentDirectionCandidate } from '../engine/emergentDirection'
 import { takeRecent } from './contextWindow'
+import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 import { listEventsByCampaign, type Event } from '../db/repositories/events'
 import { getRegionById, type RegionStatus } from '../db/repositories/regions'
@@ -15,14 +16,6 @@ export class DmSchemaError extends Error {}
 export const MAX_SCHEMA_ATTEMPTS = 3
 
 const VALID_ABILITIES: Ability[] = ['body', 'agility', 'mind', 'presence']
-
-function tryParseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return undefined
-  }
-}
 
 // === 006.1 + 006.2: intent interpretation, with the DC clamp wired in so every ===
 // === caller downstream always receives an already-clamped DC, never a raw one. ===

@@ -1,0 +1,79 @@
+import { ipcMain } from 'electron'
+import type Database from 'better-sqlite3'
+import { generateAndPersistCampaign } from '../agents/campaignGeneration'
+import { createProviderRegistry, selectProvider } from '../agents/providers/selectProvider'
+import { withRetry } from '../agents/providers/withRetry'
+import type { Provider } from '../agents/providers/types'
+import {
+  getCampaignById,
+  listCampaignsByLastPlayed,
+  type Campaign,
+  type CampaignWithLastPlayed
+} from '../db/repositories/campaigns'
+import { listNpcsByRegion, type Npc } from '../db/repositories/npcs'
+import { listRegionsByCampaign, type Region } from '../db/repositories/regions'
+import { listStoryThreadsByCampaign, type StoryThread } from '../db/repositories/storyThreads'
+import { touchLastPlayed } from '../db/repositories/sessions'
+import { loadConfig } from './config'
+import { logger } from './logger'
+import { getDb } from './db'
+
+const NEW_CAMPAIGN_NAME_LENGTH = 40
+
+export interface CampaignDetail {
+  campaign: Campaign | undefined
+  regions: Region[]
+  npcs: Npc[]
+  storyThreads: StoryThread[]
+}
+
+export function listCampaignsForSidebar(db: Database.Database): CampaignWithLastPlayed[] {
+  return listCampaignsByLastPlayed(db)
+}
+
+export function getCampaignDetail(db: Database.Database, campaignId: string): CampaignDetail {
+  const regions = listRegionsByCampaign(db, campaignId)
+  return {
+    campaign: getCampaignById(db, campaignId),
+    regions,
+    npcs: regions.flatMap((region) => listNpcsByRegion(db, region.id)),
+    storyThreads: listStoryThreadsByCampaign(db, campaignId)
+  }
+}
+
+export function selectCampaign(db: Database.Database, campaignId: string): CampaignDetail {
+  touchLastPlayed(db, campaignId)
+  return getCampaignDetail(db, campaignId)
+}
+
+export function buildAgentProvider(): Provider {
+  const config = loadConfig()
+  const registry = createProviderRegistry(config)
+  return withRetry(selectProvider(config.agentProvider, registry), logger)
+}
+
+export async function generateCampaignFromPrompt(
+  db: Database.Database,
+  provider: Provider,
+  premisePrompt: string
+): Promise<CampaignDetail> {
+  const campaign = await generateAndPersistCampaign(db, provider, {
+    name: premisePrompt.slice(0, NEW_CAMPAIGN_NAME_LENGTH),
+    premisePrompt,
+    deathMode: 'legendary'
+  })
+  touchLastPlayed(db, campaign.id)
+  return getCampaignDetail(db, campaign.id)
+}
+
+export function registerCampaignHandlers(): void {
+  ipcMain.handle('campaigns:list', () => listCampaignsForSidebar(getDb()))
+
+  ipcMain.handle('campaigns:select', (_event, campaignId: string) =>
+    selectCampaign(getDb(), campaignId)
+  )
+
+  ipcMain.handle('campaigns:generate', (_event, premisePrompt: string) =>
+    generateCampaignFromPrompt(getDb(), buildAgentProvider(), premisePrompt)
+  )
+}

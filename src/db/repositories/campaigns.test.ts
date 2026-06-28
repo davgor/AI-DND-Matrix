@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../testUtils'
+import { touchLastPlayed } from './sessions'
 import {
   advanceInGameDate,
   createCampaign,
   getCampaignById,
   listCampaigns,
+  listCampaignsByLastPlayed,
   updateCampaignStateSummary
 } from './campaigns'
 
@@ -73,6 +75,42 @@ describe('campaigns repository: listCampaigns', () => {
     })
 
     expect(listCampaigns(db).map((c) => c.id)).toEqual([third.id, second.id, first.id])
+  })
+})
+
+describe('campaigns repository: listCampaignsByLastPlayed', () => {
+  it('orders by last-played, falling back to created_at for never-played campaigns', () => {
+    const db = createTestDb()
+
+    const neverPlayed = createCampaign(db, {
+      name: 'Never Played',
+      premisePrompt: '...',
+      deathMode: 'legendary',
+      createdAt: '2026-01-01T00:00:00.000Z'
+    })
+    const playedLongAgo = createCampaign(db, {
+      name: 'Played Long Ago',
+      premisePrompt: '...',
+      deathMode: 'legendary',
+      createdAt: '2026-01-02T00:00:00.000Z'
+    })
+    const playedRecently = createCampaign(db, {
+      name: 'Played Recently',
+      premisePrompt: '...',
+      deathMode: 'legendary',
+      createdAt: '2025-01-01T00:00:00.000Z'
+    })
+
+    touchLastPlayed(db, playedLongAgo.id, '2026-01-03T00:00:00.000Z')
+    touchLastPlayed(db, playedRecently.id, '2026-06-01T00:00:00.000Z')
+
+    const result = listCampaignsByLastPlayed(db)
+
+    expect(result.map((c) => c.id)).toEqual([playedRecently.id, playedLongAgo.id, neverPlayed.id])
+    expect(result.find((c) => c.id === neverPlayed.id)?.lastPlayedAt).toBeNull()
+    expect(result.find((c) => c.id === playedRecently.id)?.lastPlayedAt).toBe(
+      '2026-06-01T00:00:00.000Z'
+    )
   })
 })
 
