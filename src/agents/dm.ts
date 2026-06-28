@@ -112,6 +112,7 @@ export interface NarrationResult {
   worldFact?: { content: string; factionTag?: string }
   storyThreadUpdate?: { threadId: string; state: string; summary: string }
   reactingNpcIds?: string[]
+  proposedPromotionNpcId?: string
 }
 
 export function assembleNarrationContext(
@@ -123,7 +124,9 @@ export function assembleNarrationContext(
   const recentEvents = takeRecent(listEventsByCampaign(db, campaignId))
   const threads = listStoryThreadsByCampaign(db, campaignId)
   const [primaryThread] = threads
-  const presentNpcs = listNpcsByRegion(db, regionId).map((npc) => ({ id: npc.id, name: npc.name }))
+  const presentNpcs = listNpcsByRegion(db, regionId)
+    .filter((npc) => !npc.isPartyMember)
+    .map((npc) => ({ id: npc.id, name: npc.name }))
   return {
     regionStatus: region?.status ?? { destroyed: false },
     recentEvents,
@@ -140,9 +143,10 @@ function buildNarrationPrompt(outcome: CheckOutcome, context: NarrationContext):
     `Region status: ${JSON.stringify(context.regionStatus)}`,
     `Recent events: ${JSON.stringify(context.recentEvents)}`,
     `Story thread: ${JSON.stringify(context.storyThreadState)}`,
-    `NPCs present in this region (pick reacting NPCs only from these exact ids): ${JSON.stringify(context.presentNpcs)}`,
-    'Respond ONLY with JSON: {"narrationText":string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"reactingNpcIds"?:string[]}',
-    'A world_fact is always recorded against the current region automatically — do not try to specify which region, you have no way to know its id.'
+    `NPCs present in this region (pick reacting NPCs, or a recruitment proposal, only from these exact ids): ${JSON.stringify(context.presentNpcs)}`,
+    'Respond ONLY with JSON: {"narrationText":string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"reactingNpcIds"?:string[],"proposedPromotionNpcId"?:string}',
+    'A world_fact is always recorded against the current region automatically — do not try to specify which region, you have no way to know its id.',
+    'Only set "proposedPromotionNpcId" when the player\'s words clearly imply recruiting that NPC into the party (e.g. asking them to join, offering them a place at their side) — the player must confirm before anything actually happens.'
   ].join('\n')
 }
 

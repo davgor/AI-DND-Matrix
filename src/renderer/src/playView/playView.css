@@ -64,3 +64,15 @@
   right: 12px;
   z-index: 5;
 }
+
+.play-view-promotion {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #202225;
+  color: #dcddde;
+  padding: 12px 16px;
+  border-radius: 6px;
+  z-index: 5;
+}

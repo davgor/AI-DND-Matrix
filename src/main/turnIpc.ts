@@ -64,6 +64,11 @@ export interface PartyMemberActionResult {
   actionText: string
 }
 
+export interface ProposedPromotion {
+  npcId: string
+  npcName: string
+}
+
 export interface TurnResult {
   narrationText: string
   check?: { roll: number; total: number; dc: number; success: boolean }
@@ -72,6 +77,7 @@ export interface TurnResult {
   npcReactions: NpcReactionResult[]
   partyMemberActions: PartyMemberActionResult[]
   dyingResolution?: DyingResolution
+  proposedPromotion?: ProposedPromotion
 }
 
 function getCurrentRegionId(db: Database.Database, campaignId: string, character: Character): string {
@@ -215,7 +221,7 @@ async function resolvePartyMemberActions(
   const partyMembers = listCharactersByCampaign(db, campaignId).filter((c) => c.kind === 'ai_party_member')
   const results: PartyMemberActionResult[] = []
   for (const member of partyMembers) {
-    const context = assemblePartyMemberContext(db, campaignId, member.id)
+    const context = assemblePartyMemberContext(db, campaignId, member)
     const action = await decidePartyMemberAction(provider, member, context, sceneNarration)
     appendEvent(db, {
       campaignId,
@@ -284,8 +290,20 @@ async function resolveCheckTurn(
         }
       : undefined,
     npcReactions,
-    partyMemberActions
+    partyMemberActions,
+    proposedPromotion: resolveProposedPromotion(db, narrationResult.proposedPromotionNpcId)
   }
+}
+
+function resolveProposedPromotion(
+  db: Database.Database,
+  npcId: string | undefined
+): ProposedPromotion | undefined {
+  if (!npcId) {
+    return undefined
+  }
+  const npc = getNpcById(db, npcId)
+  return npc ? { npcId: npc.id, npcName: npc.name } : undefined
 }
 
 export async function resolvePlayerTurn(

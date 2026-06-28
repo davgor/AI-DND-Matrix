@@ -7,6 +7,7 @@ import { loadConfig } from './config'
 import { registerFileUploadHandlers } from './fileUploadIpc'
 import { setupGlobalErrorLogging } from './logger'
 import { registerNarrationLogHandlers } from './narrationLog'
+import { registerPromotionHandlers } from './promotionIpc'
 import { registerRecapHandlers } from './recapIpc'
 import { registerTurnHandlers } from './turnIpc'
 
@@ -62,6 +63,7 @@ app.whenReady().then(() => {
   registerTurnHandlers()
   registerRecapHandlers()
   registerNarrationLogHandlers()
+  registerPromotionHandlers()
   createMainWindow()
 })
 

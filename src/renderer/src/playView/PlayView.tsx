@@ -1,6 +1,7 @@
 import { CharacterSheet } from '../characterSheet/CharacterSheet'
 import { DmNarrationPanel } from './DmNarrationPanel'
 import { PlayerActionPanel } from './PlayerActionPanel'
+import { PromotionPrompt } from './PromotionPrompt'
 import { RecapBanner } from './RecapBanner'
 import { usePlayViewController } from './usePlayViewController'
 import './playView.css'
@@ -18,6 +19,7 @@ export function PlayView(props: PlayViewProps): JSX.Element {
   return (
     <div className="play-view">
       <RecapBanner recap={controller.recap} />
+      <PromotionPrompt promotion={controller.promotion} />
       <button type="button" className="play-view-sheet-toggle" onClick={controller.toggleSheet}>
         Character Sheet
       </button>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
-import { createNpc } from '../db/repositories/npcs'
+import { createNpc, markNpcPromoted } from '../db/repositories/npcs'
 import { createRegion, updateRegionStatus } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listWorldFactsByRegionOrFaction } from '../db/repositories/worldFacts'
@@ -117,6 +117,24 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira' }])
   })
 
+  it('excludes already-promoted NPCs from presentNpcs, since they are now party members', async () => {
+    const { db, campaign, region } = seedCampaignWithRegion()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    markNpcPromoted(db, npc.id)
+
+    const context = assembleNarrationContext(db, campaign.id, region.id)
+
+    expect(context.presentNpcs).toEqual([])
+  })
+})
+
+describe('narrate: optional schema fields (006.3, 011.1)', () => {
   it('parses an optional reactingNpcIds field from the narration response', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
     const npc = createNpc(db, {
@@ -134,6 +152,25 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     const result = await narrate(provider, { success: true, total: 15, dc: 10 }, context)
 
     expect(result.reactingNpcIds).toEqual([npc.id])
+  })
+
+  it('parses an optional proposedPromotionNpcId field from the narration response', async () => {
+    const { db, campaign, region } = seedCampaignWithRegion()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      `{"narrationText":"Mira considers your offer.","proposedPromotionNpcId":"${npc.id}"}`
+    ])
+    const context = assembleNarrationContext(db, campaign.id, region.id)
+
+    const result = await narrate(provider, { success: true, total: 15, dc: 10 }, context)
+
+    expect(result.proposedPromotionNpcId).toBe(npc.id)
   })
 
   it('never lets the narration call invent a different pass/fail/total than the engine produced', async () => {

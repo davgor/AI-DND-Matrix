@@ -3,7 +3,7 @@ import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createCharacter, getCharacterById } from '../db/repositories/characters'
 import { listEventsByCampaign } from '../db/repositories/events'
-import { createNpc } from '../db/repositories/npcs'
+import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from './turnIpc'
@@ -115,6 +115,33 @@ describe('resolvePlayerTurn: NPC reactions and combat', () => {
     expect(reloaded).toBeDefined()
     expect(reloaded?.hp).toBe(0)
     expect((reloaded!.stats as { dyingState?: unknown }).dyingState).toBeDefined()
+  })
+})
+
+describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
+  it('surfaces a proposed NPC promotion with the NPC name, without applying it', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      '{"checkNeeded":false}',
+      `{"narrationText":"Mira considers your offer.","proposedPromotionNpcId":"${npc.id}"}`
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Join us, Mira!' },
+      fixedRng(0.5)
+    )
+
+    expect(result.proposedPromotion).toEqual({ npcId: npc.id, npcName: 'Mira' })
+    expect(getNpcById(db, npc.id)?.isPartyMember).toBe(false)
   })
 })
 

@@ -13,6 +13,7 @@ import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { TurnInput, TurnResult } from '../main/turnIpc'
 import type { PlayLogEntry } from '../main/narrationLog'
+import type { PromoteNpcInput } from '../main/promotionIpc'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -35,7 +36,9 @@ const campaigns = {
   generateRecap: (campaignId: string): Promise<string> =>
     ipcRenderer.invoke('campaigns:generateRecap', campaignId),
   getNarrationLog: (campaignId: string): Promise<PlayLogEntry[]> =>
-    ipcRenderer.invoke('campaigns:getNarrationLog', campaignId)
+    ipcRenderer.invoke('campaigns:getNarrationLog', campaignId),
+  confirmPromotion: (input: PromoteNpcInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:confirmPromotion', input)
 }
 
 const files = {
