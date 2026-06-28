@@ -32,17 +32,13 @@ describe('selectProvider', () => {
 
 describe('createProviderRegistry', () => {
   it('builds a registry with both provider names present', () => {
-    const registry = createProviderRegistry({ claudeApiKey: 'test-key', claudeModel: 'claude-test' })
+    const registry = createProviderRegistry({
+      claudeApiKey: 'test-key',
+      claudeModel: 'claude-test',
+      player2BaseUrl: 'http://127.0.0.1:4315'
+    })
 
     expect(registry.claude).toBeDefined()
     expect(registry.player2).toBeDefined()
-  })
-
-  it('the player2 stub rejects since the real adapter is not implemented yet', async () => {
-    const registry = createProviderRegistry({ claudeApiKey: undefined, claudeModel: 'claude-test' })
-
-    await expect(registry.player2.generate('hello')).rejects.toThrow(
-      'Player2 provider adapter is not implemented yet (see board epic 014)'
-    )
   })
 })

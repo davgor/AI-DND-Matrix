@@ -1,4 +1,5 @@
 import { createClaudeProvider } from './claude'
+import { createPlayer2Provider } from './player2'
 import type { Provider } from './types'
 
 export type AgentProviderName = 'player2' | 'claude'
@@ -6,14 +7,7 @@ export type AgentProviderName = 'player2' | 'claude'
 export interface ProviderRegistryConfig {
   claudeApiKey: string | undefined
   claudeModel: string
-}
-
-function createPlayer2Stub(): Provider {
-  return {
-    async generate(): Promise<string> {
-      throw new Error('Player2 provider adapter is not implemented yet (see board epic 014)')
-    }
-  }
+  player2BaseUrl: string
 }
 
 export function selectProvider(
@@ -26,6 +20,6 @@ export function selectProvider(
 export function createProviderRegistry(config: ProviderRegistryConfig): Record<AgentProviderName, Provider> {
   return {
     claude: createClaudeProvider({ apiKey: config.claudeApiKey, model: config.claudeModel }),
-    player2: createPlayer2Stub()
+    player2: createPlayer2Provider({ baseUrl: config.player2BaseUrl })
   }
 }

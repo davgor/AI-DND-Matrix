@@ -23,7 +23,7 @@ Core gameplay loop (campaign generation, character creation, play, NPC promotion
    ```
 3. `CLAUDE_MODEL` is optional and defaults to a current Claude model — only set it if you want a specific one.
 
-**Switching providers**: set `AGENT_PROVIDER` in `.env` to the provider name (e.g. `claude`) — no code changes or rebuild required. Player2 (a local LLM runner) is the planned second provider but its adapter is deferred (ticket board epic 014) until after v1; selecting it today will surface a clear "not implemented yet" error rather than failing silently.
+**Switching providers**: set `AGENT_PROVIDER` in `.env` to the provider name (`claude` or `player2`) — no code changes or rebuild required. `player2` talks to a locally running [Player2](http://127.0.0.1:4315) app over its OpenAI-compatible chat-completions endpoint; no API key needed, just have Player2 running. `PLAYER2_BASE_URL` is optional and defaults to `http://127.0.0.1:4315`.
 
 **Running from source** (for development): `npm install`, then `npm run dev` boots Electron + the React dev server + a dev SQLite file in one command. `npm run package` produces the distributable `.exe` in `release/`.
 
@@ -32,7 +32,7 @@ Core gameplay loop (campaign generation, character creation, play, NPC promotion
 - **Engine and database are the source of truth.** AI agents read state to produce narration and propose actions; a deterministic rules engine validates and resolves everything (dice, checks, damage, death) before it's persisted. Agents never decide outcomes themselves.
 - **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick.
 - **NPCs have isolated memory.** Each NPC has its own private memory log; it only ever sees its own memories plus world facts explicitly tagged to its region/faction. No NPC can "know" something only another NPC experienced.
-- **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — initial target is Claude (Anthropic Messages API), swappable to [Player2](http://127.0.0.1:4315) (local) or others via runtime config, no code changes required. The Player2 adapter is deferred (ticket board epic 014) until after v1's Claude-backed definition of done.
+- **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — Claude (Anthropic Messages API) and [Player2](http://127.0.0.1:4315) (local) are both implemented, swappable via runtime config with no code changes required.
 
 ## Tech Stack
 
