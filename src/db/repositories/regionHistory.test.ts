@@ -6,7 +6,8 @@ import {
   createRegionHistoryEntry,
   listCompressionCandidates,
   listRegionHistoryByRegion,
-  markRegionHistoryCompressed
+  markRegionHistoryCompressed,
+  replaceRegionHistoryWithCompressedSummary
 } from './regionHistory'
 
 function seedRegion(db: ReturnType<typeof createTestDb>) {
@@ -90,5 +91,48 @@ describe('regionHistory repository: listCompressionCandidates', () => {
     const candidates = listCompressionCandidates(db, regionA.id, 10)
 
     expect(candidates.map((c) => c.id)).toEqual([candidateA.id])
+  })
+})
+
+describe('regionHistory repository: replaceRegionHistoryWithCompressedSummary', () => {
+  it('deletes the candidate entries and inserts one compressed summary row', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+
+    const first = createRegionHistoryEntry(db, {
+      regionId: region.id,
+      inGameDate: 1,
+      content: 'First old event'
+    })
+    const second = createRegionHistoryEntry(db, {
+      regionId: region.id,
+      inGameDate: 2,
+      content: 'Second old event'
+    })
+    const third = createRegionHistoryEntry(db, {
+      regionId: region.id,
+      inGameDate: 3,
+      content: 'Third old event'
+    })
+
+    const result = replaceRegionHistoryWithCompressedSummary(db, {
+      regionId: region.id,
+      candidateIds: [first.id, second.id, third.id],
+      summary: 'A condensed summary of three events.',
+      inGameDate: 3
+    })
+
+    expect(result.isCompressed).toBe(true)
+    expect(result.content).toBe('A condensed summary of three events.')
+
+    const remaining = listRegionHistoryByRegion(db, region.id)
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0]?.isCompressed).toBe(true)
+    expect(remaining[0]?.content).toBe('A condensed summary of three events.')
+
+    const remainingIds = remaining.map((entry) => entry.id)
+    expect(remainingIds).not.toContain(first.id)
+    expect(remainingIds).not.toContain(second.id)
+    expect(remainingIds).not.toContain(third.id)
   })
 })

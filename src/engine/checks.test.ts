@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveCheck } from './checks'
+import { clampDC, resolveCheck } from './checks'
 
 function fixedSequence(values: number[]): () => number {
   let index = 0
@@ -78,5 +78,19 @@ describe('resolveCheck advantage and disadvantage', () => {
       mode: 'disadvantage'
     })
     expect(result.roll).toBe(5)
+  })
+})
+
+describe('clampDC', () => {
+  it('passes a DC inside the sane range through unchanged', () => {
+    expect(clampDC(15)).toBe(15)
+  })
+
+  it('clamps a too-high DC down to the maximum', () => {
+    expect(clampDC(999)).toBe(30)
+  })
+
+  it('clamps a too-low DC up to the minimum', () => {
+    expect(clampDC(-5)).toBe(5)
   })
 })

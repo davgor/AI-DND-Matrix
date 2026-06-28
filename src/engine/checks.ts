@@ -17,6 +17,13 @@ export interface CheckResult {
   success: boolean
 }
 
+export const DC_MIN = 5
+export const DC_MAX = 30
+
+export function clampDC(dc: number): number {
+  return Math.min(DC_MAX, Math.max(DC_MIN, dc))
+}
+
 export function rollD20(rng: RandomFn): number {
   return Math.floor(rng() * 20) + 1
 }

@@ -93,3 +93,30 @@ export function listCompressionCandidates(
     .all(regionId, inGameDateThreshold) as RegionHistoryRow[]
   return rows.map(rowToEntry)
 }
+
+export interface ReplaceWithCompressedSummaryInput {
+  regionId: string
+  candidateIds: string[]
+  summary: string
+  inGameDate: number
+}
+
+export function replaceRegionHistoryWithCompressedSummary(
+  db: Database.Database,
+  input: ReplaceWithCompressedSummaryInput
+): RegionHistoryEntry {
+  const { regionId, candidateIds, summary, inGameDate } = input
+  const id = randomUUID()
+  const deleteStmt = db.prepare('DELETE FROM region_history WHERE id = ?')
+  const insertStmt = db.prepare(
+    `INSERT INTO region_history (id, region_id, in_game_date, content, is_compressed)
+     VALUES (?, ?, ?, ?, 1)`
+  )
+  db.transaction(() => {
+    for (const candidateId of candidateIds) {
+      deleteStmt.run(candidateId)
+    }
+    insertStmt.run(id, regionId, inGameDate, summary)
+  })()
+  return { id, regionId, inGameDate, content: summary, isCompressed: true }
+}
