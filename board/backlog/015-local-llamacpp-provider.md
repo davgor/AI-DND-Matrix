@@ -1,0 +1,7 @@
+# EPIC: Local AI provider adapter (llama.cpp-first)
+
+Build a local-first AI provider path that doesn't require a cloud API key for core gameplay: llama.cpp runs as a separate local process (owned by Electron's main process, never the renderer), exposed over loopback HTTP, and adapted behind the same provider interface Claude already implements — so model swap is a config change, not a code change. Research findings and recommended defaults live in [docs/research/llamacpp-local-runtime-2026-06-28.md](../../docs/research/llamacpp-local-runtime-2026-06-28.md).
+
+Broken down into sub-tickets 015.1-015.16. This epic is done when all of them are.
+
+015.1 llama.cpp local-process research spike · 015.2 local process lifecycle manager · 015.3 llama.cpp provider adapter · 015.4 local-provider config wiring + model swap · 015.5 local-provider retry/backoff + failure logging · 015.6 packaged local runtime wiring · 015.7 packaged local-provider manual smoke · 015.8 smoke parity: campaign generation (local) · 015.9 smoke parity: character + party creation (local) · 015.10 smoke parity: combat encounter (local) · 015.11 smoke parity: world-altering persistence (local) · 015.12 smoke parity: rest/level-up/homebrew (local) · 015.13 smoke parity: currency spend (local) · 015.14 smoke parity: NPC promotion (local) · 015.15 smoke parity: death mode execution (local) · 015.16 smoke parity: restart state integrity (local)
