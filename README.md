@@ -4,7 +4,28 @@ A single-player, text-adventure-style D&D desktop app (Electron + React + TypeSc
 
 ## Status
 
-Pre-implementation. See `/board` for the ticket backlog and the full design plan at the bottom of this README.
+Core gameplay loop (campaign generation, character creation, play, NPC promotion, packaging) is implemented; see `/board` for the ticket backlog and the full design plan at the bottom of this README.
+
+## Setup
+
+**Running the packaged app** (if someone sent you `AI D&D Matrix.exe`, start here):
+
+1. Place a `.env` file in the same folder as the `.exe` (see below for what it needs).
+2. Double-click `AI D&D Matrix.exe`. It's a portable build — no installer, no admin rights, nothing else to install.
+
+**Configuring a Claude API key** (the default, recommended provider):
+
+1. Get an API key from [console.anthropic.com](https://console.anthropic.com).
+2. Create a `.env` file (next to the `.exe` for a packaged build, or at the repo root for a dev checkout) with:
+   ```
+   AGENT_PROVIDER=claude
+   CLAUDE_API_KEY=sk-ant-...
+   ```
+3. `CLAUDE_MODEL` is optional and defaults to a current Claude model — only set it if you want a specific one.
+
+**Switching providers**: set `AGENT_PROVIDER` in `.env` to the provider name (e.g. `claude`) — no code changes or rebuild required. Player2 (a local LLM runner) is the planned second provider but its adapter is deferred (ticket board epic 014) until after v1; selecting it today will surface a clear "not implemented yet" error rather than failing silently.
+
+**Running from source** (for development): `npm install`, then `npm run dev` boots Electron + the React dev server + a dev SQLite file in one command. `npm run package` produces the distributable `.exe` in `release/`.
 
 ## Core Design
 

@@ -8,6 +8,7 @@
     "predev": "npm run rebuild:electron",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "prepackage": "npm run rebuild:electron",
     "package": "electron-vite build && electron-builder --win",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "oxlint src",
