@@ -6,7 +6,7 @@ describe('selectProvider', () => {
   it('routes calls to the provider selected by config, leaving the other untouched', async () => {
     const claudeMock = createMockProvider('claude response')
     const player2Mock = createMockProvider('player2 response')
-    const registry = { claude: claudeMock, player2: player2Mock }
+    const registry = { claude: claudeMock, player2: player2Mock, llamacpp: player2Mock }
 
     const result = await selectProvider('claude', registry).generate('hello')
 
@@ -19,7 +19,7 @@ describe('selectProvider', () => {
   it('routes calls to player2 when selected, leaving claude untouched', async () => {
     const claudeMock = createMockProvider('claude response')
     const player2Mock = createMockProvider('player2 response')
-    const registry = { claude: claudeMock, player2: player2Mock }
+    const registry = { claude: claudeMock, player2: player2Mock, llamacpp: player2Mock }
 
     const result = await selectProvider('player2', registry).generate('hi there')
 
@@ -35,10 +35,12 @@ describe('createProviderRegistry', () => {
     const registry = createProviderRegistry({
       claudeApiKey: 'test-key',
       claudeModel: 'claude-test',
-      player2BaseUrl: 'http://127.0.0.1:4315'
+      player2BaseUrl: 'http://127.0.0.1:4315',
+      llamaCppBaseUrl: 'http://127.0.0.1:8080'
     })
 
     expect(registry.claude).toBeDefined()
     expect(registry.player2).toBeDefined()
+    expect(registry.llamacpp).toBeDefined()
   })
 })

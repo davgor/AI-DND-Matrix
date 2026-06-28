@@ -9,13 +9,14 @@ import { setupGlobalErrorLogging } from './logger'
 import { registerNarrationLogHandlers } from './narrationLog'
 import { registerPromotionHandlers } from './promotionIpc'
 import { registerRecapHandlers } from './recapIpc'
+import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
 
 Menu.setApplicationMenu(null)
 loadConfig()
 setupGlobalErrorLogging()
 
-function createMainWindow(): void {
+function createMainWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -33,6 +34,7 @@ function createMainWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+  return mainWindow
 }
 
 function registerWindowControlHandlers(): void {
@@ -64,7 +66,13 @@ app.whenReady().then(() => {
   registerRecapHandlers()
   registerNarrationLogHandlers()
   registerPromotionHandlers()
-  createMainWindow()
+  const mainWindow = createMainWindow()
+  registerStartupHandlers(mainWindow)
+  void runStartupBoot()
+})
+
+app.on('before-quit', () => {
+  void shutdownStartupRuntime()
 })
 
 app.on('window-all-closed', () => {

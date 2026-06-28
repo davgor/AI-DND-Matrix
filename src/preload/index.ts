@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type {
   EditNpcDispositionInput,
   EditRegionDescriptionInput,
@@ -14,6 +14,7 @@ import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { TurnInput, TurnResult } from '../main/turnIpc'
 import type { PlayLogEntry } from '../main/narrationLog'
 import type { PromoteNpcInput } from '../main/promotionIpc'
+import type { StartupEventPayload, StartupProgressPayload } from '../shared/startup/types'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -60,14 +61,29 @@ const turn = {
   resolve: (input: TurnInput): Promise<TurnResult> => ipcRenderer.invoke('turn:resolve', input)
 }
 
+const startup = {
+  getState: (): Promise<StartupProgressPayload> => ipcRenderer.invoke('startup:getState'),
+  start: (): Promise<boolean> => ipcRenderer.invoke('startup:start'),
+  retry: (): Promise<boolean> => ipcRenderer.invoke('startup:retry'),
+  onEvent: (listener: (payload: StartupEventPayload) => void): (() => void) => {
+    const handler = (_event: IpcRendererEvent, payload: StartupEventPayload): void => {
+      listener(payload)
+    }
+    ipcRenderer.on('startup:event', handler)
+    return () => ipcRenderer.removeListener('startup:event', handler)
+  }
+}
+
 contextBridge.exposeInMainWorld('windowControls', windowControls)
 contextBridge.exposeInMainWorld('campaigns', campaigns)
 contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('turn', turn)
+contextBridge.exposeInMainWorld('startup', startup)
 
 export type WindowControls = typeof windowControls
 export type CampaignsApi = typeof campaigns
 export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type TurnApi = typeof turn
+export type StartupApi = typeof startup

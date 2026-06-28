@@ -7,6 +7,8 @@ import { MainPanel } from './mainPanel/MainPanel'
 import { PlayView } from './playView/PlayView'
 import { Sidebar } from './sidebar/Sidebar'
 import { Titlebar } from './titlebar/Titlebar'
+import { LoadingScreen } from './startup/LoadingScreen'
+import { useStartupBoot } from './startup/useStartupBoot'
 
 type Stage = 'main' | 'review' | 'characterSetup'
 
@@ -42,8 +44,10 @@ function StageContent(props: StageContentProps): JSX.Element {
 }
 
 export function App(): JSX.Element {
+  const boot = useStartupBoot()
   const [detail, setDetail] = useState<CampaignDetail | null>(null)
   const [stage, setStage] = useState<Stage>('main')
+  const ready = boot.phase === 'ready'
 
   function handleSelected(next: CampaignDetail): void {
     setDetail(next)
@@ -62,8 +66,17 @@ export function App(): JSX.Element {
     setStage('main')
   }
 
+  if (!ready) {
+    return (
+      <div className="app-root">
+        <Titlebar />
+        <LoadingScreen boot={boot} />
+      </div>
+    )
+  }
+
   return (
-    <div>
+    <div className="app-root">
       <Titlebar />
       <div className="app-body">
         <Sidebar
