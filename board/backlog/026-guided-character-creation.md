@@ -1,0 +1,11 @@
+# EPIC: Guided character creation (DM interview + opening scene)
+
+Replace the post-setup **Begin Adventure** one-shot with a two-phase, live DM conversation that happens **outside** the in-campaign four-column play shell. After the player finishes mechanical setup (stats, archetype, party, death mode, portraits) on the existing `CharacterSetup` screen, the primary action becomes **Tell me about yourself** — launching a single-thread chat UI where the DM agent interviews the player to capture four identity foundations: **Who** they are, **Why** they are (their purpose/motivation), **Where** they are, and **What** they are (nature, role, or defining traits). The DM may pose follow-up questions and probe with layered "why" questions within each foundation before marking that dimension satisfied.
+
+When all four foundations are complete, the DM's synthesized view is persisted on the player character record and a second action appears: **Help me set the stage** — another single-thread conversation where the player and DM negotiate the opening scene. Only after both phases complete does the app hand off into the normal in-campaign `PlayView`.
+
+This epic adds persistence for interview transcripts and DM-captured summaries, new agent prompts with structured completeness detection (same JSON-schema retry pattern as `dm.ts` / `campaignGeneration.ts`), onboarding stage extensions in `App.tsx`, and a dedicated pre-play conversation shell styled consistently with the tavern loading/onboarding UI — not the sidebar + play columns layout.
+
+Broken down into sub-tickets 026.1-026.10. This epic is done when all of them are.
+
+026.1 identity foundations spec + guided-creation persistence schema · 026.2 guided-creation transcript repository · 026.3 DM identity-interview agent prompt + completeness schema · 026.4 DM opening-scene negotiation agent prompt + schema · 026.5 onboarding stage machine + defer play entry until guided flow completes · 026.6 guided-creation IPC contract (renderer/main/preload) · 026.7 pre-play conversation shell UI (single-thread layout) · 026.8 identity phase: Tell me about yourself entry + foundation progress + sheet persistence · 026.9 opening-scene phase: Help me set the stage + scene persistence + play handoff · 026.10 character sheet identity/scene display + end-to-end smoke test
