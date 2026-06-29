@@ -14,7 +14,7 @@ import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { TurnInput, TurnResult } from '../main/turnIpc'
 import type { PlayLogEntry } from '../main/narrationLog'
 import type { PromoteNpcInput } from '../main/promotionIpc'
-import type { StartupEventPayload, StartupProgressPayload } from '../shared/startup/types'
+import type { StartupEventPayload } from '../shared/startup/types'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -62,7 +62,7 @@ const turn = {
 }
 
 const startup = {
-  getState: (): Promise<StartupProgressPayload> => ipcRenderer.invoke('startup:getState'),
+  getState: (): Promise<StartupEventPayload> => ipcRenderer.invoke('startup:getState'),
   start: (): Promise<boolean> => ipcRenderer.invoke('startup:start'),
   retry: (): Promise<boolean> => ipcRenderer.invoke('startup:retry'),
   onEvent: (listener: (payload: StartupEventPayload) => void): (() => void) => {

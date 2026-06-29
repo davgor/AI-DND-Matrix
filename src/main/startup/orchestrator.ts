@@ -23,6 +23,7 @@ export class StartupOrchestrator {
   private booting = false
   private handoffComplete = false
   private lastProgress: StartupProgressPayload | null = null
+  private lastFailure: StartupFailurePayload | null = null
 
   constructor(private readonly options: StartupOrchestratorOptions) {}
 
@@ -36,6 +37,10 @@ export class StartupOrchestrator {
 
   getLastProgress(): StartupProgressPayload | null {
     return this.lastProgress
+  }
+
+  getLastFailure(): StartupFailurePayload | null {
+    return this.lastFailure
   }
 
   getProgressPayload(
@@ -72,6 +77,7 @@ export class StartupOrchestrator {
       message: result.message,
       recoverable: result.recoverable
     }
+    this.lastFailure = payload
     this.options.onEvent(payload)
   }
 
@@ -82,6 +88,7 @@ export class StartupOrchestrator {
     if (this.booting) {
       return false
     }
+    this.lastFailure = null
     this.booting = true
     try {
       this.transition('booting')

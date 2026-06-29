@@ -68,7 +68,9 @@ app.whenReady().then(() => {
   registerPromotionHandlers()
   const mainWindow = createMainWindow()
   registerStartupHandlers(mainWindow)
-  void runStartupBoot()
+  mainWindow.webContents.once('did-finish-load', () => {
+    void runStartupBoot()
+  })
 })
 
 app.on('before-quit', () => {

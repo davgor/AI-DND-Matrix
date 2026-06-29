@@ -55,4 +55,8 @@ Validates epic 015: loading screen, DB boot stage, LLM boot stage, handoff to ap
 
 | Date | Mode | Provider | Result | Notes |
 |------|------|----------|--------|-------|
-| YYYY-MM-DD | dev | player2 | pass/fail | |
+| 2026-06-28 | dev (built Electron + CDP) | player2 | pass | `node scripts/startup-smoke.mjs --skip-package` |
+| 2026-06-28 | dev failure + retry (CDP) | player2 (dead port → stub server) | pass | Retry button recovers without app restart |
+| 2026-06-28 | packaged (`release/win-unpacked`) | player2 | pass | `node scripts/startup-smoke.mjs --packaged-only` after `npm run package` |
+
+Automated runner: `node scripts/startup-smoke.mjs` (full suite). Use `--skip-package` to skip portable build; `--packaged-only` to re-run packaged check only.

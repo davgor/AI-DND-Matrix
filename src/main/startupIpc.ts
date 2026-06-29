@@ -10,11 +10,11 @@ let orchestrator: StartupOrchestrator | undefined
 let llamaLifecycle: LlamaCppLifecycleManager | undefined
 let mainWindow: BrowserWindow | undefined
 
-function getSnapshot(): StartupProgressPayload {
+function getSnapshot(): StartupEventPayload {
   const current = orchestrator
-  if (!current?.getLastProgress()) {
+  if (!current) {
     return {
-      phase: current?.getPhase() ?? 'idle',
+      phase: 'idle',
       stageIndex: 0,
       stageTotal: 2,
       stage: null,
@@ -22,7 +22,20 @@ function getSnapshot(): StartupProgressPayload {
       progress: 0
     }
   }
-  return current.getLastProgress() as StartupProgressPayload
+  if (current.getPhase() === 'failed' && current.getLastFailure()) {
+    return current.getLastFailure() as StartupFailurePayload
+  }
+  if (current.getLastProgress()) {
+    return current.getLastProgress() as StartupProgressPayload
+  }
+  return {
+    phase: current.getPhase(),
+    stageIndex: 0,
+    stageTotal: 2,
+    stage: null,
+    statusText: 'Waiting to start',
+    progress: 0
+  }
 }
 
 function broadcast(payload: StartupEventPayload): void {

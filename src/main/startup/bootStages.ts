@@ -71,7 +71,7 @@ async function checkClaudeReadiness(config: AppConfig): Promise<BootStageResult>
 
 async function checkPlayer2Readiness(config: AppConfig, onStatus?: (text: string) => void): Promise<BootStageResult> {
   onStatus?.('Checking local narrative engine connection')
-  const reachable = await checkHttpReachable(config.player2BaseUrl, 5000)
+  const reachable = await checkHttpReachable(`${config.player2BaseUrl}/v1/models`, 5000)
   if (!reachable) {
     return {
       ok: false,

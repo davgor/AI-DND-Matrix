@@ -5,7 +5,7 @@
  */
 import 'dotenv/config'
 import { spawn } from 'node:child_process'
-import { copyFileSync, existsSync } from 'node:fs'
+import { copyFileSync, existsSync, readdirSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,6 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 const ELECTRON = join(ROOT, 'node_modules', 'electron', 'dist', 'electron.exe')
 const SKIP_PACKAGE = process.argv.includes('--skip-package')
+const PACKAGED_ONLY = process.argv.includes('--packaged-only')
 const DEAD_PORT = 59999
 
 const results = []
@@ -124,6 +125,14 @@ function spawnElectron(cdpPort, extraEnv = {}, cwd = ROOT) {
   })
 }
 
+function spawnPackagedExe(exePath, cdpPort, extraEnv = {}) {
+  return spawn(exePath, [`--remote-debugging-port=${cdpPort}`], {
+    cwd: dirname(exePath),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...extraEnv }
+  })
+}
+
 async function killProcess(child) {
   if (!child || child.exitCode !== null) {
     return
@@ -160,6 +169,11 @@ async function withCdp(child, cdpPort, fn) {
 }
 
 async function ensureBuilt() {
+  log('Rebuilding native modules for Electron...')
+  await new Promise((resolve, reject) => {
+    const proc = spawn('npm', ['run', 'rebuild:electron'], { cwd: ROOT, stdio: 'inherit', shell: true })
+    proc.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`rebuild:electron failed: ${code}`))))
+  })
   log('Building production bundle for smoke...')
   await new Promise((resolve, reject) => {
     const proc = spawn('npm', ['run', 'build'], { cwd: ROOT, stdio: 'inherit', shell: true })
@@ -178,7 +192,9 @@ function happyProviderEnv() {
 }
 
 async function observeBootToShell(cdp) {
-  await cdp.waitFor(`(() => !!document.querySelector('.loading-screen'))()`)
+  await cdp.waitFor(
+    `(() => !!document.querySelector('.loading-screen') || !!document.querySelector('.sidebar'))()`
+  )
   const stages = []
   const deadline = Date.now() + 60_000
   while (Date.now() < deadline) {
@@ -207,7 +223,10 @@ async function smokeDevHappy() {
     await withCdp(child, port, async (cdp) => {
       const final = await observeBootToShell(cdp)
       const pass = final.sidebar && !final.loading
-      record('dev happy path', pass, `stages=${final.stages.join(' → ')}`)
+      const failHint = await cdp.evaluate(
+        `document.querySelector('.loading-screen-status')?.textContent ?? ''`
+      )
+      record('dev happy path', pass, `stages=${final.stages.join(' → ')} status="${failHint}"`)
     })
   } finally {
     await killProcess(child)
@@ -256,9 +275,16 @@ async function smokeDevFailureRetry() {
 }
 
 async function ensurePackagedExe() {
-  const exe = join(ROOT, 'release', 'AI D&D Matrix.exe')
-  if (existsSync(exe)) {
-    return exe
+  const releaseDir = join(ROOT, 'release')
+  const unpacked = join(releaseDir, 'win-unpacked', 'AI D&D Matrix.exe')
+  if (existsSync(unpacked)) {
+    return unpacked
+  }
+  const portable = readdirSync(releaseDir)
+    .filter((name) => name.endsWith('.exe') && !name.includes('unpacked'))
+    .map((name) => join(releaseDir, name))[0]
+  if (portable && existsSync(portable)) {
+    return portable
   }
   if (SKIP_PACKAGE) {
     throw new Error('Packaged exe missing (pass --skip-package to skip)')
@@ -268,10 +294,10 @@ async function ensurePackagedExe() {
     const proc = spawn('npm', ['run', 'package'], { cwd: ROOT, stdio: 'inherit', shell: true })
     proc.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`package failed: ${code}`))))
   })
-  if (!existsSync(exe)) {
-    throw new Error(`Missing ${exe}`)
+  if (!portable || !existsSync(portable)) {
+    throw new Error(`No portable .exe found in ${releaseDir}`)
   }
-  return exe
+  return portable
 }
 
 async function smokePackagedHappy() {
@@ -282,7 +308,7 @@ async function smokePackagedHappy() {
     copyFileSync(join(ROOT, '.env'), envPath)
   }
   const port = 9335
-  const child = spawnElectron(port, happyProviderEnv(), releaseDir)
+  const child = spawnPackagedExe(exe, port, happyProviderEnv())
   try {
     await withCdp(child, port, async (cdp) => {
       const final = await observeBootToShell(cdp)
@@ -296,10 +322,18 @@ async function smokePackagedHappy() {
 async function main() {
   const provider = happyProviderEnv().AGENT_PROVIDER
   log(`Happy-path provider: ${provider}`)
-  await ensureBuilt()
-  await smokeDevHappy()
-  await smokeDevFailureRetry()
-  await smokePackagedHappy()
+  if (!PACKAGED_ONLY) {
+    await ensureBuilt()
+  }
+  if (!PACKAGED_ONLY) {
+    await smokeDevHappy()
+    await smokeDevFailureRetry()
+  }
+  if (SKIP_PACKAGE) {
+    log('Skipping packaged smoke (--skip-package)')
+  } else {
+    await smokePackagedHappy()
+  }
 
   console.log('\n--- Startup smoke summary ---')
   for (const r of results) {
