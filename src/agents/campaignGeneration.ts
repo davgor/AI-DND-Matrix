@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import { createCampaign, type Campaign, type DeathMode } from '../db/repositories/campaigns'
+import { createCampaign, type Campaign, type DeathMode, type RespawnRules } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createRegionHistoryEntry } from '../db/repositories/regionHistory'
@@ -137,9 +137,10 @@ export interface CampaignSetupInput {
   name: string
   premisePrompt: string
   deathMode: DeathMode
+  respawnRules?: RespawnRules | null
 }
 
-function persistGeneratedCampaign(
+export function persistGeneratedCampaign(
   db: Database.Database,
   input: CampaignSetupInput,
   generation: CampaignGenerationResult
@@ -147,7 +148,8 @@ function persistGeneratedCampaign(
   const campaign = createCampaign(db, {
     name: input.name,
     premisePrompt: input.premisePrompt,
-    deathMode: input.deathMode
+    deathMode: input.deathMode,
+    respawnRules: input.respawnRules ?? null
   })
 
   const regionIdsByName = new Map<string, string>()

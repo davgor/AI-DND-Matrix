@@ -18,6 +18,9 @@ import { touchLastPlayed } from '../db/repositories/sessions'
 import { loadConfig } from './config'
 import { logger } from './logger'
 import { getDb } from './db'
+import { createElectronSecretCodec, getSettingsFilePath, loadSettingsOrNull } from './settingsStore'
+import { resolveProviderRegistryConfig } from './settingsRuntime'
+import { DEFAULT_PROVIDER_SETTINGS } from '../shared/settings/types'
 
 const NEW_CAMPAIGN_NAME_LENGTH = 40
 
@@ -50,9 +53,11 @@ export function selectCampaign(db: Database.Database, campaignId: string): Campa
 }
 
 export function buildAgentProvider(): Provider {
-  const config = loadConfig()
-  const registry = createProviderRegistry(config)
-  return withRetry(selectProvider(config.agentProvider, registry), logger)
+  const envConfig = loadConfig()
+  const persisted = loadSettingsOrNull(getSettingsFilePath(), createElectronSecretCodec(), DEFAULT_PROVIDER_SETTINGS)
+  const resolved = resolveProviderRegistryConfig(envConfig, persisted)
+  const registry = createProviderRegistry(resolved)
+  return withRetry(selectProvider(resolved.agentProvider, registry), logger)
 }
 
 export async function generateCampaignFromPrompt(

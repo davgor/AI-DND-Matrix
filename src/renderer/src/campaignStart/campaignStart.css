@@ -1,0 +1,116 @@
+.campaign-start-overlay {
+  position: fixed;
+  inset: 32px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 8, 12, 0.72);
+  z-index: 20;
+}
+
+.campaign-start-modal {
+  width: min(520px, 92vw);
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(244, 232, 210, 0.18);
+  background: #12161d;
+  color: #f4e8d2;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.campaign-start-modal h2 {
+  margin: 0 0 1rem;
+}
+
+.campaign-start-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.campaign-start-field input,
+.campaign-start-field textarea {
+  border: 1px solid rgba(244, 232, 210, 0.2);
+  border-radius: 8px;
+  background: #0d1016;
+  color: #f4e8d2;
+  padding: 0.55rem 0.65rem;
+}
+
+.campaign-start-optional {
+  color: #b9a98c;
+  font-size: 0.85rem;
+}
+
+.campaign-start-field-error,
+.campaign-start-flow-error {
+  color: #f0b2a5;
+  margin: 0 0 0.75rem;
+}
+
+.campaign-start-fieldset {
+  border: 1px solid rgba(244, 232, 210, 0.15);
+  border-radius: 8px;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+}
+
+.campaign-start-radio {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.campaign-start-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.campaign-start-actions button {
+  border: 1px solid #c9a66b;
+  background: rgba(201, 166, 107, 0.12);
+  color: #f4e8d2;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+}
+
+.campaign-start-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.campaign-start-loading {
+  text-align: center;
+}
+
+.campaign-start-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(244, 232, 210, 0.12);
+  margin-top: 1rem;
+}
+
+.campaign-start-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b5a2b, #d4a15a);
+}
+
+.campaign-start-progress-indeterminate {
+  width: 40%;
+  animation: campaign-start-progress-slide 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes campaign-start-progress-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(160%);
+  }
+}

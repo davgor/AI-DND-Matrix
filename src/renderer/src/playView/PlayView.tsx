@@ -1,42 +1,53 @@
-import { CharacterSheet } from '../characterSheet/CharacterSheet'
-import { DmNarrationPanel } from './DmNarrationPanel'
-import { PlayerActionPanel } from './PlayerActionPanel'
+import { useEffect } from 'react'
+import { useSidebarController } from '../sidebar/useSidebarController'
+import { usePlayerSheetCollapse } from '../characterSheet/PlayerSheetRail'
+import { useInCampaignLayoutMode } from '../inCampaign/useInCampaignLayoutMode'
 import { PromotionPrompt } from './PromotionPrompt'
 import { RecapBanner } from './RecapBanner'
+import { InCampaignPlayColumns, type PlayViewCampaignProps } from './InCampaignPlayColumns'
 import { usePlayViewController } from './usePlayViewController'
 import './playView.css'
 
-export interface PlayViewProps {
+export interface PlayViewProps extends PlayViewCampaignProps {
   campaignId: string
   characterId: string
+  sidebarRef?: { current: ReturnType<typeof useSidebarController> | null }
 }
 
 export function PlayView(props: PlayViewProps): JSX.Element {
   const controller = usePlayViewController(props.campaignId, props.characterId)
-  const dmEntries = controller.log.filter((entry) => entry.speaker !== 'player')
-  const playerEntries = controller.log.filter((entry) => entry.speaker === 'player')
+  const layoutMode = useInCampaignLayoutMode()
+  const sheetCollapse = usePlayerSheetCollapse()
+  const campaignsController = useSidebarController({
+    onCampaignSelected: props.onCampaignSelected,
+    onOpenNewCampaign: props.onOpenNewCampaign
+  })
+
+  useEffect(() => {
+    if (props.sidebarRef) {
+      props.sidebarRef.current = campaignsController
+    }
+  }, [campaignsController, props.sidebarRef])
 
   return (
-    <div className="play-view">
-      <RecapBanner recap={controller.recap} />
-      <PromotionPrompt promotion={controller.promotion} />
-      <button type="button" className="play-view-sheet-toggle" onClick={controller.toggleSheet}>
-        Character Sheet
-      </button>
-      <DmNarrationPanel
-        entries={dmEntries}
-        showRolls={controller.showRolls}
-        onToggleShowRolls={controller.toggleShowRolls}
-        lastCheck={controller.lastCheck}
+    <>
+      <InCampaignPlayColumns
+        layoutMode={layoutMode}
+        campaignsController={campaignsController}
+        selectedCampaignId={props.selectedCampaignId}
+        onOpenNewCampaign={props.onOpenNewCampaign}
+        controller={controller}
+        campaignId={props.campaignId}
+        characterId={props.characterId}
+        sheetCollapsed={sheetCollapse.collapsed}
+        onToggleSheet={sheetCollapse.toggleCollapsed}
+        overlays={
+          <>
+            <RecapBanner recap={controller.recap} />
+            <PromotionPrompt promotion={controller.promotion} />
+          </>
+        }
       />
-      <PlayerActionPanel
-        entries={playerEntries}
-        inputValue={controller.inputValue}
-        onInputChange={controller.setInputValue}
-        onSubmit={() => void controller.submitAction()}
-        submitting={controller.submitting}
-      />
-      <CharacterSheet campaignId={props.campaignId} isOpen={controller.sheetOpen} onClose={controller.closeSheet} />
-    </div>
+    </>
   )
 }

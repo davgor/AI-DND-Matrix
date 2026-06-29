@@ -1,10 +1,12 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { DeleteCampaignResult } from '../shared/campaignDelete/types'
 import type {
   EditNpcDispositionInput,
   EditRegionDescriptionInput,
   SetDeathModeInput
 } from '../main/campaignEditIpc'
 import type { CampaignDetail } from '../main/campaignIpc'
+import type { CreateCampaignRequest, CreateCampaignProgress } from '../shared/campaignCreate/types'
 import type {
   CreatePartyMembersInput,
   CreatePlayerCharacterInput
@@ -15,6 +17,12 @@ import type { TurnInput, TurnResult } from '../main/turnIpc'
 import type { PlayLogEntry } from '../main/narrationLog'
 import type { PromoteNpcInput } from '../main/promotionIpc'
 import type { StartupEventPayload } from '../shared/startup/types'
+import type {
+  ConnectionCheckResult,
+  ProviderSettings,
+  RedactedProviderSettings,
+  SaveProviderSettingsInput
+} from '../shared/settings/types'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -28,6 +36,15 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:select', campaignId),
   generate: (premisePrompt: string): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:generate', premisePrompt),
+  create: (request: CreateCampaignRequest): Promise<CreateCampaignResult> =>
+    ipcRenderer.invoke('campaigns:create', request),
+  onCreateProgress: (listener: (payload: CreateCampaignProgress) => void): (() => void) => {
+    const handler = (_event: IpcRendererEvent, payload: CreateCampaignProgress): void => {
+      listener(payload)
+    }
+    ipcRenderer.on('campaignCreate:progress', handler)
+    return () => ipcRenderer.removeListener('campaignCreate:progress', handler)
+  },
   setDeathMode: (input: SetDeathModeInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:setDeathMode', input),
   editRegionDescription: (input: EditRegionDescriptionInput): Promise<CampaignDetail> =>
@@ -39,7 +56,9 @@ const campaigns = {
   getNarrationLog: (campaignId: string): Promise<PlayLogEntry[]> =>
     ipcRenderer.invoke('campaigns:getNarrationLog', campaignId),
   confirmPromotion: (input: PromoteNpcInput): Promise<CampaignDetail> =>
-    ipcRenderer.invoke('campaigns:confirmPromotion', input)
+    ipcRenderer.invoke('campaigns:confirmPromotion', input),
+  delete: (campaignId: string): Promise<DeleteCampaignResult> =>
+    ipcRenderer.invoke('campaigns:delete', campaignId)
 }
 
 const files = {
@@ -74,12 +93,23 @@ const startup = {
   }
 }
 
+const settings = {
+  get: (): Promise<RedactedProviderSettings> => ipcRenderer.invoke('settings:get'),
+  save: (input: SaveProviderSettingsInput): Promise<RedactedProviderSettings> =>
+    ipcRenderer.invoke('settings:save', input),
+  testPlayer2Connection: (baseUrl: string): Promise<ConnectionCheckResult> =>
+    ipcRenderer.invoke('settings:testPlayer2Connection', baseUrl),
+  checkLlamaRuntime: (config: ProviderSettings): Promise<ConnectionCheckResult> =>
+    ipcRenderer.invoke('settings:checkLlamaRuntime', config)
+}
+
 contextBridge.exposeInMainWorld('windowControls', windowControls)
 contextBridge.exposeInMainWorld('campaigns', campaigns)
 contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('turn', turn)
 contextBridge.exposeInMainWorld('startup', startup)
+contextBridge.exposeInMainWorld('settings', settings)
 
 export type WindowControls = typeof windowControls
 export type CampaignsApi = typeof campaigns
@@ -87,3 +117,4 @@ export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type TurnApi = typeof turn
 export type StartupApi = typeof startup
+export type SettingsApi = typeof settings

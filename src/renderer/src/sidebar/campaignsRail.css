@@ -1,0 +1,93 @@
+.campaigns-rail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 13px;
+}
+
+.campaigns-rail-collapsed {
+  align-items: center;
+}
+
+.campaigns-rail-toggle {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  height: 28px;
+  width: 100%;
+}
+
+.campaigns-rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.campaigns-rail-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.campaigns-rail-button:hover {
+  background: #393c43;
+}
+
+.campaigns-rail-button-active {
+  background: #42464d;
+}
+
+.campaigns-rail-name {
+  font-weight: 600;
+}
+
+.campaigns-rail-last-played {
+  font-size: 11px;
+  color: #96989d;
+}
+
+.campaigns-rail-new {
+  padding: 8px;
+}
+
+.campaigns-rail-new-button {
+  width: 100%;
+}
+
+.campaigns-rail-quick-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.campaigns-rail-chip {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: #393c43;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.campaigns-rail-chip-active {
+  background: #5865f2;
+}
+
+.campaigns-rail-chip-more {
+  color: #96989d;
+}

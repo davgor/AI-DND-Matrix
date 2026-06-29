@@ -1,10 +1,22 @@
+import { useState } from 'react'
+import { SettingsView } from '../settings/SettingsView'
 import './titlebar.css'
 
 export function Titlebar(): JSX.Element {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   return (
     <div className="titlebar">
       <div className="titlebar-drag-region">AI D&D Matrix</div>
       <div className="titlebar-controls">
+        <button
+          type="button"
+          aria-label="Settings"
+          className="titlebar-button"
+          onClick={() => setSettingsOpen(true)}
+        >
+          &#9881;
+        </button>
         <button
           type="button"
           aria-label="Minimize"
@@ -30,6 +42,7 @@ export function Titlebar(): JSX.Element {
           &#10005;
         </button>
       </div>
+      {settingsOpen && <SettingsView onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }

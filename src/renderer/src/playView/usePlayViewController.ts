@@ -1,28 +1,29 @@
-import { useState } from 'react'
-import type { TurnResult } from '../../../main/turnIpc'
+import {
+  filterDmExpositionEntries,
+  filterPlayerInteractionEntries
+} from '../../../shared/inCampaignLayout/sceneContext'
 import { usePlayLog, type PlayLogController } from './usePlayLog'
 import { useRollVisibility, type RollVisibilityController } from './useRollVisibility'
 import { useSessionRecap, type SessionRecapController } from './useSessionRecap'
 import { usePromotionPrompt, type PromotionPromptController } from './usePromotionPrompt'
+import { useTurnSubmission } from './useTurnSubmission'
 
 export interface PlayViewController extends RollVisibilityController, PlayLogController {
+  dmEntries: ReturnType<typeof filterDmExpositionEntries>
+  playerEntries: ReturnType<typeof filterPlayerInteractionEntries>
   inputValue: string
   setInputValue: (value: string) => void
   submitting: boolean
   submitAction: () => Promise<void>
-  lastCheck: TurnResult['check'] | null
-  sheetOpen: boolean
-  toggleSheet: () => void
-  closeSheet: () => void
+  lastCheck: ReturnType<typeof useTurnSubmission>['lastCheck']
+  expositionStatus: ReturnType<typeof useTurnSubmission>['expositionStatus']
+  retryExposition: () => void
+  characterRefreshToken: number
   recap: SessionRecapController
   promotion: PromotionPromptController
 }
 
 export function usePlayViewController(campaignId: string, characterId: string): PlayViewController {
-  const [inputValue, setInputValue] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [lastCheck, setLastCheck] = useState<TurnResult['check'] | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
   const rollVisibility = useRollVisibility()
   const recap = useSessionRecap(campaignId)
   const playLog = usePlayLog(campaignId, (entries) => {
@@ -31,34 +32,14 @@ export function usePlayViewController(campaignId: string, characterId: string): 
     }
   })
   const promotion = usePromotionPrompt(campaignId, () => void playLog.refreshLog())
-
-  async function submitAction(): Promise<void> {
-    if (!inputValue.trim() || submitting) {
-      return
-    }
-    setSubmitting(true)
-    try {
-      const result = await window.turn.resolve({ campaignId, characterId, playerInput: inputValue })
-      setInputValue('')
-      setLastCheck(result.check ?? null)
-      promotion.setProposed(result.proposedPromotion ?? null)
-      await playLog.refreshLog()
-    } finally {
-      setSubmitting(false)
-    }
-  }
+  const turn = useTurnSubmission({ campaignId, characterId, playLog, promotion })
 
   return {
-    inputValue,
-    setInputValue,
-    submitting,
-    submitAction,
+    dmEntries: filterDmExpositionEntries(playLog.log),
+    playerEntries: filterPlayerInteractionEntries(playLog.log),
+    ...turn,
     ...rollVisibility,
     ...playLog,
-    lastCheck,
-    sheetOpen,
-    toggleSheet: () => setSheetOpen((open) => !open),
-    closeSheet: () => setSheetOpen(false),
     recap,
     promotion
   }

@@ -1,0 +1,86 @@
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.settings-panel {
+  background: #36393f;
+  color: #dcddde;
+  width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-provider-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid #42464d;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.settings-provider-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-field-error {
+  color: #ed4245;
+  font-size: 12px;
+  margin: 0;
+}
+
+.settings-check-ok {
+  color: #3ba55d;
+  font-size: 12px;
+}
+
+.settings-check-failed {
+  color: #ed4245;
+  font-size: 12px;
+}
+
+.settings-secret-badge {
+  font-size: 11px;
+  color: #3ba55d;
+  margin-left: 6px;
+}
+
+.settings-discard-confirm {
+  background: #42464d;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

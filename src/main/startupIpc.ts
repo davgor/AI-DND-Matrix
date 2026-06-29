@@ -4,7 +4,7 @@ import { loadConfig } from './config'
 import { LlamaCppLifecycleManager } from './llamacpp/lifecycle'
 import { createDbBootStage, createLlmBootStage } from './startup/bootStages'
 import { StartupOrchestrator } from './startup/orchestrator'
-import type { StartupEventPayload, StartupProgressPayload } from '../shared/startup/types'
+import type { StartupEventPayload, StartupFailurePayload, StartupProgressPayload } from '../shared/startup/types'
 
 let orchestrator: StartupOrchestrator | undefined
 let llamaLifecycle: LlamaCppLifecycleManager | undefined

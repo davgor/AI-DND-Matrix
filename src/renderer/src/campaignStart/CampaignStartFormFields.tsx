@@ -1,0 +1,108 @@
+import type { DeathMode } from '../../../shared/campaignCreate/types'
+import type { CampaignStartFlow } from './useCampaignStartFlow'
+
+const DEATH_MODES: DeathMode[] = ['legendary', 'standard', 'respawn']
+
+function CampaignStartIdentityFields(props: { flow: CampaignStartFlow }): JSX.Element {
+  const { flow } = props
+  return (
+    <>
+      <label className="campaign-start-field">
+        Campaign name <span className="campaign-start-optional">(optional)</span>
+        <input
+          type="text"
+          value={flow.form.name}
+          disabled={flow.submitting}
+          onChange={(event) => flow.updateForm({ name: event.target.value })}
+        />
+      </label>
+      <label className="campaign-start-field">
+        Premise
+        <textarea
+          value={flow.form.premisePrompt}
+          disabled={flow.submitting}
+          rows={4}
+          onChange={(event) => flow.updateForm({ premisePrompt: event.target.value })}
+        />
+      </label>
+      {flow.fieldError ? <p className="campaign-start-field-error">{flow.fieldError}</p> : null}
+    </>
+  )
+}
+
+function CampaignStartDeathModeFields(props: { flow: CampaignStartFlow }): JSX.Element {
+  const { flow } = props
+  return (
+    <>
+      <fieldset className="campaign-start-fieldset" disabled={flow.submitting}>
+        <legend>Death mode</legend>
+        {DEATH_MODES.map((mode) => (
+          <label key={mode} className="campaign-start-radio">
+            <input
+              type="radio"
+              name="deathMode"
+              checked={flow.form.deathMode === mode}
+              onChange={() => flow.updateForm({ deathMode: mode })}
+            />
+            {mode}
+          </label>
+        ))}
+      </fieldset>
+      {flow.form.deathMode === 'respawn' ? (
+        <label className="campaign-start-field">
+          Respawn location
+          <input
+            type="text"
+            value={flow.form.respawnLocation}
+            disabled={flow.submitting}
+            onChange={(event) => flow.updateForm({ respawnLocation: event.target.value })}
+          />
+        </label>
+      ) : null}
+    </>
+  )
+}
+
+export function CampaignStartFormFields(props: {
+  flow: CampaignStartFlow
+  isError: boolean
+}): JSX.Element {
+  const { flow, isError } = props
+  return (
+    <>
+      <h2 id="campaign-start-title">{isError ? 'Campaign creation failed' : 'New campaign'}</h2>
+      {isError && flow.flowError ? <p className="campaign-start-flow-error">{flow.flowError}</p> : null}
+      <CampaignStartIdentityFields flow={flow} />
+      <CampaignStartDeathModeFields flow={flow} />
+    </>
+  )
+}
+
+export function CampaignStartFormActions(props: {
+  flow: CampaignStartFlow
+  isError: boolean
+  onSubmit: () => void
+}): JSX.Element {
+  const { flow, isError, onSubmit } = props
+  return (
+    <div className="campaign-start-actions">
+      <button type="button" disabled={flow.submitting} onClick={() => flow.close()}>
+        Cancel
+      </button>
+      {isError ? (
+        <button type="button" disabled={flow.submitting} onClick={onSubmit}>
+          Retry
+        </button>
+      ) : null}
+      {isError ? (
+        <button type="button" disabled={flow.submitting} onClick={() => flow.backToForm()}>
+          Edit form
+        </button>
+      ) : (
+        <button type="button" disabled={flow.submitting} onClick={onSubmit}>
+          Create campaign
+        </button>
+      )}
+    </div>
+  )
+}

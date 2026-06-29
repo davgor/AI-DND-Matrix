@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'node:path'
 import { registerCampaignEditHandlers } from './campaignEditIpc'
+import { registerCampaignDeleteHandlers } from './campaignDeleteIpc'
+import { registerCampaignCreateHandlers } from './campaignCreateIpc'
 import { registerCampaignHandlers } from './campaignIpc'
 import { registerCharacterCreationHandlers } from './characterCreationIpc'
 import { loadConfig } from './config'
@@ -9,6 +11,7 @@ import { setupGlobalErrorLogging } from './logger'
 import { registerNarrationLogHandlers } from './narrationLog'
 import { registerPromotionHandlers } from './promotionIpc'
 import { registerRecapHandlers } from './recapIpc'
+import { registerSettingsHandlers } from './settingsIpc'
 import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
 
@@ -59,6 +62,7 @@ function registerWindowControlHandlers(): void {
 app.whenReady().then(() => {
   registerWindowControlHandlers()
   registerCampaignHandlers()
+  registerCampaignDeleteHandlers()
   registerCampaignEditHandlers()
   registerFileUploadHandlers()
   registerCharacterCreationHandlers()
@@ -66,8 +70,10 @@ app.whenReady().then(() => {
   registerRecapHandlers()
   registerNarrationLogHandlers()
   registerPromotionHandlers()
+  registerSettingsHandlers()
   const mainWindow = createMainWindow()
   registerStartupHandlers(mainWindow)
+  registerCampaignCreateHandlers(mainWindow)
   mainWindow.webContents.once('did-finish-load', () => {
     void runStartupBoot()
   })
