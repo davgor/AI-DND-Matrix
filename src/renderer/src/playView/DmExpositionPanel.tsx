@@ -3,7 +3,8 @@ import type { TurnResult } from '../../../main/turnIpc'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { PendingAlignmentShift } from '../../../shared/alignment/types'
 import { pickCurrentSceneText } from '../../../shared/inCampaignLayout/sceneContext'
-import { AlignmentShiftWarningBanner, renderNpcLine } from './dmExpositionParts'
+import { FormattedText } from '../shared/FormattedText'
+import { AlignmentShiftWarningBanner, renderFeedLine } from './dmExpositionParts'
 
 export interface DmExpositionPanelProps {
   entries: PlayLogEntry[]
@@ -45,7 +46,7 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
         ) : null}
         <div className="dm-exposition-scene" aria-live="polite">
           {sceneText ? (
-            <p className="dm-exposition-scene-text">{sceneText}</p>
+            FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: sceneText })
           ) : (
             <p className="dm-exposition-scene-empty">No scene set yet — act to begin.</p>
           )}
@@ -58,9 +59,7 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
       <div className="play-view-log dm-exposition-feed">
         {props.entries.map((entry) => (
           <p key={entry.id} className="play-view-log-entry">
-            {entry.speaker === 'npc' || entry.speaker === 'partyMember'
-              ? renderNpcLine(entry)
-              : entry.text}
+            {renderFeedLine(entry)}
           </p>
         ))}
         {props.showRolls && props.lastCheck ? (

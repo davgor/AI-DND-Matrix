@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import type { PendingAlignmentShift } from '../shared/alignment/types'
+import { stripActionMarkers, wrapActionDescription } from '../shared/alignment/types'
 import type Database from 'better-sqlite3'
 import type { AbilityScores, RandomFn } from '../engine/abilities'
 import { decidePartyMemberAction, assemblePartyMemberContext } from '../agents/partyMember'
@@ -12,6 +13,8 @@ import {
   type IntentInterpretation,
   type NarrationResult
 } from '../agents/dm'
+import { reviewTurn } from '../agents/turnReview'
+import type { TurnBeat, TurnRoutingPlan } from '../shared/turnRouting/types'
 import type { Provider } from '../agents/providers/types'
 import { computeAC } from '../engine/armorClass'
 import { getEquippedArmorTier, getEquippedWeaponDamageRoll } from '../db/repositories/characterItems'
@@ -75,6 +78,7 @@ export interface ProposedPromotion {
 
 export interface TurnResult {
   narrationText: string
+  playerActionText?: string
   check?: { roll: number; total: number; dc: number; success: boolean }
   hpAfter?: number
   inGameDateAfter?: number
@@ -220,49 +224,51 @@ function resolveNpcAttackAgainstPlayer(
   return { hit: true, damage, resolution }
 }
 
-interface NpcReactionsContext {
+interface TargetedNpcReactionInput {
   campaignId: string
   player: Character
-  narrationResult: NarrationResult
+  npcId: string
+  sceneNarration: string
   rng: RandomFn
 }
 
-async function resolveNpcReactions(
+async function resolveTargetedNpcReaction(
   db: Database.Database,
   provider: Provider,
-  context: NpcReactionsContext
-): Promise<NpcReactionResult[]> {
-  const results: NpcReactionResult[] = []
-  for (const npcId of context.narrationResult.reactingNpcIds ?? []) {
-    const npc = getNpcById(db, npcId)
-    if (!npc) {
-      continue
-    }
-    const npcContext = assembleNpcContext(db, npc)
-    const reaction = await generateNpcReaction(provider, npc, npcContext, context.narrationResult.narrationText)
-    appendNpcMemory(db, { npcId, content: reaction.text, tags: [] })
-    appendEvent(db, {
-      campaignId: context.campaignId,
-      type: 'npc_reaction',
-      payload: {
-        npcId,
-        text: reaction.text,
-        reactionKind: reaction.reactionKind,
-        attack: Boolean(reaction.attack)
-      }
-    })
-    const attackResult = reaction.attack
-      ? resolveNpcAttackAgainstPlayer(db, context.player, context.rng)
-      : undefined
-    results.push({
-      npcId,
-      npcName: npc.name,
+  input: TargetedNpcReactionInput
+): Promise<NpcReactionResult | undefined> {
+  const npc = getNpcById(db, input.npcId)
+  if (!npc) {
+    return undefined
+  }
+  const npcContext = assembleNpcContext(db, npc)
+  const reaction = await generateNpcReaction(
+    provider,
+    npc,
+    npcContext,
+    input.sceneNarration
+  )
+  appendNpcMemory(db, { npcId: input.npcId, content: reaction.text, tags: [] })
+  appendEvent(db, {
+    campaignId: input.campaignId,
+    type: 'npc_reaction',
+    payload: {
+      npcId: input.npcId,
       text: reaction.text,
       reactionKind: reaction.reactionKind,
-      attackResult
-    })
+      attack: Boolean(reaction.attack)
+    }
+  })
+  const attackResult = reaction.attack
+    ? resolveNpcAttackAgainstPlayer(db, input.player, input.rng)
+    : undefined
+  return {
+    npcId: input.npcId,
+    npcName: npc.name,
+    text: reaction.text,
+    reactionKind: reaction.reactionKind,
+    attackResult
   }
-  return results
 }
 
 async function resolvePartyMemberActions(
@@ -299,82 +305,220 @@ interface ResolvedCheckOutcome {
   roll: number | undefined
 }
 
-function recordPlayerCheckAction(
+function appendPlayerAuditEvent(
   db: Database.Database,
   input: {
     campaignId: string
-    character: Character
+    characterId: string
     playerInput: string
     resolved: ResolvedCheckOutcome
-    narrationText: string
   }
 ): void {
   appendEvent(db, {
     campaignId: input.campaignId,
     type: 'player_action',
     payload: {
-      characterId: input.character.id,
+      characterId: input.characterId,
       playerInput: input.playerInput,
+      outcome: input.resolved.outcome,
+      auditOnly: true
+    }
+  })
+}
+
+function appendPlayerActionExpressionEvent(
+  db: Database.Database,
+  input: {
+    campaignId: string
+    characterId: string
+    playerInput: string
+    actionDescription: string
+  }
+): void {
+  appendEvent(db, {
+    campaignId: input.campaignId,
+    type: 'player_action_expression',
+    payload: {
+      characterId: input.characterId,
+      playerInput: input.playerInput,
+      actionDescription: wrapActionDescription(input.actionDescription)
+    }
+  })
+}
+
+function appendDmNarrationEvent(
+  db: Database.Database,
+  input: {
+    campaignId: string
+    characterId: string
+    narrationText: string
+    resolved: ResolvedCheckOutcome
+  }
+): void {
+  appendEvent(db, {
+    campaignId: input.campaignId,
+    type: 'player_action',
+    payload: {
+      characterId: input.characterId,
       outcome: input.resolved.outcome,
       narrationText: input.narrationText
     }
   })
 }
 
-async function assembleCheckTurnResult(
+interface BeatExecutionState {
+  narrationText: string
+  playerActionText?: string
+  narrationResult?: NarrationResult
+  npcReactions: NpcReactionResult[]
+  partyMemberActions: PartyMemberActionResult[]
+  sceneContext: string
+}
+
+async function executeNpcResponseBeat(
   db: Database.Database,
   provider: Provider,
-  campaignId: string,
+  beat: Extract<TurnBeat, { kind: 'npcResponse' }>,
   input: {
-    character: Character
-    playerInput: string
-    resolved: ResolvedCheckOutcome
-    narrationResult: NarrationResult
+    campaignId: string
+    player: Character
     rng: RandomFn
+    state: BeatExecutionState
   }
-): Promise<TurnResult> {
-  const { character, playerInput, resolved, narrationResult, rng } = input
-  recordPlayerCheckAction(db, {
-    campaignId,
-    character,
-    playerInput,
-    resolved,
-    narrationText: narrationResult.narrationText
-  })
-
-  const npcReactions = await resolveNpcReactions(db, provider, {
-    campaignId,
-    player: character,
-    narrationResult,
-    rng
-  })
-  const partyMemberActions = await resolvePartyMemberActions(
-    db,
-    provider,
-    campaignId,
-    narrationResult.narrationText
-  )
-
-  createSaveSnapshot(db, campaignId)
-
-  return {
-    narrationText: narrationResult.narrationText,
-    check: resolved.rolled
-      ? {
-          roll: resolved.roll as number,
-          total: resolved.outcome.total,
-          dc: resolved.outcome.dc,
-          success: resolved.outcome.success
-        }
-      : undefined,
-    npcReactions,
-    partyMemberActions,
-    proposedPromotion: resolveProposedPromotion(db, narrationResult.proposedPromotionNpcId),
-    ...buildTurnResultExtras(db, character.id, narrationResult.commitAlignmentShift?.newAlignment)
+): Promise<void> {
+  for (const npcId of beat.npcIds) {
+    const reaction = await resolveTargetedNpcReaction(db, provider, {
+      campaignId: input.campaignId,
+      player: input.player,
+      npcId,
+      sceneNarration: input.state.sceneContext,
+      rng: input.rng
+    })
+    if (reaction) {
+      input.state.npcReactions.push(reaction)
+    }
   }
 }
 
-async function resolveCheckTurn(
+async function executeDmNarrationBeat(
+  db: Database.Database,
+  provider: Provider,
+  input: {
+    campaignId: string
+    regionId: string
+    character: Character
+    resolved: ResolvedCheckOutcome
+    narrationContext: ReturnType<typeof assembleNarrationContext>
+    state: BeatExecutionState
+  }
+): Promise<void> {
+  const narrationResult = await narrate(provider, input.resolved.outcome, input.narrationContext)
+  persistNarrationSideEffects(db, narrationResult, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    characterId: input.character.id
+  })
+  appendDmNarrationEvent(db, {
+    campaignId: input.campaignId,
+    characterId: input.character.id,
+    narrationText: narrationResult.narrationText,
+    resolved: input.resolved
+  })
+  input.state.narrationResult = narrationResult
+  input.state.narrationText = narrationResult.narrationText
+  input.state.sceneContext = input.state.sceneContext
+    ? `${input.state.sceneContext} ${narrationResult.narrationText}`
+    : narrationResult.narrationText
+}
+
+function executePlayerActionExpressionBeat(
+  db: Database.Database,
+  beat: Extract<TurnBeat, { kind: 'playerActionExpression' }>,
+  input: {
+    campaignId: string
+    character: Character
+    playerInput: string
+    state: BeatExecutionState
+  }
+): void {
+  const wrapped = wrapActionDescription(beat.actionDescription)
+  const expressed = stripActionMarkers(wrapped)
+  appendPlayerActionExpressionEvent(db, {
+    campaignId: input.campaignId,
+    characterId: input.character.id,
+    playerInput: input.playerInput,
+    actionDescription: beat.actionDescription
+  })
+  input.state.playerActionText = expressed
+  input.state.sceneContext = input.state.sceneContext
+    ? `${input.state.sceneContext} ${expressed}`
+    : expressed
+}
+
+async function executePartyMemberBeat(
+  db: Database.Database,
+  provider: Provider,
+  input: {
+    campaignId: string
+    state: BeatExecutionState
+  }
+): Promise<void> {
+  const actions = await resolvePartyMemberActions(
+    db,
+    provider,
+    input.campaignId,
+    input.state.sceneContext
+  )
+  input.state.partyMemberActions.push(...actions)
+}
+
+async function executeRoutingBeats(
+  db: Database.Database,
+  provider: Provider,
+  plan: TurnRoutingPlan,
+  input: {
+    campaignId: string
+    regionId: string
+    character: Character
+    playerInput: string
+    resolved: ResolvedCheckOutcome
+    narrationContext: ReturnType<typeof assembleNarrationContext>
+    rng: RandomFn
+  }
+): Promise<BeatExecutionState> {
+  const state: BeatExecutionState = {
+    narrationText: '',
+    npcReactions: [],
+    partyMemberActions: [],
+    sceneContext: ''
+  }
+
+  for (const beat of plan.beats) {
+    if (beat.kind === 'playerActionExpression') {
+      executePlayerActionExpressionBeat(db, beat, {
+        campaignId: input.campaignId,
+        character: input.character,
+        playerInput: input.playerInput,
+        state
+      })
+    } else if (beat.kind === 'dmNarration') {
+      await executeDmNarrationBeat(db, provider, { ...input, state })
+    } else if (beat.kind === 'npcResponse') {
+      await executeNpcResponseBeat(db, provider, beat, {
+        campaignId: input.campaignId,
+        player: input.character,
+        rng: input.rng,
+        state
+      })
+    } else if (beat.kind === 'partyMember') {
+      await executePartyMemberBeat(db, provider, { campaignId: input.campaignId, state })
+    }
+  }
+
+  return state
+}
+
+async function resolveRoutedTurn(
   db: Database.Database,
   provider: Provider,
   campaignId: string,
@@ -390,20 +534,50 @@ async function resolveCheckTurn(
     characterId: character.id,
     playerInput
   })
-  const narrationResult = await narrate(provider, resolved.outcome, narrationContext)
-  persistNarrationSideEffects(db, narrationResult, {
-    campaignId,
-    regionId,
-    characterId: character.id
+  const routingPlan = await reviewTurn(provider, {
+    ...narrationContext,
+    intent,
+    checkOutcome: resolved.rolled ? resolved.outcome : undefined
   })
 
-  return assembleCheckTurnResult(db, provider, campaignId, {
+  appendPlayerAuditEvent(db, { campaignId, characterId: character.id, playerInput, resolved })
+
+  const state = await executeRoutingBeats(db, provider, routingPlan, {
+    campaignId,
+    regionId,
     character,
     playerInput,
     resolved,
-    narrationResult,
+    narrationContext,
     rng
   })
+
+  createSaveSnapshot(db, campaignId)
+  return buildRoutedTurnResult(db, character.id, resolved, state)
+}
+
+function buildRoutedTurnResult(
+  db: Database.Database,
+  characterId: string,
+  resolved: ResolvedCheckOutcome,
+  state: BeatExecutionState
+): TurnResult {
+  return {
+    narrationText: state.narrationText,
+    playerActionText: state.playerActionText,
+    check: resolved.rolled
+      ? {
+          roll: resolved.roll as number,
+          total: resolved.outcome.total,
+          dc: resolved.outcome.dc,
+          success: resolved.outcome.success
+        }
+      : undefined,
+    npcReactions: state.npcReactions,
+    partyMemberActions: state.partyMemberActions,
+    proposedPromotion: resolveProposedPromotion(db, state.narrationResult?.proposedPromotionNpcId),
+    ...buildTurnResultExtras(db, characterId, state.narrationResult?.commitAlignmentShift?.newAlignment)
+  }
 }
 
 function resolveProposedPromotion(
@@ -481,7 +655,7 @@ export async function resolvePlayerTurn(
     })
   }
 
-  return resolveCheckTurn(db, provider, turnInput.campaignId, {
+  return resolveRoutedTurn(db, provider, turnInput.campaignId, {
     character,
     intent,
     playerInput: turnInput.playerInput,

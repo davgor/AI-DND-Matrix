@@ -5,7 +5,7 @@ import { appendEvent } from '../db/repositories/events'
 import { buildNarrationLog } from './narrationLog'
 
 describe('buildNarrationLog', () => {
-  it('splits a player_action event into a player entry and a dm entry', () => {
+  it('maps legacy player_action events with playerInput and narrationText', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
     appendEvent(db, {
@@ -17,8 +17,52 @@ describe('buildNarrationLog', () => {
     const log = buildNarrationLog(db, campaign.id)
 
     expect(log).toEqual([
-      expect.objectContaining({ speaker: 'player', text: 'I sneak past' }),
+      expect.objectContaining({ speaker: 'player', text: 'I sneak past', playerLineKind: 'raw' }),
       expect.objectContaining({ speaker: 'dm', text: 'You slip by unseen.' })
+    ])
+  })
+
+  it('hides audit-only player_action events from the feed', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'player_action',
+      payload: { characterId: 'c1', playerInput: 'secret', auditOnly: true }
+    })
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'player_action',
+      payload: { characterId: 'c1', narrationText: 'The door creaks open.' }
+    })
+
+    const log = buildNarrationLog(db, campaign.id)
+
+    expect(log).toEqual([expect.objectContaining({ speaker: 'dm', text: 'The door creaks open.' })])
+  })
+
+  it('maps player_action_expression to bold player lines without raw input', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'player_action_expression',
+      payload: {
+        characterId: 'c1',
+        playerInput: 'I draw my sword',
+        actionDescription: '**Kael draws his sword.**'
+      }
+    })
+
+    const log = buildNarrationLog(db, campaign.id)
+
+    expect(log).toEqual([
+      expect.objectContaining({
+        speaker: 'player',
+        text: 'Kael draws his sword.',
+        playerLineKind: 'actionExpression',
+        reactionKind: 'action'
+      })
     ])
   })
 

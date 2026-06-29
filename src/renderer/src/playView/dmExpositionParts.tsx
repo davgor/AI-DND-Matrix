@@ -1,5 +1,6 @@
 import type { PendingAlignmentShift } from '../../../shared/alignment/types'
 import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/types'
+import { FormattedText } from '../shared/FormattedText'
 
 export interface AlignmentShiftWarningBannerProps {
   pending: PendingAlignmentShift
@@ -27,9 +28,27 @@ export function AlignmentShiftWarningBanner(
 
 function renderNpcLine(entry: { reactionKind?: string; text: string }): JSX.Element {
   if (entry.reactionKind === 'action') {
-    return <strong>{entry.text}</strong>
+    return (
+      <strong>
+        {FormattedText({ text: entry.text })}
+      </strong>
+    )
   }
-  return <em>{entry.text}</em>
+  return (
+    <em>
+      {FormattedText({ text: entry.text })}
+    </em>
+  )
 }
 
-export { renderNpcLine }
+function renderFeedLine(entry: { speaker: string; reactionKind?: string; playerLineKind?: string; text: string }): JSX.Element {
+  if (entry.speaker === 'player' && entry.playerLineKind === 'actionExpression') {
+    return <strong>{entry.text}</strong>
+  }
+  if (entry.speaker === 'npc' || entry.speaker === 'partyMember') {
+    return renderNpcLine(entry)
+  }
+  return <>{entry.text}</>
+}
+
+export { renderNpcLine, renderFeedLine }

@@ -25,4 +25,21 @@ describe('scene context helpers', () => {
     expect(filterDmExpositionEntries(ENTRIES)).toHaveLength(3)
     expect(filterPlayerInteractionEntries(ENTRIES)).toHaveLength(1)
   })
+
+  it('includes player action expression in exposition and keeps raw input in player feed', () => {
+    const entries = [
+      { id: '1', timestamp: 't1', speaker: 'player' as const, text: 'I draw my sword', playerLineKind: 'raw' as const },
+      {
+        id: '2',
+        timestamp: 't2',
+        speaker: 'player' as const,
+        text: 'Kael draws his sword.',
+        playerLineKind: 'actionExpression' as const
+      },
+      { id: '3', timestamp: 't3', speaker: 'dm' as const, text: 'Steel flashes.' }
+    ]
+    expect(filterDmExpositionEntries(entries)).toHaveLength(2)
+    expect(filterPlayerInteractionEntries(entries)).toHaveLength(1)
+    expect(filterPlayerInteractionEntries(entries)[0]?.text).toBe('I draw my sword')
+  })
 })

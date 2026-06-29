@@ -1,4 +1,5 @@
 import { LOG_CATEGORIES, type LogEntry } from '../../../shared/logBook/types'
+import { FormattedText } from '../shared/FormattedText'
 import { LOG_CATEGORY_LABELS, groupLogEntriesByCategory } from './logBookGrouping'
 
 export interface CharacterLogBookSectionsProps {
@@ -23,7 +24,7 @@ export function CharacterLogBookSections(props: CharacterLogBookSectionsProps): 
                     <strong>{entry.title}</strong>
                     <span className="character-log-book-date">Day {entry.learnedInGameDate}</span>
                   </div>
-                  <p>{entry.content}</p>
+                  {FormattedText({ as: 'p', text: entry.content })}
                 </li>
               ))}
             </ul>

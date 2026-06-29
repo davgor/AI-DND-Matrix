@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { AlignmentShiftWarningBanner, renderNpcLine } from './dmExpositionParts'
+import { AlignmentShiftWarningBanner, renderFeedLine, renderNpcLine } from './dmExpositionParts'
+import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
 
 describe('AlignmentShiftWarningBanner', () => {
   it('renders alert role and warning copy when a shift is pending', () => {
@@ -21,11 +22,45 @@ describe('AlignmentShiftWarningBanner', () => {
   })
 })
 
+describe('renderFeedLine', () => {
+  it('renders player action expression in bold and hides raw player lines from dm feed path', () => {
+    const action = renderFeedLine({
+      speaker: 'player',
+      playerLineKind: 'actionExpression',
+      text: 'Kael draws his sword.'
+    })
+    expect(action.type).toBe('strong')
+    expect(action.props.children).toBe('Kael draws his sword.')
+  })
+
+  it('renders italic npc dialogue and bold creature actions', () => {
+    const dialogue = renderFeedLine({ speaker: 'npc', reactionKind: 'dialogue', text: 'Hello.' })
+    const creature = renderFeedLine({ speaker: 'npc', reactionKind: 'action', text: 'The wolf lunges.' })
+
+    expect(dialogue.type).toBe('em')
+    expect(creature.type).toBe('strong')
+  })
+})
+
 describe('renderNpcLine', () => {
   it('renders dialogue in italics and actions in bold', () => {
     const dialogue = renderNpcLine({ reactionKind: 'dialogue', text: 'Hello.' })
     const action = renderNpcLine({ reactionKind: 'action', text: 'The wolf lunges.' })
 
+    expect(dialogue.type).toBe('em')
+    expect(dialogue.props.children.type).toBeDefined()
+    expect(action.type).toBe('strong')
+    expect(action.props.children.type).toBeDefined()
+  })
+
+  it('renders inline emphasis inside dialogue and action lines', () => {
+    const dialogue = renderNpcLine({ reactionKind: 'dialogue', text: 'I *never* lie.' })
+    const action = renderNpcLine({ reactionKind: 'action', text: 'The wolf **snarls**.' })
+
+    const dialogueInner = dialogue.props.children as JSX.Element
+    const actionInner = action.props.children as JSX.Element
+    expect(hasEmphasisTypes(dialogueInner, ['em'])).toBe(true)
+    expect(hasEmphasisTypes(actionInner, ['strong'])).toBe(true)
     expect(dialogue.type).toBe('em')
     expect(action.type).toBe('strong')
   })

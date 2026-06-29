@@ -7,6 +7,7 @@ import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from './turnIpc'
+import { buildNarrationLog } from './narrationLog'
 
 function fixedRng(value: number) {
   return () => value
@@ -27,6 +28,10 @@ function seedCampaignWithPlayer() {
     stats: { abilityScores: { body: 12, agility: 14, mind: 10, presence: 10 }, ac: 12 }
   })
   return { db, campaign, region, player }
+}
+
+function routingPlan(...beats: object[]) {
+  return JSON.stringify({ disposition: 'composite', beats })
 }
 
 describe('resolvePlayerTurn: rest and travel branches', () => {
@@ -65,11 +70,12 @@ describe('resolvePlayerTurn: rest and travel branches', () => {
   })
 })
 
-describe('resolvePlayerTurn: standard check turn', () => {
-  it('rolls a check, narrates the outcome, and persists the player_action event', async () => {
+describe('resolvePlayerTurn: routed check turn', () => {
+  it('rolls a check, narrates when the plan includes dmNarration, and persists events', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
     const provider = createScriptedProvider([
       '{"checkNeeded":true,"ability":"agility","dc":10,"proficient":false}',
+      routingPlan({ kind: 'dmNarration' }),
       '{"narrationText":"You slip past unseen."}'
     ])
 
@@ -83,13 +89,65 @@ describe('resolvePlayerTurn: standard check turn', () => {
     expect(result.check).toBeDefined()
     expect(result.narrationText).toBe('You slip past unseen.')
     expect(result.pendingAlignmentShift).toBeNull()
-    const events = listEventsByCampaign(db, campaign.id, { type: 'player_action' })
-    expect(events).toHaveLength(1)
+    const audit = listEventsByCampaign(db, campaign.id, { type: 'player_action' })
+    expect(audit.some((event) => event.payload['auditOnly'] === true)).toBe(true)
+    expect(audit.some((event) => event.payload['narrationText'] === 'You slip past unseen.')).toBe(true)
+  })
+
+  it('skips narration when the routing plan omits dmNarration', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      '{"checkNeeded":false}',
+      routingPlan({ kind: 'npcResponse', npcIds: [npc.id] }),
+      '{"dialogue":"What do you need?"}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
+      fixedRng(0.5)
+    )
+
+    expect(result.narrationText).toBe('')
+    expect(result.npcReactions).toHaveLength(1)
+    expect(result.npcReactions[0]?.text).toBe('What do you need?')
+    expect(provider.calls).toHaveLength(3)
+  })
+
+  it('expresses a player physical action as bold prose when the plan includes playerActionExpression', async () => {
+    const { db, campaign, player } = seedCampaignWithPlayer()
+    const provider = createScriptedProvider([
+      '{"checkNeeded":false}',
+      routingPlan({
+        kind: 'playerActionExpression',
+        actionDescription: 'Kael draws his sword.'
+      })
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I draw my sword' },
+      fixedRng(0.5)
+    )
+
+    expect(result.playerActionText).toBe('Kael draws his sword.')
+    const expressionEvents = listEventsByCampaign(db, campaign.id, { type: 'player_action_expression' })
+    expect(expressionEvents).toHaveLength(1)
+    expect(expressionEvents[0]?.payload['playerInput']).toBe('I draw my sword')
   })
 })
 
 describe('resolvePlayerTurn: NPC reactions and combat', () => {
-  it('generates a reacting NPC and applies a hit that can drop the player to 0 HP', async () => {
+  it('generates a targeted NPC from the routing plan and applies a hit', async () => {
     const { db, campaign, region, player } = seedCampaignWithPlayer()
     const npc = createNpc(db, {
       campaignId: campaign.id,
@@ -101,7 +159,7 @@ describe('resolvePlayerTurn: NPC reactions and combat', () => {
     db.prepare('UPDATE characters SET hp = 10 WHERE id = ?').run(player.id)
     const provider = createScriptedProvider([
       '{"checkNeeded":false}',
-      `{"narrationText":"The bandit lunges.","reactingNpcIds":["${npc.id}"]}`,
+      routingPlan({ kind: 'npcResponse', npcIds: [npc.id] }),
       '{"dialogue":"Die!","attack":true}'
     ])
 
@@ -120,6 +178,33 @@ describe('resolvePlayerTurn: NPC reactions and combat', () => {
     expect(reloaded?.hp).toBe(0)
     expect((reloaded!.stats as { dyingState?: unknown }).dyingState).toBeDefined()
   })
+
+  it('renders non-speaking creature actions from the routing plan', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const wolf = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Wolf',
+      role: 'beast',
+      disposition: 'hostile',
+      canSpeak: false
+    })
+    const provider = createScriptedProvider([
+      '{"checkNeeded":false}',
+      routingPlan({ kind: 'npcResponse', npcIds: [wolf.id] }),
+      JSON.stringify({ actionDescription: '**The wolf lunges.**' })
+    ])
+
+    await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I approach' },
+      fixedRng(0.5)
+    )
+
+    const actionLine = buildNarrationLog(db, campaign.id).find((entry) => entry.reactionKind === 'action')
+    expect(actionLine?.text).toBe('The wolf lunges.')
+  })
 })
 
 describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
@@ -134,6 +219,7 @@ describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
     })
     const provider = createScriptedProvider([
       '{"checkNeeded":false}',
+      routingPlan({ kind: 'dmNarration' }),
       `{"narrationText":"Mira considers your offer.","proposedPromotionNpcId":"${npc.id}"}`
     ])
 
@@ -150,8 +236,8 @@ describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
   })
 })
 
-describe('resolvePlayerTurn: AI party member autonomous actions', () => {
-  it('generates an action for each AI party member without player direction', async () => {
+describe('resolvePlayerTurn: AI party member routing', () => {
+  it('runs party members only when the plan includes a partyMember beat', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
     createCharacter(db, {
       campaignId: campaign.id,
@@ -162,6 +248,7 @@ describe('resolvePlayerTurn: AI party member autonomous actions', () => {
     })
     const provider = createScriptedProvider([
       '{"checkNeeded":false}',
+      routingPlan({ kind: 'dmNarration' }, { kind: 'partyMember' }),
       '{"narrationText":"Nothing much happens."}',
       '{"actionText":"Brom scouts ahead."}'
     ])
@@ -173,8 +260,42 @@ describe('resolvePlayerTurn: AI party member autonomous actions', () => {
       fixedRng(0.5)
     )
 
-    expect(result.partyMemberActions).toEqual([{ characterId: expect.any(String), name: 'Brom', actionText: 'Brom scouts ahead.' }])
+    expect(result.partyMemberActions).toEqual([
+      { characterId: expect.any(String), name: 'Brom', actionText: 'Brom scouts ahead.' }
+    ])
     expect(result.pendingAlignmentShift).toBeNull()
+  })
+
+  it('skips party members on converse-only NPC turns', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'guard',
+      disposition: 'friendly'
+    })
+    createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Brom',
+      characterClass: 'ranger',
+      kind: 'ai_party_member'
+    })
+    const provider = createScriptedProvider([
+      '{"checkNeeded":false}',
+      routingPlan({ kind: 'npcResponse', npcIds: [npc.id] }),
+      '{"dialogue":"Evening."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Good evening' },
+      fixedRng(0.5)
+    )
+
+    expect(result.partyMemberActions).toHaveLength(0)
+    expect(provider.calls).toHaveLength(3)
   })
 })
 

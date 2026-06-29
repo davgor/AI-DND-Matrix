@@ -17,6 +17,7 @@ import type { EmergentDirectionCandidate } from '../engine/emergentDirection'
 import { takeRecent } from './contextWindow'
 import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
+import { NARRATIVE_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
 import { listEventsByCampaign, type Event } from '../db/repositories/events'
 import { listNpcsByRegion } from '../db/repositories/npcs'
 import { getRegionById, type RegionStatus } from '../db/repositories/regions'
@@ -206,15 +207,16 @@ function buildNarrationPrompt(outcome: CheckOutcome, context: NarrationContext):
     `Region status: ${JSON.stringify(context.regionStatus)}`,
     `Recent events: ${JSON.stringify(context.recentEvents)}`,
     `Story thread: ${JSON.stringify(context.storyThreadState)}`,
-    `NPCs present in this region (pick reacting NPCs, or a recruitment proposal, only from these exact ids): ${JSON.stringify(context.presentNpcs)}`,
+    `NPCs present in this region (recruitment proposals only from these exact ids): ${JSON.stringify(context.presentNpcs)}`,
     logBookSection,
-    'Respond ONLY with JSON: {"narrationText":string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"reactingNpcIds"?:string[],"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean}',
+    'Respond ONLY with JSON: {"narrationText":string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean}',
     'A world_fact is always recorded against the current region automatically — do not try to specify which region, you have no way to know its id.',
     'Only set "proposedPromotionNpcId" when the player\'s words clearly imply recruiting that NPC into the party (e.g. asking them to join, offering them a place at their side) — the player must confirm before anything actually happens.',
     'Set "alignmentShiftWarning" only when the player\'s action seriously threatens their current alignment — include proposedAlignment and warningText telling them they may no longer be their alignment if they continue. Do not shift alignment on warning alone.',
     'If a pending alignment shift warning is active and the player continues with the morally consequential action, set "commitAlignmentShift" with newAlignment (usually matching the proposed alignment). If they back down, set "clearAlignmentShiftWarning" to true instead.',
     'Add logBookEntries when the scene reveals something the player character would remember (a new place, person, creature, item, or notable event). Never invent mechanical numbers for items — use itemGrants for loot instead.',
-    'Optional "journalEntry": a short informal first-person note the player character might jot in their diary after a major beat (quest completion, a notable NPC encounter, a significant choice). Write in their own voice, like personal notes — not a combat log. Omit for routine combat, minor exchanges, or turns where nothing memorable happened.'
+    'Optional "journalEntry": a short informal first-person note the player character might jot in their diary after a major beat (quest completion, a notable NPC encounter, a significant choice). Write in their own voice, like personal notes — not a combat log. Omit for routine combat, minor exchanges, or turns where nothing memorable happened.',
+    NARRATIVE_EMPHASIS_GUIDANCE
   ].join('\n')
 }
 

@@ -1,4 +1,5 @@
 import type { Character } from '../../../db/repositories/characters'
+import { FormattedText } from '../shared/FormattedText'
 import { useCharacterJournal } from './useCharacterJournal'
 import './characterJournal.css'
 
@@ -18,7 +19,7 @@ export function CharacterJournalSection(props: CharacterJournalSectionProps): JS
         ) : (
           journal.entries.map((entry) => (
             <article key={entry.id} className="character-journal-entry">
-              <p>{entry.content}</p>
+              {FormattedText({ as: 'p', text: entry.content })}
               <footer>Day {entry.inGameDate}</footer>
             </article>
           ))

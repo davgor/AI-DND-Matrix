@@ -11,9 +11,11 @@ export function pickCurrentSceneText(entries: PlayLogEntry[]): string | null {
 }
 
 export function filterDmExpositionEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
-  return entries.filter((entry) => entry.speaker !== 'player')
+  return entries.filter(
+    (entry) => entry.speaker !== 'player' || entry.playerLineKind === 'actionExpression'
+  )
 }
 
 export function filterPlayerInteractionEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
-  return entries.filter((entry) => entry.speaker === 'player')
+  return entries.filter((entry) => entry.speaker === 'player' && entry.playerLineKind !== 'actionExpression')
 }

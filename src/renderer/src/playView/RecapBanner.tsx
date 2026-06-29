@@ -1,3 +1,4 @@
+import { FormattedText } from '../shared/FormattedText'
 import type { SessionRecapController } from './useSessionRecap'
 
 export interface RecapBannerProps {
@@ -13,7 +14,7 @@ export function RecapBanner(props: RecapBannerProps): JSX.Element | null {
   if (recap.text) {
     return (
       <div className="play-view-recap">
-        <p>{recap.text}</p>
+        {FormattedText({ as: 'p', text: recap.text })}
         <button type="button" onClick={recap.skip}>
           Continue
         </button>

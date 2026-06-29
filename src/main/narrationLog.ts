@@ -6,6 +6,7 @@ import { listEventsByCampaign, type Event } from '../db/repositories/events'
 import { getDb } from './db'
 
 export type LogSpeaker = 'dm' | 'player' | 'npc' | 'partyMember'
+export type PlayerLineKind = 'raw' | 'actionExpression'
 
 export interface PlayLogEntry {
   id: string
@@ -13,13 +14,72 @@ export interface PlayLogEntry {
   speaker: LogSpeaker
   text: string
   reactionKind?: NpcReactionKind
+  playerLineKind?: PlayerLineKind
+}
+
+function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as {
+    auditOnly?: boolean
+    playerInput?: string
+    narrationText?: string
+    actionDescription?: string
+  }
+  if (payload.auditOnly) {
+    return []
+  }
+  const entries: PlayLogEntry[] = []
+  if (payload.actionDescription) {
+    entries.push({
+      id: `${event.id}-action`,
+      timestamp: event.timestamp,
+      speaker: 'player',
+      text: stripActionMarkers(payload.actionDescription),
+      playerLineKind: 'actionExpression',
+      reactionKind: 'action'
+    })
+  } else if (payload.playerInput) {
+    entries.push({
+      id: `${event.id}-player`,
+      timestamp: event.timestamp,
+      speaker: 'player',
+      text: payload.playerInput,
+      playerLineKind: 'raw'
+    })
+  }
+  if (payload.narrationText) {
+    entries.push({ id: `${event.id}-dm`, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText })
+  }
+  return entries
+}
+
+function playerActionExpressionEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as { actionDescription?: string }
+  if (typeof payload.actionDescription !== 'string') {
+    return []
+  }
+  return [
+    {
+      id: event.id,
+      timestamp: event.timestamp,
+      speaker: 'player',
+      text: stripActionMarkers(payload.actionDescription),
+      playerLineKind: 'actionExpression',
+      reactionKind: 'action'
+    }
+  ]
 }
 
 function playerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
   const payload = event.payload as { playerInput?: string; narrationText?: string }
   const entries: PlayLogEntry[] = []
   if (payload.playerInput) {
-    entries.push({ id: `${event.id}-player`, timestamp: event.timestamp, speaker: 'player', text: payload.playerInput })
+    entries.push({
+      id: `${event.id}-player`,
+      timestamp: event.timestamp,
+      speaker: 'player',
+      text: payload.playerInput,
+      playerLineKind: 'raw'
+    })
   }
   if (payload.narrationText) {
     entries.push({ id: `${event.id}-dm`, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText })
@@ -53,9 +113,22 @@ function npcReactionEntries(event: Event): PlayLogEntry[] {
   ]
 }
 
+function dmNarrationOnlyEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as { narrationText?: string; auditOnly?: boolean }
+  if (payload.auditOnly || typeof payload.narrationText !== 'string') {
+    return []
+  }
+  return [{ id: event.id, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText }]
+}
+
 function eventToLogEntries(event: Event): PlayLogEntry[] {
   switch (event.type) {
-    case 'player_action':
+    case 'player_action_expression':
+      return playerActionExpressionEntries(event)
+    case 'player_action': {
+      const legacy = legacyPlayerInputAndNarrationEntries(event)
+      return legacy.length > 0 ? legacy : dmNarrationOnlyEntries(event)
+    }
     case 'rest':
     case 'travel':
       return playerInputAndNarrationEntries(event)
