@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import type { CreateCampaignResult } from '../main/campaignCreateIpc'
 import type { DeleteCampaignResult } from '../shared/campaignDelete/types'
 import type {
   EditNpcDispositionInput,
