@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { APP_DISPLAY_NAME } from '../../../shared/appBranding'
 import { SettingsView } from '../settings/SettingsView'
 import './titlebar.css'
 
@@ -7,7 +8,7 @@ export function Titlebar(): JSX.Element {
 
   return (
     <div className="titlebar">
-      <div className="titlebar-drag-region">AI D&D Matrix</div>
+      <div className="titlebar-drag-region">{APP_DISPLAY_NAME}</div>
       <div className="titlebar-controls">
         <button
           type="button"

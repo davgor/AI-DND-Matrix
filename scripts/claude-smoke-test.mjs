@@ -22,7 +22,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
     model,
     max_tokens: 256,
     messages: [
-      { role: 'user', content: 'Say hello in one sentence, in character as a fantasy dungeon master.' }
+      { role: 'user', content: 'Say hello in one sentence, in character as a fantasy game master.' }
     ]
   })
 })

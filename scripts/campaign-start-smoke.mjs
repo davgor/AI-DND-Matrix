@@ -10,6 +10,7 @@ import { createServer } from 'node:http'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as sleep } from 'node:timers/promises'
+import { APP_EXE_NAME } from './appProduct.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -392,7 +393,7 @@ async function smokeDevFailureRetry() {
 
 async function ensurePackagedExe() {
   const releaseDir = join(ROOT, 'release')
-  const unpacked = join(releaseDir, 'win-unpacked', 'AI D&D Matrix.exe')
+  const unpacked = join(releaseDir, 'win-unpacked', APP_EXE_NAME)
   if (existsSync(unpacked)) {
     return unpacked
   }

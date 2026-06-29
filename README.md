@@ -1,6 +1,6 @@
-# AI D&D Matrix
+# AI TTRPG Matrix
 
-A single-player, text-adventure-style D&D desktop app (Electron + React + TypeScript). Two cooperating AI agents run the game — a **DM agent** that sets scenes, drives the plot, and designs encounters, and **NPC/party-member agents** that roleplay individual characters and enemies. Campaigns are generated from a free-text prompt and then played; world state is durable and causally consistent — if you burn down a village, every later scene remembers it's gone.
+A single-player, text-adventure-style TTRPG desktop app (Electron + React + TypeScript). Two cooperating AI agents run the game — a **DM agent** that sets scenes, drives the plot, and designs encounters, and **NPC/party-member agents** that roleplay individual characters and enemies. Campaigns are generated from a free-text prompt and then played; world state is durable and causally consistent — if you burn down a village, every later scene remembers it's gone.
 
 ## Status
 
@@ -8,10 +8,10 @@ Core gameplay loop (campaign generation, character creation, play, NPC promotion
 
 ## Setup
 
-**Running the packaged app** (if someone sent you `AI D&D Matrix.exe`, start here):
+**Running the packaged app** (if someone sent you `AI TTRPG Matrix.exe`, start here):
 
 1. Place a `.env` file in the same folder as the `.exe` (see below for what it needs).
-2. Double-click `AI D&D Matrix.exe`. It's a portable build — no installer, no admin rights, nothing else to install.
+2. Double-click `AI TTRPG Matrix.exe`. It's a portable build — no installer, no admin rights, nothing else to install.
 
 **Configuring a Claude API key** (the default, recommended provider):
 
@@ -63,7 +63,7 @@ Electron security baseline (from the first scaffold, not retrofitted): `contextI
 
 ## Rules Engine
 
-A custom, simplified 5E-like ruleset, fully deterministic and unit-tested — agents narrate outcomes, they never invent them.
+A custom, simplified tabletop RPG-inspired ruleset, fully deterministic and unit-tested — agents narrate outcomes, they never invent them.
 
 - **Four abilities**: Body (STR+CON), Agility (DEX), Mind (INT+WIS), Presence (CHA). Modifier = `floor((score-10)/2)`. Score generation: point buy, standard array, or roll-for-stats — player's choice.
 - **Core resolution**: `d20 + ability modifier + (proficiency bonus if proficient) vs DC/AC`, with advantage/disadvantage (roll 2d20, take higher/lower). No separate skill list — the DM agent flags an ability + a proficiency boolean per check from context; the engine owns the actual bonus amount.

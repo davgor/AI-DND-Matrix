@@ -16,7 +16,7 @@ async function probeChatCompletion() {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       messages: [
-        { role: 'system', content: 'You are a terse fantasy dungeon master.' },
+        { role: 'system', content: 'You are a terse fantasy game master.' },
         { role: 'user', content: 'Say hello in one short sentence.' }
       ],
       max_tokens: 64,

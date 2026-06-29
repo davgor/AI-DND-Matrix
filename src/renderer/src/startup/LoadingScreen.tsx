@@ -1,4 +1,5 @@
 import type { StartupBootState } from './useStartupBoot'
+import { APP_DISPLAY_NAME } from '../../../shared/appBranding'
 import './loadingScreen.css'
 
 export interface LoadingScreenProps {
@@ -25,7 +26,7 @@ export function LoadingScreen(props: LoadingScreenProps): JSX.Element {
   return (
     <div className="loading-screen" role="status" aria-live="polite">
       <div className="loading-screen-panel">
-        <p className="loading-screen-eyebrow">AI D&amp;D Matrix</p>
+        <p className="loading-screen-eyebrow">{APP_DISPLAY_NAME}</p>
         <h1 className="loading-screen-title">{failed ? 'Startup Interrupted' : boot.stageLabel}</h1>
         <p className="loading-screen-status">{boot.statusText}</p>
         {!failed ? (
