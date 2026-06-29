@@ -1,7 +1,9 @@
 import type { PlayLogEntry } from '../../../main/narrationLog'
 import type { TurnResult } from '../../../main/turnIpc'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
+import type { PendingAlignmentShift } from '../../../shared/alignment/types'
 import { pickCurrentSceneText } from '../../../shared/inCampaignLayout/sceneContext'
+import { AlignmentShiftWarningBanner, renderNpcLine } from './dmExpositionParts'
 
 export interface DmExpositionPanelProps {
   entries: PlayLogEntry[]
@@ -10,6 +12,8 @@ export interface DmExpositionPanelProps {
   showRolls: boolean
   onToggleShowRolls: () => void
   lastCheck: TurnResult['check'] | null
+  pendingAlignmentShift: PendingAlignmentShift | null
+  playerAlignment: string | null
 }
 
 function formatRoll(check: NonNullable<TurnResult['check']>): string {
@@ -24,6 +28,12 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
     <div className="play-view-panel play-view-dm-panel dm-exposition-panel">
       <header className="dm-exposition-header">
         <h2>Scene</h2>
+        {props.pendingAlignmentShift ? (
+          <AlignmentShiftWarningBanner
+            pending={props.pendingAlignmentShift}
+            playerAlignment={props.playerAlignment}
+          />
+        ) : null}
         {isLoading ? <p className="dm-exposition-status dm-exposition-loading">Updating scene…</p> : null}
         {props.expositionStatus.state === 'error' ? (
           <div className="dm-exposition-status dm-exposition-error" role="alert">
@@ -48,7 +58,9 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
       <div className="play-view-log dm-exposition-feed">
         {props.entries.map((entry) => (
           <p key={entry.id} className="play-view-log-entry">
-            {entry.speaker === 'npc' || entry.speaker === 'partyMember' ? <em>{entry.text}</em> : entry.text}
+            {entry.speaker === 'npc' || entry.speaker === 'partyMember'
+              ? renderNpcLine(entry)
+              : entry.text}
           </p>
         ))}
         {props.showRolls && props.lastCheck ? (

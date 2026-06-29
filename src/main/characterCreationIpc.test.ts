@@ -24,7 +24,8 @@ describe('createPlayerCharacter (009.3)', () => {
       campaignId: campaign.id,
       name: 'Kael',
       archetype: 'fighter',
-      abilityScores
+      abilityScores,
+      alignment: 'lawful_good'
     })
 
     expect(character.kind).toBe('player')
@@ -40,6 +41,7 @@ describe('createPlayerCharacter (009.3)', () => {
       name: 'Kael',
       archetype: 'mage',
       abilityScores: { body: 8, agility: 12, mind: 16, presence: 10 },
+      alignment: 'chaotic_neutral',
       portraitPath: '/path/to/portrait.png',
       sheetBackgroundPath: '/path/to/background.jpg'
     })

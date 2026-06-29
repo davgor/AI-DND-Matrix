@@ -6,6 +6,69 @@
   background: transparent;
 }
 
+.campaign-review-header {
+  margin-bottom: 24px;
+}
+
+.campaign-review-lead {
+  margin: 8px 0 0;
+  color: var(--text-secondary, #9ca3af);
+  max-width: 60ch;
+}
+
+.campaign-review-story {
+  margin-bottom: 28px;
+}
+
+.campaign-review-story ul {
+  margin: 8px 0 0;
+  padding-left: 1.25rem;
+}
+
+.campaign-review-regions h2 {
+  margin-bottom: 16px;
+}
+
+.campaign-review-region-card {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: var(--surface-raised, rgba(0, 0, 0, 0.2));
+}
+
+.campaign-review-region-card h3 {
+  margin: 0 0 12px;
+}
+
+.campaign-review-region-card h4 {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-readonly {
+  margin-bottom: 12px;
+}
+
+.campaign-review-readonly p {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.campaign-review-readonly ul {
+  margin: 6px 0 0;
+  padding-left: 1.25rem;
+}
+
+.campaign-review-npcs {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
 .campaign-review-item {
   margin-bottom: 12px;
 }
@@ -16,6 +79,68 @@
   font-family: inherit;
 }
 
-.campaign-review-continue {
+.campaign-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.campaign-review-continue,
+.campaign-review-generate-region {
+  padding: 10px 16px;
+}
+
+.campaign-review-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 100;
+}
+
+.campaign-review-generate-modal {
+  width: min(520px, calc(100vw - 32px));
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--surface-modal, #1a1a1f);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.campaign-review-generate-modal h2 {
+  margin: 0 0 8px;
+}
+
+.campaign-review-generate-modal p {
+  margin: 0 0 12px;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-seed-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.campaign-review-error {
+  margin: 8px 0 0;
+  color: #f87171;
+}
+
+.campaign-review-generate-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
   margin-top: 16px;
+}
+
+.campaign-review-generate-submit {
+  font-weight: 600;
 }

@@ -3,8 +3,9 @@ import type { CreateCampaignResult } from '../main/campaignCreateIpc'
 import type { DeleteCampaignResult } from '../shared/campaignDelete/types'
 import type {
   EditNpcDispositionInput,
+  EditNpcTraitsInput,
   EditRegionDescriptionInput,
-  SetDeathModeInput
+  GenerateRegionInput
 } from '../main/campaignEditIpc'
 import type { CampaignDetail } from '../main/campaignIpc'
 import type { CreateCampaignRequest, CreateCampaignProgress } from '../shared/campaignCreate/types'
@@ -15,9 +16,18 @@ import type {
 import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { TurnInput, TurnResult } from '../main/turnIpc'
+import type { LogEntry } from '../shared/logBook/types'
+import type { CharacterJournalEntry } from '../shared/journal/types'
+import type { CharacterItemView } from '../shared/items/types'
+import type { EquipSlot } from '../shared/items/types'
 import type { PlayLogEntry } from '../main/narrationLog'
 import type { PromoteNpcInput } from '../main/promotionIpc'
 import type { StartupEventPayload } from '../shared/startup/types'
+import type {
+  GuidedCreationSendMessageInput,
+  GuidedCreationSendMessageResult,
+  GuidedCreationState
+} from '../shared/guidedCreation/types'
 import type {
   ConnectionCheckResult,
   ProviderSettings,
@@ -46,12 +56,16 @@ const campaigns = {
     ipcRenderer.on('campaignCreate:progress', handler)
     return () => ipcRenderer.removeListener('campaignCreate:progress', handler)
   },
-  setDeathMode: (input: SetDeathModeInput): Promise<CampaignDetail> =>
-    ipcRenderer.invoke('campaigns:setDeathMode', input),
   editRegionDescription: (input: EditRegionDescriptionInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editRegionDescription', input),
   editNpcDisposition: (input: EditNpcDispositionInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editNpcDisposition', input),
+  editNpcTraits: (input: EditNpcTraitsInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editNpcTraits', input),
+  generateRegion: (
+    input: GenerateRegionInput
+  ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('campaigns:generateRegion', input),
   generateRecap: (campaignId: string): Promise<string> =>
     ipcRenderer.invoke('campaigns:generateRecap', campaignId),
   getNarrationLog: (campaignId: string): Promise<PlayLogEntry[]> =>
@@ -74,7 +88,24 @@ const characters = {
   createPartyMembers: (input: CreatePartyMembersInput): Promise<Character[]> =>
     ipcRenderer.invoke('characters:createPartyMembers', input),
   listByCampaign: (campaignId: string): Promise<Character[]> =>
-    ipcRenderer.invoke('characters:listByCampaign', campaignId)
+    ipcRenderer.invoke('characters:listByCampaign', campaignId),
+  listItems: (characterId: string): Promise<CharacterItemView[]> =>
+    ipcRenderer.invoke('characters:listItems', characterId),
+  equipItem: (input: {
+    characterId: string
+    characterItemId: string
+    slot: EquipSlot
+  }): Promise<{ ok: true } | { ok: false; reason: string }> =>
+    ipcRenderer.invoke('characters:equipItem', input),
+  unequipItem: (input: { characterId: string; slot: EquipSlot }): Promise<void> =>
+    ipcRenderer.invoke('characters:unequipItem', input),
+  consumeItem: (input: { characterId: string; itemId: string }): Promise<
+    { ok: true; hpAfter: number } | { ok: false; reason: string }
+  > => ipcRenderer.invoke('characters:consumeItem', input),
+  listLogEntries: (characterId: string): Promise<LogEntry[]> =>
+    ipcRenderer.invoke('characters:listLogEntries', characterId),
+  listJournalEntries: (characterId: string): Promise<CharacterJournalEntry[]> =>
+    ipcRenderer.invoke('characters:listJournalEntries', characterId)
 }
 
 const turn = {
@@ -94,6 +125,13 @@ const startup = {
   }
 }
 
+const guidedCreation = {
+  getState: (characterId: string): Promise<GuidedCreationState | undefined> =>
+    ipcRenderer.invoke('guidedCreation:getState', characterId),
+  sendMessage: (input: GuidedCreationSendMessageInput): Promise<GuidedCreationSendMessageResult> =>
+    ipcRenderer.invoke('guidedCreation:sendMessage', input)
+}
+
 const settings = {
   get: (): Promise<RedactedProviderSettings> => ipcRenderer.invoke('settings:get'),
   save: (input: SaveProviderSettingsInput): Promise<RedactedProviderSettings> =>
@@ -110,6 +148,7 @@ contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('turn', turn)
 contextBridge.exposeInMainWorld('startup', startup)
+contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
 contextBridge.exposeInMainWorld('settings', settings)
 
 export type WindowControls = typeof windowControls
@@ -118,4 +157,5 @@ export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type TurnApi = typeof turn
 export type StartupApi = typeof startup
+export type GuidedCreationApi = typeof guidedCreation
 export type SettingsApi = typeof settings

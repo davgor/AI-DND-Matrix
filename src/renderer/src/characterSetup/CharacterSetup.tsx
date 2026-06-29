@@ -1,7 +1,7 @@
 import type { Archetype } from '../../../engine/hp'
 import { AbilityScoreAssignment } from './AbilityScoreAssignment'
-import { DeathModeSelector } from './DeathModeSelector'
 import { PartyMemberList } from './PartyMemberList'
+import { CharacterSetupCoreFields } from './CharacterSetupFields'
 import { useCharacterSetup } from './useCharacterSetup'
 import './characterSetup.css'
 
@@ -19,25 +19,7 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
     <div className="character-setup">
       <h1>Create Your Character</h1>
 
-      <label>
-        Name
-        <input value={setup.name} onChange={(event) => setup.setName(event.target.value)} />
-      </label>
-
-      <label>
-        Archetype
-        <select
-          value={setup.archetype}
-          onChange={(event) => setup.setArchetype(event.target.value as Archetype)}
-        >
-          <option value="">--</option>
-          {ARCHETYPES.map((archetype) => (
-            <option key={archetype} value={archetype}>
-              {archetype}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CharacterSetupCoreFields setup={setup} archetypes={ARCHETYPES} />
 
       <AbilityScoreAssignment onAssigned={setup.setAbilityScores} />
 
@@ -50,9 +32,6 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
         </button>
       </div>
 
-      <h2>Death Mode</h2>
-      <DeathModeSelector onChange={setup.setDeathMode} />
-
       <h2>AI Party Members</h2>
       <PartyMemberList onChange={setup.setPartyMembers} />
 
@@ -61,7 +40,7 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
       )}
 
       <button type="button" disabled={setup.submitting} onClick={() => void setup.handleSubmit()}>
-        {setup.submitting ? 'Creating...' : 'Begin Adventure'}
+        {setup.submitting ? 'Creating...' : 'Tell me about yourself'}
       </button>
     </div>
   )

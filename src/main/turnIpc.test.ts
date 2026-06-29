@@ -45,6 +45,7 @@ describe('resolvePlayerTurn: rest and travel branches', () => {
     expect(provider.calls).toHaveLength(1)
     expect(result.hpAfter).toBeGreaterThan(5)
     expect(result.check).toBeUndefined()
+    expect(result.pendingAlignmentShift).toBeNull()
   })
 
   it('resolves a travel action, clamping the estimate and advancing in-game date', async () => {
@@ -60,6 +61,7 @@ describe('resolvePlayerTurn: rest and travel branches', () => {
 
     expect(result.inGameDateAfter).toBe(30)
     expect(result.narrationText).toContain('30 days')
+    expect(result.pendingAlignmentShift).toBeNull()
   })
 })
 
@@ -80,6 +82,7 @@ describe('resolvePlayerTurn: standard check turn', () => {
 
     expect(result.check).toBeDefined()
     expect(result.narrationText).toBe('You slip past unseen.')
+    expect(result.pendingAlignmentShift).toBeNull()
     const events = listEventsByCampaign(db, campaign.id, { type: 'player_action' })
     expect(events).toHaveLength(1)
   })
@@ -111,6 +114,7 @@ describe('resolvePlayerTurn: NPC reactions and combat', () => {
 
     expect(result.npcReactions).toHaveLength(1)
     expect(result.npcReactions[0]?.attackResult?.hit).toBe(true)
+    expect(result.pendingAlignmentShift).toBeNull()
     const reloaded = getCharacterById(db, player.id)
     expect(reloaded).toBeDefined()
     expect(reloaded?.hp).toBe(0)
@@ -141,6 +145,7 @@ describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
     )
 
     expect(result.proposedPromotion).toEqual({ npcId: npc.id, npcName: 'Mira' })
+    expect(result.pendingAlignmentShift).toBeNull()
     expect(getNpcById(db, npc.id)?.isPartyMember).toBe(false)
   })
 })
@@ -169,6 +174,7 @@ describe('resolvePlayerTurn: AI party member autonomous actions', () => {
     )
 
     expect(result.partyMemberActions).toEqual([{ characterId: expect.any(String), name: 'Brom', actionText: 'Brom scouts ahead.' }])
+    expect(result.pendingAlignmentShift).toBeNull()
   })
 })
 
@@ -187,5 +193,6 @@ describe('resolvePlayerTurn: dying-sequence short-circuit', () => {
 
     expect(provider.calls).toHaveLength(0)
     expect(result.dyingResolution).toBeDefined()
+    expect(result.pendingAlignmentShift).toBeNull()
   })
 })

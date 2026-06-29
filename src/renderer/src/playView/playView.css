@@ -50,6 +50,30 @@
   color: var(--color-error);
 }
 
+.dm-alignment-shift-warning {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #ff6b35;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(180, 40, 0, 0.35), rgba(120, 20, 0, 0.5));
+  color: #ffe8d6;
+  box-shadow: 0 0 12px rgba(255, 107, 53, 0.35);
+}
+
+.dm-alignment-shift-warning-title {
+  margin: 0 0 0.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffb347;
+}
+
+.dm-alignment-shift-warning-detail {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
 .dm-exposition-feed {
   border-top: 1px solid var(--border-subtle);
   padding-top: 8px;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   abilityModifier,
   createSeededRandom,
+  getPointBuyRemaining,
   resolvePointBuy,
   resolveStandardArray,
   rollForStats
@@ -39,6 +40,12 @@ describe('point buy generation', () => {
   it('rejects an allocation outside the min/max range', () => {
     const result = resolvePointBuy({ body: 16, agility: 8, mind: 8, presence: 8 })
     expect(result.valid).toBe(false)
+  })
+
+  it('tracks remaining points as scores are raised', () => {
+    expect(getPointBuyRemaining({ body: 8, agility: 8, mind: 8, presence: 8 })).toBe(15)
+    expect(getPointBuyRemaining({ body: 15, agility: 14, mind: 8, presence: 8 })).toBe(2)
+    expect(getPointBuyRemaining({ body: 15, agility: 15, mind: 10, presence: 8 })).toBe(-1)
   })
 })
 

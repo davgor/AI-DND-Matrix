@@ -8,7 +8,7 @@ export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2)
 }
 
-export const POINT_BUY_POOL = 27
+export const POINT_BUY_POOL = 15
 export const POINT_BUY_MIN = 8
 export const POINT_BUY_MAX = 15
 
@@ -18,6 +18,11 @@ export type PointBuyResult =
 
 function pointBuyCost(score: number): number {
   return score - POINT_BUY_MIN
+}
+
+export function getPointBuyRemaining(allocation: AbilityScores): number {
+  const spent = Object.values(allocation).reduce((sum, score) => sum + pointBuyCost(score), 0)
+  return POINT_BUY_POOL - spent
 }
 
 export function resolvePointBuy(allocation: AbilityScores): PointBuyResult {

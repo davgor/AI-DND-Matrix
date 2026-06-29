@@ -1,0 +1,45 @@
+.character-journal h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.character-journal-feed {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px 2px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-scene);
+}
+
+.character-journal-entry {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.character-journal-entry:last-child {
+  border-bottom: none;
+}
+
+.character-journal-entry p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  font-style: italic;
+}
+
+.character-journal-entry footer {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.character-journal .character-sheet-empty {
+  margin: 10px 12px;
+}

@@ -1,0 +1,78 @@
+import { describe, expect, it } from 'vitest'
+import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import {
+  allFoundationsComplete,
+  mergeFoundationStatus,
+  runIdentityInterviewTurn,
+  defaultIdentityFoundations
+} from './guidedIdentity'
+import { createScriptedProvider } from './providers/mockHarness'
+
+const IDENTITY_INTERVIEW_CONTEXT = {
+  campaignPremise: 'A flooded kingdom.',
+  characterName: 'Kael',
+  characterClass: 'fighter',
+  abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
+  alignment: 'lawful_good' as const,
+  transcript: [] as Array<{ role: 'player' | 'dm'; content: string }>,
+  currentFoundations: defaultIdentityFoundations()
+}
+
+describe('runIdentityInterviewTurn', () => {
+  it('returns partial foundation completion from a valid response', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Tell me more about your past.',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a wandering knight.' },
+          why: { complete: false },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      })
+    ])
+    const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'I am Kael.')
+    expect(result.foundations.who.complete).toBe(true)
+    expect(result.allFoundationsComplete).toBe(false)
+  })
+
+  it('retries malformed JSON until a valid schema arrives', async () => {
+    const provider = createScriptedProvider([
+      'not json',
+      JSON.stringify({
+        dmReply: 'All set.',
+        foundations: {
+          who: { complete: true, summary: 'Kael' },
+          why: { complete: true, summary: 'Justice' },
+          where: { complete: true, summary: 'Oakhollow' },
+          what: { complete: true, summary: 'Steadfast fighter' }
+        },
+        allFoundationsComplete: true
+      })
+    ])
+    const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'Done.')
+    expect(result.allFoundationsComplete).toBe(true)
+    expect(provider.calls).toHaveLength(2)
+  })
+
+  it('throws after exhausting schema retries', async () => {
+    const provider = createScriptedProvider(['bad', 'still bad', 'nope'])
+    await expect(runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'x')).rejects.toThrow()
+    expect(provider.calls).toHaveLength(MAX_SCHEMA_ATTEMPTS)
+  })
+})
+
+describe('foundation status helpers', () => {
+  it('merges newly completed foundations without dropping prior summaries', () => {
+    const current = defaultIdentityFoundations()
+    current.who = { complete: true, summary: 'Kael' }
+    const merged = mergeFoundationStatus(current, {
+      ...defaultIdentityFoundations(),
+      why: { complete: true, summary: 'Justice' }
+    })
+    expect(merged.who.summary).toBe('Kael')
+    expect(merged.why.summary).toBe('Justice')
+    expect(allFoundationsComplete(merged)).toBe(false)
+  })
+})

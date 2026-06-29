@@ -76,7 +76,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       <div className="settings-panel">
         <header className="settings-header">
           <h2>Settings</h2>
-          <button type="button" aria-label="Close settings" onClick={controller.requestClose}>
+          <button type="button" className="btn-ghost settings-close" aria-label="Close settings" onClick={controller.requestClose}>
             &#10005;
           </button>
         </header>

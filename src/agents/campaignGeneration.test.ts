@@ -5,36 +5,143 @@ import { listNpcsByRegion } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listRegionHistoryByRegion } from '../db/repositories/regionHistory'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
+import { listQuestHooksByRegion } from '../db/repositories/worldFacts'
 import { createScriptedProvider } from './providers/mockHarness'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
+  generateAdditionalRegion,
   generateAndPersistCampaign,
-  generateCampaignSeed
+  generateCampaignSeed,
+  normalizeCampaignGeneration,
+  persistRegionWithNpcs
 } from './campaignGeneration'
 
-const VALID_GENERATION = JSON.stringify({
-  regions: [
-    { name: 'Oakhollow', description: 'A quiet logging village.', historyBackstory: 'Founded a century ago.' },
-    { name: 'The Sunken Crown', description: 'A flooded ruin.', historyBackstory: 'Once a royal seat.' }
-  ],
-  npcs: [
-    { name: 'Mira the Woodcutter', role: 'shopkeeper', disposition: 'friendly', regionName: 'Oakhollow' },
-    { name: 'The Drowned King', role: 'boss', disposition: 'hostile', regionName: 'The Sunken Crown' }
-  ],
-  storyThread: { title: 'The Crown Beneath the Waves', state: 'starting', summary: 'A throne lies hidden.' }
+import {
+  ADDITIONAL_REGION,
+  LEGACY_NORMALIZE_PAYLOAD,
+  SETUP_INPUT,
+  TRIM_NPCS_PAYLOAD,
+  VALID_GENERATION
+} from './campaignGeneration.fixtures'
+import type { GeneratedNpc, GeneratedRegion } from './campaignGeneration'
+
+describe('normalizeCampaignGeneration', () => {
+  it('accepts legacy region fields and fills recent history plus quest hooks', () => {
+    const normalized = normalizeCampaignGeneration(LEGACY_NORMALIZE_PAYLOAD)
+
+    expect(normalized?.regions[0]?.recentHistory).toContain('Azure Expanse')
+    expect(normalized?.regions[0]?.potentialQuests.length).toBeGreaterThanOrEqual(2)
+    expect(normalized?.npcs).toHaveLength(6)
+  })
+
+  it('trims extra NPCs per region and ignores unknown region tags', () => {
+    const normalized = normalizeCampaignGeneration(TRIM_NPCS_PAYLOAD)
+
+    expect(normalized?.npcs.filter((npc) => npc.regionName === 'Azure Expanse')).toHaveLength(3)
+    expect(normalized?.npcs.some((npc) => npc.name === 'Stray')).toBe(false)
+  })
+
+  it('accepts the pre-expansion campaign shape with two regions and two NPCs', () => {
+    const normalized = normalizeCampaignGeneration({
+      regions: [
+        { name: 'The Azure Deep', description: 'A new oceanic frontier.', historyBackstory: 'Just discovered.' },
+        { name: 'Harbor of First Light', description: 'Explorer port.', historyBackstory: 'Built last season.' }
+      ],
+      npcs: [
+        {
+          name: 'Captain Reyes',
+          role: 'explorer',
+          disposition: 'Offers a charter if the party surveys the reef.',
+          regionName: 'The Azure Deep',
+          temperament: 'cunning',
+          canSpeak: true,
+          alignment: 'chaotic_good'
+        },
+        {
+          name: 'Sister Mael',
+          role: 'chronicler',
+          disposition: 'Seeks witnesses to the first landing.',
+          regionName: 'Harbor of First Light',
+          temperament: 'curious',
+          canSpeak: true,
+          alignment: 'neutral_good'
+        }
+      ],
+      story_thread: {
+        title: 'Ventures on the New Ocean',
+        state: 'starting',
+        summary: 'Explorers push into uncharted waters.'
+      }
+    })
+
+    expect(normalized?.regions).toHaveLength(2)
+    expect(normalized?.npcs).toHaveLength(2)
+    expect(normalized?.storyThread.title).toBe('Ventures on the New Ocean')
+  })
 })
 
-const SETUP_INPUT = { name: 'Test Campaign', premisePrompt: 'A flooded kingdom.', deathMode: 'legendary' } as const
+describe('generateCampaignSeed legacy compatibility', () => {
+  it('accepts older-shaped model output after normalization', async () => {
+    const legacy = JSON.stringify({
+      regions: [
+        {
+          name: 'The Azure Deep',
+          description: 'A newly charted oceanic region.',
+          historyBackstory: 'Sailors only recently proved it navigable.'
+        },
+        {
+          name: 'Harbor of First Light',
+          description: 'The explorer port.',
+          historyBackstory: 'Founded to support the first voyages.'
+        }
+      ],
+      npcs: [
+        {
+          name: 'Captain Reyes',
+          role: 'explorer',
+          disposition: 'Offers a charter if the party surveys the reef.',
+          regionName: 'The Azure Deep',
+          temperament: 'cunning',
+          canSpeak: true,
+          alignment: 'chaotic_good'
+        },
+        {
+          name: 'Sister Mael',
+          role: 'chronicler',
+          disposition: 'Seeks witnesses to the first landing.',
+          regionName: 'Harbor of First Light',
+          temperament: 'curious',
+          canSpeak: true,
+          alignment: 'neutral_good'
+        }
+      ],
+      story_thread: {
+        title: 'Ventures on the New Ocean',
+        state: 'starting',
+        summary: 'Explorers push into uncharted waters.'
+      }
+    })
+    const provider = createScriptedProvider([legacy])
+    const result = await generateCampaignSeed(
+      provider,
+      'A new oceanic region has been discovered and explorers are venturing out'
+    )
+    expect(result.regions).toHaveLength(2)
+    expect(result.storyThread.title).toBe('Ventures on the New Ocean')
+  })
+})
 
 describe('generateCampaignSeed (007.1)', () => {
-  it('produces a structured response with 2-4 regions, at least 2 NPCs, and one story thread', async () => {
+  it('produces a structured response with 2-4 regions, 3 NPCs each, and one story thread', async () => {
     const provider = createScriptedProvider([VALID_GENERATION])
     const result = await generateCampaignSeed(provider, 'A flooded kingdom.')
 
     expect(result.regions.length).toBeGreaterThanOrEqual(2)
     expect(result.regions.length).toBeLessThanOrEqual(4)
-    expect(result.npcs.length).toBeGreaterThanOrEqual(2)
+    expect(result.regions[0]?.recentHistory).toBeTruthy()
+    expect(result.regions[0]?.potentialQuests.length).toBeGreaterThanOrEqual(2)
+    expect(result.npcs.length).toBe(result.regions.length * 3)
     expect(result.storyThread.title).toBe('The Crown Beneath the Waves')
   })
 })
@@ -56,8 +163,18 @@ describe('generateCampaignSeed schema rejection + retry (007.4, generation half)
   })
 })
 
+describe('generateAdditionalRegion', () => {
+  it('returns one region with exactly three NPCs', async () => {
+    const provider = createScriptedProvider([ADDITIONAL_REGION])
+    const result = await generateAdditionalRegion(provider, 'A flooded kingdom.', ['Oakhollow'], 'A marsh crossing')
+    expect(result.region.name).toBe('Mistfen Crossing')
+    expect(result.npcs).toHaveLength(3)
+    expect(result.npcs.every((npc) => npc.regionName === 'Mistfen Crossing')).toBe(true)
+  })
+})
+
 describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 npcs/threads)', () => {
-  it('writes regions (each with a seeded region_history entry), NPCs, and the story thread', async () => {
+  it('writes regions (with history and quest hooks), NPCs, and the story thread', async () => {
     const db = createTestDb()
     const provider = createScriptedProvider([VALID_GENERATION])
 
@@ -66,18 +183,39 @@ describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 
     const regions = listRegionsByCampaign(db, campaign.id)
     expect(regions).toHaveLength(2)
     for (const region of regions) {
-      expect(listRegionHistoryByRegion(db, region.id).length).toBeGreaterThanOrEqual(1)
+      const history = listRegionHistoryByRegion(db, region.id)
+      expect(history.length).toBeGreaterThanOrEqual(2)
+      expect(listQuestHooksByRegion(db, region.id).length).toBeGreaterThanOrEqual(2)
     }
 
     const oakhollow = regions.find((region) => region.name === 'Oakhollow')
     expect(oakhollow).toBeDefined()
     const npcsInOakhollow = listNpcsByRegion(db, oakhollow!.id)
-    expect(npcsInOakhollow).toHaveLength(1)
-    expect(npcsInOakhollow[0]?.name).toBe('Mira the Woodcutter')
+    expect(npcsInOakhollow).toHaveLength(3)
 
     const threads = listStoryThreadsByCampaign(db, campaign.id)
     expect(threads).toHaveLength(1)
     expect(threads[0]?.title).toBe('The Crown Beneath the Waves')
+  })
+})
+
+describe('persistRegionWithNpcs', () => {
+  it('appends a region with history, quests, and three NPCs', async () => {
+    const db = createTestDb()
+    const provider = createScriptedProvider([VALID_GENERATION])
+    const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
+    const additional = JSON.parse(ADDITIONAL_REGION) as {
+      region: GeneratedRegion
+      npcs: GeneratedNpc[]
+    }
+    persistRegionWithNpcs(db, campaign.id, additional.region, additional.npcs)
+
+    const regions = listRegionsByCampaign(db, campaign.id)
+    expect(regions).toHaveLength(3)
+    const mistfen = regions.find((region) => region.name === 'Mistfen Crossing')
+    expect(mistfen).toBeDefined()
+    expect(listNpcsByRegion(db, mistfen!.id)).toHaveLength(3)
+    expect(listQuestHooksByRegion(db, mistfen!.id)).toHaveLength(2)
   })
 })
 

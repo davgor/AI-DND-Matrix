@@ -13,7 +13,9 @@ import {
 import { listCharactersByCampaign, type Character } from '../db/repositories/characters'
 import { listNpcsByRegion, type Npc } from '../db/repositories/npcs'
 import { listRegionsByCampaign, type Region } from '../db/repositories/regions'
+import { listRegionHistoryByRegion } from '../db/repositories/regionHistory'
 import { listStoryThreadsByCampaign, type StoryThread } from '../db/repositories/storyThreads'
+import { listQuestHooksByRegion } from '../db/repositories/worldFacts'
 import { touchLastPlayed } from '../db/repositories/sessions'
 import { loadConfig } from './config'
 import { logger } from './logger'
@@ -24,10 +26,18 @@ import { DEFAULT_PROVIDER_SETTINGS } from '../shared/settings/types'
 
 const NEW_CAMPAIGN_NAME_LENGTH = 40
 
+export interface RegionExtras {
+  regionId: string
+  backstory: string
+  recentHistory: string
+  questHooks: string[]
+}
+
 export interface CampaignDetail {
   campaign: Campaign | undefined
   regions: Region[]
   npcs: Npc[]
+  regionExtras: RegionExtras[]
   storyThreads: StoryThread[]
   characters: Character[]
 }
@@ -36,12 +46,25 @@ export function listCampaignsForSidebar(db: Database.Database): CampaignWithLast
   return listCampaignsByLastPlayed(db)
 }
 
+export function buildRegionExtras(db: Database.Database, campaignId: string): RegionExtras[] {
+  return listRegionsByCampaign(db, campaignId).map((region) => {
+    const history = listRegionHistoryByRegion(db, region.id)
+    return {
+      regionId: region.id,
+      backstory: history.find((entry) => entry.inGameDate === 0)?.content ?? '',
+      recentHistory: history.find((entry) => entry.inGameDate === 1)?.content ?? '',
+      questHooks: listQuestHooksByRegion(db, region.id).map((fact) => fact.content)
+    }
+  })
+}
+
 export function getCampaignDetail(db: Database.Database, campaignId: string): CampaignDetail {
   const regions = listRegionsByCampaign(db, campaignId)
   return {
     campaign: getCampaignById(db, campaignId),
     regions,
     npcs: regions.flatMap((region) => listNpcsByRegion(db, region.id)),
+    regionExtras: buildRegionExtras(db, campaignId),
     storyThreads: listStoryThreadsByCampaign(db, campaignId),
     characters: listCharactersByCampaign(db, campaignId)
   }

@@ -6,6 +6,10 @@ import { createRegion, updateRegionStatus } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listWorldFactsByRegionOrFaction } from '../db/repositories/worldFacts'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
+import { createCharacter } from '../db/repositories/characters'
+import { listCharacterItems } from '../db/repositories/characterItems'
+import { listCharacterJournalEntries } from '../db/repositories/characterJournalEntries'
+import { listCatalogItems } from '../db/repositories/items'
 import { createScriptedProvider } from './providers/mockHarness'
 import {
   DmSchemaError,
@@ -29,7 +33,13 @@ function seedCampaignWithRegion() {
     name: 'Oakhollow',
     description: 'A quiet logging village.'
   })
-  return { db, campaign, region }
+  const player = createCharacter(db, {
+    campaignId: campaign.id,
+    name: 'Kael',
+    characterClass: 'fighter',
+    kind: 'player'
+  })
+  return { db, campaign, region, player }
 }
 
 describe('interpretIntent (006.1 schema validation/retry + 006.2 DC clamp)', () => {
@@ -91,20 +101,20 @@ describe('interpretIntent (006.1 schema validation/retry + 006.2 DC clamp)', () 
 
 describe('assembleNarrationContext + narrate (006.3)', () => {
   it('pulls region status, recent events, and story thread state fresh from the DB at call time', async () => {
-    const { db, campaign, region } = seedCampaignWithRegion()
+    const { db, campaign, region, player } = seedCampaignWithRegion()
     createStoryThread(db, { campaignId: campaign.id, title: 'Main Arc', state: 'rising', summary: 'so far...' })
 
-    const before = assembleNarrationContext(db, campaign.id, region.id)
+    const before = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(before.regionStatus).toEqual({ destroyed: false })
     expect(before.storyThreadState?.state).toBe('rising')
 
     updateRegionStatus(db, region.id, { destroyed: true, cause: 'firebomb' })
-    const after = assembleNarrationContext(db, campaign.id, region.id)
+    const after = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(after.regionStatus).toEqual({ destroyed: true, cause: 'firebomb' })
   })
 
   it('includes the NPCs present in the region so the DM can only pick real ids to react', async () => {
-    const { db, campaign, region } = seedCampaignWithRegion()
+    const { db, campaign, region, player } = seedCampaignWithRegion()
     const npc = createNpc(db, {
       campaignId: campaign.id,
       regionId: region.id,
@@ -113,12 +123,12 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
       disposition: 'friendly'
     })
 
-    const context = assembleNarrationContext(db, campaign.id, region.id)
+    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira' }])
   })
 
   it('excludes already-promoted NPCs from presentNpcs, since they are now party members', async () => {
-    const { db, campaign, region } = seedCampaignWithRegion()
+    const { db, campaign, region, player } = seedCampaignWithRegion()
     const npc = createNpc(db, {
       campaignId: campaign.id,
       regionId: region.id,
@@ -128,7 +138,7 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     })
     markNpcPromoted(db, npc.id)
 
-    const context = assembleNarrationContext(db, campaign.id, region.id)
+    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     expect(context.presentNpcs).toEqual([])
   })
@@ -136,7 +146,7 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
 
 describe('narrate: optional schema fields (006.3, 011.1)', () => {
   it('parses an optional reactingNpcIds field from the narration response', async () => {
-    const { db, campaign, region } = seedCampaignWithRegion()
+    const { db, campaign, region, player } = seedCampaignWithRegion()
     const npc = createNpc(db, {
       campaignId: campaign.id,
       regionId: region.id,
@@ -147,7 +157,7 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
     const provider = createScriptedProvider([
       `{"narrationText":"Mira gasps.","reactingNpcIds":["${npc.id}"]}`
     ])
-    const context = assembleNarrationContext(db, campaign.id, region.id)
+    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     const result = await narrate(provider, { success: true, total: 15, dc: 10 }, context)
 
@@ -155,7 +165,7 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
   })
 
   it('parses an optional proposedPromotionNpcId field from the narration response', async () => {
-    const { db, campaign, region } = seedCampaignWithRegion()
+    const { db, campaign, region, player } = seedCampaignWithRegion()
     const npc = createNpc(db, {
       campaignId: campaign.id,
       regionId: region.id,
@@ -166,7 +176,7 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
     const provider = createScriptedProvider([
       `{"narrationText":"Mira considers your offer.","proposedPromotionNpcId":"${npc.id}"}`
     ])
-    const context = assembleNarrationContext(db, campaign.id, region.id)
+    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     const result = await narrate(provider, { success: true, total: 15, dc: 10 }, context)
 
@@ -174,10 +184,10 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
   })
 
   it('never lets the narration call invent a different pass/fail/total than the engine produced', async () => {
-    const { db, campaign, region } = seedCampaignWithRegion()
+    const { db, campaign, region, player } = seedCampaignWithRegion()
     const provider = createScriptedProvider(['{"narrationText":"The blade finds its mark."}'])
     const outcome = { success: true, total: 17, dc: 12 }
-    const context = assembleNarrationContext(db, campaign.id, region.id)
+    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     await narrate(provider, outcome, context)
 
@@ -188,16 +198,16 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
 describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', () => {
   it('persists a world_fact tagged to the authoritative current region, ignoring anything the agent might claim', () => {
     const { db, campaign, region } = seedCampaignWithRegion()
-    persistNarrationSideEffects(db, campaign.id, region.id, {
+    persistNarrationSideEffects(db, {
       narrationText: 'The village burns.',
       worldFact: { content: 'Oakhollow burned down' }
-    })
+    }, { campaignId: campaign.id, regionId: region.id })
     expect(listWorldFactsByRegionOrFaction(db, campaign.id, region.id)).toHaveLength(1)
   })
 
   it('creates no world_fact row when the narration response omits one', () => {
     const { db, campaign, region } = seedCampaignWithRegion()
-    persistNarrationSideEffects(db, campaign.id, region.id, { narrationText: 'Nothing of note happens.' })
+    persistNarrationSideEffects(db, { narrationText: 'Nothing of note happens.' }, { campaignId: campaign.id, regionId: region.id })
     expect(listWorldFactsByRegionOrFaction(db, campaign.id, region.id)).toHaveLength(0)
   })
 
@@ -209,10 +219,10 @@ describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', 
       state: 'rising',
       summary: 'so far...'
     })
-    persistNarrationSideEffects(db, campaign.id, region.id, {
+    persistNarrationSideEffects(db, {
       narrationText: 'The plot thickens.',
       storyThreadUpdate: { threadId: thread.id, state: 'climax', summary: 'updated summary' }
-    })
+    }, { campaignId: campaign.id, regionId: region.id })
     const [updated] = listStoryThreadsByCampaign(db, campaign.id)
     expect(updated).toMatchObject({ state: 'climax', summary: 'updated summary' })
   })
@@ -225,9 +235,90 @@ describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', 
       state: 'rising',
       summary: 'so far...'
     })
-    persistNarrationSideEffects(db, campaign.id, region.id, { narrationText: 'Nothing changes the plot.' })
+    persistNarrationSideEffects(db, { narrationText: 'Nothing changes the plot.' }, { campaignId: campaign.id, regionId: region.id })
     const [unchanged] = listStoryThreadsByCampaign(db, campaign.id)
     expect(unchanged).toEqual(thread)
+  })
+})
+
+describe('persistNarrationSideEffects item grants (024.7)', () => {
+  it('persists valid catalog and proposed item grants for the acting character', () => {
+    const { db, campaign, region } = seedCampaignWithRegion()
+    const character = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Hero',
+      characterClass: 'fighter',
+      kind: 'player'
+    })
+    const catalogItem = listCatalogItems(db)[0]
+    if (!catalogItem) {
+      throw new Error('expected seeded catalog item')
+    }
+
+    persistNarrationSideEffects(
+      db,
+      {
+        narrationText: 'You find loot.',
+        itemGrants: [
+          { catalogItemId: catalogItem.id },
+          {
+            proposeNew: {
+              name: 'Whispering Coin',
+              description: 'A coin that remembers debts.',
+              itemType: 'misc',
+              rarityTier: 'common'
+            }
+          }
+        ]
+      },
+      { campaignId: campaign.id, regionId: region.id, characterId: character.id }
+    )
+
+    expect(listCharacterItems(db, character.id)).toHaveLength(2)
+  })
+})
+
+describe('persistNarrationSideEffects journal entry (027.2)', () => {
+  it('persists a proposed journal entry for the acting character', () => {
+    const { db, campaign, region } = seedCampaignWithRegion()
+    const character = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Hero',
+      characterClass: 'fighter',
+      kind: 'player'
+    })
+
+    persistNarrationSideEffects(
+      db,
+      {
+        narrationText: 'The miller thanks you warmly.',
+        journalEntry:
+          'Finished the job for the miller. Morgan helped out — kind of smelly but alright.'
+      },
+      { campaignId: campaign.id, regionId: region.id, characterId: character.id }
+    )
+
+    const entries = listCharacterJournalEntries(db, character.id)
+    expect(entries).toHaveLength(1)
+    expect(entries[0]?.content).toContain('miller')
+  })
+
+  it('does not create a journal entry when none is proposed', () => {
+    const { db, campaign, region } = seedCampaignWithRegion()
+    const character = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Hero',
+      characterClass: 'fighter',
+      kind: 'player'
+    })
+
+    persistNarrationSideEffects(
+      db,
+      { narrationText: 'You parry and strike again.' },
+      { campaignId: campaign.id, regionId: region.id, characterId: character.id }
+    )
+
+    expect(listCharacterJournalEntries(db, character.id)).toHaveLength(0)
   })
 })
 

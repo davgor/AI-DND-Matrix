@@ -37,12 +37,7 @@ export function LoadingScreen(props: LoadingScreenProps): JSX.Element {
           <div className="loading-screen-failure">
             <p className="loading-screen-failure-hint">{failureHint(boot.failureCategory)}</p>
             {boot.recoverable ? (
-              <button
-                type="button"
-                className="loading-screen-retry"
-                onClick={() => void boot.retry()}
-                disabled={boot.retrying}
-              >
+              <button type="button" onClick={() => void boot.retry()} disabled={boot.retrying}>
                 {boot.retrying ? 'Retrying…' : 'Retry'}
               </button>
             ) : null}

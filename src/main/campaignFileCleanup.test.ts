@@ -16,7 +16,15 @@ const CHARACTER: Character = {
   kind: 'player',
   sourceNpcId: null,
   portraitPath: '/data/portraits/a.png',
-  sheetBackgroundPath: '/data/sheet-backgrounds/b.png'
+  sheetBackgroundPath: '/data/sheet-backgrounds/b.png',
+  identityWho: null,
+  identityWhy: null,
+  identityWhere: null,
+  identityWhat: null,
+  openingScene: null,
+  guidedCreationPhase: 'complete',
+  alignment: null,
+  pendingAlignmentShift: null
 }
 
 describe('campaign file cleanup', () => {

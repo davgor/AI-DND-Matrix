@@ -2,6 +2,7 @@ import {
   filterDmExpositionEntries,
   filterPlayerInteractionEntries
 } from '../../../shared/inCampaignLayout/sceneContext'
+import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
 import { usePlayLog, type PlayLogController } from './usePlayLog'
 import { useRollVisibility, type RollVisibilityController } from './useRollVisibility'
 import { useSessionRecap, type SessionRecapController } from './useSessionRecap'
@@ -21,6 +22,8 @@ export interface PlayViewController extends RollVisibilityController, PlayLogCon
   characterRefreshToken: number
   recap: SessionRecapController
   promotion: PromotionPromptController
+  pendingAlignmentShift: PendingAlignmentShift | null
+  playerAlignment: Alignment | null
 }
 
 export function usePlayViewController(campaignId: string, characterId: string): PlayViewController {
@@ -41,6 +44,8 @@ export function usePlayViewController(campaignId: string, characterId: string): 
     ...rollVisibility,
     ...playLog,
     recap,
-    promotion
+    promotion,
+    pendingAlignmentShift: turn.pendingAlignmentShift,
+    playerAlignment: turn.playerAlignment
   }
 }

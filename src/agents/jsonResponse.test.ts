@@ -16,6 +16,11 @@ describe('tryParseJson', () => {
     expect(tryParseJson(raw)).toEqual({ a: 1 })
   })
 
+  it('extracts a JSON object from surrounding prose', () => {
+    const raw = 'Here is the campaign seed:\n{"a":1}\nHope that helps.'
+    expect(tryParseJson(raw)).toEqual({ a: 1 })
+  })
+
   it('returns undefined for genuinely malformed input', () => {
     expect(tryParseJson('not json at all')).toBeUndefined()
   })

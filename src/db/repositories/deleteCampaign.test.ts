@@ -34,6 +34,16 @@ function countForCampaign(db: ReturnType<typeof createTestDb>, table: string, ca
         .get(campaignId) as { count: number }
     ).count
   }
+  if (table === 'character_items') {
+    return (
+      db
+        .prepare(
+          `SELECT COUNT(*) as count FROM character_items
+           WHERE character_id IN (SELECT id FROM characters WHERE campaign_id = ?)`
+        )
+        .get(campaignId) as { count: number }
+    ).count
+  }
   const row = db
     .prepare(`SELECT COUNT(*) as count FROM ${table} WHERE campaign_id = ?`)
     .get(campaignId) as { count: number }
@@ -99,6 +109,7 @@ describe('deleteCampaignCascade', () => {
     }
     expect(countForCampaign(db, 'region_history', target.id)).toBe(0)
     expect(countForCampaign(db, 'npc_memories', target.id)).toBe(0)
+    expect(countForCampaign(db, 'character_items', target.id)).toBe(0)
 
     expect(getCampaignById(db, other.id)?.name).toBe('Other')
     expect(countForCampaign(db, 'characters', other.id)).toBe(1)

@@ -47,6 +47,8 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
           showRolls={controller.showRolls}
           onToggleShowRolls={controller.toggleShowRolls}
           lastCheck={controller.lastCheck}
+          pendingAlignmentShift={controller.pendingAlignmentShift}
+          playerAlignment={controller.playerAlignment}
         />
       }
       playerInteraction={

@@ -12,8 +12,16 @@ function tableNames(db: Database.Database): string[] {
 
 const ALL_TABLE_NAMES = [
   'campaigns',
+  'catalog_bucket_tags',
+  'catalog_creatures',
+  'catalog_spells',
+  'character_items',
+  'character_journal_entries',
   'characters',
   'events',
+  'guided_creation_messages',
+  'items',
+  'log_entries',
   'npc_memories',
   'npcs',
   'region_history',
@@ -46,5 +54,40 @@ describe('the real app migrations registry', () => {
 
     runMigrations(db, migrations)
     expect(tableNames(db)).toEqual(ALL_TABLE_NAMES)
+  })
+
+  it('migration 17 adds alignment and temperament columns', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 16)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 17)
+    )
+
+    const characterColumns = db
+      .prepare("PRAGMA table_info(characters)")
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(characterColumns).toContain('alignment')
+    expect(characterColumns).toContain('pending_alignment_shift')
+
+    const npcColumns = db
+      .prepare("PRAGMA table_info(npcs)")
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(npcColumns).toContain('alignment')
+    expect(npcColumns).toContain('temperament')
+    expect(npcColumns).toContain('can_speak')
+
+    const creatureColumns = db
+      .prepare("PRAGMA table_info(catalog_creatures)")
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(creatureColumns).toContain('temperament')
+    expect(creatureColumns).toContain('can_speak')
   })
 })

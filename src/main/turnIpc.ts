@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import type { PendingAlignmentShift } from '../shared/alignment/types'
 import type Database from 'better-sqlite3'
 import type { AbilityScores, RandomFn } from '../engine/abilities'
 import { decidePartyMemberAction, assemblePartyMemberContext } from '../agents/partyMember'
@@ -13,6 +14,8 @@ import {
 } from '../agents/dm'
 import type { Provider } from '../agents/providers/types'
 import { computeAC } from '../engine/armorClass'
+import { getEquippedArmorTier, getEquippedWeaponDamageRoll } from '../db/repositories/characterItems'
+import { resolvePlayerAttackDamage } from '../engine/playerCombat'
 import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
 import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damage'
 import { computeHP, type Archetype } from '../engine/hp'
@@ -54,7 +57,8 @@ export interface NpcAttackOutcome {
 export interface NpcReactionResult {
   npcId: string
   npcName: string
-  dialogue: string
+  text: string
+  reactionKind: 'dialogue' | 'action'
   attackResult?: NpcAttackOutcome
 }
 
@@ -78,6 +82,20 @@ export interface TurnResult {
   partyMemberActions: PartyMemberActionResult[]
   dyingResolution?: DyingResolution
   proposedPromotion?: ProposedPromotion
+  pendingAlignmentShift: PendingAlignmentShift | null
+  alignmentShiftCommitted?: string
+}
+
+function buildTurnResultExtras(
+  db: Database.Database,
+  characterId: string,
+  alignmentShiftCommitted?: string
+): Pick<TurnResult, 'pendingAlignmentShift' | 'alignmentShiftCommitted'> {
+  const character = getCharacterById(db, characterId)
+  return {
+    pendingAlignmentShift: character?.pendingAlignmentShift ?? null,
+    alignmentShiftCommitted
+  }
 }
 
 function getCurrentRegionId(db: Database.Database, campaignId: string, character: Character): string {
@@ -119,32 +137,44 @@ function resolveRestTurn(db: Database.Database, turn: RestTurnInput): TurnResult
   })
   createSaveSnapshot(db, campaignId)
 
-  return { narrationText, hpAfter, inGameDateAfter, npcReactions: [], partyMemberActions: [] }
+  return {
+    narrationText,
+    hpAfter,
+    inGameDateAfter,
+    npcReactions: [],
+    partyMemberActions: [],
+    ...buildTurnResultExtras(db, character.id)
+  }
 }
 
 function resolveTravelTurn(
   db: Database.Database,
-  campaignId: string,
-  estimatedDays: number,
-  playerInput: string
+  input: { campaignId: string; estimatedDays: number; playerInput: string; characterId: string }
 ): TurnResult {
+  const { campaignId, estimatedDays, playerInput, characterId } = input
   const days = resolveTravel(estimatedDays)
   const inGameDateAfter = advanceInGameDate(db, campaignId, days)
   const narrationText = `${days} day${days === 1 ? '' : 's'} pass as you travel.`
   appendEvent(db, { campaignId, type: 'travel', payload: { days, narrationText, playerInput } })
   createSaveSnapshot(db, campaignId)
-  return { narrationText, inGameDateAfter, npcReactions: [], partyMemberActions: [] }
+  return {
+    narrationText,
+    inGameDateAfter,
+    npcReactions: [],
+    partyMemberActions: [],
+    ...buildTurnResultExtras(db, characterId)
+  }
 }
 
 interface RolledOutcome {
   outcome: { success: boolean; total: number; dc: number }
   rolled: boolean
-  roll?: number
+  roll: number | undefined
 }
 
 function resolveOutcome(character: Character, intent: IntentInterpretation, rng: RandomFn): RolledOutcome {
   if (!intent.checkNeeded || !intent.ability) {
-    return { outcome: { success: true, total: 0, dc: 0 }, rolled: false }
+    return { outcome: { success: true, total: 0, dc: 0 }, rolled: false, roll: undefined }
   }
   const abilityScores = (character.stats as { abilityScores?: AbilityScores }).abilityScores
   const abilityScore = abilityScores?.[intent.ability] ?? 10
@@ -162,13 +192,25 @@ function resolveOutcome(character: Character, intent: IntentInterpretation, rng:
 const NPC_ATTACK_BONUS = 2
 const NPC_DAMAGE_ROLL: DamageRoll = { diceCount: 1, diceSize: 6, modifier: 0 }
 
+export function resolvePlayerEquippedAttackDamage(
+  db: Database.Database,
+  characterId: string,
+  rng: RandomFn,
+  attackRoll: number
+): number {
+  const weaponRoll = getEquippedWeaponDamageRoll(db, characterId)
+  return resolvePlayerAttackDamage(weaponRoll, rng, attackRoll)
+}
+
 function resolveNpcAttackAgainstPlayer(
   db: Database.Database,
   player: Character,
   rng: RandomFn
 ): NpcAttackOutcome {
   const stats = player.stats as { abilityScores?: AbilityScores; ac?: number }
-  const ac = stats.ac ?? computeAC(stats.abilityScores?.agility ?? 10, 'none')
+  const armorTier = getEquippedArmorTier(db, player.id)
+  const agility = stats.abilityScores?.agility ?? 10
+  const ac = stats.ac ?? computeAC(agility, armorTier)
   const d20 = rollD20(rng)
   if (d20 + NPC_ATTACK_BONUS < ac) {
     return { hit: false }
@@ -198,16 +240,27 @@ async function resolveNpcReactions(
     }
     const npcContext = assembleNpcContext(db, npc)
     const reaction = await generateNpcReaction(provider, npc, npcContext, context.narrationResult.narrationText)
-    appendNpcMemory(db, { npcId, content: reaction.dialogue, tags: [] })
+    appendNpcMemory(db, { npcId, content: reaction.text, tags: [] })
     appendEvent(db, {
       campaignId: context.campaignId,
       type: 'npc_reaction',
-      payload: { npcId, dialogue: reaction.dialogue, attack: Boolean(reaction.attack) }
+      payload: {
+        npcId,
+        text: reaction.text,
+        reactionKind: reaction.reactionKind,
+        attack: Boolean(reaction.attack)
+      }
     })
     const attackResult = reaction.attack
       ? resolveNpcAttackAgainstPlayer(db, context.player, context.rng)
       : undefined
-    results.push({ npcId, npcName: npc.name, dialogue: reaction.dialogue, attackResult })
+    results.push({
+      npcId,
+      npcName: npc.name,
+      text: reaction.text,
+      reactionKind: reaction.reactionKind,
+      attackResult
+    })
   }
   return results
 }
@@ -240,28 +293,53 @@ interface CheckTurnInput {
   rng: RandomFn
 }
 
-async function resolveCheckTurn(
+interface ResolvedCheckOutcome {
+  outcome: ReturnType<typeof resolveOutcome>['outcome']
+  rolled: boolean
+  roll: number | undefined
+}
+
+function recordPlayerCheckAction(
+  db: Database.Database,
+  input: {
+    campaignId: string
+    character: Character
+    playerInput: string
+    resolved: ResolvedCheckOutcome
+    narrationText: string
+  }
+): void {
+  appendEvent(db, {
+    campaignId: input.campaignId,
+    type: 'player_action',
+    payload: {
+      characterId: input.character.id,
+      playerInput: input.playerInput,
+      outcome: input.resolved.outcome,
+      narrationText: input.narrationText
+    }
+  })
+}
+
+async function assembleCheckTurnResult(
   db: Database.Database,
   provider: Provider,
   campaignId: string,
-  turn: CheckTurnInput
+  input: {
+    character: Character
+    playerInput: string
+    resolved: ResolvedCheckOutcome
+    narrationResult: NarrationResult
+    rng: RandomFn
+  }
 ): Promise<TurnResult> {
-  const { character, intent, playerInput, rng } = turn
-  const resolved = resolveOutcome(character, intent, rng)
-  const regionId = getCurrentRegionId(db, campaignId, character)
-  const narrationContext = assembleNarrationContext(db, campaignId, regionId)
-  const narrationResult = await narrate(provider, resolved.outcome, narrationContext)
-  persistNarrationSideEffects(db, campaignId, regionId, narrationResult)
-
-  appendEvent(db, {
+  const { character, playerInput, resolved, narrationResult, rng } = input
+  recordPlayerCheckAction(db, {
     campaignId,
-    type: 'player_action',
-    payload: {
-      characterId: character.id,
-      playerInput,
-      outcome: resolved.outcome,
-      narrationText: narrationResult.narrationText
-    }
+    character,
+    playerInput,
+    resolved,
+    narrationText: narrationResult.narrationText
   })
 
   const npcReactions = await resolveNpcReactions(db, provider, {
@@ -291,8 +369,41 @@ async function resolveCheckTurn(
       : undefined,
     npcReactions,
     partyMemberActions,
-    proposedPromotion: resolveProposedPromotion(db, narrationResult.proposedPromotionNpcId)
+    proposedPromotion: resolveProposedPromotion(db, narrationResult.proposedPromotionNpcId),
+    ...buildTurnResultExtras(db, character.id, narrationResult.commitAlignmentShift?.newAlignment)
   }
+}
+
+async function resolveCheckTurn(
+  db: Database.Database,
+  provider: Provider,
+  campaignId: string,
+  turn: CheckTurnInput
+): Promise<TurnResult> {
+  const { character, intent, playerInput, rng } = turn
+  const resolved = resolveOutcome(character, intent, rng)
+  const regionId = getCurrentRegionId(db, campaignId, character)
+  const narrationContext = assembleNarrationContext({
+    db,
+    campaignId,
+    regionId,
+    characterId: character.id,
+    playerInput
+  })
+  const narrationResult = await narrate(provider, resolved.outcome, narrationContext)
+  persistNarrationSideEffects(db, narrationResult, {
+    campaignId,
+    regionId,
+    characterId: character.id
+  })
+
+  return assembleCheckTurnResult(db, provider, campaignId, {
+    character,
+    playerInput,
+    resolved,
+    narrationResult,
+    rng
+  })
 }
 
 function resolveProposedPromotion(
@@ -306,6 +417,35 @@ function resolveProposedPromotion(
   return npc ? { npcId: npc.id, npcName: npc.name } : undefined
 }
 
+function resolveDyingTurnIfNeeded(
+  db: Database.Database,
+  campaignId: string,
+  character: Character,
+  rng: RandomFn
+): TurnResult | undefined {
+  const priorDying = progressDyingSequence(db, campaignId, character, rng)
+  if (!priorDying) {
+    return undefined
+  }
+  appendEvent(db, {
+    campaignId,
+    type: 'dying_resolution',
+    payload: {
+      characterId: character.id,
+      status: priorDying.status,
+      narrationText: priorDying.message
+    }
+  })
+  createSaveSnapshot(db, campaignId)
+  return {
+    narrationText: priorDying.message,
+    npcReactions: [],
+    partyMemberActions: [],
+    dyingResolution: priorDying,
+    ...buildTurnResultExtras(db, character.id)
+  }
+}
+
 export async function resolvePlayerTurn(
   db: Database.Database,
   provider: Provider,
@@ -317,24 +457,9 @@ export async function resolvePlayerTurn(
     throw new Error(`Character ${turnInput.characterId} not found`)
   }
 
-  const priorDying = progressDyingSequence(db, turnInput.campaignId, character, rng)
-  if (priorDying) {
-    appendEvent(db, {
-      campaignId: turnInput.campaignId,
-      type: 'dying_resolution',
-      payload: {
-        characterId: character.id,
-        status: priorDying.status,
-        narrationText: priorDying.message
-      }
-    })
-    createSaveSnapshot(db, turnInput.campaignId)
-    return {
-      narrationText: priorDying.message,
-      npcReactions: [],
-      partyMemberActions: [],
-      dyingResolution: priorDying
-    }
+  const dyingTurn = resolveDyingTurnIfNeeded(db, turnInput.campaignId, character, rng)
+  if (dyingTurn) {
+    return dyingTurn
   }
 
   const intent = await interpretIntent(provider, turnInput.playerInput)
@@ -348,7 +473,12 @@ export async function resolvePlayerTurn(
     })
   }
   if (intent.actionType === 'travel') {
-    return resolveTravelTurn(db, turnInput.campaignId, intent.travelDays ?? 1, turnInput.playerInput)
+    return resolveTravelTurn(db, {
+      campaignId: turnInput.campaignId,
+      estimatedDays: intent.travelDays ?? 1,
+      playerInput: turnInput.playerInput,
+      characterId: character.id
+    })
   }
 
   return resolveCheckTurn(db, provider, turnInput.campaignId, {

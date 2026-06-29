@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import type { AbilityScores } from '../engine/abilities'
+import type { Alignment } from '../shared/alignment/types'
 import { computeAC } from '../engine/armorClass'
 import { computeHP, type Archetype } from '../engine/hp'
 import {
@@ -18,6 +19,7 @@ export interface CreatePlayerCharacterInput {
   name: string
   archetype: Archetype
   abilityScores: AbilityScores
+  alignment: Alignment
   portraitPath?: string | null
   sheetBackgroundPath?: string | null
 }
@@ -39,7 +41,8 @@ export function createPlayerCharacter(
     level: STARTING_LEVEL,
     currency: STARTING_CURRENCY,
     portraitPath: input.portraitPath ?? null,
-    sheetBackgroundPath: input.sheetBackgroundPath ?? null
+    sheetBackgroundPath: input.sheetBackgroundPath ?? null,
+    alignment: input.alignment
   })
 }
 

@@ -5,6 +5,10 @@ import { registerCampaignDeleteHandlers } from './campaignDeleteIpc'
 import { registerCampaignCreateHandlers } from './campaignCreateIpc'
 import { registerCampaignHandlers } from './campaignIpc'
 import { registerCharacterCreationHandlers } from './characterCreationIpc'
+import { registerGuidedCreationHandlers } from './guidedCreationIpc'
+import { registerItemHandlers } from './itemIpc'
+import { registerJournalHandlers } from './journalIpc'
+import { registerLogBookHandlers } from './logBookIpc'
 import { loadConfig } from './config'
 import { registerFileUploadHandlers } from './fileUploadIpc'
 import { setupGlobalErrorLogging } from './logger'
@@ -66,6 +70,10 @@ app.whenReady().then(() => {
   registerCampaignEditHandlers()
   registerFileUploadHandlers()
   registerCharacterCreationHandlers()
+  registerItemHandlers()
+  registerJournalHandlers()
+  registerLogBookHandlers()
+  registerGuidedCreationHandlers()
   registerTurnHandlers()
   registerRecapHandlers()
   registerNarrationLogHandlers()

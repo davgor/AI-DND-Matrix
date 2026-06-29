@@ -66,7 +66,13 @@ export function confirmNpcPromotion(db: Database.Database, input: PromoteNpcInpu
     sourceNpcId: npc.id,
     level: STARTING_LEVEL,
     hp,
-    stats: { abilityScores, ac, personality: npc.disposition }
+    alignment: npc.alignment,
+    stats: {
+      abilityScores,
+      ac,
+      personality: npc.disposition,
+      temperament: npc.temperament
+    }
   })
 
   markNpcPromoted(db, npc.id)

@@ -3,13 +3,61 @@ import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
-import { editNpcDisposition, editRegionDescription, setCampaignDeathMode } from './campaignEditIpc'
+import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
+
+function makeRegion(name: string) {
+  return {
+    name,
+    description: `Description of ${name}.`,
+    historyBackstory: `History of ${name}.`,
+    recentHistory: `Recent events in ${name}.`,
+    potentialQuests: [`Quest in ${name}`, `Another quest in ${name}`]
+  }
+}
+
+function makeNpcs(regionName: string, prefix: string) {
+  return [
+    {
+      name: `${prefix} One`,
+      role: 'guide',
+      disposition: 'friendly',
+      regionName,
+      temperament: 'neutral',
+      canSpeak: true,
+      alignment: 'true_neutral'
+    },
+    {
+      name: `${prefix} Two`,
+      role: 'merchant',
+      disposition: 'curious',
+      regionName,
+      temperament: 'curious',
+      canSpeak: true,
+      alignment: 'neutral_good'
+    },
+    {
+      name: `${prefix} Three`,
+      role: 'guard',
+      disposition: 'wary',
+      regionName,
+      temperament: 'disciplined',
+      canSpeak: true,
+      alignment: 'lawful_neutral'
+    }
+  ]
+}
+
+const ADDITIONAL_REGION = JSON.stringify({
+  region: makeRegion('Mistfen Crossing'),
+  npcs: makeNpcs('Mistfen Crossing', 'Mist')
+})
 
 function seedCampaignWithRegionAndNpc() {
   const db = createTestDb()
   const campaign = createCampaign(db, {
     name: 'Test Campaign',
-    premisePrompt: '...',
+    premisePrompt: 'A flooded kingdom.',
     deathMode: 'legendary'
   })
   const region = createRegion(db, {
@@ -56,6 +104,47 @@ describe('editNpcDisposition', () => {
     expect(detail.npcs.find((n) => n.id === npc.id)?.disposition).toBe(
       'wary, after the bandit raid'
     )
+  })
+})
+
+describe('editNpcTraits', () => {
+  it('persists temperament, alignment, canSpeak, and disposition round-trips', () => {
+    const { db, campaign, npc } = seedCampaignWithRegionAndNpc()
+
+    const detail = editNpcTraits(db, {
+      campaignId: campaign.id,
+      npcId: npc.id,
+      disposition: 'guarded but fair',
+      temperament: 'cautious',
+      alignment: 'lawful_neutral',
+      canSpeak: false
+    })
+
+    const updated = detail.npcs.find((n) => n.id === npc.id)
+    expect(updated?.disposition).toBe('guarded but fair')
+    expect(updated?.temperament).toBe('cautious')
+    expect(updated?.alignment).toBe('lawful_neutral')
+    expect(updated?.canSpeak).toBe(false)
+  })
+})
+
+describe('generateRegionForCampaign', () => {
+  it('adds a generated region with extras and three NPCs', async () => {
+    const { db, campaign } = seedCampaignWithRegionAndNpc()
+    const provider = createScriptedProvider([ADDITIONAL_REGION])
+
+    const detail = await generateRegionForCampaign(db, provider, {
+      campaignId: campaign.id,
+      seedPrompt: 'A marsh crossing shrouded in fog'
+    })
+
+    expect(detail.regions).toHaveLength(2)
+    const mistfen = detail.regions.find((region) => region.name === 'Mistfen Crossing')
+    expect(mistfen).toBeDefined()
+    expect(detail.npcs.filter((npc) => npc.regionId === mistfen!.id)).toHaveLength(3)
+    const extras = detail.regionExtras.find((entry) => entry.regionId === mistfen!.id)
+    expect(extras?.recentHistory).toContain('Mistfen Crossing')
+    expect(extras?.questHooks.length).toBeGreaterThanOrEqual(2)
   })
 })
 

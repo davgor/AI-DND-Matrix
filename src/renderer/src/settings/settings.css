@@ -35,19 +35,9 @@
   color: var(--text-primary);
 }
 
-.settings-header button {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  padding: 0.25rem 0.5rem;
-  cursor: pointer;
+.settings-close {
   font-size: 1rem;
-}
-
-.settings-header button:hover {
-  color: var(--text-accent);
-  background: transparent;
-  border: none;
+  line-height: 1;
 }
 
 .settings-provider-mode {

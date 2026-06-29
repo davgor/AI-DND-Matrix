@@ -6,8 +6,54 @@
   background: transparent;
 }
 
+.character-setup h1 {
+  margin-bottom: 1.25rem;
+}
+
+.character-setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.character-setup-field > span {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.character-setup-field input,
+.character-setup-field select {
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  padding: 0.55rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.character-setup-field input:focus,
+.character-setup-field select:focus {
+  outline: none;
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px rgba(201, 166, 107, 0.15);
+}
+
+.character-setup-field input::placeholder {
+  color: var(--text-dim);
+}
+
 .character-setup-error {
   color: var(--color-error);
+}
+
+.character-setup-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 .party-member-row {
@@ -18,4 +64,220 @@
 
 .party-member-row input {
   flex: 1;
+}
+
+/* Ability score assignment */
+.ability-score-assignment {
+  margin: 1.25rem 0;
+}
+
+.ability-score-assignment h2 {
+  margin-top: 0;
+}
+
+.ability-method-fieldset {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.ability-method-fieldset legend {
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.ability-method-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ability-method-option {
+  position: relative;
+  cursor: pointer;
+}
+
+.ability-method-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ability-method-option span {
+  display: inline-block;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.ability-method-option input:checked + span {
+  border-color: var(--border-strong);
+  background: rgba(201, 166, 107, 0.16);
+  color: var(--text-primary);
+}
+
+.ability-method-option input:focus-visible + span {
+  outline: 2px solid rgba(201, 166, 107, 0.35);
+  outline-offset: 2px;
+}
+
+.ability-method-option:hover span {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.ability-point-buy,
+.ability-standard-array,
+.ability-roll {
+  padding: 1rem 1.1rem;
+}
+
+.ability-points-remaining {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-scene);
+}
+
+.ability-points-remaining-value {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ability-points-remaining-over .ability-points-remaining-value {
+  color: var(--color-error);
+}
+
+.ability-points-remaining-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.ability-points-remaining-pool {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.ability-score-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ability-score-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+}
+
+.ability-score-label {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.ability-score-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ability-score-step {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.ability-score-value {
+  min-width: 1.75rem;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.ability-score-modifier {
+  min-width: 2.25rem;
+  text-align: right;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ability-standard-array {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ability-roll {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.ability-roll-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+}
+
+.ability-roll-result {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+}
+
+.ability-roll-result dt {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.ability-roll-result dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.portrait-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
 }

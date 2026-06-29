@@ -37,6 +37,29 @@ describe('buildNarrationLog', () => {
     expect(log.map((entry) => entry.text)).toEqual(['Halt!', 'Brom scouts ahead.'])
     expect(log.map((entry) => entry.speaker)).toEqual(['npc', 'partyMember'])
   })
+
+  it('strips action markers and preserves reactionKind for non-speaking NPC reactions', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'npc_reaction',
+      payload: {
+        text: '**The wolf lunges at your throat.**',
+        reactionKind: 'action'
+      }
+    })
+
+    const log = buildNarrationLog(db, campaign.id)
+
+    expect(log).toEqual([
+      expect.objectContaining({
+        speaker: 'npc',
+        text: 'The wolf lunges at your throat.',
+        reactionKind: 'action'
+      })
+    ])
+  })
 })
 
 describe('buildNarrationLog: rest, travel, and dying_resolution', () => {

@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import type { Archetype } from '../../../engine/hp'
 import type { AbilityScores } from '../../../engine/abilities'
-import type { DeathMode, RespawnRules } from '../../../db/repositories/campaigns'
+import type { Alignment } from '../../../shared/alignment/types'
 import type { AiPartyMemberInput } from '../../../main/characterCreationIpc'
 import type { CharacterSetupState } from './characterSetupValidation'
-import { useDeathModeState } from './useDeathModeState'
 import { useImageSelectors } from './useImageSelectors'
 import { useSubmitCharacterSetup } from './useSubmitCharacterSetup'
 
@@ -13,8 +12,9 @@ export interface CharacterSetupController {
   setName: (value: string) => void
   archetype: Archetype | ''
   setArchetype: (value: Archetype | '') => void
+  alignment: Alignment | ''
+  setAlignment: (value: Alignment | '') => void
   setAbilityScores: (scores: AbilityScores | null) => void
-  setDeathMode: (deathMode: DeathMode, respawnRules: RespawnRules | null) => void
   setPartyMembers: (members: AiPartyMemberInput[]) => void
   selectPortrait: () => Promise<void>
   selectSheetBackground: () => Promise<void>
@@ -29,17 +29,16 @@ export function useCharacterSetup(
 ): CharacterSetupController {
   const [name, setName] = useState('')
   const [archetype, setArchetype] = useState<Archetype | ''>('')
+  const [alignment, setAlignment] = useState<Alignment | ''>('')
   const [abilityScores, setAbilityScores] = useState<AbilityScores | null>(null)
   const [partyMembers, setPartyMembers] = useState<AiPartyMemberInput[]>([])
   const images = useImageSelectors()
-  const deathModeState = useDeathModeState()
 
   const formState: CharacterSetupState = {
     name,
     archetype,
-    abilityScores,
-    deathMode: deathModeState.deathMode,
-    respawnRules: deathModeState.respawnRules
+    alignment,
+    abilityScores
   }
   const submission = useSubmitCharacterSetup(
     campaignId,
@@ -53,8 +52,9 @@ export function useCharacterSetup(
     setName,
     archetype,
     setArchetype,
+    alignment,
+    setAlignment,
     setAbilityScores,
-    setDeathMode: deathModeState.setDeathMode,
     setPartyMembers,
     selectPortrait: images.selectPortrait,
     selectSheetBackground: images.selectSheetBackground,

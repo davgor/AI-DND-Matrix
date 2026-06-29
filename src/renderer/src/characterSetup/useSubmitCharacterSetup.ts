@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Archetype } from '../../../engine/hp'
+import type { Alignment } from '../../../shared/alignment/types'
 import type { AbilityScores } from '../../../engine/abilities'
 import type { AiPartyMemberInput } from '../../../main/characterCreationIpc'
 import { validateCharacterSetup, type CharacterSetupState } from './characterSetupValidation'
@@ -21,16 +21,12 @@ async function submitCharacterSetup(
   state: CharacterSetupState,
   extras: SubmissionExtras
 ): Promise<void> {
-  await window.campaigns.setDeathMode({
-    campaignId,
-    deathMode: state.deathMode,
-    respawnRules: state.respawnRules
-  })
   await window.characters.createPlayer({
     campaignId,
     name: state.name,
     archetype: state.archetype as Archetype,
     abilityScores: state.abilityScores as AbilityScores,
+    alignment: state.alignment as Alignment,
     portraitPath: extras.portraitPath,
     sheetBackgroundPath: extras.sheetBackgroundPath
   })

@@ -4,15 +4,51 @@ import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 
+function makeRegion(name: string) {
+  return {
+    name,
+    description: `Description of ${name}.`,
+    historyBackstory: `History of ${name}.`,
+    recentHistory: `Recent events in ${name}.`,
+    potentialQuests: [`Quest in ${name}`, `Another quest in ${name}`]
+  }
+}
+
+function makeNpcs(regionName: string, prefix: string) {
+  return [
+    {
+      name: `${prefix} One`,
+      role: 'guide',
+      disposition: 'friendly',
+      regionName,
+      temperament: 'neutral',
+      canSpeak: true,
+      alignment: 'true_neutral'
+    },
+    {
+      name: `${prefix} Two`,
+      role: 'merchant',
+      disposition: 'curious',
+      regionName,
+      temperament: 'curious',
+      canSpeak: true,
+      alignment: 'neutral_good'
+    },
+    {
+      name: `${prefix} Three`,
+      role: 'guard',
+      disposition: 'wary',
+      regionName,
+      temperament: 'disciplined',
+      canSpeak: true,
+      alignment: 'lawful_neutral'
+    }
+  ]
+}
+
 const VALID_GENERATION = JSON.stringify({
-  regions: [
-    { name: 'Oakhollow', description: 'A place.', historyBackstory: 'Some history.' },
-    { name: 'Oakhollow Outskirts', description: 'Nearby.', historyBackstory: 'More history.' }
-  ],
-  npcs: [
-    { name: 'Mira', role: 'shopkeeper', disposition: 'friendly', regionName: 'Oakhollow' },
-    { name: 'Borin', role: 'guard', disposition: 'neutral', regionName: 'Oakhollow' }
-  ],
+  regions: [makeRegion('Oakhollow'), makeRegion('Oakhollow Outskirts')],
+  npcs: [...makeNpcs('Oakhollow', 'Oak'), ...makeNpcs('Oakhollow Outskirts', 'Out')],
   storyThread: { title: 'Main Arc', state: 'starting', summary: 'A summary.' }
 })
 
@@ -41,6 +77,7 @@ describe('createCampaignFromRequest', () => {
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.detail.regions.length).toBeGreaterThan(0)
+      expect(result.detail.regionExtras.length).toBe(result.detail.regions.length)
     }
   })
 

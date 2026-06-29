@@ -1,4 +1,13 @@
+import { useState } from 'react'
 import type { Character } from '../../../db/repositories/characters'
+import { CharacterInventorySection } from './CharacterInventorySection'
+import { CharacterIdentitySection } from './CharacterIdentitySection'
+import { CharacterJournalSection } from './CharacterJournalSection'
+import { CharacterLogBookModal } from './CharacterLogBookModal'
+import './characterInventory.css'
+import './characterIdentity.css'
+import './characterJournal.css'
+import './characterLogBook.css'
 
 interface AbilityScores {
   body?: number
@@ -20,6 +29,7 @@ export interface CharacterSheetBodyProps {
 export function CharacterSheetBody(props: CharacterSheetBodyProps): JSX.Element {
   const { character } = props
   const stats = character.stats as CharacterStats
+  const [logBookOpen, setLogBookOpen] = useState(false)
 
   return (
     <div className={props.compact ? 'character-sheet-content character-sheet-content-compact' : 'character-sheet-content'}>
@@ -30,7 +40,19 @@ export function CharacterSheetBody(props: CharacterSheetBodyProps): JSX.Element 
       </p>
       <CharacterSheetVitals character={character} ac={stats.ac} />
       <AbilityScoresList abilityScores={stats.abilityScores} />
-      <CharacterSheetInventory inventory={character.inventory} />
+      <CharacterIdentitySection character={character} />
+      <CharacterJournalSection character={character} />
+      <div className="character-log-book-actions">
+        <button type="button" onClick={() => setLogBookOpen(true)}>
+          Log Book
+        </button>
+      </div>
+      <CharacterInventorySection character={character} />
+      <CharacterLogBookModal
+        character={character}
+        isOpen={logBookOpen}
+        onClose={() => setLogBookOpen(false)}
+      />
     </div>
   )
 }
@@ -98,23 +120,5 @@ function AbilityScoresList(props: { abilityScores: AbilityScores | undefined }):
         </div>
       ))}
     </dl>
-  )
-}
-
-function CharacterSheetInventory(props: { inventory: unknown[] }): JSX.Element {
-  const { inventory } = props
-  return (
-    <div className="character-sheet-inventory">
-      <h3>Inventory</h3>
-      {inventory.length === 0 ? (
-        <p className="character-sheet-empty">No items yet</p>
-      ) : (
-        <ul>
-          {inventory.map((item, index) => (
-            <li key={index}>{JSON.stringify(item)}</li>
-          ))}
-        </ul>
-      )}
-    </div>
   )
 }

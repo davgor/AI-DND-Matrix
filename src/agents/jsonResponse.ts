@@ -6,9 +6,19 @@ function stripCodeFence(raw: string): string {
   return match ? match[1] : trimmed
 }
 
+function extractJsonObject(raw: string): string {
+  const stripped = stripCodeFence(raw)
+  const start = stripped.indexOf('{')
+  const end = stripped.lastIndexOf('}')
+  if (start >= 0 && end > start) {
+    return stripped.slice(start, end + 1)
+  }
+  return stripped
+}
+
 export function tryParseJson(raw: string): unknown {
   try {
-    return JSON.parse(stripCodeFence(raw))
+    return JSON.parse(extractJsonObject(raw))
   } catch {
     return undefined
   }

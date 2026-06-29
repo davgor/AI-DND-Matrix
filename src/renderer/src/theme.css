@@ -144,20 +144,22 @@ body {
   color: var(--text-dim);
 }
 
-/* Primary / secondary buttons in content areas */
-.btn,
-.content-panel button,
-.campaign-review button,
-.character-setup button,
-.play-view-input-row button,
-.settings-footer button,
-.settings-discard-confirm button,
-.settings-section button,
-.dm-exposition-error button,
-.play-view-recap button,
-.play-view-promotion button,
-.campaign-delete-actions button,
-.campaigns-rail-new-button {
+/* Themed action buttons — default for all app buttons except chrome/nav controls */
+.app-root .btn,
+.app-root button:not(
+  .titlebar-button,
+  .character-sheet-close,
+  .character-log-book-close,
+  .btn-ghost,
+  .campaigns-rail-toggle,
+  .campaigns-rail-button,
+  .campaigns-rail-chip,
+  .campaigns-rail-delete,
+  .player-sheet-rail-toggle,
+  .sidebar-toggle,
+  .sidebar-campaign-button,
+  .ability-score-step
+) {
   border: 1px solid var(--accent-gold);
   background: rgba(201, 166, 107, 0.12);
   color: var(--text-primary);
@@ -169,43 +171,93 @@ body {
   transition: background 150ms ease, border-color 150ms ease;
 }
 
-.btn:hover,
-.content-panel button:hover,
-.campaign-review button:hover,
-.character-setup button:hover,
-.play-view-input-row button:hover,
-.settings-footer button:hover,
-.settings-discard-confirm button:hover,
-.settings-section button:hover,
-.dm-exposition-error button:hover,
-.play-view-recap button:hover,
-.play-view-promotion button:hover,
-.campaign-delete-actions button:hover,
-.campaigns-rail-new-button:hover {
+.app-root .btn:hover:not(:disabled),
+.app-root button:not(
+  .titlebar-button,
+  .character-sheet-close,
+  .character-log-book-close,
+  .btn-ghost,
+  .campaigns-rail-toggle,
+  .campaigns-rail-button,
+  .campaigns-rail-chip,
+  .campaigns-rail-delete,
+  .player-sheet-rail-toggle,
+  .sidebar-toggle,
+  .sidebar-campaign-button,
+  .ability-score-step
+):hover:not(:disabled) {
   background: rgba(201, 166, 107, 0.22);
   border-color: var(--accent-bronze-light);
 }
 
-.btn:disabled,
-.content-panel button:disabled,
-.character-setup button:disabled,
-.play-view-input-row button:disabled,
-.campaign-delete-actions button:disabled {
+.app-root .btn:disabled,
+.app-root button:not(
+  .titlebar-button,
+  .character-sheet-close,
+  .character-log-book-close,
+  .btn-ghost,
+  .campaigns-rail-toggle,
+  .campaigns-rail-button,
+  .campaigns-rail-chip,
+  .campaigns-rail-delete,
+  .player-sheet-rail-toggle,
+  .sidebar-toggle,
+  .sidebar-campaign-button,
+  .ability-score-step
+):disabled {
   opacity: 0.55;
   cursor: wait;
 }
 
-.btn-danger,
-.campaign-delete-confirm {
+.app-root .btn-danger,
+.app-root .campaign-delete-confirm {
   border-color: var(--color-danger);
   background: rgba(196, 92, 92, 0.2);
   color: var(--text-primary);
 }
 
-.btn-danger:hover,
-.campaign-delete-confirm:hover {
+.app-root .btn-danger:hover:not(:disabled),
+.app-root .campaign-delete-confirm:hover:not(:disabled) {
   background: rgba(196, 92, 92, 0.35);
   border-color: #d87070;
+}
+
+.app-root .guided-conversation-advance {
+  border-color: var(--accent-bronze-light);
+  background: rgba(201, 166, 107, 0.2);
+}
+
+.app-root .guided-conversation-advance:hover:not(:disabled) {
+  background: rgba(201, 166, 107, 0.3);
+  border-color: var(--accent-bronze-light);
+}
+
+.app-root .ability-score-step {
+  border: 1px solid var(--border-medium);
+  background: var(--surface-inset);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 0;
+}
+
+.app-root .ability-score-step:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+/* Ghost / icon buttons — no gold chrome */
+.app-root .btn-ghost {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.app-root .btn-ghost:hover:not(:disabled) {
+  color: var(--text-accent);
+  background: var(--surface-hover);
+  border-color: transparent;
 }
 
 .eyebrow {

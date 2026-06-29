@@ -1,0 +1,111 @@
+.guided-conversation {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  min-height: 0;
+}
+
+.guided-conversation-header,
+.guided-conversation-thread,
+.guided-conversation-composer {
+  padding: 20px;
+}
+
+.guided-conversation-header h1 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.guided-conversation-header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.guided-foundation-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.guided-foundation-chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.guided-foundation-chip-complete {
+  border-color: var(--border-strong);
+  color: var(--text-accent);
+  background: rgba(201, 166, 107, 0.12);
+}
+
+.guided-conversation-thread {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 280px;
+}
+
+.guided-conversation-message {
+  max-width: 85%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.guided-conversation-message-dm {
+  align-self: flex-start;
+  background: var(--surface-scene);
+}
+
+.guided-conversation-message-player {
+  align-self: flex-end;
+  background: rgba(201, 166, 107, 0.1);
+  border-color: var(--border-medium);
+}
+
+.guided-conversation-speaker {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.guided-conversation-message p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.guided-conversation-empty,
+.guided-conversation-status {
+  color: var(--text-muted);
+}
+
+.guided-conversation-error {
+  color: var(--color-error);
+}
+
+.guided-conversation-composer textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+
+.guided-conversation-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}

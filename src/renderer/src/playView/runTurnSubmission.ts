@@ -1,4 +1,5 @@
 import type { TurnResult } from '../../../main/turnIpc'
+import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { PlayLogController } from './usePlayLog'
 import type { PromotionPromptController } from './usePromotionPrompt'
@@ -15,6 +16,8 @@ export async function runTurnSubmission(input: {
   lastCheck: TurnResult['check'] | null
   characterRefreshToken: number
   expositionStatus: ExpositionStatus
+  pendingAlignmentShift: PendingAlignmentShift | null
+  playerAlignment: Alignment | null
 }> {
   const result = await resolvePlayerTurn({
     campaignId: input.campaignId,
@@ -23,9 +26,13 @@ export async function runTurnSubmission(input: {
   })
   input.promotion.setProposed(result.proposedPromotion ?? null)
   await input.playLog.refreshLog()
+  const characters = await window.characters.listByCampaign(input.campaignId)
+  const player = characters.find((character) => character.id === input.characterId)
   return {
     lastCheck: result.check ?? null,
     characterRefreshToken: input.characterRefreshToken + 1,
-    expositionStatus: idleExposition()
+    expositionStatus: idleExposition(),
+    pendingAlignmentShift: result.pendingAlignmentShift,
+    playerAlignment: player?.alignment ?? null
   }
 }

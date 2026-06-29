@@ -8,18 +8,50 @@ import {
   selectCampaign
 } from './campaignIpc'
 
-const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: string): string =>
-  JSON.stringify({
-    regions: [
-      { name: regionName, description: 'A place.', historyBackstory: 'Some history.' },
-      { name: `${regionName} Outskirts`, description: 'Nearby.', historyBackstory: 'More history.' }
-    ],
-    npcs: [
-      { name: npcName, role: 'shopkeeper', disposition: 'friendly', regionName },
-      { name: `${npcName} the Second`, role: 'guard', disposition: 'neutral', regionName }
-    ],
+const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: string): string => {
+  const outskirts = `${regionName} Outskirts`
+  const makeRegion = (name: string) => ({
+    name,
+    description: `Description of ${name}.`,
+    historyBackstory: `History of ${name}.`,
+    recentHistory: `Recent events in ${name}.`,
+    potentialQuests: [`Quest in ${name}`, `Another quest in ${name}`]
+  })
+  const makeNpcs = (name: string, prefix: string) => [
+    {
+      name: `${prefix} One`,
+      role: 'guide',
+      disposition: 'friendly',
+      regionName: name,
+      temperament: 'neutral',
+      canSpeak: true,
+      alignment: 'true_neutral'
+    },
+    {
+      name: `${prefix} Two`,
+      role: 'merchant',
+      disposition: 'curious',
+      regionName: name,
+      temperament: 'curious',
+      canSpeak: true,
+      alignment: 'neutral_good'
+    },
+    {
+      name: npcName,
+      role: 'shopkeeper',
+      disposition: 'friendly',
+      regionName: name,
+      temperament: 'cautious',
+      canSpeak: true,
+      alignment: 'lawful_good'
+    }
+  ]
+  return JSON.stringify({
+    regions: [makeRegion(regionName), makeRegion(outskirts)],
+    npcs: [...makeNpcs(regionName, regionName), ...makeNpcs(outskirts, `${regionName} Out`)],
     storyThread: { title: threadTitle, state: 'starting', summary: 'A summary.' }
   })
+}
 
 describe('generateCampaignFromPrompt + selectCampaign + listCampaignsForSidebar', () => {
   it('generates, persists, and immediately marks the campaign as last-played', async () => {
@@ -30,7 +62,8 @@ describe('generateCampaignFromPrompt + selectCampaign + listCampaignsForSidebar'
 
     expect(detail.campaign?.name).toBeDefined()
     expect(detail.regions).toHaveLength(2)
-    expect(detail.npcs).toHaveLength(2)
+    expect(detail.npcs).toHaveLength(6)
+    expect(detail.regionExtras).toHaveLength(2)
     expect(detail.storyThreads).toHaveLength(1)
 
     const sidebarList = listCampaignsForSidebar(db)
@@ -63,8 +96,22 @@ describe('multi-campaign isolation (008.5)', () => {
     expect(detailA.regions.map((r) => r.name)).toEqual(['Oakhollow', 'Oakhollow Outskirts'])
     expect(detailB.regions.map((r) => r.name)).toEqual(['Frosthaven', 'Frosthaven Outskirts'])
 
-    expect(detailA.npcs.map((n) => n.name)).toEqual(['Mira', 'Mira the Second'])
-    expect(detailB.npcs.map((n) => n.name)).toEqual(['Borin', 'Borin the Second'])
+    expect(detailA.npcs.map((n) => n.name)).toEqual([
+      'Mira',
+      'Oakhollow One',
+      'Oakhollow Two',
+      'Mira',
+      'Oakhollow Out One',
+      'Oakhollow Out Two'
+    ])
+    expect(detailB.npcs.map((n) => n.name)).toEqual([
+      'Borin',
+      'Frosthaven One',
+      'Frosthaven Two',
+      'Borin',
+      'Frosthaven Out One',
+      'Frosthaven Out Two'
+    ])
 
     expect(detailA.storyThreads[0]?.title).toBe('The Sunken Crown')
     expect(detailB.storyThreads[0]?.title).toBe('The Frozen Pact')

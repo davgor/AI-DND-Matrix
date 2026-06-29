@@ -59,6 +59,17 @@ export function createWorldFact(db: Database.Database, input: CreateWorldFactInp
   }
 }
 
+export function listQuestHooksByRegion(db: Database.Database, regionId: string): WorldFact[] {
+  const rows = db
+    .prepare(
+      `SELECT * FROM world_facts
+       WHERE region_id = ? AND faction_tag = 'quest_hook'
+       ORDER BY created_at`
+    )
+    .all(regionId) as WorldFactRow[]
+  return rows.map(rowToWorldFact)
+}
+
 export function listWorldFactsByRegionOrFaction(
   db: Database.Database,
   campaignId: string,

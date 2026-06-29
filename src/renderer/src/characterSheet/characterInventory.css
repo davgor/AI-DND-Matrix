@@ -1,0 +1,64 @@
+.character-inventory h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.character-inventory-equipped {
+  display: grid;
+  gap: 8px;
+}
+
+.character-inventory-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-scene);
+}
+
+.character-inventory-slot-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+.character-inventory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.character-inventory-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-scene);
+}
+
+.character-inventory-list p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.character-inventory-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.character-inventory-actions button {
+  white-space: nowrap;
+}

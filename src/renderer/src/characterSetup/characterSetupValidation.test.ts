@@ -7,20 +7,23 @@ function baseState(overrides: Partial<CharacterSetupState> = {}): CharacterSetup
   return {
     name: 'Kael',
     archetype: 'fighter',
+    alignment: 'true_neutral',
     abilityScores: VALID_SCORES,
-    deathMode: 'legendary',
-    respawnRules: null,
     ...overrides
   }
 }
 
 describe('validateCharacterSetup (009.6)', () => {
   it('blocks submission until name is set', () => {
-    expect(validateCharacterSetup(baseState({ name: '' }))).toBe('Name is required.')
+    expect(validateCharacterSetup(baseState({ name: '' }))).toBe('Character name is required.')
   })
 
   it('blocks submission until an archetype is chosen', () => {
     expect(validateCharacterSetup(baseState({ archetype: '' }))).toBe('Choose an archetype.')
+  })
+
+  it('blocks submission until an alignment is chosen', () => {
+    expect(validateCharacterSetup(baseState({ alignment: '' }))).toBe('Choose an alignment.')
   })
 
   it('blocks submission until all four ability scores are assigned', () => {
@@ -29,21 +32,7 @@ describe('validateCharacterSetup (009.6)', () => {
     )
   })
 
-  it('blocks submission when respawn mode has no respawn rules defined', () => {
-    expect(validateCharacterSetup(baseState({ deathMode: 'respawn', respawnRules: null }))).toBe(
-      'Respawn mode requires a location, cost, and limit to be defined.'
-    )
-  })
-
-  it('allows a fully valid legendary-mode form', () => {
+  it('allows a fully valid form', () => {
     expect(validateCharacterSetup(baseState())).toBeNull()
-  })
-
-  it('allows a fully valid respawn-mode form once rules are defined', () => {
-    const state = baseState({
-      deathMode: 'respawn',
-      respawnRules: { location: 'Last Shrine', cost: 50, limit: 3 }
-    })
-    expect(validateCharacterSetup(state)).toBeNull()
   })
 })

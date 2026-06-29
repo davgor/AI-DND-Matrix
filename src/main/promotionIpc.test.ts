@@ -50,6 +50,26 @@ describe('confirmNpcPromotion (011.3 conversion + 011.5 mark promoted)', () => {
     expect(promoted?.hp).toBe(computeHP('rogue', 1, 15))
   })
 
+  it('copies NPC alignment onto the promoted character when present', () => {
+    const { db, campaign, region } = seedNpc('guard')
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Sergeant Vale',
+      role: 'guard',
+      disposition: 'stern',
+      alignment: 'lawful_neutral',
+      temperament: 'disciplined'
+    })
+
+    confirmNpcPromotion(db, { campaignId: campaign.id, npcId: npc.id })
+    const promoted = listCharactersByCampaign(db, campaign.id).find((c) => c.sourceNpcId === npc.id)
+    const stats = promoted?.stats as { temperament?: string } | undefined
+
+    expect(promoted?.alignment).toBe('lawful_neutral')
+    expect(stats?.temperament).toBe('disciplined')
+  })
+
   it('marks the original NPC row as promoted', () => {
     const { db, campaign, npc } = seedNpc('guard')
 

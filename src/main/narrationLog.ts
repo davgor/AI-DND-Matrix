@@ -1,5 +1,7 @@
 import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
+import type { NpcReactionKind } from '../shared/alignment/types'
+import { stripActionMarkers } from '../shared/alignment/types'
 import { listEventsByCampaign, type Event } from '../db/repositories/events'
 import { getDb } from './db'
 
@@ -10,6 +12,7 @@ export interface PlayLogEntry {
   timestamp: string
   speaker: LogSpeaker
   text: string
+  reactionKind?: NpcReactionKind
 }
 
 function playerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
@@ -29,6 +32,27 @@ function singleTextEntry(event: Event, speaker: LogSpeaker, field: string): Play
   return typeof text === 'string' ? [{ id: event.id, timestamp: event.timestamp, speaker, text }] : []
 }
 
+function npcReactionEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as {
+    dialogue?: string
+    text?: string
+    reactionKind?: NpcReactionKind
+  }
+  const text = payload.text ?? payload.dialogue
+  if (typeof text !== 'string') {
+    return []
+  }
+  return [
+    {
+      id: event.id,
+      timestamp: event.timestamp,
+      speaker: 'npc',
+      text: payload.reactionKind === 'action' ? stripActionMarkers(text) : text,
+      reactionKind: payload.reactionKind ?? 'dialogue'
+    }
+  ]
+}
+
 function eventToLogEntries(event: Event): PlayLogEntry[] {
   switch (event.type) {
     case 'player_action':
@@ -36,10 +60,12 @@ function eventToLogEntries(event: Event): PlayLogEntry[] {
     case 'travel':
       return playerInputAndNarrationEntries(event)
     case 'npc_reaction':
-      return singleTextEntry(event, 'npc', 'dialogue')
+      return npcReactionEntries(event)
     case 'party_member_action':
       return singleTextEntry(event, 'partyMember', 'content')
     case 'dying_resolution':
+      return singleTextEntry(event, 'dm', 'narrationText')
+    case 'opening_scene':
       return singleTextEntry(event, 'dm', 'narrationText')
     default:
       return []

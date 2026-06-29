@@ -84,7 +84,7 @@ describe('generateNpcReaction', () => {
 
     const reaction = await generateNpcReaction(provider, npcA, context, 'The player enters the village.')
 
-    expect(reaction).toEqual({ dialogue: 'Welcome, traveler.' })
+    expect(reaction).toEqual({ reactionKind: 'dialogue', text: 'Welcome, traveler.' })
   })
 
   it('flags a hostile attack, leaving the actual resolution to the engine', async () => {
@@ -95,6 +95,29 @@ describe('generateNpcReaction', () => {
 
     const reaction = await generateNpcReaction(provider, npcA, context, 'The player attacks.')
 
-    expect(reaction).toEqual({ dialogue: 'Die!', attack: true })
+    expect(reaction).toEqual({ reactionKind: 'dialogue', text: 'Die!', attack: true })
+  })
+
+  it('returns a wrapped action description for a non-speaking NPC', async () => {
+    const db = createTestDb()
+    const { campaign, region } = seedTwoNpcs(db)
+    const wolf = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Wolf',
+      role: 'beast',
+      disposition: 'hostile',
+      temperament: 'aggressive',
+      canSpeak: false
+    })
+    const context = assembleNpcContext(db, wolf)
+    const provider = createScriptedProvider(['{"actionDescription":"The wolf lunges at your throat."}'])
+
+    const reaction = await generateNpcReaction(provider, wolf, context, 'The player approaches.')
+
+    expect(reaction).toEqual({
+      reactionKind: 'action',
+      text: '**The wolf lunges at your throat.**'
+    })
   })
 })
