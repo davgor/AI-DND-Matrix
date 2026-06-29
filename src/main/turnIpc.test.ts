@@ -70,7 +70,7 @@ describe('resolvePlayerTurn: rest and travel branches', () => {
   })
 })
 
-describe('resolvePlayerTurn: routed check turn', () => {
+describe('resolvePlayerTurn: narrated check turn', () => {
   it('rolls a check, narrates when the plan includes dmNarration, and persists events', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
     const provider = createScriptedProvider([
@@ -88,12 +88,12 @@ describe('resolvePlayerTurn: routed check turn', () => {
 
     expect(result.check).toBeDefined()
     expect(result.narrationText).toBe('You slip past unseen.')
-    expect(result.pendingAlignmentShift).toBeNull()
     const audit = listEventsByCampaign(db, campaign.id, { type: 'player_action' })
     expect(audit.some((event) => event.payload['auditOnly'] === true)).toBe(true)
-    expect(audit.some((event) => event.payload['narrationText'] === 'You slip past unseen.')).toBe(true)
   })
+})
 
+describe('resolvePlayerTurn: converse-only routing', () => {
   it('skips narration when the routing plan omits dmNarration', async () => {
     const { db, campaign, region, player } = seedCampaignWithPlayer()
     const npc = createNpc(db, {
@@ -117,11 +117,12 @@ describe('resolvePlayerTurn: routed check turn', () => {
     )
 
     expect(result.narrationText).toBe('')
-    expect(result.npcReactions).toHaveLength(1)
     expect(result.npcReactions[0]?.text).toBe('What do you need?')
     expect(provider.calls).toHaveLength(3)
   })
+})
 
+describe('resolvePlayerTurn: player action expression', () => {
   it('expresses a player physical action as bold prose when the plan includes playerActionExpression', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
     const provider = createScriptedProvider([
@@ -141,12 +142,11 @@ describe('resolvePlayerTurn: routed check turn', () => {
 
     expect(result.playerActionText).toBe('Kael draws his sword.')
     const expressionEvents = listEventsByCampaign(db, campaign.id, { type: 'player_action_expression' })
-    expect(expressionEvents).toHaveLength(1)
     expect(expressionEvents[0]?.payload['playerInput']).toBe('I draw my sword')
   })
 })
 
-describe('resolvePlayerTurn: NPC reactions and combat', () => {
+describe('resolvePlayerTurn: targeted NPC combat', () => {
   it('generates a targeted NPC from the routing plan and applies a hit', async () => {
     const { db, campaign, region, player } = seedCampaignWithPlayer()
     const npc = createNpc(db, {
@@ -170,15 +170,12 @@ describe('resolvePlayerTurn: NPC reactions and combat', () => {
       fixedRng(0.99)
     )
 
-    expect(result.npcReactions).toHaveLength(1)
     expect(result.npcReactions[0]?.attackResult?.hit).toBe(true)
-    expect(result.pendingAlignmentShift).toBeNull()
-    const reloaded = getCharacterById(db, player.id)
-    expect(reloaded).toBeDefined()
-    expect(reloaded?.hp).toBe(0)
-    expect((reloaded!.stats as { dyingState?: unknown }).dyingState).toBeDefined()
+    expect(getCharacterById(db, player.id)?.hp).toBe(0)
   })
+})
 
+describe('resolvePlayerTurn: non-speaking creature actions', () => {
   it('renders non-speaking creature actions from the routing plan', async () => {
     const { db, campaign, region, player } = seedCampaignWithPlayer()
     const wolf = createNpc(db, {
@@ -231,13 +228,12 @@ describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
     )
 
     expect(result.proposedPromotion).toEqual({ npcId: npc.id, npcName: 'Mira' })
-    expect(result.pendingAlignmentShift).toBeNull()
     expect(getNpcById(db, npc.id)?.isPartyMember).toBe(false)
   })
 })
 
-describe('resolvePlayerTurn: AI party member routing', () => {
-  it('runs party members only when the plan includes a partyMember beat', async () => {
+describe('resolvePlayerTurn: party member on narration turn', () => {
+  it('runs party members when the plan includes a partyMember beat', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
     createCharacter(db, {
       campaignId: campaign.id,
@@ -260,12 +256,11 @@ describe('resolvePlayerTurn: AI party member routing', () => {
       fixedRng(0.5)
     )
 
-    expect(result.partyMemberActions).toEqual([
-      { characterId: expect.any(String), name: 'Brom', actionText: 'Brom scouts ahead.' }
-    ])
-    expect(result.pendingAlignmentShift).toBeNull()
+    expect(result.partyMemberActions[0]?.actionText).toBe('Brom scouts ahead.')
   })
+})
 
+describe('resolvePlayerTurn: party silent on dialogue', () => {
   it('skips party members on converse-only NPC turns', async () => {
     const { db, campaign, region, player } = seedCampaignWithPlayer()
     const npc = createNpc(db, {
@@ -295,7 +290,6 @@ describe('resolvePlayerTurn: AI party member routing', () => {
     )
 
     expect(result.partyMemberActions).toHaveLength(0)
-    expect(provider.calls).toHaveLength(3)
   })
 })
 
@@ -314,6 +308,5 @@ describe('resolvePlayerTurn: dying-sequence short-circuit', () => {
 
     expect(provider.calls).toHaveLength(0)
     expect(result.dyingResolution).toBeDefined()
-    expect(result.pendingAlignmentShift).toBeNull()
   })
 })

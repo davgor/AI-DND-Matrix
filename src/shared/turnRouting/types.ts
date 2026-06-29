@@ -46,16 +46,14 @@ function isTurnDisposition(value: unknown): value is TurnDisposition {
   return typeof value === 'string' && (TURN_DISPOSITIONS as readonly string[]).includes(value)
 }
 
-function isNpcResponseBeat(record: Record<string, unknown>): record is NpcResponseBeat {
+function isNpcResponseBeat(record: Record<string, unknown>): boolean {
   if (record['kind'] !== 'npcResponse' || !Array.isArray(record['npcIds'])) {
     return false
   }
   return (record['npcIds'] as unknown[]).every((id) => typeof id === 'string')
 }
 
-function isPlayerActionExpressionBeat(
-  record: Record<string, unknown>
-): record is PlayerActionExpressionBeat {
+function isPlayerActionExpressionBeat(record: Record<string, unknown>): boolean {
   return (
     record['kind'] === 'playerActionExpression' &&
     typeof record['actionDescription'] === 'string' &&

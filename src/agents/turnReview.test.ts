@@ -32,10 +32,10 @@ function seedReviewContext() {
     characterId: player.id,
     playerInput: 'Hello Mira'
   })
-  return { db, campaign, region, player, npc, narrationContext }
+  return { npc, narrationContext }
 }
 
-describe('reviewTurn', () => {
+describe('reviewTurn: converse and act dispositions', () => {
   it('routes a converse-only turn to targeted npc response without narration', async () => {
     const { npc, narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([
@@ -75,7 +75,9 @@ describe('reviewTurn', () => {
       actionDescription: 'Kael draws his sword.'
     })
   })
+})
 
+describe('reviewTurn: narrate and composite dispositions', () => {
   it('routes a narrate-with-check turn including dmNarration', async () => {
     const { narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([
@@ -121,7 +123,9 @@ describe('reviewTurn', () => {
       'npcResponse'
     ])
   })
+})
 
+describe('reviewTurn: validation', () => {
   it('strips invalid npc ids from the plan', async () => {
     const { npc, narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([

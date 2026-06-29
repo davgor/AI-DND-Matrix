@@ -75,7 +75,7 @@ Skip this step only for tickets that add no native module and don't touch `main`
 
 - Edit the ticket file: change `- [ ]` to `- [x]` for each criterion you've actually verified (test passes, or you've manually confirmed the behavior per the criterion's wording). Don't check off something you didn't verify.
 - If every criterion is checked, `git mv` the ticket file from `/board/in-progress/` to `/board/done/`.
-- If the ticket is a sub-ticket (`NNN.M`), check whether every other `NNN.*` sub-ticket is already in `/board/done/`. If this was the last one, also move the parent epic file `NNN-*.md` to `/board/done/` (the epic file's job is just to index its sub-tickets, so it's done when they all are).
+- If the ticket is a sub-ticket (`NNN.M`), check whether every other `NNN.*` sub-ticket is already in `/board/done/`. If this was the last one, also move the parent epic file `NNN-*.md` to `/board/done/` (the epic file's job is just to index its sub-tickets, so it's done when they all are), then invoke the `collapse-epic` skill on that epic so its sub-ticket files get folded into the epic file instead of piling up individually.
 - If only some criteria could be completed (e.g. genuinely blocked on something), leave the ticket in `/board/in-progress/`, leave the unmet boxes unchecked, and clearly tell the user what's blocking it instead of force-completing.
 
 ## 6. Spin off follow-up tickets for anything out of scope
@@ -107,5 +107,5 @@ When the user means the whole epic ("complete epic 4", "do 4.1 through 4.12", "c
    Use `subagent_type: "generalPurpose"` unless a narrower type fits (e.g. `explore` for read-only dependency mapping).
 5. **Verify each subagent's work before trusting it** — skim the diff for scope creep, skipped TDD, or lint-shaped problems, per this project's "trust but verify" norm. Fix small issues yourself rather than re-dispatching a subagent for them.
 6. **Run the whole-repo checks once, after every sub-ticket in scope is implemented**, exactly as section 4 describes: `npm test`, `npm run lint`, `npm run typecheck`, `npm run build` if relevant, the native-module/Electron verification from section 4 if any sub-ticket touched a native module or `main`/`preload`, and the real `act`-driven `pr-checks.yml` run confirming `🏁 Job succeeded` for every job. Fix integration fallout (e.g. two subagents' work not composing cleanly) yourself.
-7. **Check off criteria and close out per section 5**, for every sub-ticket, then close the epic file once every sub-ticket under it is done.
+7. **Check off criteria and close out per section 5**, for every sub-ticket, then close the epic file once every sub-ticket under it is done, then invoke the `collapse-epic` skill on this epic so its sub-ticket files get folded into the epic file.
 8. **Report back per section 7, organized by sub-ticket**, and note which ran in parallel vs. sequentially and why — if the epic's sub-tickets formed one long dependency chain with no parallelizable work, say so and explain you ran it sequentially instead of forcing subagents where they wouldn't help.

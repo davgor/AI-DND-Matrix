@@ -4,7 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { appendEvent } from '../db/repositories/events'
 import { buildNarrationLog } from './narrationLog'
 
-describe('buildNarrationLog', () => {
+describe('buildNarrationLog: player_action mapping', () => {
   it('maps legacy player_action events with playerInput and narrationText', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
@@ -40,7 +40,9 @@ describe('buildNarrationLog', () => {
 
     expect(log).toEqual([expect.objectContaining({ speaker: 'dm', text: 'The door creaks open.' })])
   })
+})
 
+describe('buildNarrationLog: player action expression', () => {
   it('maps player_action_expression to bold player lines without raw input', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
@@ -65,7 +67,9 @@ describe('buildNarrationLog', () => {
       })
     ])
   })
+})
 
+describe('buildNarrationLog: npc and party mapping', () => {
   it('maps npc_reaction and party_member_action events to single entries', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
