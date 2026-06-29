@@ -3,8 +3,9 @@
   align-items: center;
   justify-content: space-between;
   height: 32px;
-  background: #202225;
-  color: #dcddde;
+  background: var(--surface-inset);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
   font-size: 12px;
   user-select: none;
 }
@@ -14,7 +15,9 @@
   height: 100%;
   display: flex;
   align-items: center;
-  padding-left: 8px;
+  padding-left: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-accent);
   -webkit-app-region: drag;
 }
 
@@ -34,9 +37,10 @@
 }
 
 .titlebar-button:hover {
-  background: #2f3136;
+  background: var(--surface-hover);
 }
 
 .titlebar-button-close:hover {
-  background: #ed4245;
+  background: var(--color-danger-solid);
+  color: var(--text-primary);
 }

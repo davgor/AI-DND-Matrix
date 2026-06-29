@@ -1,7 +1,9 @@
 .sidebar {
   width: 220px;
-  background: #2f3136;
-  color: #dcddde;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-medium);
+  box-shadow: inset -12px 0 24px rgba(0, 0, 0, 0.22);
+  color: var(--text-primary);
   font-size: 13px;
   display: flex;
   flex-direction: column;
@@ -15,9 +17,13 @@
 .sidebar-toggle {
   border: none;
   background: transparent;
-  color: inherit;
+  color: var(--text-muted);
   cursor: pointer;
   height: 28px;
+}
+
+.sidebar-toggle:hover {
+  color: var(--text-accent);
 }
 
 .sidebar-campaign-list {
@@ -42,11 +48,12 @@
 }
 
 .sidebar-campaign-button:hover {
-  background: #393c43;
+  background: var(--surface-sidebar-hover);
 }
 
 .sidebar-campaign-active {
-  background: #42464d;
+  background: var(--surface-sidebar-active);
+  border-left: 2px solid var(--accent-gold);
 }
 
 .sidebar-campaign-name {
@@ -55,7 +62,7 @@
 
 .sidebar-campaign-last-played {
   font-size: 11px;
-  color: #96989d;
+  color: var(--text-dim);
 }
 
 .sidebar-new-campaign {
@@ -63,4 +70,5 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px;
+  border-top: 1px solid var(--border-subtle);
 }

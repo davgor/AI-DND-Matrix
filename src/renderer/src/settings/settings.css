@@ -1,7 +1,7 @@
 .settings-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,16 +9,18 @@
 }
 
 .settings-panel {
-  background: #36393f;
-  color: #dcddde;
+  background: var(--surface-panel);
+  color: var(--text-primary);
   width: 480px;
   max-height: 80vh;
   overflow-y: auto;
-  border-radius: 6px;
-  padding: 16px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: var(--shadow-panel);
 }
 
 .settings-header {
@@ -27,19 +29,42 @@
   justify-content: space-between;
 }
 
+.settings-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.settings-header button {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.settings-header button:hover {
+  color: var(--text-accent);
+  background: transparent;
+  border: none;
+}
+
 .settings-provider-mode {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border: 1px solid #42464d;
-  border-radius: 4px;
-  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  background: var(--surface-inset);
 }
 
 .settings-provider-mode-option {
   display: flex;
   align-items: center;
   gap: 6px;
+  color: var(--text-secondary);
 }
 
 .settings-section {
@@ -48,39 +73,54 @@
   gap: 6px;
 }
 
+.settings-section label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
 .settings-field-error {
-  color: #ed4245;
+  color: var(--color-error);
   font-size: 12px;
   margin: 0;
 }
 
 .settings-check-ok {
-  color: #3ba55d;
+  color: var(--color-success);
   font-size: 12px;
 }
 
 .settings-check-failed {
-  color: #ed4245;
+  color: var(--color-error);
   font-size: 12px;
 }
 
 .settings-secret-badge {
   font-size: 11px;
-  color: #3ba55d;
+  color: var(--color-success);
   margin-left: 6px;
 }
 
 .settings-discard-confirm {
-  background: #42464d;
-  border-radius: 4px;
-  padding: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 10px;
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--text-secondary);
+}
+
+.settings-help-text {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin: 0;
 }
 
 .settings-footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
 }

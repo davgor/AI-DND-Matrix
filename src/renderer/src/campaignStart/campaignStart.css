@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(6, 8, 12, 0.72);
+  background: var(--overlay-backdrop);
   z-index: 20;
 }
 
@@ -13,11 +13,11 @@
   max-height: calc(100vh - 80px);
   overflow: auto;
   padding: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid rgba(244, 232, 210, 0.18);
-  background: #12161d;
-  color: #f4e8d2;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-medium);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-panel);
 }
 
 .campaign-start-modal h2 {
@@ -31,29 +31,33 @@
   margin-bottom: 0.85rem;
 }
 
+.campaign-start-field label {
+  color: var(--text-secondary);
+}
+
 .campaign-start-field input,
 .campaign-start-field textarea {
-  border: 1px solid rgba(244, 232, 210, 0.2);
-  border-radius: 8px;
-  background: #0d1016;
-  color: #f4e8d2;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
   padding: 0.55rem 0.65rem;
 }
 
 .campaign-start-optional {
-  color: #b9a98c;
+  color: var(--text-muted);
   font-size: 0.85rem;
 }
 
 .campaign-start-field-error,
 .campaign-start-flow-error {
-  color: #f0b2a5;
+  color: var(--color-error);
   margin: 0 0 0.75rem;
 }
 
 .campaign-start-fieldset {
-  border: 1px solid rgba(244, 232, 210, 0.15);
-  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   margin: 0 0 1rem;
   padding: 0.75rem;
 }
@@ -61,6 +65,7 @@
 .campaign-start-radio {
   display: block;
   margin-bottom: 0.35rem;
+  color: var(--text-secondary);
 }
 
 .campaign-start-actions {
@@ -71,12 +76,17 @@
 }
 
 .campaign-start-actions button {
-  border: 1px solid #c9a66b;
+  border: 1px solid var(--accent-gold);
   background: rgba(201, 166, 107, 0.12);
-  color: #f4e8d2;
-  border-radius: 8px;
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.9rem;
   cursor: pointer;
+  font-family: inherit;
+}
+
+.campaign-start-actions button:hover {
+  background: rgba(201, 166, 107, 0.22);
 }
 
 .campaign-start-actions button:disabled {
@@ -90,7 +100,7 @@
 
 .campaign-start-progress-track {
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
   background: rgba(244, 232, 210, 0.12);
   margin-top: 1rem;
@@ -98,7 +108,7 @@
 
 .campaign-start-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #8b5a2b, #d4a15a);
+  background: var(--progress-gradient);
 }
 
 .campaign-start-progress-indeterminate {

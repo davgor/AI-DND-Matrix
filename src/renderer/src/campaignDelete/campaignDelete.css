@@ -1,7 +1,7 @@
 .campaign-delete-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--overlay-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -10,11 +10,12 @@
 
 .campaign-delete-modal {
   width: min(420px, 92vw);
-  background: #2f3136;
-  color: #dcddde;
-  border-radius: 8px;
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
   padding: 20px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-panel);
 }
 
 .campaign-delete-modal h2 {
@@ -24,25 +25,19 @@
 
 .campaign-delete-warning {
   margin: 0 0 16px;
-  color: #b9bbbe;
+  color: var(--text-secondary);
   line-height: 1.45;
 }
 
 .campaign-delete-error {
   margin: 0 0 12px;
-  color: #f04747;
+  color: var(--color-error);
 }
 
 .campaign-delete-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.campaign-delete-confirm {
-  background: #ed4245;
-  color: #fff;
-  border: none;
 }
 
 .campaigns-rail-row {
@@ -58,13 +53,14 @@
 .campaigns-rail-delete {
   border: none;
   background: transparent;
-  color: #96989d;
+  color: var(--text-dim);
   cursor: pointer;
   width: 28px;
   flex-shrink: 0;
+  padding: 0;
 }
 
 .campaigns-rail-delete:hover {
-  color: #ed4245;
-  background: #393c43;
+  color: var(--color-danger);
+  background: rgba(196, 92, 92, 0.15);
 }

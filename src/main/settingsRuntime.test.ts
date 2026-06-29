@@ -53,4 +53,17 @@ describe('resolveProviderRegistryConfig', () => {
 
     expect(resolved.claudeApiKey).toBe('env-claude-key')
   })
+
+  it('resolves to the llamacpp provider with its persisted base URL when that mode is selected', () => {
+    const persisted = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'llamacpp' as const,
+      llamaCppBaseUrl: 'http://127.0.0.1:8081'
+    }
+
+    const resolved = resolveProviderRegistryConfig(envConfig, persisted)
+
+    expect(resolved.agentProvider).toBe('llamacpp')
+    expect(resolved.llamaCppBaseUrl).toBe('http://127.0.0.1:8081')
+  })
 })

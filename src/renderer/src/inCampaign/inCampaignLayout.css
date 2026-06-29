@@ -8,7 +8,7 @@
   position: relative;
   grid-template-columns: var(--col-campaigns) minmax(240px, 1.2fr) minmax(220px, 1fr) var(--col-sheet);
   grid-template-areas: 'campaigns dm player sheet';
-  color: #dcddde;
+  color: var(--text-primary);
 }
 
 .in-campaign-layout--campaigns-collapsed {
@@ -29,24 +29,26 @@
 
 .in-campaign-column--campaigns {
   grid-area: campaigns;
-  background: #2f3136;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-medium);
+  box-shadow: inset -12px 0 24px rgba(0, 0, 0, 0.22);
 }
 
 .in-campaign-column--dm {
   grid-area: dm;
-  background: #36393f;
-  border-right: 1px solid #202225;
+  background: var(--surface-column-alt);
+  border-right: 1px solid var(--border-subtle);
 }
 
 .in-campaign-column--player {
   grid-area: player;
-  background: #313338;
+  background: var(--surface-column);
 }
 
 .in-campaign-column--sheet {
   grid-area: sheet;
-  background: #2f3136;
-  border-left: 1px solid #202225;
+  background: var(--surface-column);
+  border-left: 1px solid var(--border-subtle);
 }
 
 .in-campaign-overlays {
@@ -67,7 +69,8 @@
   bottom: 0;
   width: min(320px, 90vw);
   z-index: 20;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.4);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.45);
+  border-left: 1px solid var(--border-medium);
 }
 
 .in-campaign-layout--sheet-overlay.in-campaign-layout--sheet-collapsed .in-campaign-column--sheet {
@@ -87,7 +90,8 @@
   bottom: 0;
   width: min(320px, 92vw);
   z-index: 25;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.45);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+  border-left: 1px solid var(--border-medium);
 }
 
 .in-campaign-layout--compact.in-campaign-layout--sheet-collapsed .in-campaign-column--sheet {
@@ -106,5 +110,6 @@
   bottom: 0;
   width: min(240px, 85vw);
   z-index: 30;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.45);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5);
+  border-right: 1px solid var(--border-medium);
 }

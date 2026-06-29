@@ -8,7 +8,14 @@ export interface MainPanelProps {
 export function MainPanel(props: MainPanelProps): JSX.Element {
   const { detail } = props
   if (!detail?.campaign) {
-    return <div className="main-panel main-panel-empty">Select or create a campaign to begin.</div>
+    return (
+      <div className="main-panel main-panel-empty">
+        <div className="main-panel-empty-card">
+          <p className="eyebrow">The table awaits</p>
+          <p>Select or create a campaign to begin.</p>
+        </div>
+      </div>
+    )
   }
 
   return (

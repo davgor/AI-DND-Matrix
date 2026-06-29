@@ -58,6 +58,16 @@ function DiscardConfirmation(props: { onConfirm: () => void; onCancel: () => voi
   )
 }
 
+function canSave(controller: ReturnType<typeof useSettings>): boolean {
+  if (!controller.dirty || controller.saving) {
+    return false
+  }
+  if (controller.draft.mode === 'llamacpp') {
+    return controller.llamaRuntimeChecked
+  }
+  return true
+}
+
 export function SettingsView(props: SettingsViewProps): JSX.Element {
   const controller = useSettings(props.onClose)
 
@@ -80,9 +90,12 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
           <button type="button" onClick={controller.requestClose}>
             Cancel
           </button>
-          <button type="button" disabled={!controller.dirty || controller.saving} onClick={() => void controller.save()}>
+          <button type="button" disabled={!canSave(controller)} onClick={() => void controller.save()}>
             {controller.saving ? 'Saving...' : 'Save'}
           </button>
+          {controller.draft.mode === 'llamacpp' && !controller.llamaRuntimeChecked && controller.dirty && (
+            <p className="settings-field-error">Run a successful runtime check before saving.</p>
+          )}
         </footer>
       </div>
     </div>

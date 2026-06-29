@@ -1,14 +1,29 @@
 .main-panel {
   flex: 1;
-  padding: 16px 24px;
+  padding: 24px 28px;
   overflow-y: auto;
-  color: #dcddde;
-  background: #36393f;
+  color: var(--text-primary);
+  background: transparent;
 }
 
 .main-panel-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #96989d;
+}
+
+.main-panel-empty-card {
+  width: min(420px, 90%);
+  padding: 2rem 1.75rem;
+  text-align: center;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  background: var(--surface-glass);
+  box-shadow: var(--shadow-panel);
+}
+
+.main-panel-empty-card p:last-child {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1.05rem;
 }

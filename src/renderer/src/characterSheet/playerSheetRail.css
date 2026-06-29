@@ -4,6 +4,7 @@
   height: 100%;
   overflow: hidden;
   font-size: 13px;
+  color: var(--text-primary);
 }
 
 .player-sheet-rail-collapsed {
@@ -13,10 +14,14 @@
 .player-sheet-rail-toggle {
   border: none;
   background: transparent;
-  color: inherit;
+  color: var(--text-muted);
   cursor: pointer;
   height: 28px;
   width: 100%;
+}
+
+.player-sheet-rail-toggle:hover {
+  color: var(--text-accent);
 }
 
 .player-sheet-rail .character-sheet-content {
@@ -29,12 +34,14 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #5865f2;
+  background: var(--progress-gradient);
+  border: 1px solid var(--accent-gold);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   margin-top: 8px;
+  color: var(--text-primary);
 }
 
 .character-sheet-content-compact .character-sheet-images {

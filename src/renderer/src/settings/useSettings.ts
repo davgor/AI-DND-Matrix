@@ -18,6 +18,7 @@ export interface SettingsController {
   confirmingDiscard: boolean
   playerConnectionResult: ConnectionCheckResult | null
   llamaRuntimeResult: ConnectionCheckResult | null
+  llamaRuntimeChecked: boolean
   updateDraft: (patch: Partial<ProviderSettings>) => void
   save: () => Promise<void>
   requestClose: () => void
@@ -37,6 +38,7 @@ interface SettingsState {
   confirmingDiscard: boolean
   playerConnectionResult: ConnectionCheckResult | null
   llamaRuntimeResult: ConnectionCheckResult | null
+  llamaRuntimeChecked: boolean
   setBaseline: (settings: ProviderSettings) => void
   setDraft: React.Dispatch<React.SetStateAction<ProviderSettings>>
   setClaudeApiKeySet: (value: boolean) => void
@@ -46,6 +48,7 @@ interface SettingsState {
   setConfirmingDiscard: (value: boolean) => void
   setPlayerConnectionResult: (result: ConnectionCheckResult | null) => void
   setLlamaRuntimeResult: (result: ConnectionCheckResult | null) => void
+  setLlamaRuntimeChecked: (value: boolean) => void
 }
 
 function useSettingsState(): SettingsState {
@@ -58,6 +61,7 @@ function useSettingsState(): SettingsState {
   const [confirmingDiscard, setConfirmingDiscard] = useState(false)
   const [playerConnectionResult, setPlayerConnectionResult] = useState<ConnectionCheckResult | null>(null)
   const [llamaRuntimeResult, setLlamaRuntimeResult] = useState<ConnectionCheckResult | null>(null)
+  const [llamaRuntimeChecked, setLlamaRuntimeChecked] = useState(false)
 
   return {
     baseline,
@@ -69,6 +73,7 @@ function useSettingsState(): SettingsState {
     confirmingDiscard,
     playerConnectionResult,
     llamaRuntimeResult,
+    llamaRuntimeChecked,
     setBaseline,
     setDraft,
     setClaudeApiKeySet,
@@ -77,7 +82,8 @@ function useSettingsState(): SettingsState {
     setSaveFailed,
     setConfirmingDiscard,
     setPlayerConnectionResult,
-    setLlamaRuntimeResult
+    setLlamaRuntimeResult,
+    setLlamaRuntimeChecked
   }
 }
 
@@ -121,6 +127,7 @@ function useSettingsActions(state: SettingsState, onClose: () => void) {
     state.setDraft((current) => ({ ...current, ...patch }))
     state.setErrors([])
     state.setSaveFailed(false)
+    state.setLlamaRuntimeChecked(false)
   }
 
   function requestClose(): void {
@@ -142,7 +149,9 @@ function useSettingsActions(state: SettingsState, onClose: () => void) {
   }
 
   async function checkLlamaRuntime(): Promise<void> {
-    state.setLlamaRuntimeResult(await window.settings.checkLlamaRuntime(state.draft))
+    const result = await window.settings.checkLlamaRuntime(state.draft)
+    state.setLlamaRuntimeResult(result)
+    state.setLlamaRuntimeChecked(result.ok)
   }
 
   return {
@@ -171,6 +180,7 @@ export function useSettings(onClose: () => void): SettingsController {
     confirmingDiscard: state.confirmingDiscard,
     playerConnectionResult: state.playerConnectionResult,
     llamaRuntimeResult: state.llamaRuntimeResult,
+    llamaRuntimeChecked: state.llamaRuntimeChecked,
     ...actions
   }
 }

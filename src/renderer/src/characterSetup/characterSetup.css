@@ -1,17 +1,21 @@
 .character-setup {
   flex: 1;
-  padding: 16px 24px;
+  padding: 24px 28px;
   overflow-y: auto;
-  color: #dcddde;
-  background: #36393f;
+  color: var(--text-primary);
+  background: transparent;
 }
 
 .character-setup-error {
-  color: #ed4245;
+  color: var(--color-error);
 }
 
 .party-member-row {
   display: flex;
   gap: 8px;
   margin-bottom: 4px;
+}
+
+.party-member-row input {
+  flex: 1;
 }

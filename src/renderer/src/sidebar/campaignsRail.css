@@ -3,6 +3,7 @@
   flex-direction: column;
   height: 100%;
   font-size: 13px;
+  color: var(--text-primary);
 }
 
 .campaigns-rail-collapsed {
@@ -11,11 +12,17 @@
 
 .campaigns-rail-toggle {
   border: none;
+  border-bottom: 1px solid var(--border-subtle);
   background: transparent;
-  color: inherit;
+  color: var(--text-muted);
   cursor: pointer;
   height: 28px;
   width: 100%;
+}
+
+.campaigns-rail-toggle:hover {
+  color: var(--text-accent);
+  background: var(--surface-sidebar-hover);
 }
 
 .campaigns-rail-list {
@@ -40,11 +47,12 @@
 }
 
 .campaigns-rail-button:hover {
-  background: #393c43;
+  background: var(--surface-sidebar-hover);
 }
 
 .campaigns-rail-button-active {
-  background: #42464d;
+  background: var(--surface-sidebar-active);
+  border-left: 2px solid var(--accent-gold);
 }
 
 .campaigns-rail-name {
@@ -53,11 +61,12 @@
 
 .campaigns-rail-last-played {
   font-size: 11px;
-  color: #96989d;
+  color: var(--text-dim);
 }
 
 .campaigns-rail-new {
   padding: 8px;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .campaigns-rail-new-button {
@@ -76,18 +85,25 @@
 .campaigns-rail-chip {
   width: 28px;
   height: 28px;
-  border: none;
-  border-radius: 4px;
-  background: #393c43;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
   color: inherit;
   cursor: pointer;
   font-weight: 600;
 }
 
+.campaigns-rail-chip:hover {
+  border-color: var(--border-medium);
+  background: var(--surface-sidebar-hover);
+}
+
 .campaigns-rail-chip-active {
-  background: #5865f2;
+  background: var(--surface-sidebar-active);
+  border-color: var(--accent-gold);
+  color: var(--text-primary);
 }
 
 .campaigns-rail-chip-more {
-  color: #96989d;
+  color: var(--text-dim);
 }

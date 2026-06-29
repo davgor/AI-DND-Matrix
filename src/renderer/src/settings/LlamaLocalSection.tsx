@@ -15,6 +15,11 @@ function fieldError(errors: SettingsValidationError[], field: string): string | 
 function ManagedModeFields(props: LlamaLocalSectionProps): JSX.Element {
   return (
     <>
+      <p className="settings-help-text">
+        Don&apos;t have llama-server yet? Install it with <code>winget install llama.cpp</code> (Windows) or
+        download a release from the llama.cpp GitHub releases page, then point the fields below at the
+        executable and a .gguf model file.
+      </p>
       <label htmlFor="settings-llama-server-path">llama-server executable path</label>
       <input
         id="settings-llama-server-path"
