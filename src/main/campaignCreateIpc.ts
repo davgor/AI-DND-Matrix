@@ -50,7 +50,7 @@ function toSetupInput(request: CreateCampaignRequest): CampaignSetupInput {
   return {
     name: request.name ?? request.premisePrompt.slice(0, 40),
     premisePrompt: request.premisePrompt,
-    deathMode: (request.deathMode ?? 'legendary') as DeathMode,
+    deathMode: (request.deathMode ?? 'standard') as DeathMode,
     respawnRules: (request.respawnRules ?? null) as RespawnRules | null
   }
 }

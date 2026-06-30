@@ -29,6 +29,6 @@ describe('mapFormToCreateRequest', () => {
     )
     expect(request.sessionId).toBe('session-1')
     expect(request.name).toBe(defaultCampaignName('A flooded kingdom under eternal rain'))
-    expect(request.deathMode).toBe('legendary')
+    expect(request.deathMode).toBe('standard')
   })
 })

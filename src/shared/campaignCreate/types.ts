@@ -40,7 +40,7 @@ export interface CampaignSetupFormValues {
 export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
   name: '',
   premisePrompt: '',
-  deathMode: 'legendary',
+  deathMode: 'standard',
   respawnLocation: '',
   respawnCost: 0,
   respawnLimit: ''

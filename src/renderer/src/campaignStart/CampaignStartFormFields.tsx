@@ -3,6 +3,18 @@ import type { CampaignStartFlow } from './useCampaignStartFlow'
 
 const DEATH_MODES: DeathMode[] = ['legendary', 'standard', 'respawn']
 
+const DEATH_MODE_LABELS: Record<DeathMode, string> = {
+  legendary: 'Legendary',
+  standard: 'Standard',
+  respawn: 'Respawn'
+}
+
+const DEATH_MODE_HINTS: Record<DeathMode, string> = {
+  legendary: 'Death is permanent — fail the dying-save sequence and the character is gone.',
+  standard: 'Fatal blows rewind to the last save, as if the death never happened.',
+  respawn: 'Wake at a chosen location for a gold cost; optional use limit, then death becomes permanent.'
+}
+
 function CampaignStartIdentityFields(props: { flow: CampaignStartFlow }): JSX.Element {
   const { flow } = props
   return (
@@ -34,20 +46,31 @@ function CampaignStartDeathModeFields(props: { flow: CampaignStartFlow }): JSX.E
   const { flow } = props
   return (
     <>
-      <fieldset className="campaign-start-fieldset" disabled={flow.submitting}>
-        <legend>Death mode</legend>
-        {DEATH_MODES.map((mode) => (
-          <label key={mode} className="campaign-start-radio">
-            <input
-              type="radio"
-              name="deathMode"
-              checked={flow.form.deathMode === mode}
-              onChange={() => flow.updateForm({ deathMode: mode })}
-            />
-            {mode}
-          </label>
-        ))}
-      </fieldset>
+      <div className="campaign-start-death-mode-row">
+        <fieldset className="campaign-start-fieldset" disabled={flow.submitting}>
+          <legend>Death mode</legend>
+          {DEATH_MODES.map((mode) => (
+            <label key={mode} className="campaign-start-radio">
+              <input
+                type="radio"
+                name="deathMode"
+                checked={flow.form.deathMode === mode}
+                onChange={() => flow.updateForm({ deathMode: mode })}
+              />
+              {DEATH_MODE_LABELS[mode]}
+            </label>
+          ))}
+        </fieldset>
+        <div className="campaign-start-death-mode-hints" aria-hidden="true">
+          {DEATH_MODES.map((mode) => (
+            <p key={mode}>
+              <span className="campaign-start-death-mode-hint-label">{DEATH_MODE_LABELS[mode]}</span>
+              {' — '}
+              {DEATH_MODE_HINTS[mode]}
+            </p>
+          ))}
+        </div>
+      </div>
       {flow.form.deathMode === 'respawn' ? (
         <label className="campaign-start-field">
           Respawn location

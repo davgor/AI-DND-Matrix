@@ -9,7 +9,7 @@
 }
 
 .campaign-start-modal {
-  width: min(520px, 92vw);
+  width: min(640px, 92vw);
   max-height: calc(100vh - 80px);
   overflow: auto;
   padding: 1.5rem;
@@ -53,6 +53,38 @@
 .campaign-start-flow-error {
   color: var(--color-error);
   margin: 0 0 0.75rem;
+}
+
+.campaign-start-death-mode-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.campaign-start-death-mode-row .campaign-start-fieldset {
+  margin-bottom: 0;
+}
+
+.campaign-start-death-mode-hints {
+  flex: 1;
+  min-width: 0;
+  padding-top: 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.campaign-start-death-mode-hints p {
+  margin: 0 0 0.5rem;
+}
+
+.campaign-start-death-mode-hints p:last-child {
+  margin-bottom: 0;
+}
+
+.campaign-start-death-mode-hint-label {
+  color: var(--text-secondary);
 }
 
 .campaign-start-fieldset {
