@@ -62,6 +62,37 @@ describe('normalizeCampaignGeneration', () => {
     expect(normalized?.npcs).toHaveLength(2)
     expect(normalized?.storyThread.title).toBe('Ventures on the New Ocean')
   })
+
+  it('trims extra regions when the model over-delivers', () => {
+    const payload = {
+      regions: [
+        makeRegion('First', 'a'),
+        makeRegion('Second', 'b'),
+        makeRegion('Third', 'c')
+      ],
+      npcs: [...makeNpcs('First', 'F'), ...makeNpcs('Second', 'S')],
+      storyThread: { title: 'Arc', state: 'starting', summary: 'Summary.' }
+    }
+    const normalized = normalizeCampaignGeneration(payload, { regionCount: 2, npcsPerRegion: 3 })
+
+    expect(normalized?.regions).toHaveLength(2)
+    expect(normalized?.regions.map((region) => region.name)).toEqual(['First', 'Second'])
+  })
+
+  it('accepts fewer than requested NPCs per region when at least one is present', () => {
+    const payload = {
+      regions: [makeRegion('Oakhollow', 'old'), makeRegion('The Sunken Crown', 'ruin')],
+      npcs: [
+        ...makeNpcs('Oakhollow', 'Oak').slice(0, 2),
+        ...makeNpcs('The Sunken Crown', 'Crown').slice(0, 2)
+      ],
+      storyThread: { title: 'Partial Cast', state: 'starting', summary: 'A start.' }
+    }
+    const normalized = normalizeCampaignGeneration(payload, { regionCount: 2, npcsPerRegion: 3 })
+
+    expect(normalized?.npcs).toHaveLength(4)
+    expect(normalized?.npcs.filter((npc) => npc.regionName === 'Oakhollow')).toHaveLength(2)
+  })
 })
 
 describe('generateCampaignSeed legacy compatibility', () => {
@@ -113,6 +144,22 @@ describe('generateCampaignSeed (007.1, 039.4)', () => {
     const result = await generateCampaignSeed(provider, 'A quiet land.', { regionCount: 1, npcsPerRegion: 0 })
     expect(result.regions).toHaveLength(1)
     expect(result.npcs).toHaveLength(0)
+  })
+
+  it('accepts partial NPC counts from the model instead of failing validation', async () => {
+    const partialPayload = JSON.stringify({
+      regions: [makeRegion('Oakhollow', 'old'), makeRegion('The Sunken Crown', 'ruin')],
+      npcs: [
+        ...makeNpcs('Oakhollow', 'Oak').slice(0, 2),
+        ...makeNpcs('The Sunken Crown', 'Crown').slice(0, 2)
+      ],
+      storyThread: { title: 'Partial Cast', state: 'starting', summary: 'A start.' }
+    })
+    const provider = createScriptedProvider([partialPayload])
+    const result = await generateCampaignSeed(provider, 'Random fantasy.', { regionCount: 2, npcsPerRegion: 3 })
+
+    expect(result.regions).toHaveLength(2)
+    expect(result.npcs).toHaveLength(4)
   })
 })
 

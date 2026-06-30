@@ -18,6 +18,7 @@ import type { Provider } from './providers/types'
 export class CampaignGenerationSchemaError extends Error {}
 
 export const MAX_GENERATION_ATTEMPTS = 3
+const MIN_NPCS_PER_REGION_WHEN_NONZERO = 1
 const MIN_QUEST_HOOKS = 1
 const MAX_QUEST_HOOKS = 4
 const GENERATION_MAX_TOKENS = 10240
@@ -248,15 +249,20 @@ function assignNpcsToRegions(
   return true
 }
 
+function minNpcsPerRegion(npcsPerRegion: number): number {
+  return npcsPerRegion > 0 ? MIN_NPCS_PER_REGION_WHEN_NONZERO : 0
+}
+
 function sliceNpcsPerRegion(
   regionNames: string[],
   grouped: Map<string, GeneratedNpc[]>,
   npcsPerRegion: number
 ): GeneratedNpc[] | undefined {
   const normalized: GeneratedNpc[] = []
+  const minRequired = minNpcsPerRegion(npcsPerRegion)
   for (const regionName of regionNames) {
     const regionNpcs = grouped.get(regionName) ?? []
-    if (regionNpcs.length < npcsPerRegion) {
+    if (regionNpcs.length < minRequired) {
       return undefined
     }
     normalized.push(...regionNpcs.slice(0, npcsPerRegion))
@@ -313,11 +319,17 @@ export function normalizeCampaignGeneration(
     return undefined
   }
 
-  const regions = rawRegions
+  let regions = rawRegions
     .map((region) => normalizeGeneratedRegion(region))
     .filter((region): region is GeneratedRegion => region !== undefined)
-  if (regions.length !== counts.regionCount) {
+  if (counts.regionCount === 0) {
+    if (regions.length !== 0) {
+      return undefined
+    }
+  } else if (regions.length < counts.regionCount) {
     return undefined
+  } else {
+    regions = regions.slice(0, counts.regionCount)
   }
 
   const regionNames = regions.map((region) => region.name)
@@ -462,7 +474,7 @@ function isValidRegionList(value: unknown, regionCount: number): value is Genera
   )
 }
 
-function hasExactNpcsPerRegion(
+function hasEnoughNpcsPerRegion(
   regions: GeneratedRegion[],
   npcs: GeneratedNpc[],
   npcsPerRegion: number
@@ -473,6 +485,7 @@ function hasExactNpcsPerRegion(
   if (npcsPerRegion === 0) {
     return npcs.length === 0
   }
+  const minRequired = minNpcsPerRegion(npcsPerRegion)
   const counts = new Map(regions.map((region) => [region.name, 0]))
   for (const npc of npcs) {
     if (!counts.has(npc.regionName)) {
@@ -480,7 +493,54 @@ function hasExactNpcsPerRegion(
     }
     counts.set(npc.regionName, (counts.get(npc.regionName) ?? 0) + 1)
   }
-  return [...counts.values()].every((count) => count === npcsPerRegion)
+  return [...counts.values()].every(
+    (count) => count >= minRequired && count <= npcsPerRegion
+  )
+}
+
+function needsNpcTopUp(result: CampaignGenerationResult, counts: GenerationCounts): boolean {
+  if (counts.npcsPerRegion === 0 || counts.regionCount === 0) {
+    return false
+  }
+  const byRegion = new Map<string, number>()
+  for (const npc of result.npcs) {
+    byRegion.set(npc.regionName, (byRegion.get(npc.regionName) ?? 0) + 1)
+  }
+  return result.regions.some(
+    (region) => (byRegion.get(region.name) ?? 0) < counts.npcsPerRegion
+  )
+}
+
+async function fillCampaignNpcShortfall(
+  provider: Provider,
+  premisePrompt: string,
+  partial: CampaignGenerationResult,
+  counts: GenerationCounts
+): Promise<CampaignGenerationResult | undefined> {
+  const npcs = [...partial.npcs]
+  const allNames = (): string[] => npcs.map((npc) => npc.name)
+
+  for (const region of partial.regions) {
+    const inRegion = npcs.filter((npc) => npc.regionName === region.name).length
+    let shortfall = counts.npcsPerRegion - inRegion
+    while (shortfall > 0) {
+      try {
+        const generated = await generateSingleNpc(provider, {
+          campaignPremise: premisePrompt,
+          regionName: region.name,
+          regionDescription: region.description,
+          existingNpcNames: allNames(),
+          seedPrompt: `Create another distinct local character in ${region.name}.`
+        })
+        npcs.push(generated.npc)
+        shortfall -= 1
+      } catch {
+        return undefined
+      }
+    }
+  }
+
+  return { ...partial, npcs }
 }
 
 function isValidNpcList(value: unknown, regionNames: Set<string>): value is GeneratedNpc[] {
@@ -507,7 +567,7 @@ function isValidGenerationResult(
   const npcs = candidate['npcs']
   if (
     !isValidNpcList(npcs, regionNames) ||
-    !hasExactNpcsPerRegion(regions, npcs, counts.npcsPerRegion)
+    !hasEnoughNpcsPerRegion(regions, npcs, counts.npcsPerRegion)
   ) {
     return false
   }
@@ -808,15 +868,30 @@ export async function generateCampaignSeed(
   countsInput?: Partial<GenerationCounts>
 ): Promise<CampaignGenerationResult> {
   const counts = resolveInitialGenerationCounts(countsInput?.regionCount, countsInput?.npcsPerRegion)
+  let lastLenient: CampaignGenerationResult | undefined
+
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(buildGenerationPrompt(premisePrompt, counts), {
       maxTokens: GENERATION_MAX_TOKENS
     })
     const parsed = tryParseJson(raw)
     const normalized = normalizeCampaignGeneration(parsed, counts)
-    if (normalized && isValidGenerationResult(normalized, counts)) {
+    if (!normalized || !isValidGenerationResult(normalized, counts)) {
+      continue
+    }
+    lastLenient = normalized
+    if (!needsNpcTopUp(normalized, counts)) {
       return normalized
     }
+    const repaired = await fillCampaignNpcShortfall(provider, premisePrompt, normalized, counts)
+    if (repaired && isValidGenerationResult(repaired, counts)) {
+      return repaired
+    }
+    return normalized
+  }
+
+  if (lastLenient) {
+    return lastLenient
   }
   throw new CampaignGenerationSchemaError(
     'DM agent did not return a valid campaign generation schema after retries'
