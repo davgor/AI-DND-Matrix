@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "description": "AI-driven single-player text-adventure TTRPG desktop app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davgor/AI-DND-Matrix.git"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "predev": "npm run rebuild:electron",
@@ -22,6 +26,7 @@
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
     "electron-log": "^5.4.4",
+    "electron-updater": "^6.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -49,8 +54,35 @@
     "files": [
       "out/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "davgor",
+      "repo": "AI-DND-Matrix"
+    },
     "win": {
-      "target": "portable"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable.${ext}"
     }
   }
 }

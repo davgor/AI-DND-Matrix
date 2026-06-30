@@ -52,7 +52,7 @@ Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-prog
 - SQLite (`better-sqlite3`) for persistence, one save per campaign
 - Vitest + npm for testing
 - oxlint (strict, complexity-aware) for linting
-- GitHub Actions: `CI Checks` (test + lint + build) on PRs and pushes to `main`; successful merges to `main` trigger `Deploy`, which packages a Windows `.exe` and publishes a GitHub Release
+- GitHub Actions: `CI Checks` (test + lint + build) on PRs and pushes to `main`; successful merges to `main` trigger `Deploy`, which bumps the minor version, packages **NSIS installer** (silent auto-update) and **portable `.exe`**, and publishes a GitHub Release with `latest.yml`
 
 ## Architecture
 

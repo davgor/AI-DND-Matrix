@@ -16,6 +16,7 @@ import { useSettingsIntro } from './settingsIntro/useSettingsIntro'
 import { Titlebar } from './titlebar/Titlebar'
 import { LoadingScreen } from './startup/LoadingScreen'
 import { useStartupBoot } from './startup/useStartupBoot'
+import { UpdateBanner } from './autoUpdate/UpdateBanner'
 
 interface ReadyAppShellProps {
   campaignStart: ReturnType<typeof useCampaignStartFlow>
@@ -111,6 +112,7 @@ function ReadyAppShell(props: ReadyAppShellProps): JSX.Element {
         onSuccess={(created) => void props.onCampaignCreated(created)}
       />
       <CampaignDeleteModal flow={props.campaignDelete} />
+      <UpdateBanner />
     </div>
   )
 }
@@ -143,6 +145,7 @@ export function App(): JSX.Element {
       <div className="app-root">
         <Titlebar />
         <LoadingScreen boot={boot} />
+        <UpdateBanner />
       </div>
     )
   }

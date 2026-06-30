@@ -1,10 +1,11 @@
 import type {
+  AutoUpdateApi,
   CampaignsApi,
   CharactersApi,
   CombatApi,
-  ProgressionApi,
   FilesApi,
   GuidedCreationApi,
+  ProgressionApi,
   SettingsApi,
   SettingsIntroApi,
   StartupApi,
@@ -25,5 +26,6 @@ declare global {
     startup: StartupApi
     settings: SettingsApi
     settingsIntro: SettingsIntroApi
+    autoUpdate: AutoUpdateApi
   }
 }

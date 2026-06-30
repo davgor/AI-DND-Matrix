@@ -51,6 +51,10 @@
   --radius-pill: 999px;
 
   --overlay-backdrop: rgba(6, 8, 12, 0.72);
+
+  --scrollbar-track: rgba(8, 10, 14, 0.65);
+  --scrollbar-thumb: rgba(201, 166, 107, 0.32);
+  --scrollbar-thumb-hover: rgba(201, 166, 107, 0.48);
 }
 
 *,
@@ -69,6 +73,41 @@ body {
 
 .app-body {
   background: var(--bg-gradient);
+}
+
+.app-root {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.app-root * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.app-root ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.app-root ::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--radius-pill);
+}
+
+.app-root ::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  background-clip: padding-box;
+}
+
+.app-root ::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.app-root ::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Shared content surfaces */
@@ -158,7 +197,8 @@ body {
   .player-sheet-rail-toggle,
   .sidebar-toggle,
   .sidebar-campaign-button,
-  .ability-score-step
+  .ability-score-step,
+  .field-random-dice
 ) {
   border: 1px solid var(--accent-gold);
   background: rgba(201, 166, 107, 0.12);
@@ -184,7 +224,8 @@ body {
   .player-sheet-rail-toggle,
   .sidebar-toggle,
   .sidebar-campaign-button,
-  .ability-score-step
+  .ability-score-step,
+  .field-random-dice
 ):hover:not(:disabled) {
   background: rgba(201, 166, 107, 0.22);
   border-color: var(--accent-bronze-light);
@@ -203,7 +244,8 @@ body {
   .player-sheet-rail-toggle,
   .sidebar-toggle,
   .sidebar-campaign-button,
-  .ability-score-step
+  .ability-score-step,
+  .field-random-dice
 ):disabled {
   opacity: 0.55;
   cursor: wait;

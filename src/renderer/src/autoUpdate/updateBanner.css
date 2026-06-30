@@ -1,0 +1,27 @@
+.update-banner {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: min(28rem, calc(100vw - 2rem));
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-overlay);
+  font-size: 0.88rem;
+}
+
+.update-banner-text {
+  line-height: 1.4;
+}
+
+.update-banner-restart {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+}

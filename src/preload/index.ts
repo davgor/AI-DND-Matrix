@@ -41,6 +41,7 @@ import type {
   SaveProviderSettingsInput
 } from '../shared/settings/types'
 import type { SettingsIntroState } from '../shared/settingsIntro/types'
+import type { AutoUpdateState } from '../shared/autoUpdate/types'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -180,6 +181,18 @@ const settingsIntro = {
   openPlayer2InstallPage: (): Promise<void> => ipcRenderer.invoke('settingsIntro:openPlayer2InstallPage')
 }
 
+const autoUpdate = {
+  getState: (): Promise<AutoUpdateState> => ipcRenderer.invoke('autoUpdate:getState'),
+  quitAndInstall: (): Promise<void> => ipcRenderer.invoke('autoUpdate:quitAndInstall'),
+  onEvent: (listener: (payload: AutoUpdateState) => void): (() => void) => {
+    const handler = (_event: IpcRendererEvent, payload: AutoUpdateState): void => {
+      listener(payload)
+    }
+    ipcRenderer.on('autoUpdate:event', handler)
+    return () => ipcRenderer.removeListener('autoUpdate:event', handler)
+  }
+}
+
 contextBridge.exposeInMainWorld('windowControls', windowControls)
 contextBridge.exposeInMainWorld('campaigns', campaigns)
 contextBridge.exposeInMainWorld('files', files)
@@ -191,6 +204,7 @@ contextBridge.exposeInMainWorld('startup', startup)
 contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
 contextBridge.exposeInMainWorld('settings', settings)
 contextBridge.exposeInMainWorld('settingsIntro', settingsIntro)
+contextBridge.exposeInMainWorld('autoUpdate', autoUpdate)
 
 export type WindowControls = typeof windowControls
 export type CampaignsApi = typeof campaigns
@@ -203,3 +217,4 @@ export type StartupApi = typeof startup
 export type GuidedCreationApi = typeof guidedCreation
 export type SettingsApi = typeof settings
 export type SettingsIntroApi = typeof settingsIntro
+export type AutoUpdateApi = typeof autoUpdate

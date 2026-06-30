@@ -22,6 +22,7 @@ import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from 
 import { registerTurnHandlers } from './turnIpc'
 import { registerCombatHandlers } from './combatIpc'
 import { registerProgressionHandlers } from './progressionIpc'
+import { initAutoUpdate, registerAutoUpdateHandlers } from './autoUpdate'
 
 Menu.setApplicationMenu(null)
 loadConfig()
@@ -87,6 +88,8 @@ app.whenReady().then(() => {
   registerPromotionHandlers()
   registerSettingsHandlers()
   registerSettingsIntroHandlers()
+  registerAutoUpdateHandlers()
+  initAutoUpdate()
   const mainWindow = createMainWindow()
   registerStartupHandlers(mainWindow)
   registerCampaignCreateHandlers(mainWindow)
