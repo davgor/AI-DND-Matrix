@@ -144,3 +144,60 @@
 .campaign-review-generate-submit {
   font-weight: 600;
 }
+
+.campaign-review-npc-card {
+  margin-bottom: 16px;
+}
+
+.campaign-review-npc-backstory {
+  margin: 8px 0 10px;
+}
+
+.campaign-review-npc-backstory p {
+  margin: 4px 0 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.campaign-review-field-label {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-npc-tier {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-npc-traits {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-npc-trait-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.campaign-review-npc-trait-row dt {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.campaign-review-npc-trait-row dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}

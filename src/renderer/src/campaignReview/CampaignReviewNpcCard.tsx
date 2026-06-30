@@ -1,6 +1,5 @@
 import type { Npc } from '../../../db/repositories/npcs'
 import type { EditNpcTraitsInput } from '../../../main/campaignEditIpc'
-import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/types'
 import { EditableField } from './EditableField'
 import { CampaignReviewNpcTraits } from './CampaignReviewNpcTraits'
 import { FormattedText } from '../shared/FormattedText'
@@ -31,19 +30,14 @@ export function CampaignReviewNpcCard(props: {
           props.onSaveTraits({ campaignId: props.campaignId, npcId: npc.id, disposition })
         }
       />
-      {npc.canSpeak && npc.backstory ? (
+      {npc.backstory ? (
         <div className="campaign-review-npc-backstory">
           <p className="campaign-review-field-label">Backstory</p>
           {FormattedText({ as: 'p', text: npc.backstory })}
-          {npc.alignment ? (
-            <p className="campaign-review-npc-alignment">
-              Alignment: {ALIGNMENT_LABELS[npc.alignment as Alignment]}
-            </p>
-          ) : null}
           {tierLabel ? <p className="campaign-review-npc-tier">{tierLabel}</p> : null}
         </div>
       ) : null}
-      <CampaignReviewNpcTraits campaignId={props.campaignId} npc={npc} onSaveTraits={props.onSaveTraits} />
+      <CampaignReviewNpcTraits npc={npc} />
     </div>
   )
 }

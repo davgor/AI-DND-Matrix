@@ -1,53 +1,30 @@
-import { useState } from 'react'
 import type { Npc } from '../../../db/repositories/npcs'
-import type { EditNpcTraitsInput } from '../../../main/campaignEditIpc'
-import type { Alignment, Temperament } from '../../../shared/alignment/types'
-import { NpcTraitFields } from './NpcTraitFields'
+import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/types'
 
-export function CampaignReviewNpcTraits(props: {
-  campaignId: string
-  npc: Npc
-  onSaveTraits: (input: EditNpcTraitsInput) => Promise<void>
-}): JSX.Element {
+function formatTemperament(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+export function CampaignReviewNpcTraits(props: { npc: Npc }): JSX.Element {
   const { npc } = props
-  const [temperament, setTemperament] = useState<Temperament>(npc.temperament)
-  const [alignment, setAlignment] = useState<Alignment | ''>(npc.alignment ?? '')
-  const [canSpeak, setCanSpeak] = useState(npc.canSpeak)
-  const [saving, setSaving] = useState(false)
-
-  const dirty =
-    temperament !== npc.temperament ||
-    (alignment || null) !== npc.alignment ||
-    canSpeak !== npc.canSpeak
-
-  async function handleSave(): Promise<void> {
-    setSaving(true)
-    try {
-      await props.onSaveTraits({
-        campaignId: props.campaignId,
-        npcId: npc.id,
-        temperament,
-        alignment: alignment || null,
-        canSpeak
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
-
   return (
-    <div className="campaign-review-npc-traits">
-      <NpcTraitFields
-        temperament={temperament}
-        alignment={alignment}
-        canSpeak={canSpeak}
-        onTemperamentChange={setTemperament}
-        onAlignmentChange={setAlignment}
-        onCanSpeakChange={setCanSpeak}
-      />
-      <button type="button" disabled={saving || !dirty} onClick={() => void handleSave()}>
-        {saving ? 'Saving...' : 'Save traits'}
-      </button>
-    </div>
+    <dl className="campaign-review-npc-traits">
+      <div className="campaign-review-npc-trait-row">
+        <dt>Temperament</dt>
+        <dd>{formatTemperament(npc.temperament)}</dd>
+      </div>
+      {npc.alignment ? (
+        <div className="campaign-review-npc-trait-row">
+          <dt>Alignment</dt>
+          <dd>{ALIGNMENT_LABELS[npc.alignment as Alignment]}</dd>
+        </div>
+      ) : null}
+      {!npc.canSpeak ? (
+        <div className="campaign-review-npc-trait-row">
+          <dt>Speech</dt>
+          <dd>Non-verbal (deaf or mute)</dd>
+        </div>
+      ) : null}
+    </dl>
   )
 }

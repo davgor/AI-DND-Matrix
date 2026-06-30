@@ -37,6 +37,7 @@ describe('guided creation stage routing', () => {
   })
 
   it('resumes the correct onboarding stage after campaign select', () => {
+    expect(stageAfterCampaignSelect([])).toBe('review')
     expect(stageAfterCampaignSelect([player('identity')])).toBe('guidedIdentity')
     expect(stageAfterCampaignSelect([player('opening_scene')])).toBe('guidedOpeningScene')
     expect(stageAfterCampaignSelect([player('complete')])).toBe('main')

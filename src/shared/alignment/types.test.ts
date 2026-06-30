@@ -3,6 +3,7 @@ import {
   isCommitAlignmentShift,
   isPendingAlignmentShift,
   parseAlignment,
+  parseTemperament,
   stripActionMarkers,
   wrapActionDescription
 } from './types'
@@ -12,6 +13,11 @@ describe('alignment types', () => {
     expect(parseAlignment('lawful_good')).toBe('lawful_good')
     expect(parseAlignment('Lawful Good')).toBe('lawful_good')
     expect(parseAlignment('not-an-alignment')).toBeUndefined()
+  })
+
+  it('parses temperament labels case-insensitively', () => {
+    expect(parseTemperament('Cautious')).toBe('cautious')
+    expect(parseTemperament('MINDLESS')).toBe('mindless')
   })
 
   it('validates pending alignment shift shape', () => {

@@ -85,7 +85,7 @@ Each campaign is one SQLite save covering regions (with a preseeded, periodicall
 - **TDD**: tests are written before implementation for engine, db, and agent context-assembly logic.
 - **Ticket board**: see `/board` — text-file tickets (`/board/backlog`, `/board/in-progress`, `/board/done`), each with acceptance criteria that must all be checked before a ticket is done.
 - **Agent skills**: the `complete-ticket` workflow lives in `.claude/skills/complete-ticket/SKILL.md` (Claude Code) and `.cursor/skills/complete-ticket/SKILL.md` (Cursor) — keep both in sync.
-- **CI**: every PR runs tests + oxlint + build; all required to merge. `.github/workflows/pr-checks.yml` defines three jobs — `test`, `lint`, `build` — on `pull_request` against `main`. GitHub branch protection doesn't pick these up automatically; once the workflow has run at least once on the repo, go to Settings → Branches → branch protection rule for `main` → enable "Require status checks to pass before merging" → select `test`, `lint`, and `build` by name.
+- **CI**: tests + oxlint + build run on both direct `push` to `main` and `pull_request` targeting `main`. `.github/workflows/pr-checks.yml` defines three jobs — `test`, `lint`, `build`. To enforce this on direct pushes too, create a branch protection rule or ruleset for `main`, enable required status checks, and select `test`, `lint`, and `build` by name.
 - **Local dev**: `npm run dev` boots Electron + the React dev server + a dev SQLite file in one command (once scaffolded). `npm run package` produces a distributable `.exe`.
 
 ## License / Distribution

@@ -80,6 +80,14 @@ export function isTemperament(value: unknown): value is Temperament {
   return typeof value === 'string' && (TEMPERAMENTS as readonly string[]).includes(value)
 }
 
+export function parseTemperament(value: unknown): Temperament | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+  const normalized = value.trim().toLowerCase()
+  return isTemperament(normalized) ? normalized : undefined
+}
+
 export function isPendingAlignmentShift(value: unknown): value is PendingAlignmentShift {
   if (typeof value !== 'object' || value === null) {
     return false

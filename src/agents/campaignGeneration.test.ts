@@ -13,6 +13,7 @@ import {
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
+  normalizeAdditionalRegion,
   normalizeCampaignGeneration,
   persistRegionWithNpcs
 } from './campaignGeneration'
@@ -21,6 +22,8 @@ import {
   ADDITIONAL_REGION,
   LEGACY_NORMALIZE_PAYLOAD,
   LEGACY_CAMPAIGN_SEED_PAYLOAD,
+  makeNpcs,
+  makeRegion,
   npcReviewResponses,
   PRE_EXPANSION_CAMPAIGN_PAYLOAD,
   SETUP_INPUT,
@@ -97,6 +100,24 @@ describe('generateCampaignSeed schema rejection + retry (007.4, generation half)
   })
 })
 
+describe('normalizeAdditionalRegion', () => {
+  it('accepts human-readable alignment labels and temperament casing', () => {
+    const payload = {
+      region: makeRegion('Ashmere Ossuary', 'death'),
+      npcs: makeNpcs('Ashmere Ossuary', 'Ash').map((npc) => ({
+        ...npc,
+        alignment: 'True Neutral',
+        temperament: 'Cautious',
+        canSpeak: true
+      }))
+    }
+    const normalized = normalizeAdditionalRegion(payload)
+    expect(normalized?.region.name).toBe('Ashmere Ossuary')
+    expect(normalized?.npcs[0]?.alignment).toBe('true_neutral')
+    expect(normalized?.npcs[0]?.temperament).toBe('cautious')
+  })
+})
+
 describe('generateAdditionalRegion', () => {
   it('returns one region with exactly three NPCs', async () => {
     const provider = createScriptedProvider([ADDITIONAL_REGION])
@@ -104,6 +125,29 @@ describe('generateAdditionalRegion', () => {
     expect(result.region.name).toBe('Mistfen Crossing')
     expect(result.npcs).toHaveLength(3)
     expect(result.npcs.every((npc) => npc.regionName === 'Mistfen Crossing')).toBe(true)
+  })
+
+  it('accepts human-readable alignment labels and string canSpeak from the model', async () => {
+    const payload = {
+      region: makeRegion('Ashmere Ossuary', 'death'),
+      npcs: makeNpcs('Ashmere Ossuary', 'Ash').map((npc) => ({
+        ...npc,
+        alignment: 'True Neutral',
+        temperament: 'Cautious',
+        canSpeak: 'true'
+      }))
+    }
+    const provider = createScriptedProvider([JSON.stringify(payload)])
+    const result = await generateAdditionalRegion(
+      provider,
+      'A kingdom where death is sacred',
+      ['Oakhollow'],
+      'A death themed region with cemeteries everywhere'
+    )
+    expect(result.region.name).toBe('Ashmere Ossuary')
+    expect(result.npcs[0]?.alignment).toBe('true_neutral')
+    expect(result.npcs[0]?.temperament).toBe('cautious')
+    expect(result.npcs[0]?.canSpeak).toBe(true)
   })
 })
 

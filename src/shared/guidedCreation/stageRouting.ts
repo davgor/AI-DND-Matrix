@@ -29,7 +29,7 @@ export function stageForGuidedPhase(phase: GuidedCreationPhase | undefined): Onb
 export function stageAfterCampaignSelect(characters: Character[]): OnboardingStage {
   const player = findPlayerCharacter(characters)
   if (!player) {
-    return 'main'
+    return 'review'
   }
   return stageForGuidedPhase(player.guidedCreationPhase)
 }
