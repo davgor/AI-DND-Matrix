@@ -1,4 +1,13 @@
 import type { DeathMode } from '../../../shared/campaignCreate/types'
+import {
+  DEFAULT_NPCS_PER_REGION,
+  DEFAULT_REGION_COUNT,
+  MAX_NPCS_PER_REGION,
+  MAX_REGION_COUNT,
+  MIN_NPCS_PER_REGION,
+  MIN_REGION_COUNT
+} from '../../../shared/campaignCreate/types'
+import { clampNpcsPerRegion, clampRegionCount } from '../../../shared/campaignCreate/validation'
 import type { CampaignStartFlow } from './useCampaignStartFlow'
 
 const DEATH_MODES: DeathMode[] = ['legendary', 'standard', 'respawn']
@@ -38,6 +47,49 @@ function CampaignStartIdentityFields(props: { flow: CampaignStartFlow }): JSX.El
         />
       </label>
       {flow.fieldError ? <p className="campaign-start-field-error">{flow.fieldError}</p> : null}
+    </>
+  )
+}
+
+function CampaignStartGenerationFields(props: { flow: CampaignStartFlow }): JSX.Element {
+  const { flow } = props
+  return (
+    <>
+      <label className="campaign-start-field">
+        Regions to generate
+        <input
+          type="number"
+          min={MIN_REGION_COUNT}
+          max={MAX_REGION_COUNT}
+          value={flow.form.regionCount}
+          disabled={flow.submitting}
+          onChange={(event) =>
+            flow.updateForm({ regionCount: clampRegionCount(Number(event.target.value)) })
+          }
+        />
+        <span className="campaign-start-hint">
+          How many starting regions to create ({MIN_REGION_COUNT}–{MAX_REGION_COUNT}, default{' '}
+          {DEFAULT_REGION_COUNT}). You can add more on the review screen.
+        </span>
+      </label>
+      <label className="campaign-start-field">
+        NPCs per region
+        <input
+          type="number"
+          min={MIN_NPCS_PER_REGION}
+          max={MAX_NPCS_PER_REGION}
+          value={flow.form.npcsPerRegion}
+          disabled={flow.submitting}
+          onChange={(event) =>
+            flow.updateForm({ npcsPerRegion: clampNpcsPerRegion(Number(event.target.value)) })
+          }
+        />
+        <span className="campaign-start-hint">
+          NPCs generated in each starting region ({MIN_NPCS_PER_REGION}–{MAX_NPCS_PER_REGION},
+          default {DEFAULT_NPCS_PER_REGION}). Zero is allowed, but review requires at least one
+          region and one NPC before you can continue.
+        </span>
+      </label>
     </>
   )
 }
@@ -96,6 +148,7 @@ export function CampaignStartFormFields(props: {
       <h2 id="campaign-start-title">{isError ? 'Campaign creation failed' : 'New campaign'}</h2>
       {isError && flow.flowError ? <p className="campaign-start-flow-error">{flow.flowError}</p> : null}
       <CampaignStartIdentityFields flow={flow} />
+      <CampaignStartGenerationFields flow={flow} />
       <CampaignStartDeathModeFields flow={flow} />
     </>
   )

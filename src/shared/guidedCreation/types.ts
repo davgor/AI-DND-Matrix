@@ -55,6 +55,23 @@ export interface GuidedCreationSendMessageInput {
   message: string
 }
 
+export interface GuidedCreationKickoffInput {
+  campaignId: string
+  characterId: string
+}
+
+export interface GuidedCreationKickoffSuccess {
+  ok: true
+  kickedOff: boolean
+}
+
+export interface GuidedCreationKickoffFailure {
+  ok: false
+  reason: GuidedCreationFailureReason
+}
+
+export type GuidedCreationKickoffResult = GuidedCreationKickoffSuccess | GuidedCreationKickoffFailure
+
 export type GuidedCreationFailureReason =
   | 'not_found'
   | 'invalid_phase'

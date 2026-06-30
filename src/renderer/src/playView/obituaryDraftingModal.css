@@ -1,0 +1,68 @@
+.obituary-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.obituary-modal {
+  width: min(720px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 1.75rem;
+  border-radius: 8px;
+  background: #1a1410;
+  color: #f5e6d3;
+  border: 1px solid #6b4f2a;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.obituary-modal h2 {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+}
+
+.obituary-progress {
+  margin: 1rem 0;
+  font-style: italic;
+  color: #d4c4a8;
+}
+
+.obituary-body {
+  margin: 0 0 1.25rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.obituary-reactions {
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.obituary-reaction {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid #6b4f2a;
+  background: #241c14;
+}
+
+.obituary-reaction-name {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+  color: #c9a227;
+}
+
+.obituary-fallback {
+  margin: 0 0 1.25rem;
+  color: #d4c4a8;
+}
+
+.obituary-dismiss {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.2rem;
+}

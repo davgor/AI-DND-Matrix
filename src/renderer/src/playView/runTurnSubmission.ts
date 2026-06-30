@@ -1,4 +1,5 @@
 import type { TurnResult } from '../../../main/turnIpc'
+import type { DyingResolution } from '../../../main/dyingResolution'
 import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
 import type { FleeTurnOutcome } from '../../../shared/combat/flee/types'
@@ -28,7 +29,8 @@ function buildTurnSubmissionResult(
     defeatDispositionNarration: result.defeatDispositionNarration ?? null,
     xpNarration: result.xpNarration ?? null,
     lootNarration: result.lootNarration ?? null,
-    playerImprisoned: playerImprisonedFromStats(player?.stats)
+    playerImprisoned: playerImprisonedFromStats(player?.stats),
+    dyingResolution: result.dyingResolution
   }
 }
 
@@ -51,6 +53,7 @@ export async function runTurnSubmission(input: {
   xpNarration: string | null
   lootNarration: string | null
   playerImprisoned: boolean
+  dyingResolution?: DyingResolution
 }> {
   const result = await resolvePlayerTurn({
     campaignId: input.campaignId,

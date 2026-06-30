@@ -25,7 +25,12 @@ function player(phase: Character['guidedCreationPhase']): Character {
     openingScene: null,
     guidedCreationPhase: phase,
     alignment: null,
-    pendingAlignmentShift: null
+    pendingAlignmentShift: null,
+    lifeStatus: 'alive',
+    diedAt: null,
+    deathCause: null,
+    obituary: null,
+    ownerPlayerCharacterId: null
   }
 }
 
@@ -40,6 +45,6 @@ describe('guided creation stage routing', () => {
     expect(stageAfterCampaignSelect([])).toBe('review')
     expect(stageAfterCampaignSelect([player('identity')])).toBe('guidedIdentity')
     expect(stageAfterCampaignSelect([player('opening_scene')])).toBe('guidedOpeningScene')
-    expect(stageAfterCampaignSelect([player('complete')])).toBe('main')
+    expect(stageAfterCampaignSelect([player('complete')])).toBe('campaignHub')
   })
 })

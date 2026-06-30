@@ -1,3 +1,4 @@
+import type { DyingResolution } from '../../../main/dyingResolution'
 import type { FleeTurnOutcome } from '../../../shared/combat/flee/types'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
@@ -38,6 +39,7 @@ export async function executeTurnSubmission(input: {
   xpNarration: string | null
   lootNarration: string | null
   playerImprisoned: boolean
+  dyingResolution?: DyingResolution
 }> {
   try {
     const outcome = await runTurnSubmission(input)
@@ -52,7 +54,8 @@ export async function executeTurnSubmission(input: {
       defeatDispositionNarration: outcome.defeatDispositionNarration,
       xpNarration: outcome.xpNarration,
       lootNarration: outcome.lootNarration,
-      playerImprisoned: outcome.playerImprisoned
+      playerImprisoned: outcome.playerImprisoned,
+      dyingResolution: outcome.dyingResolution
     }
   } catch {
     return failedTurnSubmission(input.characterRefreshToken)

@@ -4,6 +4,7 @@ import { registerCampaignEditHandlers } from './campaignEditIpc'
 import { registerCampaignDeleteHandlers } from './campaignDeleteIpc'
 import { registerCampaignCreateHandlers } from './campaignCreateIpc'
 import { registerCampaignHandlers } from './campaignIpc'
+import { registerCampaignHubHandlers } from './campaignHubIpc'
 import { registerCharacterCreationHandlers } from './characterCreationIpc'
 import { registerGuidedCreationHandlers } from './guidedCreationIpc'
 import { registerItemHandlers } from './itemIpc'
@@ -16,6 +17,7 @@ import { registerNarrationLogHandlers } from './narrationLog'
 import { registerPromotionHandlers } from './promotionIpc'
 import { registerRecapHandlers } from './recapIpc'
 import { registerSettingsHandlers } from './settingsIpc'
+import { registerSettingsIntroHandlers } from './settingsIntroIpc'
 import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
 import { registerCombatHandlers } from './combatIpc'
@@ -68,6 +70,7 @@ function registerWindowControlHandlers(): void {
 app.whenReady().then(() => {
   registerWindowControlHandlers()
   registerCampaignHandlers()
+  registerCampaignHubHandlers()
   registerCampaignDeleteHandlers()
   registerCampaignEditHandlers()
   registerFileUploadHandlers()
@@ -83,6 +86,7 @@ app.whenReady().then(() => {
   registerNarrationLogHandlers()
   registerPromotionHandlers()
   registerSettingsHandlers()
+  registerSettingsIntroHandlers()
   const mainWindow = createMainWindow()
   registerStartupHandlers(mainWindow)
   registerCampaignCreateHandlers(mainWindow)

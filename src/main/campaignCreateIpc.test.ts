@@ -66,9 +66,19 @@ describe('isValidCreateCampaignRequest', () => {
   it('rejects missing premise', () => {
     expect(isValidCreateCampaignRequest({ sessionId: 's1', premisePrompt: '  ' })).toBe(false)
   })
+
+  it('rejects invalid generation counts', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        regionCount: 99
+      })
+    ).toBe(false)
+  })
 })
 
-describe('createCampaignFromRequest', () => {
+describe('createCampaignFromRequest success', () => {
   it('persists one campaign on success', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
@@ -85,6 +95,30 @@ describe('createCampaignFromRequest', () => {
     }
   })
 
+  it('honors custom generation counts on the setup input', async () => {
+    resetCampaignCreateForTests()
+    const db = createTestDb()
+    const oneRegionPayload = JSON.stringify({
+      regions: [makeRegion('Lonely Reach')],
+      npcs: makeNpcs('Lonely Reach', 'Lone'),
+      storyThread: { title: 'Solo Arc', state: 'starting', summary: 'A small start.' }
+    })
+    const provider = createScriptedProvider([oneRegionPayload, ...npcReviewResponses(1)])
+    const result = await createCampaignFromRequest(db, provider, {
+      sessionId: 'session-counts',
+      premisePrompt: 'A sparse frontier',
+      regionCount: 1,
+      npcsPerRegion: 1
+    })
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.detail.regions).toHaveLength(1)
+      expect(result.detail.npcs).toHaveLength(1)
+    }
+  })
+})
+
+describe('createCampaignFromRequest failure', () => {
   it('returns typed generation failure without partial rows', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()

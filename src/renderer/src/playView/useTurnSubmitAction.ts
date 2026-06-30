@@ -4,12 +4,14 @@ import { loadingExposition } from './submitPlayerTurn'
 import { executeTurnSubmission } from './turnSubmissionActions'
 import type { useAlignmentCombatBootstrap } from './useAlignmentCombatBootstrap'
 import type { useTurnSubmissionState } from './useTurnSubmissionState'
+import type { useObituaryDrafting } from './useObituaryDrafting'
 
 export function createSubmitAction(input: {
   playLog: PlayLogController
   promotion: PromotionPromptController
   state: ReturnType<typeof useTurnSubmissionState>
   alignmentCombat: ReturnType<typeof useAlignmentCombatBootstrap>
+  obituary: ReturnType<typeof useObituaryDrafting>
   campaignId: string
   characterId: string
 }) {
@@ -38,6 +40,15 @@ export function createSubmitAction(input: {
     state.setXpNarration(outcome.xpNarration)
     state.setLootNarration(outcome.lootNarration)
     state.setPlayerImprisoned(outcome.playerImprisoned)
+    if (outcome.dyingResolution?.status === 'permanently_dead') {
+      const characters = await window.characters.listByCampaign(input.campaignId)
+      const player = characters.find((character) => character.id === input.characterId)
+      input.obituary.beginObituaryDrafting({
+        campaignId: input.campaignId,
+        characterId: input.characterId,
+        deathCause: player?.deathCause ?? undefined
+      })
+    }
     state.setSubmitting(false)
   }
 }

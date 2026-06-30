@@ -166,7 +166,7 @@ function perkChosenEntries(event: Event): PlayLogEntry[] {
   ]
 }
 
-function eventToLogEntries(event: Event): PlayLogEntry[] {
+export function eventToLogEntries(event: Event): PlayLogEntry[] {
   const progression = progressionEventEntries(event)
   if (progression) {
     return progression
@@ -193,12 +193,25 @@ function eventToLogEntries(event: Event): PlayLogEntry[] {
   return []
 }
 
-export function buildNarrationLog(db: Database.Database, campaignId: string): PlayLogEntry[] {
-  return listEventsByCampaign(db, campaignId).flatMap(eventToLogEntries)
+export function buildNarrationLog(
+  db: Database.Database,
+  campaignId: string,
+  characterId?: string
+): PlayLogEntry[] {
+  const events = listEventsByCampaign(db, campaignId)
+  const scoped = characterId
+    ? events.filter((event) => {
+        const payloadCharacterId = event.payload['characterId']
+        return payloadCharacterId === undefined || payloadCharacterId === characterId
+      })
+    : events
+  return scoped.flatMap(eventToLogEntries)
 }
 
 export function registerNarrationLogHandlers(): void {
-  ipcMain.handle('campaigns:getNarrationLog', (_event, campaignId: string) =>
-    buildNarrationLog(getDb(), campaignId)
+  ipcMain.handle(
+    'campaigns:getNarrationLog',
+    (_event, campaignId: string, characterId?: string) =>
+      buildNarrationLog(getDb(), campaignId, characterId)
   )
 }

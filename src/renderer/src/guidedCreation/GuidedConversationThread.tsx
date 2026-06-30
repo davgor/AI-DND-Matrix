@@ -2,6 +2,7 @@ import type { GuidedCreationMessage } from '../../../shared/guidedCreation/types
 
 export interface GuidedConversationThreadProps {
   loading: boolean
+  kickingOff: boolean
   messages: GuidedCreationMessage[]
   sending: boolean
   error: string | null
@@ -14,7 +15,9 @@ export function GuidedConversationThread(props: GuidedConversationThreadProps): 
       {props.loading ? (
         <p className="guided-conversation-empty">Loading conversation…</p>
       ) : props.messages.length === 0 ? (
-        <p className="guided-conversation-empty">The DM is ready when you are. Share your first answer below.</p>
+        <p className="guided-conversation-empty">
+          {props.kickingOff ? 'The DM is preparing your first question…' : 'Waiting for the DM…'}
+        </p>
       ) : (
         props.messages.map((message) => (
           <div
@@ -30,7 +33,9 @@ export function GuidedConversationThread(props: GuidedConversationThreadProps): 
           </div>
         ))
       )}
-      {props.sending ? <p className="guided-conversation-status">The DM is thinking…</p> : null}
+      {props.sending || props.kickingOff ? (
+        <p className="guided-conversation-status">The DM is thinking…</p>
+      ) : null}
       {props.error ? <p className="guided-conversation-error">{props.error}</p> : null}
     </div>
   )

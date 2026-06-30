@@ -4,6 +4,11 @@ import { stripActionMarkers, wrapActionDescription } from '../shared/alignment/t
 import type Database from 'better-sqlite3'
 import type { AbilityScores, RandomFn } from '../engine/abilities'
 import { decidePartyMemberAction, assemblePartyMemberContext } from '../agents/partyMember'
+import {
+  assembleInactivePlayerContext,
+  decideInactivePlayerAction,
+  listInactiveLivingPlayersInRegion
+} from '../agents/inactivePlayer'
 import { generateNpcReaction, assembleNpcContext } from '../agents/npc'
 import {
   assembleNarrationContext,
@@ -28,10 +33,11 @@ import { proficiencyBonus } from '../engine/proficiency'
 import { resolveLongRest, resolveShortRest } from '../engine/rest'
 import { resolveTravel } from '../engine/travel'
 import { buildAgentProvider } from './campaignIpc'
+import { generateRegionForCampaign } from './campaignEditIpc'
 import { advanceInGameDate } from '../db/repositories/campaigns'
 import {
   getCharacterById,
-  listCharactersByCampaign,
+  listPartyMembersForPlayer,
   updateCharacter,
   type Character
 } from '../db/repositories/characters'
@@ -52,6 +58,7 @@ import {
 import { getActiveEncounter } from '../db/repositories/combatEncounters'
 import { getDb } from './db'
 import { CombatTurnError, resolveCombatTurn, shouldRouteToCombat } from './combatTurn'
+import { generateObituaryForDeath, type GenerateObituaryInput } from './obituaryIpc'
 import type { CombatAttackResult, CombatStateSnapshot } from '../shared/combat/types'
 import type { FleeTurnOutcome } from '../shared/combat/flee/types'
 
@@ -81,6 +88,12 @@ export interface PartyMemberActionResult {
   actionText: string
 }
 
+export interface InactivePlayerActionResult {
+  characterId: string
+  name: string
+  actionText: string
+}
+
 export interface ProposedPromotion {
   npcId: string
   npcName: string
@@ -94,6 +107,7 @@ export interface TurnResult {
   inGameDateAfter?: number
   npcReactions: NpcReactionResult[]
   partyMemberActions: PartyMemberActionResult[]
+  inactivePlayerActions?: InactivePlayerActionResult[]
   dyingResolution?: DyingResolution
   proposedPromotion?: ProposedPromotion
   pendingAlignmentShift: PendingAlignmentShift | null
@@ -171,26 +185,83 @@ function resolveRestTurn(db: Database.Database, turn: RestTurnInput): TurnResult
     inGameDateAfter,
     npcReactions: [],
     partyMemberActions: [],
+    inactivePlayerActions: [],
     ...buildTurnResultExtras(db, character.id)
   }
 }
 
 function resolveTravelTurn(
   db: Database.Database,
-  input: { campaignId: string; estimatedDays: number; playerInput: string; characterId: string }
+  input: { campaignId: string; estimatedDays: number; playerInput: string; characterId: string },
+  destinationRegionId?: string
 ): TurnResult {
   const { campaignId, estimatedDays, playerInput, characterId } = input
   const days = resolveTravel(estimatedDays)
   const inGameDateAfter = advanceInGameDate(db, campaignId, days)
-  const narrationText = `${days} day${days === 1 ? '' : 's'} pass as you travel.`
-  appendEvent(db, { campaignId, type: 'travel', payload: { days, narrationText, playerInput } })
+  if (destinationRegionId) {
+    const character = getCharacterById(db, characterId)
+    if (character) {
+      updateCharacter(db, characterId, {
+        stats: { ...(character.stats as Record<string, unknown>), currentRegionId: destinationRegionId }
+      })
+    }
+  }
+  const narrationText = destinationRegionId
+    ? `After ${days} day${days === 1 ? '' : 's'} of travel, you arrive at your destination.`
+    : `${days} day${days === 1 ? '' : 's'} pass as you travel.`
+  appendEvent(db, {
+    campaignId,
+    type: 'travel',
+    payload: { days, narrationText, playerInput, characterId, destinationRegionId }
+  })
   createSaveSnapshot(db, campaignId)
   return {
     narrationText,
     inGameDateAfter,
     npcReactions: [],
     partyMemberActions: [],
+    inactivePlayerActions: [],
     ...buildTurnResultExtras(db, characterId)
+  }
+}
+
+async function resolveTravelTurnWithDestination(
+  db: Database.Database,
+  provider: Provider,
+  input: { campaignId: string; estimatedDays: number; playerInput: string; characterId: string },
+  intent: IntentInterpretation
+): Promise<TurnResult> {
+  const destination = intent.travelDestinationName?.trim()
+  if (!destination) {
+    return resolveTravelTurn(db, input)
+  }
+  const regions = listRegionsByCampaign(db, input.campaignId)
+  const matched = regions.find(
+    (region) => region.name.toLowerCase() === destination.toLowerCase()
+  )
+  if (matched) {
+    return resolveTravelTurn(db, input, matched.id)
+  }
+  try {
+    const detail = await generateRegionForCampaign(db, provider, {
+      campaignId: input.campaignId,
+      seedPrompt: destination
+    })
+    const newRegion =
+      detail.regions.find((region) => region.name.toLowerCase() === destination.toLowerCase()) ??
+      detail.regions.at(-1)
+    if (!newRegion) {
+      throw new Error('Region generation produced no destination')
+    }
+    return resolveTravelTurn(db, input, newRegion.id)
+  } catch {
+    return {
+      narrationText: `The way to ${destination} could not be charted — you remain where you are.`,
+      npcReactions: [],
+      partyMemberActions: [],
+      inactivePlayerActions: [],
+      ...buildTurnResultExtras(db, input.characterId)
+    }
   }
 }
 
@@ -298,20 +369,50 @@ async function resolveTargetedNpcReaction(
 async function resolvePartyMemberActions(
   db: Database.Database,
   provider: Provider,
-  campaignId: string,
+  activeCharacterId: string,
   sceneNarration: string
 ): Promise<PartyMemberActionResult[]> {
-  const partyMembers = listCharactersByCampaign(db, campaignId).filter((c) => c.kind === 'ai_party_member')
+  const partyMembers = listPartyMembersForPlayer(db, activeCharacterId)
   const results: PartyMemberActionResult[] = []
   for (const member of partyMembers) {
-    const context = assemblePartyMemberContext(db, campaignId, member)
+    const context = assemblePartyMemberContext(db, member.campaignId, member)
     const action = await decidePartyMemberAction(provider, member, context, sceneNarration)
     appendEvent(db, {
-      campaignId,
+      campaignId: member.campaignId,
       type: 'party_member_action',
       payload: { characterId: member.id, content: action.actionText }
     })
     results.push({ characterId: member.id, name: member.name, actionText: action.actionText })
+  }
+  return results
+}
+
+async function resolveInactivePlayerActions(
+  db: Database.Database,
+  provider: Provider,
+  input: {
+    campaignId: string
+    regionId: string
+    activeCharacterId: string
+    sceneNarration: string
+  }
+): Promise<InactivePlayerActionResult[]> {
+  const inactivePlayers = listInactiveLivingPlayersInRegion(
+    db,
+    input.campaignId,
+    input.regionId,
+    input.activeCharacterId
+  )
+  const results: InactivePlayerActionResult[] = []
+  for (const inactive of inactivePlayers) {
+    const context = assembleInactivePlayerContext(db, inactive.id, input.campaignId)
+    const action = await decideInactivePlayerAction(provider, inactive, context, input.sceneNarration)
+    appendEvent(db, {
+      campaignId: input.campaignId,
+      type: 'inactive_player_action',
+      payload: { characterId: inactive.id, content: action.actionText }
+    })
+    results.push({ characterId: inactive.id, name: inactive.name, actionText: action.actionText })
   }
   return results
 }
@@ -396,6 +497,7 @@ interface BeatExecutionState {
   narrationResult?: NarrationResult
   npcReactions: NpcReactionResult[]
   partyMemberActions: PartyMemberActionResult[]
+  inactivePlayerActions: InactivePlayerActionResult[]
   sceneContext: string
   lootNarration?: string
   lootGrants?: LootGrantAccepted[]
@@ -525,17 +627,42 @@ async function executePartyMemberBeat(
   db: Database.Database,
   provider: Provider,
   input: {
-    campaignId: string
+    activeCharacterId: string
     state: BeatExecutionState
   }
 ): Promise<void> {
   const actions = await resolvePartyMemberActions(
     db,
     provider,
-    input.campaignId,
+    input.activeCharacterId,
     input.state.sceneContext
   )
   input.state.partyMemberActions.push(...actions)
+}
+
+async function executeInactivePlayerEncounter(
+  db: Database.Database,
+  provider: Provider,
+  input: {
+    campaignId: string
+    regionId: string
+    activeCharacterId: string
+    state: BeatExecutionState
+  }
+): Promise<void> {
+  if (!input.state.sceneContext.trim()) {
+    return
+  }
+  const actions = await resolveInactivePlayerActions(db, provider, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    activeCharacterId: input.activeCharacterId,
+    sceneNarration: input.state.sceneContext
+  })
+  input.state.inactivePlayerActions.push(...actions)
+  for (const action of actions) {
+    input.state.sceneContext = `${input.state.sceneContext} ${action.actionText}`
+  }
 }
 
 async function executeRoutingBeats(
@@ -556,6 +683,7 @@ async function executeRoutingBeats(
     narrationText: '',
     npcReactions: [],
     partyMemberActions: [],
+    inactivePlayerActions: [],
     sceneContext: ''
   }
 
@@ -577,9 +705,16 @@ async function executeRoutingBeats(
         state
       })
     } else if (beat.kind === 'partyMember') {
-      await executePartyMemberBeat(db, provider, { campaignId: input.campaignId, state })
+      await executePartyMemberBeat(db, provider, { activeCharacterId: input.character.id, state })
     }
   }
+
+  await executeInactivePlayerEncounter(db, provider, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    activeCharacterId: input.character.id,
+    state
+  })
 
   return state
 }
@@ -641,6 +776,7 @@ function buildRoutedTurnResult(
       : undefined,
     npcReactions: state.npcReactions,
     partyMemberActions: state.partyMemberActions,
+    inactivePlayerActions: state.inactivePlayerActions,
     proposedPromotion: resolveProposedPromotion(db, state.narrationResult?.proposedPromotionNpcId),
     lootNarration: state.lootNarration,
     lootGrants: state.lootGrants,
@@ -687,6 +823,7 @@ function resolveDyingTurnIfNeeded(
     narrationText: priorDying.message,
     npcReactions: [],
     partyMemberActions: [],
+    inactivePlayerActions: [],
     dyingResolution: priorDying,
     ...buildTurnResultExtras(db, character.id)
   }
@@ -733,12 +870,17 @@ async function resolveIntentRoutedTurn(input: {
     })
   }
   if (intent.actionType === 'travel') {
-    return resolveTravelTurn(db, {
-      campaignId: turnInput.campaignId,
-      estimatedDays: intent.travelDays ?? 1,
-      playerInput: turnInput.playerInput,
-      characterId: character.id
-    })
+    return resolveTravelTurnWithDestination(
+      db,
+      provider,
+      {
+        campaignId: turnInput.campaignId,
+        estimatedDays: intent.travelDays ?? 1,
+        playerInput: turnInput.playerInput,
+        characterId: character.id
+      },
+      intent
+    )
   }
   if (intent.actionType === 'modifyItem') {
     return resolveModificationTurn({
@@ -798,5 +940,8 @@ export async function resolvePlayerTurn(
 export function registerTurnHandlers(): void {
   ipcMain.handle('turn:resolve', (_event, input: TurnInput) =>
     resolvePlayerTurn(getDb(), buildAgentProvider(), input, Math.random)
+  )
+  ipcMain.handle('turn:generateObituary', (_event, input: GenerateObituaryInput) =>
+    generateObituaryForDeath(getDb(), buildAgentProvider(), input)
   )
 }

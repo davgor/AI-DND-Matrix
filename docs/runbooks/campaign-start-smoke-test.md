@@ -53,6 +53,17 @@ Options:
 
 **Expected outcome:** Same modal → loading → review flow as dev.
 
+## Manual dev smoke (configurable generation counts — epic 039)
+
+1. Run `npm run dev` and open **New Campaign**.
+2. Set **Regions to generate** to `0` and **NPCs per region** to `0`, enter a premise, and create the campaign.
+3. On **campaign review**, confirm **Continue** is disabled with a message about needing at least one region and one NPC.
+4. Use **Generate another region** with NPC count `1` and a seed prompt; confirm the region appears with one NPC and **Continue** enables.
+5. Add a second region with NPC count `0`; confirm **Continue** stays enabled but completing guided creation and choosing **Enter the world** shows a play blocker naming the empty region.
+6. Use **Generate NPC** on the empty region, then confirm play entry succeeds.
+
+**Expected outcome:** Count fields, review continue gate, per-region NPC generation, and stricter play gate all behave as documented.
+
 ## Recorded run (template)
 
 | Date | Mode | Provider | Result | Notes |

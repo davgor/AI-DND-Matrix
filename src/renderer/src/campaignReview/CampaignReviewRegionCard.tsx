@@ -13,6 +13,7 @@ export function CampaignReviewRegionCard(props: {
   campaignId: string
   onSaveRegionDescription: (regionId: string, description: string) => Promise<void>
   onSaveNpcTraits: (input: EditNpcTraitsInput) => Promise<void>
+  onGenerateNpc: () => void
 }): JSX.Element {
   const { region, extras, npcs } = props
 
@@ -26,7 +27,12 @@ export function CampaignReviewRegionCard(props: {
       />
       {extras ? <CampaignReviewRegionExtras extras={extras} /> : null}
       <div className="campaign-review-npcs">
-        <h4>NPCs</h4>
+        <div className="campaign-review-npcs-header">
+          <h4>NPCs</h4>
+          <button type="button" className="campaign-review-generate-npc" onClick={props.onGenerateNpc}>
+            Generate NPC
+          </button>
+        </div>
         {npcs.map((npc) => (
           <CampaignReviewNpcCard
             key={npc.id}

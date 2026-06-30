@@ -431,5 +431,15 @@ export const migrations: Migration[] = [
           ON character_item_modifications(character_item_id);
       `)
     }
+  },
+  {
+    version: 22,
+    up: (db) => {
+      addColumnIfMissing(db, 'characters', 'life_status', "TEXT NOT NULL DEFAULT 'alive'")
+      addColumnIfMissing(db, 'characters', 'died_at', 'TEXT')
+      addColumnIfMissing(db, 'characters', 'death_cause', 'TEXT')
+      addColumnIfMissing(db, 'characters', 'obituary_json', 'TEXT')
+      addColumnIfMissing(db, 'characters', 'owner_player_character_id', 'TEXT')
+    }
   }
 ]

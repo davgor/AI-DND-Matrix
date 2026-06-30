@@ -7,6 +7,11 @@ import type {
 } from '../../shared/guidedCreation/types'
 import type { Alignment, PendingAlignmentShift } from '../../shared/alignment/types'
 import { parsePendingAlignmentShiftJson } from '../../shared/alignment/types'
+import type {
+  CharacterLifeStatus,
+  CharacterObituary,
+  DeathCause
+} from '../../shared/campaignHub/types'
 
 export type CharacterKind = 'player' | 'ai_party_member'
 
@@ -27,6 +32,11 @@ export interface Character extends CharacterGuidedCreationFields {
   sheetBackgroundPath: string | null
   alignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
+  lifeStatus: CharacterLifeStatus
+  diedAt: string | null
+  deathCause: DeathCause | string | null
+  obituary: CharacterObituary | null
+  ownerPlayerCharacterId: string | null
 }
 
 export interface CreateCharacterInput {
@@ -44,6 +54,7 @@ export interface CreateCharacterInput {
   portraitPath?: string | null
   sheetBackgroundPath?: string | null
   alignment?: Alignment | null
+  ownerPlayerCharacterId?: string | null
 }
 
 export interface UpdateCharacterInput {
@@ -77,6 +88,22 @@ interface CharacterRow {
   guided_creation_phase: GuidedCreationPhase
   alignment: string | null
   pending_alignment_shift: string | null
+  life_status?: string
+  died_at?: string | null
+  death_cause?: string | null
+  obituary_json?: string | null
+  owner_player_character_id?: string | null
+}
+
+function parseObituaryJson(raw: string | null | undefined): CharacterObituary | null {
+  if (!raw) {
+    return null
+  }
+  try {
+    return JSON.parse(raw) as CharacterObituary
+  } catch {
+    return null
+  }
 }
 
 function rowToCharacter(row: CharacterRow): Character {
@@ -102,7 +129,12 @@ function rowToCharacter(row: CharacterRow): Character {
     openingScene: row.opening_scene,
     guidedCreationPhase: row.guided_creation_phase,
     alignment: (row.alignment as Alignment | null) ?? null,
-    pendingAlignmentShift: parsePendingAlignmentShiftJson(row.pending_alignment_shift)
+    pendingAlignmentShift: parsePendingAlignmentShiftJson(row.pending_alignment_shift),
+    lifeStatus: (row.life_status as CharacterLifeStatus | undefined) ?? 'alive',
+    diedAt: row.died_at ?? null,
+    deathCause: row.death_cause ?? null,
+    obituary: parseObituaryJson(row.obituary_json),
+    ownerPlayerCharacterId: row.owner_player_character_id ?? null
   }
 }
 
@@ -143,7 +175,12 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     openingScene: null,
     guidedCreationPhase: defaultGuidedPhase(input.kind),
     alignment: input.alignment ?? null,
-    pendingAlignmentShift: null
+    pendingAlignmentShift: null,
+    lifeStatus: 'alive',
+    diedAt: null,
+    deathCause: null,
+    obituary: null,
+    ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null
   }
 }
 
@@ -165,9 +202,9 @@ function insertCharacterRow(
 ): void {
   db.prepare(
     `INSERT INTO characters
-       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment)
+       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment, owner_player_character_id)
      VALUES
-       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment)`
+       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment, @ownerPlayerCharacterId)`
   ).run({
     id,
     campaignId: input.campaignId,
@@ -184,7 +221,8 @@ function insertCharacterRow(
     portraitPath: values.portraitPath,
     sheetBackgroundPath: values.sheetBackgroundPath,
     guidedCreationPhase: defaultGuidedPhase(input.kind),
-    alignment: input.alignment ?? null
+    alignment: input.alignment ?? null,
+    ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null
   })
 }
 
@@ -260,4 +298,69 @@ export function updateCharacter(
   db.prepare(
     'UPDATE characters SET stats = ?, inventory = ?, hp = ?, xp = ?, level = ? WHERE id = ?'
   ).run(JSON.stringify(stats), JSON.stringify(inventory), hp, xp, level, id)
+}
+
+export interface MarkCharacterDeadInput {
+  characterId: string
+  deathCause: DeathCause | string
+  obituary?: CharacterObituary | null
+}
+
+export function markCharacterDead(db: Database.Database, input: MarkCharacterDeadInput): void {
+  const diedAt = new Date().toISOString()
+  db.prepare(
+    `UPDATE characters
+     SET life_status = 'dead', died_at = ?, death_cause = ?, obituary_json = ?
+     WHERE id = ?`
+  ).run(
+    diedAt,
+    input.deathCause,
+    input.obituary ? JSON.stringify(input.obituary) : null,
+    input.characterId
+  )
+}
+
+export function setCharacterObituary(
+  db: Database.Database,
+  characterId: string,
+  obituary: CharacterObituary
+): void {
+  db.prepare('UPDATE characters SET obituary_json = ? WHERE id = ?').run(
+    JSON.stringify(obituary),
+    characterId
+  )
+}
+
+export function listPartyMembersForPlayer(
+  db: Database.Database,
+  playerCharacterId: string
+): Character[] {
+  const player = getCharacterById(db, playerCharacterId)
+  if (!player) {
+    return []
+  }
+  const rows = db
+    .prepare(
+      `SELECT * FROM characters
+       WHERE campaign_id = ? AND kind = 'ai_party_member'
+         AND (owner_player_character_id = ? OR owner_player_character_id IS NULL)
+       ORDER BY name`
+    )
+    .all(player.campaignId, playerCharacterId) as CharacterRow[]
+  return rows.map(rowToCharacter)
+}
+
+export function transferPartyMemberOwnership(
+  db: Database.Database,
+  partyMemberId: string,
+  newOwnerPlayerCharacterId: string
+): void {
+  db.prepare('UPDATE characters SET owner_player_character_id = ? WHERE id = ?').run(
+    newOwnerPlayerCharacterId,
+    partyMemberId
+  )
+}
+
+export function listPlayerCharacters(db: Database.Database, campaignId: string): Character[] {
+  return listCharactersByCampaign(db, campaignId).filter((character) => character.kind === 'player')
 }

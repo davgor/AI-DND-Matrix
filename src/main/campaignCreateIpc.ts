@@ -10,7 +10,7 @@ import {
   type CreateCampaignProgress,
   type CreateCampaignRequest
 } from '../shared/campaignCreate/types'
-import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
+import { isValidCreateCampaignRequest, resolveNpcsPerRegion, resolveRegionCount } from '../shared/campaignCreate/validation'
 import { touchLastPlayed } from '../db/repositories/sessions'
 import type { DeathMode, RespawnRules } from '../db/repositories/campaigns'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
@@ -51,7 +51,9 @@ function toSetupInput(request: CreateCampaignRequest): CampaignSetupInput {
     name: request.name ?? request.premisePrompt.slice(0, 40),
     premisePrompt: request.premisePrompt,
     deathMode: (request.deathMode ?? 'standard') as DeathMode,
-    respawnRules: (request.respawnRules ?? null) as RespawnRules | null
+    respawnRules: (request.respawnRules ?? null) as RespawnRules | null,
+    regionCount: resolveRegionCount(request.regionCount),
+    npcsPerRegion: resolveNpcsPerRegion(request.npcsPerRegion)
   }
 }
 
@@ -70,7 +72,10 @@ export async function createCampaignFromRequest(
   const input = toSetupInput(request)
   try {
     emitProgress(progressForStage(0, 'Sending your campaign premise to the narrative engine'))
-    const generation = await generateCampaignSeed(provider, input.premisePrompt)
+    const generation = await generateCampaignSeed(provider, input.premisePrompt, {
+      regionCount: input.regionCount,
+      npcsPerRegion: input.npcsPerRegion
+    })
     emitProgress(progressForStage(1, 'Interpreting generated world details'))
     emitProgress(progressForStage(2, 'Writing regions, NPCs, and story to your save'))
     const campaign = await persistGeneratedCampaign(db, provider, input, generation)

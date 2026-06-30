@@ -3,7 +3,11 @@ import type Database from 'better-sqlite3'
 import type { AbilityScores } from '../engine/abilities'
 import { computeAC } from '../engine/armorClass'
 import { computeHP, type Archetype } from '../engine/hp'
-import { createCharacter } from '../db/repositories/characters'
+import {
+  createCharacter,
+  getCharacterById,
+  transferPartyMemberOwnership
+} from '../db/repositories/characters'
 import { getNpcById, markNpcPromoted } from '../db/repositories/npcs'
 import { getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
@@ -45,6 +49,24 @@ export function inferArchetypeFromRole(role: string): Archetype {
 export interface PromoteNpcInput {
   campaignId: string
   npcId: string
+  recruitingPlayerCharacterId?: string
+}
+
+export interface RecruitPartyMemberInput {
+  partyMemberId: string
+  recruitingPlayerCharacterId: string
+}
+
+export function recruitPartyMemberFromRoster(
+  db: Database.Database,
+  input: RecruitPartyMemberInput
+): CampaignDetail {
+  const member = getCharacterById(db, input.partyMemberId)
+  if (!member || member.kind !== 'ai_party_member') {
+    throw new Error(`Party member ${input.partyMemberId} not found`)
+  }
+  transferPartyMemberOwnership(db, input.partyMemberId, input.recruitingPlayerCharacterId)
+  return getCampaignDetail(db, member.campaignId)
 }
 
 export function confirmNpcPromotion(db: Database.Database, input: PromoteNpcInput): CampaignDetail {
@@ -67,6 +89,7 @@ export function confirmNpcPromotion(db: Database.Database, input: PromoteNpcInpu
     level: STARTING_LEVEL,
     hp,
     alignment: npc.alignment,
+    ownerPlayerCharacterId: input.recruitingPlayerCharacterId ?? null,
     stats: {
       abilityScores,
       ac,
@@ -83,5 +106,8 @@ export function confirmNpcPromotion(db: Database.Database, input: PromoteNpcInpu
 export function registerPromotionHandlers(): void {
   ipcMain.handle('campaigns:confirmPromotion', (_event, input: PromoteNpcInput) =>
     confirmNpcPromotion(getDb(), input)
+  )
+  ipcMain.handle('campaigns:recruitPartyMember', (_event, input: RecruitPartyMemberInput) =>
+    recruitPartyMemberFromRoster(getDb(), input)
   )
 }

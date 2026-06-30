@@ -6,6 +6,7 @@ import type {
   FilesApi,
   GuidedCreationApi,
   SettingsApi,
+  SettingsIntroApi,
   StartupApi,
   TurnApi,
   WindowControls
@@ -23,5 +24,6 @@ declare global {
     progression: ProgressionApi
     startup: StartupApi
     settings: SettingsApi
+    settingsIntro: SettingsIntroApi
   }
 }

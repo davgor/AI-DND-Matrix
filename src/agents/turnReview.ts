@@ -37,6 +37,9 @@ function buildTurnReviewPrompt(context: TurnReviewContext): string {
     `Recent events: ${JSON.stringify(context.recentEvents)}`,
     `Story thread: ${JSON.stringify(context.storyThreadState)}`,
     `NPCs present in this region (only use these exact ids in npcResponse beats): ${JSON.stringify(context.presentNpcs)}`,
+    context.inactiveLivingPlayersInRegion?.length
+      ? `Inactive living player characters in this region (another protagonist — inactive player proxy may act for them): ${JSON.stringify(context.inactiveLivingPlayersInRegion)}`
+      : '',
     logBookSection,
     'Decide how to present this turn. Respond ONLY with JSON:',
     '{"disposition":"converse|act|narrate|composite","beats":Array<beat>}',

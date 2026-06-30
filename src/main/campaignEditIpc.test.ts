@@ -5,7 +5,7 @@ import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { npcReviewResponses } from '../agents/campaignGeneration.fixtures'
-import { editNpcDisposition, editNpcTraits, editRegionDescription, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, generateNpcForCampaign, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
 
 function makeRegion(name: string) {
   return {
@@ -133,7 +133,7 @@ describe('editNpcTraits', () => {
 })
 
 describe('generateRegionForCampaign', () => {
-  it('adds a generated region with extras and three NPCs', async () => {
+  it('adds a generated region with extras and three NPCs by default', async () => {
     const { db, campaign } = seedCampaignWithRegionAndNpc()
     const provider = createScriptedProvider([ADDITIONAL_REGION, ...npcReviewResponses(3)])
 
@@ -149,6 +149,64 @@ describe('generateRegionForCampaign', () => {
     const extras = detail.regionExtras.find((entry) => entry.regionId === mistfen!.id)
     expect(extras?.recentHistory).toContain('Mistfen Crossing')
     expect(extras?.questHooks.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('honors a custom npcCount including zero', async () => {
+    const { db, campaign } = seedCampaignWithRegionAndNpc()
+    const emptyRegion = JSON.stringify({
+      region: makeRegion('Silent Moor'),
+      npcs: []
+    })
+    const provider = createScriptedProvider([emptyRegion])
+
+    const detail = await generateRegionForCampaign(db, provider, {
+      campaignId: campaign.id,
+      seedPrompt: 'A quiet moor',
+      npcCount: 0
+    })
+
+    const moor = detail.regions.find((region) => region.name === 'Silent Moor')
+    expect(moor).toBeDefined()
+    expect(detail.npcs.filter((npc) => npc.regionId === moor!.id)).toHaveLength(0)
+  })
+})
+
+describe('generateNpcForCampaign', () => {
+  it('appends one NPC to the target region', async () => {
+    const { db, campaign, region } = seedCampaignWithRegionAndNpc()
+    const payload = JSON.stringify({
+      npc: {
+        name: 'Rook Vale',
+        role: 'hermit',
+        backstory: 'Rook keeps to the fog.',
+        disposition: 'gruff',
+        regionName: region.name,
+        temperament: 'cautious',
+        canSpeak: true,
+        alignment: 'true_neutral'
+      }
+    })
+    const provider = createScriptedProvider([payload, '{"upgrade":false}'])
+
+    const detail = await generateNpcForCampaign(db, provider, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      seedPrompt: 'A hermit in the woods'
+    })
+
+    expect(detail.npcs.filter((npc) => npc.regionId === region.id)).toHaveLength(2)
+    expect(detail.npcs.some((npc) => npc.name === 'Rook Vale')).toBe(true)
+  })
+
+  it('rejects an empty seed prompt', async () => {
+    const { db, campaign, region } = seedCampaignWithRegionAndNpc()
+    await expect(
+      generateNpcForCampaign(db, createScriptedProvider([]), {
+        campaignId: campaign.id,
+        regionId: region.id,
+        seedPrompt: '   '
+      })
+    ).rejects.toThrow(/seed/i)
   })
 })
 

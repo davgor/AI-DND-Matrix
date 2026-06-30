@@ -10,6 +10,7 @@ import { useRollVisibility, type RollVisibilityController } from './useRollVisib
 import { useSessionRecap, type SessionRecapController } from './useSessionRecap'
 import { usePromotionPrompt, type PromotionPromptController } from './usePromotionPrompt'
 import { useTurnSubmission } from './useTurnSubmission'
+import { useObituaryDrafting } from './useObituaryDrafting'
 
 export interface PlayViewController extends RollVisibilityController, PlayLogController {
   dmEntries: ReturnType<typeof filterDmExpositionEntries>
@@ -33,18 +34,22 @@ export interface PlayViewController extends RollVisibilityController, PlayLogCon
   lootNarration: string | null
   playerImprisoned: boolean
   notifyPerkChosen: () => void
+  obituaryRequest: ReturnType<typeof useObituaryDrafting>['obituaryRequest']
+  clearObituaryDrafting: () => void
+  obituaryBlocking: boolean
 }
 
 export function usePlayViewController(campaignId: string, characterId: string): PlayViewController {
   const rollVisibility = useRollVisibility()
   const recap = useSessionRecap(campaignId)
-  const playLog = usePlayLog(campaignId, (entries) => {
+  const playLog = usePlayLog(campaignId, characterId, (entries) => {
     if (entries.length > 0) {
       recap.show()
     }
   })
   const promotion = usePromotionPrompt(campaignId, () => void playLog.refreshLog())
-  const turn = useTurnSubmission({ campaignId, characterId, playLog, promotion })
+  const obituary = useObituaryDrafting()
+  const turn = useTurnSubmission({ campaignId, characterId, playLog, promotion, obituary })
 
   return {
     dmEntries: filterDmExpositionEntries(playLog.log),
@@ -62,6 +67,9 @@ export function usePlayViewController(campaignId: string, characterId: string): 
     xpNarration: turn.xpNarration,
     lootNarration: turn.lootNarration,
     playerImprisoned: turn.playerImprisoned,
-    notifyPerkChosen: turn.notifyPerkChosen
+    notifyPerkChosen: turn.notifyPerkChosen,
+    obituaryRequest: obituary.obituaryRequest,
+    clearObituaryDrafting: obituary.clearObituaryDrafting,
+    obituaryBlocking: obituary.obituaryBlocking
   }
 }

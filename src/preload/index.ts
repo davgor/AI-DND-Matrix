@@ -5,8 +5,10 @@ import type {
   EditNpcDispositionInput,
   EditNpcTraitsInput,
   EditRegionDescriptionInput,
-  GenerateRegionInput
+  GenerateRegionInput,
+  GenerateNpcInput
 } from '../main/campaignEditIpc'
+import type { PlayAwareHubSnapshot } from '../shared/campaignHub/types'
 import type { CampaignDetail } from '../main/campaignIpc'
 import type { CreateCampaignRequest, CreateCampaignProgress } from '../shared/campaignCreate/types'
 import type {
@@ -17,6 +19,7 @@ import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { CombatStateSnapshot } from '../shared/combat/types'
 import type { TurnInput, TurnResult } from '../main/turnIpc'
+import type { GenerateObituaryInput, GenerateObituaryResult } from '../main/obituaryIpc'
 import type { LogEntry } from '../shared/logBook/types'
 import type { CharacterJournalEntry } from '../shared/journal/types'
 import type { CharacterItemView } from '../shared/items/types'
@@ -25,6 +28,8 @@ import type { PlayLogEntry } from '../main/narrationLog'
 import type { PromoteNpcInput } from '../main/promotionIpc'
 import type { StartupEventPayload } from '../shared/startup/types'
 import type {
+  GuidedCreationKickoffInput,
+  GuidedCreationKickoffResult,
   GuidedCreationSendMessageInput,
   GuidedCreationSendMessageResult,
   GuidedCreationState
@@ -35,6 +40,7 @@ import type {
   RedactedProviderSettings,
   SaveProviderSettingsInput
 } from '../shared/settings/types'
+import type { SettingsIntroState } from '../shared/settingsIntro/types'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -46,6 +52,8 @@ const campaigns = {
   list: (): Promise<CampaignWithLastPlayed[]> => ipcRenderer.invoke('campaigns:list'),
   select: (campaignId: string): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:select', campaignId),
+  getHubSnapshot: (campaignId: string): Promise<PlayAwareHubSnapshot> =>
+    ipcRenderer.invoke('campaigns:getHubSnapshot', campaignId),
   generate: (premisePrompt: string): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:generate', premisePrompt),
   create: (request: CreateCampaignRequest): Promise<CreateCampaignResult> =>
@@ -67,10 +75,14 @@ const campaigns = {
     input: GenerateRegionInput
   ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
     ipcRenderer.invoke('campaigns:generateRegion', input),
+  generateNpc: (
+    input: GenerateNpcInput
+  ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('campaigns:generateNpc', input),
   generateRecap: (campaignId: string): Promise<string> =>
     ipcRenderer.invoke('campaigns:generateRecap', campaignId),
-  getNarrationLog: (campaignId: string): Promise<PlayLogEntry[]> =>
-    ipcRenderer.invoke('campaigns:getNarrationLog', campaignId),
+  getNarrationLog: (campaignId: string, characterId?: string): Promise<PlayLogEntry[]> =>
+    ipcRenderer.invoke('campaigns:getNarrationLog', campaignId, characterId),
   confirmPromotion: (input: PromoteNpcInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:confirmPromotion', input),
   delete: (campaignId: string): Promise<DeleteCampaignResult> =>
@@ -110,7 +122,9 @@ const characters = {
 }
 
 const turn = {
-  resolve: (input: TurnInput): Promise<TurnResult> => ipcRenderer.invoke('turn:resolve', input)
+  resolve: (input: TurnInput): Promise<TurnResult> => ipcRenderer.invoke('turn:resolve', input),
+  generateObituary: (input: GenerateObituaryInput): Promise<GenerateObituaryResult> =>
+    ipcRenderer.invoke('turn:generateObituary', input)
 }
 
 const combat = {
@@ -145,7 +159,9 @@ const guidedCreation = {
   getState: (characterId: string): Promise<GuidedCreationState | undefined> =>
     ipcRenderer.invoke('guidedCreation:getState', characterId),
   sendMessage: (input: GuidedCreationSendMessageInput): Promise<GuidedCreationSendMessageResult> =>
-    ipcRenderer.invoke('guidedCreation:sendMessage', input)
+    ipcRenderer.invoke('guidedCreation:sendMessage', input),
+  kickoffIdentity: (input: GuidedCreationKickoffInput): Promise<GuidedCreationKickoffResult> =>
+    ipcRenderer.invoke('guidedCreation:kickoffIdentity', input)
 }
 
 const settings = {
@@ -158,6 +174,12 @@ const settings = {
     ipcRenderer.invoke('settings:checkLlamaRuntime', config)
 }
 
+const settingsIntro = {
+  getState: (): Promise<SettingsIntroState> => ipcRenderer.invoke('settingsIntro:getState'),
+  dismiss: (): Promise<void> => ipcRenderer.invoke('settingsIntro:dismiss'),
+  openPlayer2InstallPage: (): Promise<void> => ipcRenderer.invoke('settingsIntro:openPlayer2InstallPage')
+}
+
 contextBridge.exposeInMainWorld('windowControls', windowControls)
 contextBridge.exposeInMainWorld('campaigns', campaigns)
 contextBridge.exposeInMainWorld('files', files)
@@ -168,6 +190,7 @@ contextBridge.exposeInMainWorld('progression', progression)
 contextBridge.exposeInMainWorld('startup', startup)
 contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
 contextBridge.exposeInMainWorld('settings', settings)
+contextBridge.exposeInMainWorld('settingsIntro', settingsIntro)
 
 export type WindowControls = typeof windowControls
 export type CampaignsApi = typeof campaigns
@@ -179,3 +202,4 @@ export type ProgressionApi = typeof progression
 export type StartupApi = typeof startup
 export type GuidedCreationApi = typeof guidedCreation
 export type SettingsApi = typeof settings
+export type SettingsIntroApi = typeof settingsIntro

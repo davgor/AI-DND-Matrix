@@ -1,20 +1,18 @@
 import { useRef, useState, type RefObject } from 'react'
 import type { CampaignDetail } from '../../main/campaignIpc'
-import {
-  canEnterPlay,
-  findPlayerCharacter,
-  stageAfterCampaignSelect,
-  type OnboardingStage
-} from '../../shared/guidedCreation/stageRouting'
+import type { OnboardingStage } from '../../shared/guidedCreation/stageRouting'
 import './app.css'
 import { CampaignDeleteModal } from './campaignDelete/CampaignDeleteModal'
 import { useCampaignDeleteFlow } from './campaignDelete/useCampaignDeleteFlow'
 import { CampaignStartModal } from './campaignStart/CampaignStartModal'
 import { useCampaignStartFlow } from './campaignStart/useCampaignStartFlow'
-import { OnboardingStageContent } from './onboarding/OnboardingStageContent'
-import { PlayView } from './playView/PlayView'
-import { Sidebar } from './sidebar/Sidebar'
+import { ReadyAppHubRoute } from './app/ReadyAppHubRoute'
+import { ReadyAppOnboardingView } from './app/ReadyAppOnboardingView'
+import { ReadyAppPlayView } from './app/ReadyAppPlayView'
+import { useReadyAppBodyState } from './app/useReadyAppBody'
 import type { useSidebarController } from './sidebar/useSidebarController'
+import { SettingsIntroModal } from './settingsIntro/SettingsIntroModal'
+import { useSettingsIntro } from './settingsIntro/useSettingsIntro'
 import { Titlebar } from './titlebar/Titlebar'
 import { LoadingScreen } from './startup/LoadingScreen'
 import { useStartupBoot } from './startup/useStartupBoot'
@@ -31,51 +29,53 @@ interface ReadyAppShellProps {
 }
 
 function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
-  const playerCharacter = findPlayerCharacter(props.detail?.characters ?? [])
-  const inCampaign =
-    props.stage === 'main' && props.detail?.campaign && canEnterPlay(playerCharacter)
+  const body = useReadyAppBodyState(props)
   const campaignCallbacks = {
-    onCampaignSelected: (next: CampaignDetail) => {
-      props.setDetail(next)
-      props.setStage(stageAfterCampaignSelect(next.characters))
-    },
+    onCampaignSelected: body.onCampaignSelected,
     onOpenNewCampaign: props.campaignStart.open,
     onRequestDelete: props.campaignDelete.open
   }
 
-  async function refreshDetail(): Promise<void> {
-    if (!props.detail?.campaign) {
-      return
-    }
-    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
+  if (body.inCampaign && body.activePlayer) {
+    return (
+      <ReadyAppPlayView
+        detail={props.detail!}
+        body={body}
+        sidebarRef={props.sidebarRef}
+        campaignCallbacks={campaignCallbacks}
+      />
+    )
   }
 
-  if (inCampaign) {
+  if (props.stage === 'campaignHub' && props.detail && body.hubSnapshot) {
     return (
-      <PlayView
-        campaignId={props.detail!.campaign!.id}
-        characterId={playerCharacter!.id}
-        selectedCampaignId={props.detail!.campaign!.id}
+      <ReadyAppHubRoute
         sidebarRef={props.sidebarRef}
-        {...campaignCallbacks}
+        detail={props.detail}
+        stage={props.stage}
+        setDetail={props.setDetail}
+        setStage={props.setStage}
+        body={body}
+        campaignCallbacks={campaignCallbacks}
+        onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
       />
     )
   }
 
   return (
-    <>
-      <Sidebar sidebarRef={props.sidebarRef} selectedCampaignId={props.detail?.campaign?.id ?? null} {...campaignCallbacks} />
-      <OnboardingStageContent
-        stage={props.stage}
-        detail={props.detail}
-        onDetailChange={props.setDetail}
-        onReviewContinue={() => props.setStage('characterSetup')}
-        onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
-        onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
-        onEnterPlay={() => props.setStage('main')}
-        onRefreshDetail={refreshDetail}
-      />
-    </>
+    <ReadyAppOnboardingView
+      sidebarRef={props.sidebarRef}
+      stage={props.stage}
+      detail={props.detail}
+      campaignCallbacks={campaignCallbacks}
+      onDetailChange={props.setDetail}
+      onReviewContinue={() => props.setStage('characterSetup')}
+      onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
+      onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
+      onEnterPlay={body.handleEnterPlay}
+      enterPlayBlockerMessage={body.enterPlayBlockerMessage}
+      onRefreshDetail={body.refreshDetail}
+    />
   )
 }
 
@@ -87,12 +87,25 @@ async function handleCharacterSetupComplete(props: ReadyAppShellProps): Promise<
 }
 
 function ReadyAppShell(props: ReadyAppShellProps): JSX.Element {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const settingsIntro = useSettingsIntro(true, settingsOpen, setSettingsOpen)
+
   return (
     <div className="app-root">
-      <Titlebar />
+      <Titlebar
+        highlightSettings={settingsIntro.highlightSettings}
+        settingsOpen={settingsOpen}
+        onSettingsOpenChange={settingsIntro.handleSettingsOpenChange}
+      />
       <div className="app-body">
         <ReadyAppBody {...props} />
       </div>
+      {settingsIntro.visible ? (
+        <SettingsIntroModal
+          onDismiss={settingsIntro.dismiss}
+          onOpenSettings={settingsIntro.openSettings}
+        />
+      ) : null}
       <CampaignStartModal
         flow={props.campaignStart}
         onSuccess={(created) => void props.onCampaignCreated(created)}

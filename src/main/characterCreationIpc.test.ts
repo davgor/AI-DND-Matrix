@@ -65,6 +65,7 @@ describe('createPartyMembers (009.4)', () => {
 
     expect(members).toHaveLength(2)
     expect(members.every((m) => m.kind === 'ai_party_member')).toBe(true)
+    expect(members.every((m) => m.ownerPlayerCharacterId === null)).toBe(true)
     const firstMember = members[0]
     expect(firstMember).toBeDefined()
     expect((firstMember!.stats as { personality: string }).personality).toBe('gruff but loyal')

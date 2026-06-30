@@ -11,6 +11,7 @@ import { resolveSave } from '../engine/saves'
 import { getCampaignById, type Campaign } from '../db/repositories/campaigns'
 import { getCharacterById, updateCharacter, type Character } from '../db/repositories/characters'
 import { restoreLatestSave } from '../db/repositories/saves'
+import { persistDeathFromDyingStatus } from './characterDeath'
 
 const DYING_SAVE_DC = 10
 const STABILIZED_HP = 1
@@ -82,6 +83,7 @@ function resolveLostDyingSequence(
     )
     if (outcome.mode === 'legendary') {
       updateCharacter(db, character.id, { stats: { ...stats, dyingState: undefined } })
+      persistDeathFromDyingStatus(db, character.id, 'permanently_dead', { respawnExhausted: true })
       return {
         status: 'permanently_dead',
         message: `${character.name} has exhausted every respawn and has died. This is permanent.`
@@ -100,6 +102,7 @@ function resolveLostDyingSequence(
 
   resolveLegendaryDeath(lostDyingState)
   updateCharacter(db, character.id, { stats: { ...getStats(character), dyingState: undefined } })
+  persistDeathFromDyingStatus(db, character.id, 'permanently_dead')
   return {
     status: 'permanently_dead',
     message: `${character.name} has died. This is permanent.`

@@ -1,0 +1,252 @@
+.campaign-hub {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  color: var(--text-primary);
+}
+
+.campaign-hub-sidebar {
+  flex-shrink: 0;
+}
+
+.campaign-hub-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.campaign-hub-center {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px;
+  overflow-y: auto;
+  background: transparent;
+}
+
+.campaign-hub-header {
+  margin-bottom: 24px;
+}
+
+.campaign-hub-header h1 {
+  margin: 0 0 8px;
+}
+
+.campaign-hub-premise {
+  margin: 0;
+  color: var(--text-secondary, #9ca3af);
+  max-width: 60ch;
+  line-height: 1.5;
+}
+
+.campaign-hub-last-played {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim, #6b7280);
+}
+
+.campaign-hub-section {
+  margin-bottom: 28px;
+}
+
+.campaign-hub-section h2 {
+  margin-bottom: 12px;
+}
+
+.campaign-hub-current-state p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.campaign-hub-recent-events ul {
+  margin: 8px 0 0;
+  padding-left: 1.25rem;
+}
+
+.campaign-hub-recent-events time {
+  color: var(--text-secondary, #9ca3af);
+  font-size: 0.9rem;
+}
+
+.campaign-hub-cast-rail {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  background: var(--surface-raised, rgba(0, 0, 0, 0.2));
+}
+
+.campaign-hub-cast-header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.campaign-hub-cast-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-hub-cast-list {
+  flex: 1;
+  margin: 0;
+  padding: 12px;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.campaign-hub-cast-card {
+  margin-bottom: 12px;
+}
+
+.campaign-hub-cast-card article {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+  background: var(--surface-inset, rgba(0, 0, 0, 0.15));
+}
+
+.campaign-hub-cast-card--dead article {
+  opacity: 0.85;
+}
+
+.campaign-hub-cast-portrait {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.campaign-hub-cast-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.campaign-hub-cast-portrait-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--border-subtle, rgba(255, 255, 255, 0.1));
+}
+
+.campaign-hub-cast-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.campaign-hub-cast-details h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.campaign-hub-cast-meta,
+.campaign-hub-cast-region {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-hub-resume,
+.campaign-hub-view-obituary,
+.campaign-hub-create-character {
+  margin-top: 8px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border-medium, rgba(255, 255, 255, 0.2));
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-inset, rgba(0, 0, 0, 0.2));
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.campaign-hub-resume:disabled,
+.campaign-hub-create-character:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.campaign-hub-cast-footer {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.campaign-hub-create-character {
+  width: 100%;
+}
+
+.campaign-hub-obituary-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.campaign-hub-obituary-modal {
+  width: min(560px, 100%);
+  max-height: min(80vh, 640px);
+  overflow-y: auto;
+  padding: 20px 24px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  background: var(--surface-raised, #1a1a1f);
+  color: var(--text-primary);
+}
+
+.campaign-hub-obituary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.campaign-hub-obituary-header h2 {
+  margin: 0;
+}
+
+.campaign-hub-obituary-close {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #9ca3af);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.campaign-hub-obituary-cause {
+  margin: 0 0 12px;
+}
+
+.campaign-hub-obituary-narrative p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.campaign-hub-obituary-reactions {
+  margin-top: 20px;
+}
+
+.campaign-hub-obituary-reactions ul {
+  margin: 8px 0 0;
+  padding-left: 1.25rem;
+}
+
+.campaign-hub-obituary-empty {
+  margin: 0;
+  color: var(--text-secondary, #9ca3af);
+  font-style: italic;
+}

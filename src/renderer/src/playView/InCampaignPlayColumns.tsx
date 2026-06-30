@@ -47,6 +47,7 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
           onInputChange={controller.setInputValue}
           onSubmit={() => void controller.submitAction()}
           submitting={controller.submitting}
+          inputBlocked={controller.obituaryBlocking}
         />
       }
       playerSheet={

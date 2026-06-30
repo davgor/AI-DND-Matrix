@@ -35,7 +35,7 @@ describe('isSettingsDirty', () => {
   })
 
   it('is true when a non-secret field differs from the baseline', () => {
-    expect(isSettingsDirty(baseline, { ...baseline, mode: 'player2', claudeApiKey: '' })).toBe(true)
+    expect(isSettingsDirty(baseline, { ...baseline, mode: 'claude', claudeApiKey: '' })).toBe(true)
   })
 
   it('is true when the user has typed anything into the API key field', () => {

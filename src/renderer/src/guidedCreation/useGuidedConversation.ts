@@ -4,19 +4,13 @@ import type {
   GuidedCreationState,
   GuidedMessagePhase
 } from '../../../shared/guidedCreation/types'
-
-async function invokeGuidedMessage(
-  campaignId: string,
-  characterId: string,
-  phase: GuidedMessagePhase,
-  message: string
-): Promise<GuidedCreationSendMessageResult> {
-  return window.guidedCreation.sendMessage({ campaignId, characterId, phase, message })
-}
+import { useGuidedIdentityKickoff } from './useGuidedIdentityKickoff'
+import { useGuidedSendMessage } from './useGuidedSendMessage'
 
 export interface GuidedConversationController {
   state: GuidedCreationState | null
   loading: boolean
+  kickingOff: boolean
   sending: boolean
   error: string | null
   inputValue: string
@@ -32,6 +26,7 @@ export function useGuidedConversation(
 ): GuidedConversationController {
   const [state, setState] = useState<GuidedCreationState | null>(null)
   const [loading, setLoading] = useState(true)
+  const [kickingOff, setKickingOff] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
@@ -49,26 +44,32 @@ export function useGuidedConversation(
     void refresh()
   }, [refresh])
 
-  async function sendMessage(): Promise<GuidedCreationSendMessageResult | null> {
-    if (!inputValue.trim() || sending) {
-      return null
-    }
-    setSending(true)
-    setError(null)
-    try {
-      const result = await invokeGuidedMessage(campaignId, characterId, phase, inputValue.trim())
-      if (!result.ok) {
-        setError(result.reason === 'schema_error' ? 'The DM could not respond. Try again.' : 'Unable to send message.')
-        return result
-      }
-      setInputValue('')
-      await refresh()
-      onStateChange?.()
-      return result
-    } finally {
-      setSending(false)
-    }
-  }
+  useGuidedIdentityKickoff({
+    campaignId,
+    characterId,
+    phase,
+    loading,
+    kickingOff,
+    sending,
+    state,
+    refresh,
+    setKickingOff,
+    setError,
+    onStateChange
+  })
 
-  return { state, loading, sending, error, inputValue, setInputValue, sendMessage }
+  const sendMessage = useGuidedSendMessage({
+    campaignId,
+    characterId,
+    phase,
+    inputValue,
+    sending,
+    setSending,
+    setError,
+    setInputValue,
+    refresh,
+    onStateChange
+  })
+
+  return { state, loading, kickingOff, sending, error, inputValue, setInputValue, sendMessage }
 }

@@ -1,0 +1,125 @@
+.settings-intro-overlay {
+  position: fixed;
+  inset: 32px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay-backdrop);
+  z-index: 25;
+}
+
+.settings-intro-modal {
+  width: min(520px, 92vw);
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-medium);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-panel);
+}
+
+.settings-intro-modal h2 {
+  margin: 0 0 0.75rem;
+}
+
+.settings-intro-lead {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.settings-intro-settings-callout {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-accent, var(--border-medium));
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.settings-intro-settings-callout strong {
+  color: var(--text-accent);
+}
+
+.settings-intro-provider-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.settings-intro-provider-list li {
+  margin-bottom: 0.35rem;
+}
+
+.settings-intro-default-tag {
+  color: var(--text-accent);
+  font-size: 0.9em;
+}
+
+.settings-intro-install-note {
+  margin: 0 0 1.25rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.settings-intro-install-link {
+  color: var(--text-accent);
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+}
+
+.settings-intro-install-link:hover {
+  color: var(--text-primary);
+}
+
+.settings-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.settings-intro-actions button {
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+}
+
+.settings-intro-actions button:hover {
+  background: var(--surface-hover);
+}
+
+.settings-intro-actions button.settings-intro-primary {
+  background: var(--color-accent-solid, var(--surface-hover));
+  border-color: transparent;
+  color: var(--text-on-accent, var(--text-primary));
+}
+
+.titlebar-button-settings-highlight {
+  position: relative;
+  z-index: 30;
+  color: var(--text-accent);
+  animation: settings-intro-pulse 1.4s ease-in-out infinite;
+  box-shadow: inset 0 0 0 1px var(--text-accent);
+}
+
+@keyframes settings-intro-pulse {
+  0%,
+  100% {
+    background: var(--surface-hover);
+  }
+  50% {
+    background: color-mix(in srgb, var(--text-accent) 22%, transparent);
+  }
+}

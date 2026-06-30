@@ -4,7 +4,7 @@ import { redactProviderSettings, validateProviderSettings } from './validation'
 
 describe('validateProviderSettings: claude mode', () => {
   it('passes once an API key is set', () => {
-    const settings = { ...DEFAULT_PROVIDER_SETTINGS, claudeApiKey: 'sk-ant-test' }
+    const settings = { ...DEFAULT_PROVIDER_SETTINGS, mode: 'claude' as const, claudeApiKey: 'sk-ant-test' }
     expect(validateProviderSettings(settings)).toEqual([])
   })
 

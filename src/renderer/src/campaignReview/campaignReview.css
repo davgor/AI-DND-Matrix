@@ -41,6 +41,21 @@
   margin: 0 0 12px;
 }
 
+.campaign-review-region-destroyed {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(180, 60, 60, 0.15);
+  color: var(--color-error, #e57373);
+  font-size: 0.9rem;
+}
+
+.campaign-review-thread-state {
+  color: var(--text-secondary, #9ca3af);
+  font-weight: normal;
+  text-transform: capitalize;
+}
+
 .campaign-review-region-card h4 {
   margin: 16px 0 8px;
   font-size: 0.95rem;

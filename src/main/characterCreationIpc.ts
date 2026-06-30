@@ -55,18 +55,26 @@ export interface AiPartyMemberInput {
 export interface CreatePartyMembersInput {
   campaignId: string
   members: AiPartyMemberInput[]
+  /**
+   * `null` = shared roster member (first character setup).
+   * Set to a player character id when creating owned members for that protagonist.
+   */
+  ownerPlayerCharacterId?: string | null
 }
 
 export function createPartyMembers(
   db: Database.Database,
   input: CreatePartyMembersInput
 ): Character[] {
+  const owner =
+    input.ownerPlayerCharacterId === undefined ? null : input.ownerPlayerCharacterId
   return input.members.map((member) =>
     createCharacter(db, {
       campaignId: input.campaignId,
       name: member.name,
       characterClass: member.characterClass,
       kind: 'ai_party_member',
+      ownerPlayerCharacterId: owner,
       stats: { personality: member.personality }
     })
   )

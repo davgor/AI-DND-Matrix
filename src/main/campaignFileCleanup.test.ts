@@ -24,7 +24,12 @@ const CHARACTER: Character = {
   openingScene: null,
   guidedCreationPhase: 'complete',
   alignment: null,
-  pendingAlignmentShift: null
+  pendingAlignmentShift: null,
+  lifeStatus: 'alive',
+  diedAt: null,
+  deathCause: null,
+  obituary: null,
+  ownerPlayerCharacterId: null
 }
 
 describe('campaign file cleanup', () => {

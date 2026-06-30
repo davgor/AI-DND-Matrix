@@ -1,3 +1,18 @@
+/** Initial one-shot campaign generation: region count (review-screen generation uses per-action counts). */
+export const MIN_REGION_COUNT = 0
+export const MAX_REGION_COUNT = 5
+export const DEFAULT_REGION_COUNT = 2
+
+/** Initial one-shot campaign generation: NPCs per region when regionCount > 0. */
+export const MIN_NPCS_PER_REGION = 0
+export const MAX_NPCS_PER_REGION = 10
+export const DEFAULT_NPCS_PER_REGION = 3
+
+/** Per-request NPC count when generating an additional region on review (or hub). */
+export const MIN_ADDITIONAL_REGION_NPC_COUNT = 0
+export const MAX_ADDITIONAL_REGION_NPC_COUNT = 10
+export const DEFAULT_ADDITIONAL_REGION_NPC_COUNT = 3
+
 export type DeathMode = 'legendary' | 'standard' | 'respawn'
 
 export interface RespawnRules {
@@ -26,6 +41,10 @@ export interface CreateCampaignRequest {
   name?: string
   deathMode?: DeathMode
   respawnRules?: RespawnRules | null
+  /** Initial generation region count (0–5). Defaults to {@link DEFAULT_REGION_COUNT}. */
+  regionCount?: number
+  /** Initial generation NPCs per region (0–10). Defaults to {@link DEFAULT_NPCS_PER_REGION}. */
+  npcsPerRegion?: number
 }
 
 export interface CampaignSetupFormValues {
@@ -35,6 +54,8 @@ export interface CampaignSetupFormValues {
   respawnLocation: string
   respawnCost: number
   respawnLimit: number | ''
+  regionCount: number
+  npcsPerRegion: number
 }
 
 export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
@@ -43,5 +64,7 @@ export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
   deathMode: 'standard',
   respawnLocation: '',
   respawnCost: 0,
-  respawnLimit: ''
+  respawnLimit: '',
+  regionCount: DEFAULT_REGION_COUNT,
+  npcsPerRegion: DEFAULT_NPCS_PER_REGION
 }

@@ -3,7 +3,7 @@ import type { GuidedCreationMessage } from '../../../shared/guidedCreation/types
 import { shouldDisableGuidedInput } from './guidedConversationState'
 
 describe('guided conversation shell state', () => {
-  it('disables input while sending or after phase completion', () => {
+  it('disables input while sending, kicking off, or after phase completion', () => {
     expect(shouldDisableGuidedInput(true, false)).toBe(true)
     expect(shouldDisableGuidedInput(false, true)).toBe(true)
     expect(shouldDisableGuidedInput(false, false)).toBe(false)

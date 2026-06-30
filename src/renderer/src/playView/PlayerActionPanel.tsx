@@ -7,6 +7,7 @@ export interface PlayerActionPanelProps {
   onInputChange: (value: string) => void
   onSubmit: () => void
   submitting: boolean
+  inputBlocked?: boolean
 }
 
 export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
@@ -15,6 +16,8 @@ export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
       props.onSubmit()
     }
   }
+
+  const disabled = props.submitting || props.inputBlocked === true
 
   return (
     <div className="play-view-panel play-view-player-panel">
@@ -31,11 +34,11 @@ export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
           type="text"
           placeholder="What do you do?"
           value={props.inputValue}
-          disabled={props.submitting}
+          disabled={disabled}
           onChange={(event) => props.onInputChange(event.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button type="button" disabled={props.submitting} onClick={props.onSubmit}>
+        <button type="button" disabled={disabled} onClick={props.onSubmit}>
           {props.submitting ? 'Resolving...' : 'Act'}
         </button>
       </div>

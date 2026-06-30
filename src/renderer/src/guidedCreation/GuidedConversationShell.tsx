@@ -33,7 +33,7 @@ export function GuidedConversationShell(props: GuidedConversationShellProps): JS
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight })
-  }, [phaseMessages.length, conversation.sending])
+  }, [phaseMessages.length, conversation.sending, conversation.kickingOff])
 
   return (
     <div className="guided-conversation">
@@ -48,13 +48,17 @@ export function GuidedConversationShell(props: GuidedConversationShellProps): JS
       <GuidedConversationThread
         threadRef={threadRef}
         loading={conversation.loading}
+        kickingOff={conversation.kickingOff}
         messages={phaseMessages}
         sending={conversation.sending}
         error={conversation.error}
       />
       <GuidedConversationComposer
         inputValue={conversation.inputValue}
-        inputDisabled={shouldDisableGuidedInput(conversation.sending, props.phaseComplete)}
+        inputDisabled={shouldDisableGuidedInput(
+          conversation.sending || conversation.kickingOff,
+          props.phaseComplete
+        )}
         sending={conversation.sending}
         phaseComplete={props.phaseComplete}
         advanceLabel={props.advanceLabel}

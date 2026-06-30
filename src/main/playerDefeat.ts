@@ -6,6 +6,7 @@ import { getNpcById } from '../db/repositories/npcs'
 import { restoreLatestSave } from '../db/repositories/saves'
 import type { DefeatDisposition, NpcDefeatOutcome } from '../shared/npcCombat/types'
 import type { DefeatDispositionProposal } from '../shared/npcCombat/types'
+import { persistCharacterDeath, deathCauseForExecuteDefeat } from './characterDeath'
 
 export interface PlayerDefeatState {
   disposition: DefeatDisposition
@@ -124,6 +125,7 @@ function resolveFatalDeathMode(input: {
   }
   if (deathMode === 'legendary') {
     clearDefeatState(db, characterId)
+    persistCharacterDeath({ db, characterId, deathCause: deathCauseForExecuteDefeat() })
     return { status: 'permanently_dead', message: `${character.name} does not rise again.` }
   }
   if (deathMode === 'standard') {

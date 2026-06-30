@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import {
   allFoundationsComplete,
+  identityWhoKickoffFallback,
   mergeFoundationStatus,
+  runIdentityInterviewKickoff,
   runIdentityInterviewTurn,
   defaultIdentityFoundations
 } from './guidedIdentity'
@@ -17,6 +19,30 @@ const IDENTITY_INTERVIEW_CONTEXT = {
   transcript: [] as Array<{ role: 'player' | 'dm'; content: string }>,
   currentFoundations: defaultIdentityFoundations()
 }
+
+describe('runIdentityInterviewKickoff', () => {
+  it('returns a who-focused opening prompt before the player speaks', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Before we begin — who are you? Tell me about Kael beyond the stats on your sheet.'
+      })
+    ])
+    const result = await runIdentityInterviewKickoff(provider, {
+      campaignPremise: IDENTITY_INTERVIEW_CONTEXT.campaignPremise,
+      characterName: IDENTITY_INTERVIEW_CONTEXT.characterName,
+      characterClass: IDENTITY_INTERVIEW_CONTEXT.characterClass,
+      abilityScores: IDENTITY_INTERVIEW_CONTEXT.abilityScores,
+      alignment: IDENTITY_INTERVIEW_CONTEXT.alignment
+    })
+    expect(result.dmReply.toLowerCase()).toContain('who')
+  })
+})
+
+describe('identityWhoKickoffFallback', () => {
+  it('names the character in the fallback opener', () => {
+    expect(identityWhoKickoffFallback('Kael')).toContain('Kael')
+  })
+})
 
 describe('runIdentityInterviewTurn', () => {
   it('returns partial foundation completion from a valid response', async () => {

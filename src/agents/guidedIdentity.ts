@@ -12,6 +12,10 @@ export interface IdentityInterviewResponse {
   allFoundationsComplete: boolean
 }
 
+export interface IdentityKickoffResponse {
+  dmReply: string
+}
+
 export interface IdentityInterviewContext {
   campaignPremise: string
   characterName: string
@@ -52,6 +56,47 @@ function isIdentityInterviewResponse(value: unknown): value is IdentityInterview
     return false
   }
   return IDENTITY_FOUNDATIONS.every((key) => isFoundationStatus((foundations as Record<string, unknown>)[key]))
+}
+
+export function identityWhoKickoffFallback(characterName: string): string {
+  return `Let's start with who you are. I have "${characterName}" on your sheet — tell me about them: how they carry themselves, where they come from, and what history they claim as their own.`
+}
+
+function isIdentityKickoffResponse(value: unknown): value is IdentityKickoffResponse {
+  return typeof value === 'object' && value !== null && typeof (value as Record<string, unknown>)['dmReply'] === 'string'
+}
+
+function buildIdentityKickoffPrompt(
+  context: Omit<IdentityInterviewContext, 'transcript' | 'currentFoundations'>
+): string {
+  return [
+    'You are the DM beginning a pre-play identity interview. The player has not spoken yet.',
+    'Open the conversation with a warm, in-character prompt about WHO they are (name, lineage, appearance, personal history).',
+    'Do not ask about Why, Where, or What yet — focus only on Who.',
+    `Campaign premise: ${context.campaignPremise}`,
+    `Mechanical character: ${JSON.stringify({
+      name: context.characterName,
+      class: context.characterClass,
+      abilityScores: context.abilityScores,
+      alignment: context.alignment
+    })}`,
+    'The player chose alignment at character setup — you may reference it for tone but never change or overwrite it.',
+    'Respond ONLY with JSON: {"dmReply":string}'
+  ].join('\n')
+}
+
+export async function runIdentityInterviewKickoff(
+  provider: Provider,
+  context: Omit<IdentityInterviewContext, 'transcript' | 'currentFoundations'>
+): Promise<IdentityKickoffResponse> {
+  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
+    const raw = await provider.generate(buildIdentityKickoffPrompt(context))
+    const parsed = tryParseJson(raw)
+    if (isIdentityKickoffResponse(parsed)) {
+      return parsed
+    }
+  }
+  throw new Error('Identity interview kickoff did not return a valid schema after retries')
 }
 
 function buildIdentityInterviewPrompt(context: IdentityInterviewContext, playerMessage: string): string {

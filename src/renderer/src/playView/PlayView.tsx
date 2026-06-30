@@ -6,6 +6,7 @@ import { PromotionPrompt } from './PromotionPrompt'
 import { RecapBanner } from './RecapBanner'
 import { InCampaignPlayColumns, type PlayViewCampaignProps } from './InCampaignPlayColumns'
 import { LevelUpModal } from './LevelUpModal'
+import { ObituaryDraftingModal } from './ObituaryDraftingModal'
 import { usePlayViewController } from './usePlayViewController'
 import './playView.css'
 
@@ -13,6 +14,7 @@ export interface PlayViewProps extends PlayViewCampaignProps {
   campaignId: string
   characterId: string
   sidebarRef?: { current: ReturnType<typeof useSidebarController> | null }
+  onExitToCampaignHub: () => void
 }
 
 export function PlayView(props: PlayViewProps): JSX.Element {
@@ -51,6 +53,15 @@ export function PlayView(props: PlayViewProps): JSX.Element {
               refreshToken={controller.characterRefreshToken}
               onComplete={controller.notifyPerkChosen}
             />
+            {controller.obituaryRequest ? (
+              <ObituaryDraftingModal
+                request={controller.obituaryRequest}
+                onDismiss={() => {
+                  controller.clearObituaryDrafting()
+                  props.onExitToCampaignHub()
+                }}
+              />
+            ) : null}
           </>
         }
       />

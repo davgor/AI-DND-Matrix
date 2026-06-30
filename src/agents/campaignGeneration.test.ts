@@ -10,12 +10,16 @@ import { createScriptedProvider } from './providers/mockHarness'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
+  buildAdditionalRegionPrompt,
+  buildGenerationPrompt,
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
+  generateSingleNpc,
   normalizeAdditionalRegion,
   normalizeCampaignGeneration,
-  persistRegionWithNpcs
+  persistRegionWithNpcs,
+  resolveInitialGenerationCounts
 } from './campaignGeneration'
 
 import {
@@ -48,8 +52,11 @@ describe('normalizeCampaignGeneration', () => {
     expect(normalized?.npcs.some((npc) => npc.name === 'Stray')).toBe(false)
   })
 
-  it('accepts the pre-expansion campaign shape with two regions and two NPCs', () => {
-    const normalized = normalizeCampaignGeneration(PRE_EXPANSION_CAMPAIGN_PAYLOAD)
+  it('accepts the pre-expansion campaign shape with two regions and one NPC each', () => {
+    const normalized = normalizeCampaignGeneration(PRE_EXPANSION_CAMPAIGN_PAYLOAD, {
+      regionCount: 2,
+      npcsPerRegion: 1
+    })
 
     expect(normalized?.regions).toHaveLength(2)
     expect(normalized?.npcs).toHaveLength(2)
@@ -62,24 +69,73 @@ describe('generateCampaignSeed legacy compatibility', () => {
     const provider = createScriptedProvider([JSON.stringify(LEGACY_CAMPAIGN_SEED_PAYLOAD)])
     const result = await generateCampaignSeed(
       provider,
-      'A new oceanic region has been discovered and explorers are venturing out'
+      'A new oceanic region has been discovered and explorers are venturing out',
+      { regionCount: 2, npcsPerRegion: 1 }
     )
     expect(result.regions).toHaveLength(2)
     expect(result.storyThread.title).toBe('Ventures on the New Ocean')
   })
 })
 
-describe('generateCampaignSeed (007.1)', () => {
-  it('produces a structured response with 2-4 regions, 3 NPCs each, and one story thread', async () => {
+describe('generateCampaignSeed (007.1, 039.4)', () => {
+  it('produces a structured response with exactly requested regions and NPCs per region', async () => {
     const provider = createScriptedProvider([VALID_GENERATION])
-    const result = await generateCampaignSeed(provider, 'A flooded kingdom.')
+    const counts = resolveInitialGenerationCounts(2, 3)
+    const result = await generateCampaignSeed(provider, 'A flooded kingdom.', counts)
 
-    expect(result.regions.length).toBeGreaterThanOrEqual(2)
-    expect(result.regions.length).toBeLessThanOrEqual(4)
+    expect(result.regions).toHaveLength(2)
     expect(result.regions[0]?.recentHistory).toBeTruthy()
     expect(result.regions[0]?.potentialQuests.length).toBeGreaterThanOrEqual(2)
-    expect(result.npcs.length).toBe(result.regions.length * 3)
+    expect(result.npcs.length).toBe(6)
     expect(result.storyThread.title).toBe('The Crown Beneath the Waves')
+  })
+
+  it('accepts zero regions with story thread only', async () => {
+    const payload = JSON.stringify({
+      regions: [],
+      npcs: [],
+      storyThread: { title: 'Thread Alone', state: 'starting', summary: 'No regions yet.' }
+    })
+    const provider = createScriptedProvider([payload])
+    const result = await generateCampaignSeed(provider, 'A premise.', { regionCount: 0, npcsPerRegion: 3 })
+    expect(result.regions).toHaveLength(0)
+    expect(result.npcs).toHaveLength(0)
+    expect(result.storyThread.title).toBe('Thread Alone')
+  })
+
+  it('persists regions with zero NPCs when configured', async () => {
+    const payload = JSON.stringify({
+      regions: [makeRegion('Empty Vale', 'quiet')],
+      npcs: [],
+      storyThread: { title: 'Quiet Start', state: 'starting', summary: 'Sparse world.' }
+    })
+    const provider = createScriptedProvider([payload])
+    const result = await generateCampaignSeed(provider, 'A quiet land.', { regionCount: 1, npcsPerRegion: 0 })
+    expect(result.regions).toHaveLength(1)
+    expect(result.npcs).toHaveLength(0)
+  })
+})
+
+describe('buildGenerationPrompt', () => {
+  it('asks for exact counts from the request', () => {
+    const prompt = buildGenerationPrompt('A marsh', { regionCount: 1, npcsPerRegion: 1 })
+    expect(prompt).toContain('exactly 1 starting region')
+    expect(prompt).toContain('exactly 1 key NPC')
+  })
+
+  it('allows zero regions in the prompt', () => {
+    const prompt = buildGenerationPrompt('A marsh', { regionCount: 0, npcsPerRegion: 3 })
+    expect(prompt).toContain('no starting regions')
+  })
+})
+
+describe('buildAdditionalRegionPrompt', () => {
+  it('includes the requested NPC count', () => {
+    const prompt = buildAdditionalRegionPrompt('Premise', ['Oakhollow'], {
+      seedPrompt: 'A foggy marsh',
+      npcCount: 0
+    })
+    expect(prompt).toContain('no NPCs')
   })
 })
 
@@ -119,9 +175,11 @@ describe('normalizeAdditionalRegion', () => {
 })
 
 describe('generateAdditionalRegion', () => {
-  it('returns one region with exactly three NPCs', async () => {
+  it('returns one region with exactly three NPCs by default', async () => {
     const provider = createScriptedProvider([ADDITIONAL_REGION])
-    const result = await generateAdditionalRegion(provider, 'A flooded kingdom.', ['Oakhollow'], 'A marsh crossing')
+    const result = await generateAdditionalRegion(provider, 'A flooded kingdom.', ['Oakhollow'], {
+      seedPrompt: 'A marsh crossing'
+    })
     expect(result.region.name).toBe('Mistfen Crossing')
     expect(result.npcs).toHaveLength(3)
     expect(result.npcs.every((npc) => npc.regionName === 'Mistfen Crossing')).toBe(true)
@@ -142,12 +200,55 @@ describe('generateAdditionalRegion', () => {
       provider,
       'A kingdom where death is sacred',
       ['Oakhollow'],
-      'A death themed region with cemeteries everywhere'
+      { seedPrompt: 'A death themed region with cemeteries everywhere' }
     )
     expect(result.region.name).toBe('Ashmere Ossuary')
     expect(result.npcs[0]?.alignment).toBe('true_neutral')
     expect(result.npcs[0]?.temperament).toBe('cautious')
     expect(result.npcs[0]?.canSpeak).toBe(true)
+  })
+
+  it('allows zero NPCs when npcCount is 0', async () => {
+    const payload = JSON.stringify({
+      region: makeRegion('Silent Moor', 'fog'),
+      npcs: []
+    })
+    const provider = createScriptedProvider([payload])
+    const result = await generateAdditionalRegion(
+      provider,
+      'A flooded kingdom.',
+      ['Oakhollow'],
+      { seedPrompt: 'A quiet moor', npcCount: 0 }
+    )
+    expect(result.region.name).toBe('Silent Moor')
+    expect(result.npcs).toHaveLength(0)
+  })
+})
+
+describe('generateSingleNpc', () => {
+  it('returns one NPC tied to the target region', async () => {
+    const payload = JSON.stringify({
+      npc: {
+        name: 'Rook Vale',
+        role: 'hermit',
+        backstory: 'Rook keeps to the fog.',
+        disposition: 'gruff',
+        regionName: 'Oakhollow',
+        temperament: 'cautious',
+        canSpeak: true,
+        alignment: 'true_neutral'
+      }
+    })
+    const provider = createScriptedProvider([payload])
+    const result = await generateSingleNpc(provider, {
+      campaignPremise: 'A flooded kingdom.',
+      regionName: 'Oakhollow',
+      regionDescription: 'A quiet logging village.',
+      existingNpcNames: ['Mira'],
+      seedPrompt: 'A hermit in the woods'
+    })
+    expect(result.npc.name).toBe('Rook Vale')
+    expect(result.npc.regionName).toBe('Oakhollow')
   })
 })
 

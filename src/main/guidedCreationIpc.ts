@@ -16,13 +16,15 @@ import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import type {
   GuidedCreationFailureReason,
+  GuidedCreationKickoffInput,
+  GuidedCreationKickoffResult,
   GuidedCreationSendMessageInput,
   GuidedCreationSendMessageResult,
   GuidedCreationState
 } from '../shared/guidedCreation/types'
 import { buildAgentProvider } from './campaignIpc'
 import { getDb } from './db'
-import { persistIdentityInterviewTurn } from './guidedCreationIdentity'
+import { kickoffIdentityInterviewIfNeeded, persistIdentityInterviewTurn } from './guidedCreationIdentity'
 import { buildOpeningSceneIdentity, persistOpeningSceneTurn } from './guidedCreationOpeningScene'
 
 function failure(reason: GuidedCreationFailureReason): GuidedCreationSendMessageResult {
@@ -195,6 +197,18 @@ export function getGuidedCreationState(
   return buildGuidedCreationState(db, characterId)
 }
 
+export async function kickoffGuidedCreationIdentity(
+  db: Database.Database,
+  provider: Provider,
+  input: GuidedCreationKickoffInput
+): Promise<GuidedCreationKickoffResult> {
+  try {
+    return await kickoffIdentityInterviewIfNeeded(db, provider, input)
+  } catch {
+    return { ok: false, reason: 'provider_error' }
+  }
+}
+
 export function registerGuidedCreationHandlers(): void {
   ipcMain.handle('guidedCreation:getState', (_event, characterId: string) =>
     getGuidedCreationState(getDb(), characterId)
@@ -206,4 +220,7 @@ export function registerGuidedCreationHandlers(): void {
       return failure('provider_error')
     }
   })
+  ipcMain.handle('guidedCreation:kickoffIdentity', async (_event, input: GuidedCreationKickoffInput) =>
+    kickoffGuidedCreationIdentity(getDb(), buildAgentProvider(), input)
+  )
 }

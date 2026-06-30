@@ -23,15 +23,11 @@ import { getDb } from './db'
 import { createElectronSecretCodec, getSettingsFilePath, loadSettingsOrNull } from './settingsStore'
 import { resolveProviderRegistryConfig } from './settingsRuntime'
 import { DEFAULT_PROVIDER_SETTINGS } from '../shared/settings/types'
+import type { RegionExtras } from '../shared/campaign/regionExtras'
 
 const NEW_CAMPAIGN_NAME_LENGTH = 40
 
-export interface RegionExtras {
-  regionId: string
-  backstory: string
-  recentHistory: string
-  questHooks: string[]
-}
+export type { RegionExtras } from '../shared/campaign/regionExtras'
 
 export interface CampaignDetail {
   campaign: Campaign | undefined

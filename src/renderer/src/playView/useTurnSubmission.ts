@@ -1,5 +1,6 @@
 import type { PlayLogController } from './usePlayLog'
 import type { PromotionPromptController } from './usePromotionPrompt'
+import type { useObituaryDrafting } from './useObituaryDrafting'
 import { idleExposition } from './submitPlayerTurn'
 import { useAlignmentCombatBootstrap } from './useAlignmentCombatBootstrap'
 import { createSubmitAction } from './useTurnSubmitAction'
@@ -10,6 +11,7 @@ export function useTurnSubmission(input: {
   characterId: string
   playLog: PlayLogController
   promotion: PromotionPromptController
+  obituary: ReturnType<typeof useObituaryDrafting>
 }) {
   const state = useTurnSubmissionState()
   const alignmentCombat = useAlignmentCombatBootstrap(

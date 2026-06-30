@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultCampaignName,
+  isValidCreateCampaignRequest,
   mapFormToCreateRequest,
   validateCampaignSetupForm
 } from './validation'
@@ -19,6 +20,35 @@ describe('validateCampaignSetupForm', () => {
     })
     expect(error).toMatch(/Respawn/)
   })
+
+  it('rejects out-of-range region count', () => {
+    const error = validateCampaignSetupForm({
+      ...DEFAULT_CAMPAIGN_SETUP_FORM,
+      premisePrompt: 'A haunted marsh',
+      regionCount: 6
+    })
+    expect(error).toMatch(/Regions to generate/)
+  })
+
+  it('rejects out-of-range npcs per region', () => {
+    const error = validateCampaignSetupForm({
+      ...DEFAULT_CAMPAIGN_SETUP_FORM,
+      premisePrompt: 'A haunted marsh',
+      npcsPerRegion: 11
+    })
+    expect(error).toMatch(/NPCs per region/)
+  })
+
+  it('accepts zero region and zero npc counts', () => {
+    expect(
+      validateCampaignSetupForm({
+        ...DEFAULT_CAMPAIGN_SETUP_FORM,
+        premisePrompt: 'A haunted marsh',
+        regionCount: 0,
+        npcsPerRegion: 0
+      })
+    ).toBeNull()
+  })
 })
 
 describe('mapFormToCreateRequest', () => {
@@ -30,5 +60,64 @@ describe('mapFormToCreateRequest', () => {
     expect(request.sessionId).toBe('session-1')
     expect(request.name).toBe(defaultCampaignName('A flooded kingdom under eternal rain'))
     expect(request.deathMode).toBe('standard')
+    expect(request.regionCount).toBe(2)
+    expect(request.npcsPerRegion).toBe(3)
+  })
+
+  it('includes custom generation counts', () => {
+    const request = mapFormToCreateRequest(
+      {
+        ...DEFAULT_CAMPAIGN_SETUP_FORM,
+        premisePrompt: 'A sparse frontier',
+        regionCount: 1,
+        npcsPerRegion: 1
+      },
+      'session-2'
+    )
+    expect(request.regionCount).toBe(1)
+    expect(request.npcsPerRegion).toBe(1)
+  })
+})
+
+describe('isValidCreateCampaignRequest', () => {
+  it('accepts a minimal valid payload with omitted generation counts', () => {
+    expect(
+      isValidCreateCampaignRequest({ sessionId: 's1', premisePrompt: 'A haunted marsh' })
+    ).toBe(true)
+  })
+
+  it('accepts explicit valid generation counts', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        regionCount: 0,
+        npcsPerRegion: 0
+      })
+    ).toBe(true)
+  })
+
+  it('rejects missing premise', () => {
+    expect(isValidCreateCampaignRequest({ sessionId: 's1', premisePrompt: '  ' })).toBe(false)
+  })
+
+  it('rejects invalid region count', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        regionCount: 9
+      })
+    ).toBe(false)
+  })
+
+  it('rejects non-integer npcs per region', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        npcsPerRegion: 2.5
+      })
+    ).toBe(false)
   })
 })

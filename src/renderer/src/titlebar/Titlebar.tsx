@@ -1,10 +1,19 @@
 import { useState } from 'react'
 import { APP_DISPLAY_NAME } from '../../../shared/appBranding'
 import { SettingsView } from '../settings/SettingsView'
+import '../settingsIntro/settingsIntro.css'
 import './titlebar.css'
 
-export function Titlebar(): JSX.Element {
-  const [settingsOpen, setSettingsOpen] = useState(false)
+export interface TitlebarProps {
+  highlightSettings?: boolean
+  settingsOpen?: boolean
+  onSettingsOpenChange?: (open: boolean) => void
+}
+
+export function Titlebar(props: TitlebarProps = {}): JSX.Element {
+  const [internalSettingsOpen, setInternalSettingsOpen] = useState(false)
+  const settingsOpen = props.settingsOpen ?? internalSettingsOpen
+  const setSettingsOpen = props.onSettingsOpenChange ?? setInternalSettingsOpen
 
   return (
     <div className="titlebar">
@@ -13,7 +22,11 @@ export function Titlebar(): JSX.Element {
         <button
           type="button"
           aria-label="Settings"
-          className="titlebar-button"
+          className={
+            props.highlightSettings
+              ? 'titlebar-button titlebar-button-settings-highlight'
+              : 'titlebar-button'
+          }
           onClick={() => setSettingsOpen(true)}
         >
           &#9881;
@@ -43,7 +56,7 @@ export function Titlebar(): JSX.Element {
           &#10005;
         </button>
       </div>
-      {settingsOpen && <SettingsView onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen ? <SettingsView onClose={() => setSettingsOpen(false)} /> : null}
     </div>
   )
 }

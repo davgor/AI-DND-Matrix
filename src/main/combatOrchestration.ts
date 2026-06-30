@@ -27,7 +27,7 @@ import {
   type Npc
 } from '../db/repositories/npcs'
 import type { NpcYieldOutcome } from '../shared/combat/types'
-import { listCharactersByCampaign, getCharacterById, type Character } from '../db/repositories/characters'
+import { listPartyMembersForPlayer, getCharacterById, type Character } from '../db/repositories/characters'
 
 export interface StartEncounterInput {
   db: Database.Database
@@ -45,9 +45,7 @@ export function collectEncounterCombatants(
   participantNpcIds?: string[]
 ): CombatantRef[] {
   const refs: CombatantRef[] = [{ kind: 'player', id: player.id }]
-  const partyMembers = listCharactersByCampaign(db, player.campaignId).filter(
-    (c) => c.kind === 'ai_party_member'
-  )
+  const partyMembers = listPartyMembersForPlayer(db, player.id)
   for (const member of partyMembers) {
     refs.push({ kind: 'ai_party_member', id: member.id })
   }
@@ -107,7 +105,7 @@ function resolveAgilityScore(db: Database.Database, ref: CombatantRef, player: C
     return scores?.agility ?? 10
   }
   if (ref.kind === 'ai_party_member') {
-    const member = listCharactersByCampaign(db, player.campaignId).find((c) => c.id === ref.id)
+    const member = getCharacterById(db, ref.id)
     const scores = (member?.stats as { abilityScores?: { agility?: number } })?.abilityScores
     return scores?.agility ?? 10
   }

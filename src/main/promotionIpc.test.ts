@@ -4,10 +4,10 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
-import { listCharactersByCampaign } from '../db/repositories/characters'
+import { createCharacter, listCharactersByCampaign } from '../db/repositories/characters'
 import { assemblePartyMemberContext } from '../agents/partyMember'
 import { computeHP } from '../engine/hp'
-import { confirmNpcPromotion, inferArchetypeFromRole } from './promotionIpc'
+import { confirmNpcPromotion, inferArchetypeFromRole, recruitPartyMemberFromRoster } from './promotionIpc'
 
 function seedNpc(role: string) {
   const db = createTestDb()
@@ -37,7 +37,7 @@ describe('inferArchetypeFromRole', () => {
   })
 })
 
-describe('confirmNpcPromotion (011.3 conversion + 011.5 mark promoted)', () => {
+describe('confirmNpcPromotion conversion (011.3)', () => {
   it('creates an ai_party_member character sourced from the NPC, with engine-computed stats', () => {
     const { db, campaign, npc } = seedNpc('shopkeeper')
 
@@ -69,7 +69,9 @@ describe('confirmNpcPromotion (011.3 conversion + 011.5 mark promoted)', () => {
     expect(promoted?.alignment).toBe('lawful_neutral')
     expect(stats?.temperament).toBe('disciplined')
   })
+})
 
+describe('confirmNpcPromotion guards and ownership (011.5)', () => {
   it('marks the original NPC row as promoted', () => {
     const { db, campaign, npc } = seedNpc('guard')
 
@@ -82,6 +84,60 @@ describe('confirmNpcPromotion (011.3 conversion + 011.5 mark promoted)', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
     expect(() => confirmNpcPromotion(db, { campaignId: campaign.id, npcId: 'does-not-exist' })).toThrow()
+  })
+
+  it('sets owner_player_character_id when recruitingPlayerCharacterId is provided', () => {
+    const { db, campaign, npc } = seedNpc('guard')
+    const player = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Hero',
+      characterClass: 'fighter',
+      kind: 'player'
+    })
+
+    confirmNpcPromotion(db, {
+      campaignId: campaign.id,
+      npcId: npc.id,
+      recruitingPlayerCharacterId: player.id
+    })
+
+    const promoted = listCharactersByCampaign(db, campaign.id).find((c) => c.sourceNpcId === npc.id)
+    expect(promoted?.ownerPlayerCharacterId).toBe(player.id)
+  })
+})
+
+describe('recruitPartyMemberFromRoster (038.13)', () => {
+  it('transfers ownership from one player roster to another', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    const playerA = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'A',
+      characterClass: 'fighter',
+      kind: 'player'
+    })
+    const playerB = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'B',
+      characterClass: 'mage',
+      kind: 'player'
+    })
+    const member = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Recruit',
+      characterClass: 'rogue',
+      kind: 'ai_party_member',
+      ownerPlayerCharacterId: playerA.id
+    })
+
+    recruitPartyMemberFromRoster(db, {
+      partyMemberId: member.id,
+      recruitingPlayerCharacterId: playerB.id
+    })
+
+    expect(listCharactersByCampaign(db, campaign.id).find((c) => c.id === member.id)?.ownerPlayerCharacterId).toBe(
+      playerB.id
+    )
   })
 })
 

@@ -30,6 +30,7 @@ export interface GuidedOpeningSceneStageProps {
   campaignId: string
   character: Character
   onEnterPlay: () => void
+  enterPlayBlockerMessage?: string | null
   onRefresh: () => Promise<void>
 }
 
@@ -37,16 +38,23 @@ export function GuidedOpeningSceneStage(props: GuidedOpeningSceneStageProps): JS
   const ready = props.character.guidedCreationPhase === 'complete'
 
   return (
-    <GuidedConversationShell
-      campaignId={props.campaignId}
-      characterId={props.character.id}
-      phase="opening_scene"
-      title="Help me set the stage"
-      subtitle="Negotiate where the story begins. When you are ready, enter the world."
-      phaseComplete={ready}
-      advanceLabel="Enter the world"
-      onAdvance={props.onEnterPlay}
-      onStateChange={() => void props.onRefresh()}
-    />
+    <div className="guided-opening-scene-stage">
+      {props.enterPlayBlockerMessage ? (
+        <p className="guided-play-blocker panel-card" role="alert">
+          {props.enterPlayBlockerMessage}
+        </p>
+      ) : null}
+      <GuidedConversationShell
+        campaignId={props.campaignId}
+        characterId={props.character.id}
+        phase="opening_scene"
+        title="Help me set the stage"
+        subtitle="Negotiate where the story begins. When you are ready, enter the world."
+        phaseComplete={ready}
+        advanceLabel="Enter the world"
+        onAdvance={props.onEnterPlay}
+        onStateChange={() => void props.onRefresh()}
+      />
+    </div>
   )
 }

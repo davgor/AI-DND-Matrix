@@ -14,7 +14,7 @@ export interface ProviderSettings {
 }
 
 export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
-  mode: 'claude',
+  mode: 'player2',
   claudeApiKey: '',
   claudeModel: 'claude-sonnet-4-6',
   llamaCppBaseUrl: 'http://127.0.0.1:8080',

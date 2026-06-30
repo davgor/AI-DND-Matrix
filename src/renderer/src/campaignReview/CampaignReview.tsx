@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
 import type { EditNpcTraitsInput } from '../../../main/campaignEditIpc'
-import { CampaignReviewGenerateModal } from './CampaignReviewGenerateModal'
-import { CampaignReviewRegionCard } from './CampaignReviewRegionCard'
+import {
+  buildRegionBlocks,
+  CampaignReviewHeader,
+  CampaignReviewRegions
+} from './CampaignReviewLayout'
+import { CampaignReviewModals } from './CampaignReviewModals'
 import { CampaignReviewFooter, CampaignReviewStory } from './CampaignReviewSections'
 import './campaignReview.css'
 
@@ -12,20 +16,13 @@ export interface CampaignReviewProps {
   onContinue: () => void
 }
 
-function buildRegionBlocks(detail: CampaignDetail) {
-  const extrasById = new Map(detail.regionExtras.map((extras) => [extras.regionId, extras]))
-  return detail.regions.map((region) => ({
-    region,
-    extras: extrasById.get(region.id),
-    npcs: detail.npcs.filter((npc) => npc.regionId === region.id)
-  }))
-}
-
 export function CampaignReview(props: CampaignReviewProps): JSX.Element {
   const { detail } = props
   const campaignId = detail.campaign?.id ?? ''
   const regionBlocks = buildRegionBlocks(detail)
   const [generateOpen, setGenerateOpen] = useState(false)
+  const [generateNpcRegionId, setGenerateNpcRegionId] = useState<string | null>(null)
+  const generateNpcRegion = regionBlocks.find((block) => block.region.id === generateNpcRegionId)
 
   async function saveRegionDescription(regionId: string, description: string): Promise<void> {
     const next = await window.campaigns.editRegionDescription({ campaignId, regionId, description })
@@ -39,40 +36,28 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
 
   return (
     <div className="campaign-review">
-      <header className="campaign-review-header">
-        <h1>{detail.campaign?.name}</h1>
-        <p className="campaign-review-lead">
-          Review your starting regions. Each includes local history, quest hooks, and NPCs to draw
-          players in.
-        </p>
-      </header>
-
+      <CampaignReviewHeader campaignName={detail.campaign?.name} />
       <CampaignReviewStory storyThreads={detail.storyThreads} />
-
-      <section className="campaign-review-regions">
-        <h2>Regions</h2>
-        {regionBlocks.map(({ region, extras, npcs }) => (
-          <CampaignReviewRegionCard
-            key={region.id}
-            region={region}
-            extras={extras}
-            npcs={npcs}
-            campaignId={campaignId}
-            onSaveRegionDescription={saveRegionDescription}
-            onSaveNpcTraits={saveNpcTraits}
-          />
-        ))}
-      </section>
-
-      <CampaignReviewFooter onGenerate={() => setGenerateOpen(true)} onContinue={props.onContinue} />
-
-      {generateOpen ? (
-        <CampaignReviewGenerateModal
-          campaignId={campaignId}
-          onDetailChange={props.onDetailChange}
-          onClose={() => setGenerateOpen(false)}
-        />
-      ) : null}
+      <CampaignReviewRegions
+        campaignId={campaignId}
+        regionBlocks={regionBlocks}
+        onSaveRegionDescription={saveRegionDescription}
+        onSaveNpcTraits={saveNpcTraits}
+        onGenerateNpc={setGenerateNpcRegionId}
+      />
+      <CampaignReviewFooter
+        detail={detail}
+        onGenerate={() => setGenerateOpen(true)}
+        onContinue={props.onContinue}
+      />
+      <CampaignReviewModals
+        campaignId={campaignId}
+        generateOpen={generateOpen}
+        generateNpcRegion={generateNpcRegion}
+        onDetailChange={props.onDetailChange}
+        onCloseGenerate={() => setGenerateOpen(false)}
+        onCloseGenerateNpc={() => setGenerateNpcRegionId(null)}
+      />
     </div>
   )
 }
