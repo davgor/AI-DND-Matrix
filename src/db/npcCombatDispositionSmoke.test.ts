@@ -9,7 +9,8 @@ import { proposeDefeatDisposition } from '../agents/defeatDisposition'
 import * as retiredAdventurerReview from '../agents/retiredAdventurerReview'
 import { applyPlayerDefeatOutcome } from '../main/playerDefeat'
 import { createPlayerCharacter } from '../main/characterCreationIpc'
-import { getNpcCombatStats, VILLAGER_STATS } from '../engine/npcCombatStats'
+import { computeRetiredAdventurerHp } from '../engine/hp'
+import { VILLAGER_STATS } from '../engine/npcCombatStats'
 import { getActiveEncounter } from './repositories/combatEncounters'
 import { PROVOKE_HOSTILE_DISPOSITION } from '../shared/npcCombat/types'
 import { provokeAndAttackNpc } from '../main/npcProvoke'
@@ -169,10 +170,10 @@ describe('npc combat disposition smoke scenario B', () => {
         canSpeak: true
       }
     )
-    const veteranStats = getNpcCombatStats('retired_adventurer', 'veteran')
+    const veteranHp = computeRetiredAdventurerHp(guard.id, 'veteran')
     const refreshed = getNpcById(db, guard.id)!
     expect(refreshed.combatTier).toBe('retired_adventurer')
-    expect(refreshed.hp).toBe(veteranStats.hp)
+    expect(refreshed.hp).toBe(veteranHp.maxHp)
     expect(refreshed.hp).toBeGreaterThan(VILLAGER_STATS.hp)
   })
 })

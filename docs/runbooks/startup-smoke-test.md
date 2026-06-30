@@ -49,6 +49,7 @@ Validates epic 015: loading screen, DB boot stage, LLM boot stage, handoff to ap
 
 - DB stage always runs migrations against the user-data SQLite file.
 - llama.cpp attach mode polls `GET /health` (503 = still loading, 200 = ready).
+- For faster manual provider smokes in dev, open **New campaign** and use the per-field **🎲** buttons to fill premise and counts before **Create campaign**.
 - Native module ABI: after packaging changes, run `npm run rebuild:electron` if SQLite errors appear in Electron only.
 
 ## Recorded run (template)

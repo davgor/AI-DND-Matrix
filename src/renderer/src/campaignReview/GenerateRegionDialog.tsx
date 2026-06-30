@@ -1,3 +1,5 @@
+import { randomAdditionalRegionNpcCount, randomRegionSeedPrompt } from '../../../shared/campaignCreate/randomFill'
+import { FieldWithRandomInputRow } from '../components/FieldRandomDiceButton'
 import { GenerateModalActions } from './GenerateModalActions'
 
 function GenerateNpcCountField(props: {
@@ -9,14 +11,21 @@ function GenerateNpcCountField(props: {
   return (
     <label className="campaign-review-field">
       NPCs to generate
-      <input
-        type="number"
-        min={props.bounds.min}
-        max={props.bounds.max}
-        value={props.value}
+      <FieldWithRandomInputRow
+        ariaLabel="Random NPC count"
         disabled={props.generating}
-        onChange={(event) => props.onChange(Number(event.target.value))}
-      />
+        centerAlign
+        onRandomize={() => props.onChange(randomAdditionalRegionNpcCount())}
+      >
+        <input
+          type="number"
+          min={props.bounds.min}
+          max={props.bounds.max}
+          value={props.value}
+          disabled={props.generating}
+          onChange={(event) => props.onChange(Number(event.target.value))}
+        />
+      </FieldWithRandomInputRow>
     </label>
   )
 }
@@ -27,14 +36,20 @@ function GenerateRegionSeedField(props: {
   onSeedChange: (value: string) => void
 }): JSX.Element {
   return (
-    <textarea
-      className="campaign-review-seed-input"
-      value={props.seedPrompt}
-      onChange={(event) => props.onSeedChange(event.target.value)}
-      placeholder="e.g. A fog-choked fishing village where the tide brings whispered warnings..."
-      rows={5}
+    <FieldWithRandomInputRow
+      ariaLabel="Random region seed"
       disabled={props.generating}
-    />
+      onRandomize={() => props.onSeedChange(randomRegionSeedPrompt())}
+    >
+      <textarea
+        className="campaign-review-seed-input"
+        value={props.seedPrompt}
+        onChange={(event) => props.onSeedChange(event.target.value)}
+        placeholder="e.g. A fog-choked fishing village where the tide brings whispered warnings..."
+        rows={5}
+        disabled={props.generating}
+      />
+    </FieldWithRandomInputRow>
   )
 }
 

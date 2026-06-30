@@ -96,7 +96,7 @@ function buildYieldPending(opts: YieldPendingInput): PlayerAttackSyncResult['yie
     combatTier: npc.combatTier,
     temperament: npc.temperament,
     hp: hpAfter,
-    maxHp: npc.maxHp ?? 1,
+    maxHp: npc.maxHp ?? 0,
     wouldKill,
     canSpeak: npc.canSpeak
   })

@@ -3,9 +3,11 @@ import type Database from 'better-sqlite3'
 import type { Condition } from '../../engine/conditions'
 import {
   getNpcCombatStats,
+  getRetiredAdventurerCombatStats,
   parseDamageRoll,
   serializeDamageRoll
 } from '../../engine/npcCombatStats'
+import { computeRetiredAdventurerHp } from '../../engine/hp'
 import type { Alignment, Temperament } from '../../shared/alignment/types'
 import type { NpcYieldOutcome } from '../../shared/combat/types'
 import type { NpcCombatTier, RetiredAdventurerProfile } from '../../shared/npcCombat/types'
@@ -130,16 +132,35 @@ function applyTierStatsToRow(
   tier: Exclude<NpcCombatTier, 'catalog'>,
   profile?: RetiredAdventurerProfile | null
 ): void {
-  const stats = getNpcCombatStats(tier, profile ?? undefined)
+  if (tier === 'villager') {
+    const stats = getNpcCombatStats('villager')
+    db.prepare(
+      `UPDATE npcs SET hp = ?, max_hp = ?, ac = ?, attack_bonus = ?, damage_roll = ?,
+     combat_tier = ?, retired_adventurer_profile = ? WHERE id = ?`
+    ).run(
+      stats.hp,
+      stats.maxHp,
+      stats.ac,
+      stats.attackBonus,
+      serializeDamageRoll(stats.damageRoll),
+      tier,
+      profile ?? null,
+      id
+    )
+    return
+  }
+
+  const combat = getRetiredAdventurerCombatStats(profile!)
+  const hpResult = computeRetiredAdventurerHp(id, profile!)
   db.prepare(
     `UPDATE npcs SET hp = ?, max_hp = ?, ac = ?, attack_bonus = ?, damage_roll = ?,
      combat_tier = ?, retired_adventurer_profile = ? WHERE id = ?`
   ).run(
-    stats.hp,
-    stats.maxHp,
-    stats.ac,
-    stats.attackBonus,
-    serializeDamageRoll(stats.damageRoll),
+    hpResult.maxHp,
+    hpResult.maxHp,
+    combat.ac,
+    combat.attackBonus,
+    serializeDamageRoll(combat.damageRoll),
     tier,
     profile ?? null,
     id

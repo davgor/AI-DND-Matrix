@@ -4,33 +4,31 @@ import type {
   NpcCombatTier,
   RetiredAdventurerProfile
 } from '../shared/npcCombat/types'
+import { VILLAGER_MAX_HP } from './hp'
 
 export const VILLAGER_STATS: NpcCombatStats = {
-  hp: 6,
-  maxHp: 6,
+  hp: VILLAGER_MAX_HP,
+  maxHp: VILLAGER_MAX_HP,
   ac: 10,
   attackBonus: 0,
   damageRoll: { diceCount: 1, diceSize: 4, modifier: 0 }
 }
 
-const RETIRED_ADVENTURER_STATS: Record<RetiredAdventurerProfile, NpcCombatStats> = {
+const RETIRED_ADVENTURER_COMBAT: Record<
+  RetiredAdventurerProfile,
+  Pick<NpcCombatStats, 'ac' | 'attackBonus' | 'damageRoll'>
+> = {
   brawler: {
-    hp: 22,
-    maxHp: 22,
     ac: 14,
     attackBonus: 4,
     damageRoll: { diceCount: 1, diceSize: 8, modifier: 2 }
   },
   skirmisher: {
-    hp: 18,
-    maxHp: 18,
     ac: 15,
     attackBonus: 5,
     damageRoll: { diceCount: 1, diceSize: 6, modifier: 3 }
   },
   veteran: {
-    hp: 28,
-    maxHp: 28,
     ac: 16,
     attackBonus: 5,
     damageRoll: { diceCount: 2, diceSize: 6, modifier: 2 }
@@ -51,7 +49,14 @@ export function getNpcCombatStats(
   if (!profile) {
     return VILLAGER_STATS
   }
-  return RETIRED_ADVENTURER_STATS[profile]
+  const combat = RETIRED_ADVENTURER_COMBAT[profile]
+  return { hp: 0, maxHp: 0, ...combat }
+}
+
+export function getRetiredAdventurerCombatStats(
+  profile: RetiredAdventurerProfile
+): Pick<NpcCombatStats, 'ac' | 'attackBonus' | 'damageRoll'> {
+  return RETIRED_ADVENTURER_COMBAT[profile]
 }
 
 export function getVillagerCombatStats(): NpcCombatStats {

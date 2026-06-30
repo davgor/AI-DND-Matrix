@@ -4,11 +4,11 @@
 
 When resolving combat stats for an NPC, apply the first matching tier:
 
-1. **catalog** — linked `catalog_creature_key` (epic 023 / 031.3); catalog HP/AC/damage take precedence
+1. **catalog** — linked `catalog_creature_key` (epic 023 / 031.3); hit-die max HP computed at hydration from level range + archetype + Body (catalog `hp` column is authoring reference only)
 2. **retired_adventurer** — unlikely upgrade decided once at NPC creation (032.7)
-3. **villager** — default for all speaking NPCs without catalog link
+3. **villager** — default for all speaking NPCs without catalog link (10 HP)
 
-Agents pick tier labels only; HP, AC, attack bonus, and damage dice are engine constants.
+Agents pick tier labels only; HP rolls, AC, attack bonus, and damage dice are engine-owned.
 
 ## Backstory policy
 
@@ -23,7 +23,7 @@ Agents pick tier labels only; HP, AC, attack bonus, and damage dice are engine c
 - `upgrade: true` only when **persisted backstory** already explicitly describes meaningful combat/adventuring experience
 - Vague hints ("old scar", "seems tough") → stay villager
 - Mundane occupations (farmer, baker, clerk) → always villager
-- Profiles: `brawler`, `skirmisher`, `veteran` — each maps to a fixed engine stat block stronger than villager, bounded below a level-5 PC
+- Profiles: `brawler`, `skirmisher`, `veteran` — hit-die max HP from engine profile table; AC/attack/damage remain profile constants, bounded below a level-5 PC
 
 ## Provoke disposition shift
 

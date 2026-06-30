@@ -1,8 +1,10 @@
 import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import type { AbilityScores } from '../engine/abilities'
+import { createSeededRandom } from '../engine/abilities'
 import { computeAC } from '../engine/armorClass'
-import { computeHP, type Archetype } from '../engine/hp'
+import { hashStringSeed, rollInitialMaxHp, type Archetype } from '../engine/hp'
+import { inferArchetypeFromClassOrRole } from '../engine/archetypeInference'
 import {
   createCharacter,
   getCharacterById,
@@ -19,31 +21,8 @@ const STARTING_LEVEL = 1
 // archetype inferred from its role below.
 const DEFAULT_PROMOTED_ABILITY_SCORES: AbilityScores = { body: 15, agility: 14, mind: 13, presence: 12 }
 
-const ROLE_ARCHETYPE_KEYWORDS: Array<[string, Archetype]> = [
-  ['guard', 'fighter'],
-  ['soldier', 'fighter'],
-  ['warrior', 'fighter'],
-  ['knight', 'fighter'],
-  ['thief', 'rogue'],
-  ['shopkeeper', 'rogue'],
-  ['merchant', 'rogue'],
-  ['scout', 'ranger'],
-  ['hunter', 'ranger'],
-  ['ranger', 'ranger'],
-  ['priest', 'cleric'],
-  ['healer', 'cleric'],
-  ['cleric', 'cleric'],
-  ['scholar', 'mage'],
-  ['wizard', 'mage'],
-  ['sage', 'mage'],
-  ['mage', 'mage']
-]
-const DEFAULT_PROMOTED_ARCHETYPE: Archetype = 'fighter'
-
 export function inferArchetypeFromRole(role: string): Archetype {
-  const normalized = role.toLowerCase()
-  const match = ROLE_ARCHETYPE_KEYWORDS.find(([keyword]) => normalized.includes(keyword))
-  return match ? match[1] : DEFAULT_PROMOTED_ARCHETYPE
+  return inferArchetypeFromClassOrRole(role)
 }
 
 export interface PromoteNpcInput {
@@ -77,7 +56,8 @@ export function confirmNpcPromotion(db: Database.Database, input: PromoteNpcInpu
 
   const archetype = inferArchetypeFromRole(npc.role)
   const abilityScores = DEFAULT_PROMOTED_ABILITY_SCORES
-  const hp = computeHP(archetype, STARTING_LEVEL, abilityScores.body)
+  const rng = createSeededRandom(hashStringSeed(`${npc.id}:promotion`))
+  const { maxHp, hitDieRolls } = rollInitialMaxHp(archetype, abilityScores.body, rng)
   const ac = computeAC(abilityScores.agility, 'none')
 
   createCharacter(db, {
@@ -87,12 +67,14 @@ export function confirmNpcPromotion(db: Database.Database, input: PromoteNpcInpu
     kind: 'ai_party_member',
     sourceNpcId: npc.id,
     level: STARTING_LEVEL,
-    hp,
+    hp: maxHp,
     alignment: npc.alignment,
     ownerPlayerCharacterId: input.recruitingPlayerCharacterId ?? null,
     stats: {
       abilityScores,
       ac,
+      maxHp,
+      hitDieRolls,
       personality: npc.disposition,
       temperament: npc.temperament
     }

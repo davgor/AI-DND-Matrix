@@ -25,7 +25,7 @@ function seedCampaignWithPlayer() {
     hp: 20,
     level: 1,
     currency: 100,
-    stats: { abilityScores: { body: 12, agility: 14, mind: 10, presence: 10 }, ac: 12 }
+    stats: { abilityScores: { body: 12, agility: 14, mind: 10, presence: 10 }, ac: 12, maxHp: 20, hitDieRolls: [10] }
   })
   return { db, campaign, region, player }
 }

@@ -26,7 +26,8 @@ export function seedCombatFleeSmokeCampaign() {
     alignment: 'chaotic_good'
   })
   updateCharacter(db, player.id, {
-    stats: { ...(player.stats as object), currentRegionId: region.id }
+    hp: 20,
+    stats: { ...(player.stats as object), currentRegionId: region.id, maxHp: 20 }
   })
   const goblin = createNpc(db, {
     campaignId: campaign.id,

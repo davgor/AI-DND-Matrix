@@ -1,9 +1,11 @@
 import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import type { AbilityScores } from '../engine/abilities'
+import { createSeededRandom, rollForStats } from '../engine/abilities'
 import type { Alignment } from '../shared/alignment/types'
 import { computeAC } from '../engine/armorClass'
-import { computeHP, type Archetype } from '../engine/hp'
+import { hashStringSeed, rollInitialMaxHp, type Archetype } from '../engine/hp'
+import { inferArchetypeFromClassOrRole } from '../engine/archetypeInference'
 import {
   createCharacter,
   listCharactersByCampaign,
@@ -28,7 +30,7 @@ export function createPlayerCharacter(
   db: Database.Database,
   input: CreatePlayerCharacterInput
 ): Character {
-  const hp = computeHP(input.archetype, STARTING_LEVEL, input.abilityScores.body)
+  const { maxHp, hitDieRolls } = rollInitialMaxHp(input.archetype, input.abilityScores.body, Math.random)
   const ac = computeAC(input.abilityScores.agility, 'none')
 
   return createCharacter(db, {
@@ -36,8 +38,8 @@ export function createPlayerCharacter(
     name: input.name,
     characterClass: input.archetype,
     kind: 'player',
-    stats: { abilityScores: input.abilityScores, ac },
-    hp,
+    stats: { abilityScores: input.abilityScores, ac, maxHp, hitDieRolls },
+    hp: maxHp,
     level: STARTING_LEVEL,
     currency: STARTING_CURRENCY,
     portraitPath: input.portraitPath ?? null,
@@ -68,16 +70,30 @@ export function createPartyMembers(
 ): Character[] {
   const owner =
     input.ownerPlayerCharacterId === undefined ? null : input.ownerPlayerCharacterId
-  return input.members.map((member) =>
-    createCharacter(db, {
+  return input.members.map((member) => {
+    const rng = createSeededRandom(hashStringSeed(`${input.campaignId}:${member.name}`))
+    const abilityScores = rollForStats(rng)
+    const archetype = inferArchetypeFromClassOrRole(member.characterClass)
+    const { maxHp, hitDieRolls } = rollInitialMaxHp(archetype, abilityScores.body, rng)
+    const ac = computeAC(abilityScores.agility, 'none')
+
+    return createCharacter(db, {
       campaignId: input.campaignId,
       name: member.name,
       characterClass: member.characterClass,
       kind: 'ai_party_member',
       ownerPlayerCharacterId: owner,
-      stats: { personality: member.personality }
+      level: STARTING_LEVEL,
+      hp: maxHp,
+      stats: {
+        personality: member.personality,
+        abilityScores,
+        ac,
+        maxHp,
+        hitDieRolls
+      }
     })
-  )
+  })
 }
 
 export function registerCharacterCreationHandlers(): void {

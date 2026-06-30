@@ -15,6 +15,7 @@ export interface CharacterPerkStats {
   lastLevelUpXp?: number
   pendingLevelUpQueue?: unknown[]
   ac?: number
+  maxHp?: number
 }
 
 export interface ApplyPerkInput {

@@ -6,7 +6,8 @@ import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createCharacter, listCharactersByCampaign } from '../db/repositories/characters'
 import { assemblePartyMemberContext } from '../agents/partyMember'
-import { computeHP } from '../engine/hp'
+import { hashStringSeed, rollInitialMaxHp } from '../engine/hp'
+import { createSeededRandom } from '../engine/abilities'
 import { confirmNpcPromotion, inferArchetypeFromRole, recruitPartyMemberFromRoster } from './promotionIpc'
 
 function seedNpc(role: string) {
@@ -38,16 +39,22 @@ describe('inferArchetypeFromRole', () => {
 })
 
 describe('confirmNpcPromotion conversion (011.3)', () => {
-  it('creates an ai_party_member character sourced from the NPC, with engine-computed stats', () => {
+  it('creates an ai_party_member with rolled maxHp and full current hp', () => {
     const { db, campaign, npc } = seedNpc('shopkeeper')
 
     const detail = confirmNpcPromotion(db, { campaignId: campaign.id, npcId: npc.id })
 
     const promoted = detail.characters.find((c) => c.sourceNpcId === npc.id)
+    const stats = promoted?.stats as { maxHp: number; hitDieRolls: number[] }
+    const rng = createSeededRandom(hashStringSeed(`${npc.id}:promotion`))
+    const expected = rollInitialMaxHp('rogue', 15, rng)
+
     expect(promoted).toBeDefined()
     expect(promoted?.kind).toBe('ai_party_member')
     expect(promoted?.characterClass).toBe('rogue')
-    expect(promoted?.hp).toBe(computeHP('rogue', 1, 15))
+    expect(promoted?.hp).toBe(stats?.maxHp)
+    expect(stats?.maxHp).toBe(expected.maxHp)
+    expect(stats?.hitDieRolls).toEqual(expected.hitDieRolls)
   })
 
   it('copies NPC alignment onto the promoted character when present', () => {
@@ -107,7 +114,7 @@ describe('confirmNpcPromotion guards and ownership (011.5)', () => {
 })
 
 describe('recruitPartyMemberFromRoster (038.13)', () => {
-  it('transfers ownership from one player roster to another', () => {
+  it('transfers ownership without resetting HP', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
     const playerA = createCharacter(db, {
@@ -127,7 +134,9 @@ describe('recruitPartyMemberFromRoster (038.13)', () => {
       name: 'Recruit',
       characterClass: 'rogue',
       kind: 'ai_party_member',
-      ownerPlayerCharacterId: playerA.id
+      ownerPlayerCharacterId: playerA.id,
+      hp: 14,
+      stats: { maxHp: 14, hitDieRolls: [9] }
     })
 
     recruitPartyMemberFromRoster(db, {
@@ -135,9 +144,9 @@ describe('recruitPartyMemberFromRoster (038.13)', () => {
       recruitingPlayerCharacterId: playerB.id
     })
 
-    expect(listCharactersByCampaign(db, campaign.id).find((c) => c.id === member.id)?.ownerPlayerCharacterId).toBe(
-      playerB.id
-    )
+    const updated = listCharactersByCampaign(db, campaign.id).find((c) => c.id === member.id)
+    expect(updated?.ownerPlayerCharacterId).toBe(playerB.id)
+    expect(updated?.hp).toBe(14)
   })
 })
 

@@ -28,7 +28,7 @@ import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damag
 import { resolveWeaponDamage } from '../engine/weaponDamage'
 import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
 import { resolveModificationTurn } from './modificationTurn'
-import { computeHP, type Archetype } from '../engine/hp'
+import { resolveCharacterMaxHp } from '../shared/hp/resolveMaxHp'
 import { proficiencyBonus } from '../engine/proficiency'
 import { resolveLongRest, resolveShortRest } from '../engine/rest'
 import { resolveTravel } from '../engine/travel'
@@ -158,8 +158,7 @@ interface RestTurnInput {
 
 function resolveRestTurn(db: Database.Database, turn: RestTurnInput): TurnResult {
   const { campaignId, character, kind, playerInput } = turn
-  const abilityScores = (character.stats as { abilityScores?: AbilityScores }).abilityScores
-  const maxHp = computeHP(character.characterClass as Archetype, character.level, abilityScores?.body ?? 10)
+  const maxHp = resolveCharacterMaxHp(character)
   const rest = kind === 'restShort' ? resolveShortRest(character.hp, maxHp) : resolveLongRest(character.hp, maxHp)
   const hpAfter = character.hp + rest.hpRestored
   updateCharacter(db, character.id, { hp: hpAfter })

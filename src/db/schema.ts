@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3'
 import type { Migration } from './migrations'
 import { seedCreatureAndSpellCatalogV1 } from './catalog/seeds'
 import { migrateLegacyCharacterInventory } from './migrateLegacyInventory'
+import { migrateHpBackfill } from './migrateHpBackfill'
 import { seedStarterItemCatalog } from './seedStarterItems'
 
 function addColumnIfMissing(
@@ -440,6 +441,12 @@ export const migrations: Migration[] = [
       addColumnIfMissing(db, 'characters', 'death_cause', 'TEXT')
       addColumnIfMissing(db, 'characters', 'obituary_json', 'TEXT')
       addColumnIfMissing(db, 'characters', 'owner_player_character_id', 'TEXT')
+    }
+  },
+  {
+    version: 23,
+    up: (db) => {
+      migrateHpBackfill(db)
     }
   }
 ]

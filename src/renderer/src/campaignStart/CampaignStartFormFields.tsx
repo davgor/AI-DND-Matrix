@@ -1,5 +1,12 @@
 import type { DeathMode } from '../../../shared/campaignCreate/types'
 import {
+  randomCampaignName,
+  randomDeathMode,
+  randomNpcsPerRegion,
+  randomPremisePrompt,
+  randomRegionCount
+} from '../../../shared/campaignCreate/randomFill'
+import {
   DEFAULT_NPCS_PER_REGION,
   DEFAULT_REGION_COUNT,
   MAX_NPCS_PER_REGION,
@@ -8,6 +15,8 @@ import {
   MIN_REGION_COUNT
 } from '../../../shared/campaignCreate/types'
 import { clampNpcsPerRegion, clampRegionCount } from '../../../shared/campaignCreate/validation'
+import { FieldRandomDiceButton, FieldWithRandomInputRow } from '../components/FieldRandomDiceButton'
+import { CampaignStartCountField, CampaignStartRespawnLocationField } from './CampaignStartRandomFields'
 import type { CampaignStartFlow } from './useCampaignStartFlow'
 
 const DEATH_MODES: DeathMode[] = ['legendary', 'standard', 'respawn']
@@ -26,25 +35,40 @@ const DEATH_MODE_HINTS: Record<DeathMode, string> = {
 
 function CampaignStartIdentityFields(props: { flow: CampaignStartFlow }): JSX.Element {
   const { flow } = props
+  const disabled = flow.submitting
+
   return (
     <>
       <label className="campaign-start-field">
         Campaign name <span className="campaign-start-optional">(optional)</span>
-        <input
-          type="text"
-          value={flow.form.name}
-          disabled={flow.submitting}
-          onChange={(event) => flow.updateForm({ name: event.target.value })}
-        />
+        <FieldWithRandomInputRow
+          ariaLabel="Random campaign name"
+          disabled={disabled}
+          centerAlign
+          onRandomize={() => flow.updateForm({ name: randomCampaignName() })}
+        >
+          <input
+            type="text"
+            value={flow.form.name}
+            disabled={disabled}
+            onChange={(event) => flow.updateForm({ name: event.target.value })}
+          />
+        </FieldWithRandomInputRow>
       </label>
       <label className="campaign-start-field">
         Premise
-        <textarea
-          value={flow.form.premisePrompt}
-          disabled={flow.submitting}
-          rows={4}
-          onChange={(event) => flow.updateForm({ premisePrompt: event.target.value })}
-        />
+        <FieldWithRandomInputRow
+          ariaLabel="Random campaign premise"
+          disabled={disabled}
+          onRandomize={() => flow.updateForm({ premisePrompt: randomPremisePrompt() })}
+        >
+          <textarea
+            value={flow.form.premisePrompt}
+            disabled={disabled}
+            rows={4}
+            onChange={(event) => flow.updateForm({ premisePrompt: event.target.value })}
+          />
+        </FieldWithRandomInputRow>
       </label>
       {flow.fieldError ? <p className="campaign-start-field-error">{flow.fieldError}</p> : null}
     </>
@@ -53,54 +77,66 @@ function CampaignStartIdentityFields(props: { flow: CampaignStartFlow }): JSX.El
 
 function CampaignStartGenerationFields(props: { flow: CampaignStartFlow }): JSX.Element {
   const { flow } = props
+  const disabled = flow.submitting
+
   return (
     <>
-      <label className="campaign-start-field">
-        Regions to generate
-        <input
-          type="number"
-          min={MIN_REGION_COUNT}
-          max={MAX_REGION_COUNT}
-          value={flow.form.regionCount}
-          disabled={flow.submitting}
-          onChange={(event) =>
-            flow.updateForm({ regionCount: clampRegionCount(Number(event.target.value)) })
-          }
-        />
-        <span className="campaign-start-hint">
-          How many starting regions to create ({MIN_REGION_COUNT}–{MAX_REGION_COUNT}, default{' '}
-          {DEFAULT_REGION_COUNT}). You can add more on the review screen.
-        </span>
-      </label>
-      <label className="campaign-start-field">
-        NPCs per region
-        <input
-          type="number"
-          min={MIN_NPCS_PER_REGION}
-          max={MAX_NPCS_PER_REGION}
-          value={flow.form.npcsPerRegion}
-          disabled={flow.submitting}
-          onChange={(event) =>
-            flow.updateForm({ npcsPerRegion: clampNpcsPerRegion(Number(event.target.value)) })
-          }
-        />
-        <span className="campaign-start-hint">
-          NPCs generated in each starting region ({MIN_NPCS_PER_REGION}–{MAX_NPCS_PER_REGION},
-          default {DEFAULT_NPCS_PER_REGION}). Zero is allowed, but review requires at least one
-          region and one NPC before you can continue.
-        </span>
-      </label>
+      <CampaignStartCountField
+        label="Regions to generate"
+        hint={`How many starting regions to create (${MIN_REGION_COUNT}–${MAX_REGION_COUNT}, default ${DEFAULT_REGION_COUNT}). You can add more on the review screen.`}
+        ariaLabel="Random region count"
+        value={flow.form.regionCount}
+        min={MIN_REGION_COUNT}
+        max={MAX_REGION_COUNT}
+        disabled={disabled}
+        onRandomize={() => flow.updateForm({ regionCount: randomRegionCount() })}
+        onChange={(value) => flow.updateForm({ regionCount: clampRegionCount(value) })}
+      />
+      <CampaignStartCountField
+        label="NPCs per region"
+        hint={`NPCs generated in each starting region (${MIN_NPCS_PER_REGION}–${MAX_NPCS_PER_REGION}, default ${DEFAULT_NPCS_PER_REGION}). Zero is allowed, but review requires at least one region and one NPC before you can continue.`}
+        ariaLabel="Random NPCs per region"
+        value={flow.form.npcsPerRegion}
+        min={MIN_NPCS_PER_REGION}
+        max={MAX_NPCS_PER_REGION}
+        disabled={disabled}
+        onRandomize={() => flow.updateForm({ npcsPerRegion: randomNpcsPerRegion() })}
+        onChange={(value) => flow.updateForm({ npcsPerRegion: clampNpcsPerRegion(value) })}
+      />
     </>
+  )
+}
+
+function CampaignStartDeathModeHints(): JSX.Element {
+  return (
+    <div className="campaign-start-death-mode-hints" aria-hidden="true">
+      {DEATH_MODES.map((mode) => (
+        <p key={mode}>
+          <span className="campaign-start-death-mode-hint-label">{DEATH_MODE_LABELS[mode]}</span>
+          {' — '}
+          {DEATH_MODE_HINTS[mode]}
+        </p>
+      ))}
+    </div>
   )
 }
 
 function CampaignStartDeathModeFields(props: { flow: CampaignStartFlow }): JSX.Element {
   const { flow } = props
+  const disabled = flow.submitting
+
   return (
     <>
       <div className="campaign-start-death-mode-row">
-        <fieldset className="campaign-start-fieldset" disabled={flow.submitting}>
-          <legend>Death mode</legend>
+        <fieldset className="campaign-start-fieldset" disabled={disabled}>
+          <legend className="field-with-random-legend">
+            <span>Death mode</span>
+            <FieldRandomDiceButton
+              ariaLabel="Random death mode"
+              disabled={disabled}
+              onRandomize={() => flow.updateForm({ deathMode: randomDeathMode() })}
+            />
+          </legend>
           {DEATH_MODES.map((mode) => (
             <label key={mode} className="campaign-start-radio">
               <input
@@ -113,26 +149,10 @@ function CampaignStartDeathModeFields(props: { flow: CampaignStartFlow }): JSX.E
             </label>
           ))}
         </fieldset>
-        <div className="campaign-start-death-mode-hints" aria-hidden="true">
-          {DEATH_MODES.map((mode) => (
-            <p key={mode}>
-              <span className="campaign-start-death-mode-hint-label">{DEATH_MODE_LABELS[mode]}</span>
-              {' — '}
-              {DEATH_MODE_HINTS[mode]}
-            </p>
-          ))}
-        </div>
+        <CampaignStartDeathModeHints />
       </div>
       {flow.form.deathMode === 'respawn' ? (
-        <label className="campaign-start-field">
-          Respawn location
-          <input
-            type="text"
-            value={flow.form.respawnLocation}
-            disabled={flow.submitting}
-            onChange={(event) => flow.updateForm({ respawnLocation: event.target.value })}
-          />
-        </label>
+        <CampaignStartRespawnLocationField flow={flow} disabled={disabled} />
       ) : null}
     </>
   )

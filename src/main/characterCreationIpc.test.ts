@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { abilityModifier } from '../engine/abilities'
-import { computeHP } from '../engine/hp'
+import { HIT_DIE_SIZE } from '../engine/hp'
+
 import { createPartyMembers, createPlayerCharacter } from './characterCreationIpc'
 
 function seedCampaign() {
@@ -16,7 +17,7 @@ function seedCampaign() {
 }
 
 describe('createPlayerCharacter (009.3)', () => {
-  it('computes HP and AC via the engine functions and sets a starting currency value', () => {
+  it('rolls L1 HP, persists stats.maxHp, and sets starting currency', () => {
     const { db, campaign } = seedCampaign()
     const abilityScores = { body: 14, agility: 16, mind: 10, presence: 12 }
 
@@ -28,9 +29,15 @@ describe('createPlayerCharacter (009.3)', () => {
       alignment: 'lawful_good'
     })
 
+    const stats = character.stats as { ac: number; maxHp: number; hitDieRolls: number[] }
+    const mod = abilityModifier(abilityScores.body)
+
     expect(character.kind).toBe('player')
-    expect(character.hp).toBe(computeHP('fighter', 1, abilityScores.body))
-    expect((character.stats as { ac: number }).ac).toBe(10 + abilityModifier(abilityScores.agility))
+    expect(character.hp).toBe(stats.maxHp)
+    expect(character.hp).toBeGreaterThanOrEqual(1 + mod)
+    expect(character.hp).toBeLessThanOrEqual(HIT_DIE_SIZE.fighter + mod)
+    expect(stats.hitDieRolls).toHaveLength(1)
+    expect(stats.ac).toBe(10 + abilityModifier(abilityScores.agility))
     expect(character.currency).toBeGreaterThan(0)
   })
 
@@ -52,7 +59,7 @@ describe('createPlayerCharacter (009.3)', () => {
 })
 
 describe('createPartyMembers (009.4)', () => {
-  it('creates one ai_party_member row per member with name/class/personality', () => {
+  it('creates ai_party_member rows with rolled HP and ability scores (fixes 0/0 bug)', () => {
     const { db, campaign } = seedCampaign()
 
     const members = createPartyMembers(db, {
@@ -66,9 +73,19 @@ describe('createPartyMembers (009.4)', () => {
     expect(members).toHaveLength(2)
     expect(members.every((m) => m.kind === 'ai_party_member')).toBe(true)
     expect(members.every((m) => m.ownerPlayerCharacterId === null)).toBe(true)
-    const firstMember = members[0]
-    expect(firstMember).toBeDefined()
-    expect((firstMember!.stats as { personality: string }).personality).toBe('gruff but loyal')
+    for (const member of members) {
+      const stats = member.stats as {
+        personality: string
+        maxHp: number
+        hitDieRolls: number[]
+        abilityScores: { body: number }
+      }
+      expect(member.hp).toBe(stats.maxHp)
+      expect(member.hp).toBeGreaterThan(0)
+      expect(stats.hitDieRolls).toHaveLength(1)
+      expect(stats.abilityScores.body).toBeGreaterThanOrEqual(3)
+    }
+    expect((members[0]!.stats as { personality: string }).personality).toBe('gruff but loyal')
   })
 
   it('creates zero rows when no party members are added', () => {

@@ -1,8 +1,10 @@
 import type Database from 'better-sqlite3'
+import { createSeededRandom } from '../engine/abilities'
 import { appendEvent } from '../db/repositories/events'
 import { getCharacterById, updateCharacter, type Character } from '../db/repositories/characters'
 import { awardXP } from '../engine/xp'
-import { PERK_HP_BONUS } from '../engine/perks'
+import { applyLevelUpHitDice, hashStringSeed, type Archetype } from '../engine/hp'
+import type { CharacterHpStats } from '../shared/hp/types'
 import type { XPContext } from '../shared/progression/types'
 import type { XpPassResult } from './progressionPipeline'
 import type { Provider } from '../agents/providers/types'
@@ -21,6 +23,52 @@ function persistCharacterProgress(
     throw new Error(`Character ${characterId} not found after update`)
   }
   return updated
+}
+
+function applyLevelUpHp(
+  character: Character,
+  levelsGained: number
+): { hp: number; stats: Record<string, unknown> } {
+  const stats = { ...(character.stats as Record<string, unknown>) } as CharacterHpStats & Record<string, unknown>
+  const archetype = character.characterClass as Archetype
+  const bodyScore = stats.abilityScores?.body ?? 10
+  const existingRolls = stats.hitDieRolls ?? []
+  const rng = createSeededRandom(hashStringSeed(`${character.id}:level:${character.level}`))
+  const levelUp = applyLevelUpHitDice({
+    archetype,
+    bodyScore,
+    existingRolls,
+    levelsGained,
+    rng
+  })
+  return {
+    hp: character.hp + levelUp.hpGain,
+    stats: { ...stats, hitDieRolls: levelUp.hitDieRolls, maxHp: levelUp.maxHp }
+  }
+}
+
+function recordXpAward(
+  db: Database.Database,
+  input: {
+    context: XPContext
+    characterId: string
+    clamped: { amount: number; clamped: boolean }
+    newXpTotal: number
+    narrationText: string
+  }
+): void {
+  appendEvent(db, {
+    campaignId: input.context.campaignId,
+    type: 'xp_awarded',
+    payload: {
+      characterId: input.characterId,
+      source: input.context.source,
+      amount: input.clamped.amount,
+      clamped: input.clamped.clamped,
+      newXpTotal: input.newXpTotal,
+      narrationText: input.narrationText
+    }
+  })
 }
 
 export async function executeXpPass(input: {
@@ -42,23 +90,19 @@ export async function executeXpPass(input: {
   const agent = await resolveXpAward(provider, context, budget)
   const clamped = clampXPProposal(agent.xpAmount, budget)
   const award = awardXP({ xp: character.xp, level: character.level }, clamped.amount)
+  const levelPatch = award.leveledUp ? applyLevelUpHp(character, award.levelsGained) : null
   const updated = persistCharacterProgress(db, character.id, {
     xp: award.state.xp,
     level: award.state.level,
-    hp: award.leveledUp ? character.hp + PERK_HP_BONUS * award.levelsGained : character.hp
+    ...(levelPatch ? { hp: levelPatch.hp, stats: levelPatch.stats } : { hp: character.hp })
   })
 
-  appendEvent(db, {
-    campaignId: context.campaignId,
-    type: 'xp_awarded',
-    payload: {
-      characterId: character.id,
-      source: context.source,
-      amount: clamped.amount,
-      clamped: clamped.clamped,
-      newXpTotal: award.state.xp,
-      narrationText: agent.narrationText
-    }
+  recordXpAward(db, {
+    context,
+    characterId: character.id,
+    clamped,
+    newXpTotal: award.state.xp,
+    narrationText: agent.narrationText
   })
 
   if (award.leveledUp) {

@@ -90,7 +90,7 @@ export function buildYieldReviewInput(params: {
     combatTier: params.npc.combatTier,
     backstory: params.npc.backstory,
     hp: params.npc.hp ?? 0,
-    maxHp: params.npc.maxHp ?? 1,
+    maxHp: params.npc.maxHp ?? 0,
     lethality: params.lethality,
     playerOffersMercy: params.playerOffersMercy,
     allowedOutcomes: params.allowedOutcomes

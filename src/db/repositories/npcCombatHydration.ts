@@ -1,7 +1,8 @@
 import type Database from 'better-sqlite3'
 import { reviewRetiredAdventurer } from '../../agents/retiredAdventurerReview'
 import type { Provider } from '../../agents/providers/types'
-import { getNpcCombatStats } from '../../engine/npcCombatStats'
+import { computeCatalogMonsterHp, computeRetiredAdventurerHp } from '../../engine/hp'
+import { getRetiredAdventurerCombatStats } from '../../engine/npcCombatStats'
 import type { CatalogCreature } from '../catalog/types'
 import {
   applyRetiredAdventurerUpgrade,
@@ -19,9 +20,17 @@ export function hydrateNpcFromCatalog(db: Database.Database, npcId: string, crea
   if (!npc || npc.catalogCreatureKey || npcHasCombatStats(npc)) {
     return
   }
+  const computed = computeCatalogMonsterHp({
+    npcId,
+    catalogKey: creature.key,
+    archetypeHint: creature.archetypeHint,
+    levelMin: creature.levelMin,
+    levelMax: creature.levelMax,
+    bodyScore: creature.abilities.body
+  })
   setNpcCombatStats(db, npcId, {
-    hp: creature.hp,
-    maxHp: creature.hp,
+    hp: computed.maxHp,
+    maxHp: computed.maxHp,
     ac: creature.ac,
     catalogCreatureKey: creature.key,
     temperament: creature.temperament,
@@ -36,13 +45,14 @@ export function hydrateNpcWithFallback(db: Database.Database, npcId: string): vo
     return
   }
   if (npc.combatTier === 'retired_adventurer' && npc.retiredAdventurerProfile) {
-    const stats = getNpcCombatStats('retired_adventurer', npc.retiredAdventurerProfile)
+    const combat = getRetiredAdventurerCombatStats(npc.retiredAdventurerProfile)
+    const hpResult = computeRetiredAdventurerHp(npcId, npc.retiredAdventurerProfile)
     setNpcCombatStats(db, npcId, {
-      hp: stats.hp,
-      maxHp: stats.maxHp,
-      ac: stats.ac,
-      attackBonus: stats.attackBonus,
-      damageRoll: stats.damageRoll,
+      hp: hpResult.maxHp,
+      maxHp: hpResult.maxHp,
+      ac: combat.ac,
+      attackBonus: combat.attackBonus,
+      damageRoll: combat.damageRoll,
       combatTier: 'retired_adventurer'
     })
     return

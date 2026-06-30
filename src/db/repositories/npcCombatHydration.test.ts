@@ -5,6 +5,7 @@ import { createRegion } from './regions'
 import { createNpc, getNpcById, setNpcCombatStats } from './npcs'
 import { hydrateNpcFromCatalog, hydrateNpcWithFallback } from './npcCombatHydration'
 import { getCreatureByKey } from '../catalog/creatures'
+import { computeCatalogMonsterHp, CATALOG_MONSTER_MIN_MAX_HP } from '../../engine/hp'
 
 function seedCampaignRegion() {
   const db = createTestDb()
@@ -14,7 +15,7 @@ function seedCampaignRegion() {
 }
 
 describe('npc combat hydration from catalog', () => {
-  it('hydrates from catalog creature', () => {
+  it('hydrates hit-die max HP from catalog creature (not static catalog hp)', () => {
     const { db, campaign, region } = seedCampaignRegion()
     const npc = createNpc(db, {
       campaignId: campaign.id,
@@ -28,7 +29,18 @@ describe('npc combat hydration from catalog', () => {
     expect(creature).toBeDefined()
     hydrateNpcFromCatalog(db, npc.id, creature!)
     const hydrated = getNpcById(db, npc.id)
-    expect(hydrated?.hp).toBe(creature!.hp)
+    const expected = computeCatalogMonsterHp({
+      npcId: npc.id,
+      catalogKey: creature!.key,
+      archetypeHint: creature!.archetypeHint,
+      levelMin: creature!.levelMin,
+      levelMax: creature!.levelMax,
+      bodyScore: creature!.abilities.body
+    })
+    expect(hydrated?.hp).toBe(expected.maxHp)
+    expect(hydrated?.maxHp).toBe(expected.maxHp)
+    expect(hydrated?.maxHp).toBeGreaterThanOrEqual(CATALOG_MONSTER_MIN_MAX_HP)
+    expect(hydrated?.hp).not.toBe(creature!.hp)
     expect(hydrated?.catalogCreatureKey).toBe('goblin-scout')
   })
 
@@ -50,16 +62,18 @@ describe('npc combat hydration from catalog', () => {
 })
 
 describe('npc combat villager fallback', () => {
-  it('uses villager fallback when no catalog', () => {
+  it('uses villager fallback at 10 HP when no catalog', () => {
     const { db, campaign, region } = seedCampaignRegion()
     const npc = createNpc(db, {
       campaignId: campaign.id,
       regionId: region.id,
       name: 'Farmer',
       role: 'villager',
-      disposition: 'neutral'
+      disposition: 'neutral',
+      skipCombatHydration: true
     })
     hydrateNpcWithFallback(db, npc.id)
-    expect(getNpcById(db, npc.id)?.hp).toBe(6)
+    expect(getNpcById(db, npc.id)?.hp).toBe(10)
+    expect(getNpcById(db, npc.id)?.maxHp).toBe(10)
   })
 })

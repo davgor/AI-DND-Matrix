@@ -1,19 +1,28 @@
+import { randomNpcSeedPrompt } from '../../../shared/campaignCreate/randomFill'
+import { FieldWithRandomInputRow } from '../components/FieldRandomDiceButton'
 import { GenerateModalActions } from './GenerateModalActions'
 
 function GenerateNpcSeedField(props: {
+  regionName: string
   seedPrompt: string
   generating: boolean
   onSeedChange: (value: string) => void
 }): JSX.Element {
   return (
-    <textarea
-      className="campaign-review-seed-input"
-      value={props.seedPrompt}
-      onChange={(event) => props.onSeedChange(event.target.value)}
-      placeholder="e.g. A retired dock guard who saw something in the fog last night..."
-      rows={5}
+    <FieldWithRandomInputRow
+      ariaLabel="Random NPC seed"
       disabled={props.generating}
-    />
+      onRandomize={() => props.onSeedChange(randomNpcSeedPrompt(props.regionName))}
+    >
+      <textarea
+        className="campaign-review-seed-input"
+        value={props.seedPrompt}
+        onChange={(event) => props.onSeedChange(event.target.value)}
+        placeholder="e.g. A retired dock guard who saw something in the fog last night..."
+        rows={5}
+        disabled={props.generating}
+      />
+    </FieldWithRandomInputRow>
   )
 }
 
@@ -42,6 +51,7 @@ export function GenerateNpcDialog(props: {
       <h2 id="generate-npc-title">Generate NPC for {props.regionName}</h2>
       <p>Seed a new NPC tied to this region — role, mood, hook, or conflict.</p>
       <GenerateNpcSeedField
+        regionName={props.regionName}
         seedPrompt={props.seedPrompt}
         generating={props.generating}
         onSeedChange={props.onSeedChange}

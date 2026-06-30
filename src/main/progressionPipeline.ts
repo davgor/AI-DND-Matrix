@@ -159,12 +159,13 @@ export function submitPerkChoice(
   })
 
   let hp = character.hp
+  const stats = appliedResult.stats as CharacterPerkStats
   if (proposal.category === 'hp_max_bonus') {
     hp += PERK_HP_BONUS
+    stats.maxHp = (stats.maxHp ?? character.hp) + PERK_HP_BONUS
   }
 
   queue.shift()
-  const stats = appliedResult.stats as CharacterPerkStats
   stats.pendingLevelUpQueue = queue
   stats.lastLevelUpXp = character.xp
   updateCharacter(db, characterId, { stats: stats as unknown as Record<string, unknown>, hp })
