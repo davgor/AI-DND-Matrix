@@ -137,96 +137,15 @@ export const TRIM_NPCS_PAYLOAD = {
     { name: 'Tidemark Reach', description: 'A harbor.', historyBackstory: 'Old trade port.' }
   ],
   npcs: [
-    {
-      name: 'A',
-      role: 'a',
-      disposition: 'a',
-      backstory: 'A local history.',
-      regionName: 'Azure Expanse',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'B',
-      role: 'b',
-      disposition: 'b',
-      backstory: 'B local history.',
-      regionName: 'Azure Expanse',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'C',
-      role: 'c',
-      disposition: 'c',
-      backstory: 'C local history.',
-      regionName: 'Azure Expanse',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'D',
-      role: 'd',
-      disposition: 'd',
-      backstory: 'D local history.',
-      regionName: 'Azure Expanse',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'E',
-      role: 'e',
-      disposition: 'e',
-      backstory: 'E local history.',
-      regionName: 'Tidemark Reach',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'F',
-      role: 'f',
-      disposition: 'f',
-      backstory: 'F local history.',
-      regionName: 'Tidemark Reach',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'G',
-      role: 'g',
-      disposition: 'g',
-      backstory: 'G local history.',
-      regionName: 'Tidemark Reach',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'H',
-      role: 'h',
-      disposition: 'h',
-      backstory: 'H local history.',
-      regionName: 'Tidemark Reach',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    },
-    {
-      name: 'Stray',
-      role: 'x',
-      disposition: 'x',
-      backstory: 'Stray local history.',
-      regionName: 'Nowhere',
-      temperament: 'neutral',
-      canSpeak: true,
-      alignment: 'true_neutral'
-    }
+    { name: 'A', role: 'a', disposition: 'a', backstory: 'A local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'B', role: 'b', disposition: 'b', backstory: 'B local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'C', role: 'c', disposition: 'c', backstory: 'C local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'D', role: 'd', disposition: 'd', backstory: 'D local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'E', role: 'e', disposition: 'e', backstory: 'E local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'F', role: 'f', disposition: 'f', backstory: 'F local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'G', role: 'g', disposition: 'g', backstory: 'G local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'H', role: 'h', disposition: 'h', backstory: 'H local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
+    { name: 'Stray', role: 'x', disposition: 'x', backstory: 'Stray local history.', regionName: 'Nowhere', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' }
   ],
   storyThread: { title: 'T', state: 'starting', summary: 'S' }
 }
@@ -267,16 +186,8 @@ export const PRE_EXPANSION_CAMPAIGN_PAYLOAD = {
 
 export const LEGACY_CAMPAIGN_SEED_PAYLOAD = {
   regions: [
-    {
-      name: 'The Azure Deep',
-      description: 'A newly charted oceanic region.',
-      historyBackstory: 'Sailors only recently proved it navigable.'
-    },
-    {
-      name: 'Harbor of First Light',
-      description: 'The explorer port.',
-      historyBackstory: 'Founded to support the first voyages.'
-    }
+    { name: 'The Azure Deep', description: 'A newly charted oceanic region.', historyBackstory: 'Sailors only recently proved it navigable.' },
+    { name: 'Harbor of First Light', description: 'The explorer port.', historyBackstory: 'Founded to support the first voyages.' }
   ],
   npcs: [
     {

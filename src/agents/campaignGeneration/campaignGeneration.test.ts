@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { createTestDb } from '../db/testUtils'
-import { listCampaigns } from '../db/repositories/campaigns'
-import { listNpcsByRegion } from '../db/repositories/npcs'
-import { listRegionsByCampaign } from '../db/repositories/regions'
-import { listRegionHistoryByRegion } from '../db/repositories/regionHistory'
-import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
-import { listQuestHooksByRegion } from '../db/repositories/worldFacts'
-import { createScriptedProvider } from './providers/mockHarness'
+import { createTestDb } from '../../db/testUtils'
+import { listCampaigns } from '../../db/repositories/campaigns'
+import { listNpcsByRegion } from '../../db/repositories/npcs'
+import { listRegionsByCampaign } from '../../db/repositories/regions'
+import { listRegionHistoryByRegion } from '../../db/repositories/regionHistory'
+import { listStoryThreadsByCampaign } from '../../db/repositories/storyThreads'
+import { listQuestHooksByRegion } from '../../db/repositories/worldFacts'
+import { createScriptedProvider } from '../providers/mockHarness'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
@@ -20,7 +20,7 @@ import {
   normalizeCampaignGeneration,
   persistRegionWithNpcs,
   resolveInitialGenerationCounts
-} from './campaignGeneration'
+} from '.'
 
 import {
   ADDITIONAL_REGION,
@@ -33,8 +33,8 @@ import {
   SETUP_INPUT,
   TRIM_NPCS_PAYLOAD,
   VALID_GENERATION
-} from './campaignGeneration.fixtures'
-import type { GeneratedNpc, GeneratedRegion } from './campaignGeneration'
+} from './fixtures'
+import type { GeneratedNpc, GeneratedRegion } from '.'
 
 describe('normalizeCampaignGeneration', () => {
   it('accepts legacy region fields and fills recent history plus quest hooks', () => {

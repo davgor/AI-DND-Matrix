@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAdditionalRegionPrompt } from './campaignGeneration'
+import { buildAdditionalRegionPrompt } from '.'
 
 describe('history-aware additional region prompt (038.16)', () => {
   it('includes campaign history fields when context is provided', () => {

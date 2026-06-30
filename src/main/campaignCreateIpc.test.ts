@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses } from '../agents/campaignGeneration.fixtures'
+import { npcReviewResponses } from '../agents/campaignGeneration/fixtures'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 

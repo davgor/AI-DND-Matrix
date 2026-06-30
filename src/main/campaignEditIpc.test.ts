@@ -4,7 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses } from '../agents/campaignGeneration.fixtures'
+import { npcReviewResponses } from '../agents/campaignGeneration/fixtures'
 import { editNpcDisposition, editNpcTraits, editRegionDescription, generateNpcForCampaign, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
 
 function makeRegion(name: string) {
