@@ -7,6 +7,7 @@ import { decidePartyMemberAction, assemblePartyMemberContext } from '../agents/p
 import { generateNpcReaction, assembleNpcContext } from '../agents/npc'
 import {
   assembleNarrationContext,
+  buildCombatIntentContext,
   interpretIntent,
   narrate,
   persistNarrationSideEffects,
@@ -17,10 +18,11 @@ import { reviewTurn } from '../agents/turnReview'
 import type { TurnBeat, TurnRoutingPlan } from '../shared/turnRouting/types'
 import type { Provider } from '../agents/providers/types'
 import { computeAC } from '../engine/armorClass'
-import { getEquippedArmorTier, getEquippedWeaponDamageRoll } from '../db/repositories/characterItems'
-import { resolvePlayerAttackDamage } from '../engine/playerCombat'
-import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
+import { getEquippedArmorTier, getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
 import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damage'
+import { resolveWeaponDamage } from '../engine/weaponDamage'
+import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
+import { resolveModificationTurn } from './modificationTurn'
 import { computeHP, type Archetype } from '../engine/hp'
 import { proficiencyBonus } from '../engine/proficiency'
 import { resolveLongRest, resolveShortRest } from '../engine/rest'
@@ -37,13 +39,21 @@ import { appendEvent } from '../db/repositories/events'
 import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { getNpcById } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
+import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
+import { applyQuestRewardsToBeatState } from './questRewardBeats'
+import { assertNoPendingLevelUp } from './progressionPipeline'
+import type { LootGrantAccepted } from '../shared/loot/types'
 import { createSaveSnapshot } from '../db/repositories/saves'
 import {
   applyDamageAndStartDyingIfNeeded,
   progressDyingSequence,
   type DyingResolution
 } from './dyingResolution'
+import { getActiveEncounter } from '../db/repositories/combatEncounters'
 import { getDb } from './db'
+import { CombatTurnError, resolveCombatTurn, shouldRouteToCombat } from './combatTurn'
+import type { CombatAttackResult, CombatStateSnapshot } from '../shared/combat/types'
+import type { FleeTurnOutcome } from '../shared/combat/flee/types'
 
 export interface TurnInput {
   campaignId: string
@@ -88,6 +98,20 @@ export interface TurnResult {
   proposedPromotion?: ProposedPromotion
   pendingAlignmentShift: PendingAlignmentShift | null
   alignmentShiftCommitted?: string
+  combatAttack?: CombatAttackResult
+  combatState?: CombatStateSnapshot | null
+  fleeOutcome?: FleeTurnOutcome
+  defeatDispositionNarration?: string
+  playerImprisoned?: boolean
+  npcYieldOutcome?: import('../shared/combat/types').NpcYieldOutcome
+  yieldNarrationHint?: string
+  lootNarration?: string
+  lootGrants?: LootGrantAccepted[]
+  xpNarration?: string
+  xpAmount?: number
+  leveledUp?: boolean
+  levelsGained?: number
+  itemModification?: { characterItemId: string; kind: string; summary: string }
 }
 
 function buildTurnResultExtras(
@@ -202,8 +226,8 @@ export function resolvePlayerEquippedAttackDamage(
   rng: RandomFn,
   attackRoll: number
 ): number {
-  const weaponRoll = getEquippedWeaponDamageRoll(db, characterId)
-  return resolvePlayerAttackDamage(weaponRoll, rng, attackRoll)
+  const profile = getEquippedWeaponDamageProfile(db, characterId)
+  return resolveWeaponDamage(profile.components, rng, isNaturalTwenty(attackRoll)).total
 }
 
 function resolveNpcAttackAgainstPlayer(
@@ -259,7 +283,7 @@ async function resolveTargetedNpcReaction(
       attack: Boolean(reaction.attack)
     }
   })
-  const attackResult = reaction.attack
+  const attackResult = reaction.attack && !getActiveEncounter(db, input.campaignId)
     ? resolveNpcAttackAgainstPlayer(db, input.player, input.rng)
     : undefined
   return {
@@ -373,6 +397,13 @@ interface BeatExecutionState {
   npcReactions: NpcReactionResult[]
   partyMemberActions: PartyMemberActionResult[]
   sceneContext: string
+  lootNarration?: string
+  lootGrants?: LootGrantAccepted[]
+  xpNarration?: string
+  xpAmount?: number
+  leveledUp?: boolean
+  levelsGained?: number
+  encounterXpRan?: boolean
 }
 
 async function executeNpcResponseBeat(
@@ -400,6 +431,33 @@ async function executeNpcResponseBeat(
   }
 }
 
+async function applyQuestRewardsToBeat(
+  db: Database.Database,
+  provider: Provider,
+  input: {
+    campaignId: string
+    regionId: string
+    character: Character
+    narrationResult: NarrationResult
+    previousThreadState?: string
+    state: BeatExecutionState
+  }
+): Promise<void> {
+  const update = input.narrationResult.storyThreadUpdate
+  if (!update || !input.previousThreadState) {
+    return
+  }
+  await applyQuestRewardsToBeatState(db, provider, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    character: input.character,
+    threadId: update.threadId,
+    previousThreadState: input.previousThreadState,
+    newThreadState: update.state,
+    state: input.state
+  })
+}
+
 async function executeDmNarrationBeat(
   db: Database.Database,
   provider: Provider,
@@ -413,11 +471,17 @@ async function executeDmNarrationBeat(
   }
 ): Promise<void> {
   const narrationResult = await narrate(provider, input.resolved.outcome, input.narrationContext)
+  let previousThreadState: string | undefined
+  if (narrationResult.storyThreadUpdate) {
+    const threads = listStoryThreadsByCampaign(db, input.campaignId)
+    previousThreadState = threads.find((t) => t.id === narrationResult.storyThreadUpdate!.threadId)?.state
+  }
   persistNarrationSideEffects(db, narrationResult, {
     campaignId: input.campaignId,
     regionId: input.regionId,
     characterId: input.character.id
   })
+  await applyQuestRewardsToBeat(db, provider, { ...input, narrationResult, previousThreadState })
   appendDmNarrationEvent(db, {
     campaignId: input.campaignId,
     characterId: input.character.id,
@@ -425,10 +489,12 @@ async function executeDmNarrationBeat(
     resolved: input.resolved
   })
   input.state.narrationResult = narrationResult
-  input.state.narrationText = narrationResult.narrationText
+  if (!input.state.lootNarration) {
+    input.state.narrationText = narrationResult.narrationText
+  }
   input.state.sceneContext = input.state.sceneContext
-    ? `${input.state.sceneContext} ${narrationResult.narrationText}`
-    : narrationResult.narrationText
+    ? `${input.state.sceneContext} ${input.state.narrationText}`
+    : input.state.narrationText
 }
 
 function executePlayerActionExpressionBeat(
@@ -576,6 +642,12 @@ function buildRoutedTurnResult(
     npcReactions: state.npcReactions,
     partyMemberActions: state.partyMemberActions,
     proposedPromotion: resolveProposedPromotion(db, state.narrationResult?.proposedPromotionNpcId),
+    lootNarration: state.lootNarration,
+    lootGrants: state.lootGrants,
+    xpNarration: state.xpNarration,
+    xpAmount: state.xpAmount,
+    leveledUp: state.leveledUp,
+    levelsGained: state.levelsGained,
     ...buildTurnResultExtras(db, characterId, state.narrationResult?.commitAlignmentShift?.newAlignment)
   }
 }
@@ -620,24 +692,38 @@ function resolveDyingTurnIfNeeded(
   }
 }
 
-export async function resolvePlayerTurn(
-  db: Database.Database,
-  provider: Provider,
-  turnInput: TurnInput,
+async function resolveCombatPlayerTurn(input: {
+  db: Database.Database
+  provider: Provider
+  turnInput: TurnInput
+  character: Character
+  intent: Awaited<ReturnType<typeof interpretIntent>>
   rng: RandomFn
-): Promise<TurnResult> {
-  const character = getCharacterById(db, turnInput.characterId)
-  if (!character) {
-    throw new Error(`Character ${turnInput.characterId} not found`)
-  }
+}): Promise<TurnResult> {
+  const { db, provider, turnInput, character, intent, rng } = input
+  const regionId = getCurrentRegionId(db, turnInput.campaignId, character)
+  const combatResult = await resolveCombatTurn({
+    db,
+    provider,
+    campaignId: turnInput.campaignId,
+    character,
+    regionId,
+    intent,
+    playerInput: turnInput.playerInput,
+    rng
+  })
+  return { ...combatResult, ...buildTurnResultExtras(db, character.id) }
+}
 
-  const dyingTurn = resolveDyingTurnIfNeeded(db, turnInput.campaignId, character, rng)
-  if (dyingTurn) {
-    return dyingTurn
-  }
-
-  const intent = await interpretIntent(provider, turnInput.playerInput)
-
+async function resolveIntentRoutedTurn(input: {
+  db: Database.Database
+  provider: Provider
+  turnInput: TurnInput
+  character: Character
+  intent: Awaited<ReturnType<typeof interpretIntent>>
+  rng: RandomFn
+}): Promise<TurnResult> {
+  const { db, provider, turnInput, character, intent, rng } = input
   if (intent.actionType === 'restShort' || intent.actionType === 'restLong') {
     return resolveRestTurn(db, {
       campaignId: turnInput.campaignId,
@@ -654,13 +740,59 @@ export async function resolvePlayerTurn(
       characterId: character.id
     })
   }
-
+  if (intent.actionType === 'modifyItem') {
+    return resolveModificationTurn({
+      db,
+      provider,
+      campaignId: turnInput.campaignId,
+      character,
+      playerInput: turnInput.playerInput
+    })
+  }
   return resolveRoutedTurn(db, provider, turnInput.campaignId, {
     character,
     intent,
     playerInput: turnInput.playerInput,
     rng
   })
+}
+
+export async function resolvePlayerTurn(
+  db: Database.Database,
+  provider: Provider,
+  turnInput: TurnInput,
+  rng: RandomFn
+): Promise<TurnResult> {
+  const character = getCharacterById(db, turnInput.characterId)
+  if (!character) {
+    throw new Error(`Character ${turnInput.characterId} not found`)
+  }
+
+  assertNoPendingLevelUp(db, turnInput.characterId)
+
+  const dyingTurn = resolveDyingTurnIfNeeded(db, turnInput.campaignId, character, rng)
+  if (dyingTurn) {
+    return dyingTurn
+  }
+
+  const intent = await interpretIntent(
+    provider,
+    turnInput.playerInput,
+    buildCombatIntentContext(db, turnInput.campaignId, character.id, getCurrentRegionId(db, turnInput.campaignId, character))
+  )
+
+  if (shouldRouteToCombat(db, turnInput.campaignId, character.id, intent)) {
+    try {
+      return await resolveCombatPlayerTurn({ db, provider, turnInput, character, intent, rng })
+    } catch (error) {
+      if (error instanceof CombatTurnError) {
+        throw error
+      }
+      throw error
+    }
+  }
+
+  return resolveIntentRoutedTurn({ db, provider, turnInput, character, intent, rng })
 }
 
 export function registerTurnHandlers(): void {

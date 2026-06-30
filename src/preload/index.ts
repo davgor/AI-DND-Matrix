@@ -15,6 +15,7 @@ import type {
 } from '../main/characterCreationIpc'
 import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
+import type { CombatStateSnapshot } from '../shared/combat/types'
 import type { TurnInput, TurnResult } from '../main/turnIpc'
 import type { LogEntry } from '../shared/logBook/types'
 import type { CharacterJournalEntry } from '../shared/journal/types'
@@ -112,6 +113,21 @@ const turn = {
   resolve: (input: TurnInput): Promise<TurnResult> => ipcRenderer.invoke('turn:resolve', input)
 }
 
+const combat = {
+  getState: (campaignId: string): Promise<CombatStateSnapshot | null> =>
+    ipcRenderer.invoke('combat:getState', campaignId)
+}
+
+const progression = {
+  getPendingLevelUp: (characterId: string): Promise<import('../main/progressionIpc').PendingLevelUpResponse | null> =>
+    ipcRenderer.invoke('progression:getPendingLevelUp', characterId),
+  submitPerkChoice: (
+    characterId: string,
+    perkId: string
+  ): Promise<{ applied: boolean; mechanicalSummary?: string; pending: boolean; character: Character | null }> =>
+    ipcRenderer.invoke('progression:submitPerkChoice', characterId, perkId)
+}
+
 const startup = {
   getState: (): Promise<StartupEventPayload> => ipcRenderer.invoke('startup:getState'),
   start: (): Promise<boolean> => ipcRenderer.invoke('startup:start'),
@@ -147,6 +163,8 @@ contextBridge.exposeInMainWorld('campaigns', campaigns)
 contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('turn', turn)
+contextBridge.exposeInMainWorld('combat', combat)
+contextBridge.exposeInMainWorld('progression', progression)
 contextBridge.exposeInMainWorld('startup', startup)
 contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
 contextBridge.exposeInMainWorld('settings', settings)
@@ -156,6 +174,8 @@ export type CampaignsApi = typeof campaigns
 export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type TurnApi = typeof turn
+export type CombatApi = typeof combat
+export type ProgressionApi = typeof progression
 export type StartupApi = typeof startup
 export type GuidedCreationApi = typeof guidedCreation
 export type SettingsApi = typeof settings

@@ -121,28 +121,76 @@ function dmNarrationOnlyEntries(event: Event): PlayLogEntry[] {
   return [{ id: event.id, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText }]
 }
 
-function eventToLogEntries(event: Event): PlayLogEntry[] {
-  switch (event.type) {
-    case 'player_action_expression':
-      return playerActionExpressionEntries(event)
-    case 'player_action': {
-      const legacy = legacyPlayerInputAndNarrationEntries(event)
-      return legacy.length > 0 ? legacy : dmNarrationOnlyEntries(event)
-    }
-    case 'rest':
-    case 'travel':
-      return playerInputAndNarrationEntries(event)
-    case 'npc_reaction':
-      return npcReactionEntries(event)
-    case 'party_member_action':
-      return singleTextEntry(event, 'partyMember', 'content')
-    case 'dying_resolution':
-      return singleTextEntry(event, 'dm', 'narrationText')
-    case 'opening_scene':
-      return singleTextEntry(event, 'dm', 'narrationText')
-    default:
-      return []
+const DM_NARRATION_EVENT_TYPES = new Set(['dying_resolution', 'loot_resolved', 'opening_scene'])
+
+function progressionEventEntries(event: Event): PlayLogEntry[] | null {
+  if (event.type === 'xp_awarded') {
+    return xpAwardedEntries(event)
   }
+  if (event.type === 'perk_chosen') {
+    return perkChosenEntries(event)
+  }
+  return null
+}
+
+function xpAwardedEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as { narrationText?: string; amount?: number }
+  if (typeof payload.narrationText === 'string') {
+    return [{ id: event.id, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText }]
+  }
+  if (typeof payload.amount === 'number') {
+    return [
+      {
+        id: event.id,
+        timestamp: event.timestamp,
+        speaker: 'dm',
+        text: `You gain ${payload.amount} experience.`
+      }
+    ]
+  }
+  return []
+}
+
+function perkChosenEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as { mechanicalSummary?: string; category?: string }
+  if (typeof payload.mechanicalSummary !== 'string') {
+    return []
+  }
+  return [
+    {
+      id: event.id,
+      timestamp: event.timestamp,
+      speaker: 'dm',
+      text: `Perk chosen: ${payload.mechanicalSummary}`
+    }
+  ]
+}
+
+function eventToLogEntries(event: Event): PlayLogEntry[] {
+  const progression = progressionEventEntries(event)
+  if (progression) {
+    return progression
+  }
+  if (event.type === 'player_action_expression') {
+    return playerActionExpressionEntries(event)
+  }
+  if (event.type === 'player_action') {
+    const legacy = legacyPlayerInputAndNarrationEntries(event)
+    return legacy.length > 0 ? legacy : dmNarrationOnlyEntries(event)
+  }
+  if (event.type === 'rest' || event.type === 'travel') {
+    return playerInputAndNarrationEntries(event)
+  }
+  if (event.type === 'npc_reaction') {
+    return npcReactionEntries(event)
+  }
+  if (event.type === 'party_member_action') {
+    return singleTextEntry(event, 'partyMember', 'content')
+  }
+  if (DM_NARRATION_EVENT_TYPES.has(event.type)) {
+    return singleTextEntry(event, 'dm', 'narrationText')
+  }
+  return []
 }
 
 export function buildNarrationLog(db: Database.Database, campaignId: string): PlayLogEntry[] {

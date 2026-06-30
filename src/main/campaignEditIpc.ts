@@ -105,9 +105,13 @@ export async function generateRegionForCampaign(
     seed
   )
 
-  db.transaction(() =>
-    persistRegionWithNpcs(db, input.campaignId, generation.region, generation.npcs)
-  )()
+  await persistRegionWithNpcs({
+    db,
+    provider,
+    campaignId: input.campaignId,
+    generatedRegion: generation.region,
+    generatedNpcs: generation.npcs
+  })
 
   return getCampaignDetail(db, input.campaignId)
 }

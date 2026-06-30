@@ -1,5 +1,6 @@
 import type { ArmorTier } from '../../engine/armorClass'
 import type { DamageRoll, DamageType } from '../../engine/damage'
+import type { WeaponDamageProfile } from '../weaponModifications/types'
 
 export const ITEM_TYPES = ['weapon', 'armor', 'potion', 'magicItem', 'misc'] as const
 export type ItemType = (typeof ITEM_TYPES)[number]
@@ -66,4 +67,5 @@ export interface CharacterItemRow {
 
 export interface CharacterItemView extends CharacterItemRow {
   item: CatalogItem
+  weaponProfile?: WeaponDamageProfile
 }

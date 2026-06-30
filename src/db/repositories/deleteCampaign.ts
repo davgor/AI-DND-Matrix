@@ -35,6 +35,7 @@ export function deleteCampaignCascade(
     db.prepare('DELETE FROM saves WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM story_threads WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM events WHERE campaign_id = ?').run(campaignId)
+    db.prepare('DELETE FROM combat_encounters WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM sessions WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM campaigns WHERE id = ?').run(campaignId)
     hooks?.beforeCommit?.()

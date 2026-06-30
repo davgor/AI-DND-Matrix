@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { npcReviewResponses } from '../agents/campaignGeneration.fixtures'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 
@@ -19,6 +20,7 @@ function makeNpcs(regionName: string, prefix: string) {
     {
       name: `${prefix} One`,
       role: 'guide',
+      backstory: `${prefix} One has lived in ${regionName} for years.`,
       disposition: 'friendly',
       regionName,
       temperament: 'neutral',
@@ -28,6 +30,7 @@ function makeNpcs(regionName: string, prefix: string) {
     {
       name: `${prefix} Two`,
       role: 'merchant',
+      backstory: `${prefix} Two runs a stall in ${regionName}.`,
       disposition: 'curious',
       regionName,
       temperament: 'curious',
@@ -37,6 +40,7 @@ function makeNpcs(regionName: string, prefix: string) {
     {
       name: `${prefix} Three`,
       role: 'guard',
+      backstory: `${prefix} Three keeps watch near ${regionName}.`,
       disposition: 'wary',
       regionName,
       temperament: 'disciplined',
@@ -68,7 +72,7 @@ describe('createCampaignFromRequest', () => {
   it('persists one campaign on success', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION])
+    const provider = createScriptedProvider([VALID_GENERATION, ...npcReviewResponses(6)])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'session-1',
       premisePrompt: 'A haunted marsh',

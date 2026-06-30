@@ -1,0 +1,66 @@
+.level-up-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.level-up-modal {
+  width: min(720px, 92vw);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: #1a1410;
+  color: #f5e6d3;
+  border: 1px solid #6b4f2a;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.level-up-narration {
+  margin: 0.75rem 0 1rem;
+  line-height: 1.5;
+}
+
+.level-up-options {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.level-up-card {
+  text-align: left;
+  padding: 0.85rem 1rem;
+  border: 1px solid #4a3820;
+  border-radius: 6px;
+  background: #241c14;
+  color: inherit;
+  cursor: pointer;
+}
+
+.level-up-card-selected {
+  border-color: #c9a227;
+  box-shadow: 0 0 0 1px #c9a227;
+}
+
+.level-up-card-badge {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #c9a227;
+}
+
+.level-up-confirm {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.2rem;
+}
+
+.level-up-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

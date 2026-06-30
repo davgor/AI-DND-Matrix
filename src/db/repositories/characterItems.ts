@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import { validateEquip, slotsToClearOnEquip, type EquipFailureReason } from '../../engine/equipment'
 import type { ArmorTier } from '../../engine/armorClass'
-import type { DamageRoll } from '../../engine/damage'
-import { UNARMED_DAMAGE_ROLL } from '../../engine/itemTemplate'
 import type { CharacterItemView, EquipSlot } from '../../shared/items/types'
 import { getCatalogItemById } from './items'
+import { enrichCharacterItemViews } from './weaponDamageProfile'
+
+export { getEquippedWeaponDamageProfile, getEquippedWeaponDamageRoll } from './weaponDamageProfile'
 
 interface CharacterItemRow {
   id: string
@@ -34,9 +35,10 @@ export function listCharacterItems(db: Database.Database, characterId: string): 
   const rows = db
     .prepare('SELECT * FROM character_items WHERE character_id = ? ORDER BY rowid')
     .all(characterId) as CharacterItemRow[]
-  return rows
+  const views = rows
     .map((row) => rowToView(db, row))
     .filter((row): row is CharacterItemView => row !== undefined)
+  return enrichCharacterItemViews(db, views)
 }
 
 export function addItemToCharacter(
@@ -137,17 +139,6 @@ export function getEquippedArmorTier(db: Database.Database, characterId: string)
     return 'none'
   }
   return equipped.item.mechanicalProperties.armorTier
-}
-
-export function getEquippedWeaponDamageRoll(
-  db: Database.Database,
-  characterId: string
-): DamageRoll {
-  const equipped = listCharacterItems(db, characterId).find((row) => row.equippedSlot === 'weapon')
-  if (!equipped || equipped.item.mechanicalProperties.kind !== 'weapon') {
-    return UNARMED_DAMAGE_ROLL
-  }
-  return equipped.item.mechanicalProperties.damageRoll
 }
 
 export function unequipCharacterItemRow(db: Database.Database, characterItemId: string): void {

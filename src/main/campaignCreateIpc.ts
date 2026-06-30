@@ -73,7 +73,7 @@ export async function createCampaignFromRequest(
     const generation = await generateCampaignSeed(provider, input.premisePrompt)
     emitProgress(progressForStage(1, 'Interpreting generated world details'))
     emitProgress(progressForStage(2, 'Writing regions, NPCs, and story to your save'))
-    const campaign = db.transaction(() => persistGeneratedCampaign(db, input, generation))()
+    const campaign = await persistGeneratedCampaign(db, provider, input, generation)
     touchLastPlayed(db, campaign.id)
     return { ok: true, detail: getCampaignDetail(db, campaign.id) }
   } catch (error) {

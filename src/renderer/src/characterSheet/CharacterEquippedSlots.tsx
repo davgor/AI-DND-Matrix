@@ -1,4 +1,5 @@
 import type { CharacterItemView, EquipSlot } from '../../../shared/items/types'
+import { CharacterWeaponProfile } from './CharacterWeaponProfile'
 
 const SLOT_LABELS: EquipSlot[] = ['weapon', 'armor', 'trinket']
 
@@ -22,7 +23,8 @@ export function CharacterEquippedSlots(props: CharacterEquippedSlotsProps): JSX.
             <span className="character-inventory-slot-label">{slot}</span>
             {row ? (
               <>
-                <strong>{row.item.name}</strong>
+                <strong>{row.weaponProfile?.displayName ?? row.item.name}</strong>
+                {row.weaponProfile ? <CharacterWeaponProfile profile={row.weaponProfile} /> : null}
                 <button type="button" disabled={props.busyId !== null} onClick={() => props.onUnequip(slot)}>
                   Unequip
                 </button>

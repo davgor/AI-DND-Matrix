@@ -355,5 +355,81 @@ export const migrations: Migration[] = [
       addColumnIfMissing(db, 'catalog_creatures', 'temperament', "TEXT NOT NULL DEFAULT 'neutral'")
       addColumnIfMissing(db, 'catalog_creatures', 'can_speak', 'INTEGER NOT NULL DEFAULT 1')
     }
+  },
+  {
+    version: 18,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'hp', 'INTEGER')
+      addColumnIfMissing(db, 'npcs', 'max_hp', 'INTEGER')
+      addColumnIfMissing(db, 'npcs', 'ac', 'INTEGER')
+      addColumnIfMissing(db, 'npcs', 'conditions', "TEXT NOT NULL DEFAULT '[]'")
+      addColumnIfMissing(db, 'npcs', 'catalog_creature_key', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'encounter_outcome', 'TEXT')
+
+      db.exec(`
+        CREATE TABLE combat_encounters (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          phase TEXT NOT NULL CHECK (phase IN ('active', 'resolved')),
+          outcome TEXT,
+          initiative_order TEXT NOT NULL DEFAULT '[]',
+          active_turn_index INTEGER NOT NULL DEFAULT 0,
+          round INTEGER NOT NULL DEFAULT 1,
+          participant_ids TEXT NOT NULL DEFAULT '[]',
+          started_at TEXT NOT NULL,
+          ended_at TEXT
+        );
+
+        CREATE UNIQUE INDEX idx_combat_encounters_active_campaign
+          ON combat_encounters(campaign_id)
+          WHERE phase = 'active';
+      `)
+    }
+  },
+  {
+    version: 19,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'backstory', "TEXT NOT NULL DEFAULT ''")
+      addColumnIfMissing(db, 'npcs', 'combat_tier', "TEXT NOT NULL DEFAULT 'villager'")
+      addColumnIfMissing(db, 'npcs', 'retired_adventurer_profile', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'attack_bonus', 'INTEGER')
+      addColumnIfMissing(db, 'npcs', 'damage_roll', 'TEXT')
+
+      const villagerDamageRoll = JSON.stringify({ diceCount: 1, diceSize: 4, modifier: 0 })
+      db.prepare(
+        `UPDATE npcs SET
+          hp = COALESCE(hp, ?),
+          max_hp = COALESCE(max_hp, ?),
+          ac = COALESCE(ac, ?),
+          attack_bonus = COALESCE(attack_bonus, ?),
+          damage_roll = COALESCE(damage_roll, ?),
+          combat_tier = COALESCE(NULLIF(combat_tier, ''), 'villager')
+        WHERE catalog_creature_key IS NULL`
+      ).run(6, 6, 10, 0, villagerDamageRoll)
+    }
+  },
+  {
+    version: 20,
+    up: (db) => {
+      addColumnIfMissing(db, 'combat_encounters', 'pursuit_state', "TEXT NOT NULL DEFAULT 'engaged'")
+      addColumnIfMissing(db, 'combat_encounters', 'exited_combatant_ids', "TEXT NOT NULL DEFAULT '[]'")
+    }
+  },
+  {
+    version: 21,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE character_item_modifications (
+          id TEXT PRIMARY KEY,
+          character_item_id TEXT NOT NULL REFERENCES character_items(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL CHECK (kind IN ('addDamageComponent', 'setDescription', 'setDisplayName')),
+          payload TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX idx_character_item_modifications_item
+          ON character_item_modifications(character_item_id);
+      `)
+    }
   }
 ]

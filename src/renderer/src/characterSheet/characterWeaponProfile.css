@@ -1,0 +1,19 @@
+.character-weapon-profile {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.character-weapon-profile-title {
+  font-weight: 600;
+}
+
+.character-weapon-profile-lines {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.character-weapon-profile-flavor {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted, #666);
+  font-style: italic;
+}

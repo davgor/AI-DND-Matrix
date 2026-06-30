@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
+import type { Condition } from '../../engine/conditions'
+import {
+  getNpcCombatStats,
+  parseDamageRoll,
+  serializeDamageRoll
+} from '../../engine/npcCombatStats'
 import type { Alignment, Temperament } from '../../shared/alignment/types'
+import type { NpcYieldOutcome } from '../../shared/combat/types'
+import type { NpcCombatTier, RetiredAdventurerProfile } from '../../shared/npcCombat/types'
+import { isNpcCombatTier } from '../../shared/npcCombat/types'
 
 export interface NpcStatus {
   alive: boolean
@@ -19,6 +28,17 @@ export interface Npc {
   canSpeak: boolean
   status: NpcStatus
   isPartyMember: boolean
+  backstory: string
+  combatTier: NpcCombatTier
+  retiredAdventurerProfile: RetiredAdventurerProfile | null
+  hp: number | null
+  maxHp: number | null
+  ac: number | null
+  attackBonus: number | null
+  damageRoll: import('../../engine/damage').DamageRoll | null
+  conditions: Condition[]
+  catalogCreatureKey: string | null
+  encounterOutcome: NpcYieldOutcome | null
 }
 
 export interface CreateNpcInput {
@@ -31,6 +51,9 @@ export interface CreateNpcInput {
   temperament?: Temperament
   canSpeak?: boolean
   status?: NpcStatus
+  backstory?: string
+  catalogCreatureKey?: string | null
+  skipCombatHydration?: boolean
 }
 
 interface NpcRow {
@@ -45,9 +68,34 @@ interface NpcRow {
   can_speak: number
   status: string
   is_party_member: number
+  backstory: string | null
+  combat_tier: string | null
+  retired_adventurer_profile: string | null
+  hp: number | null
+  max_hp: number | null
+  ac: number | null
+  attack_bonus: number | null
+  damage_roll: string | null
+  conditions: string | null
+  catalog_creature_key: string | null
+  encounter_outcome: string | null
+}
+
+function parseNpcConditions(raw: string | null): Condition[] {
+  if (!raw) {
+    return []
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? (parsed as Condition[]) : []
+  } catch {
+    return []
+  }
 }
 
 function rowToNpc(row: NpcRow): Npc {
+  const combatTier = isNpcCombatTier(row.combat_tier) ? row.combat_tier : 'villager'
+  const profile = row.retired_adventurer_profile as RetiredAdventurerProfile | null
   return {
     id: row.id,
     campaignId: row.campaign_id,
@@ -59,21 +107,83 @@ function rowToNpc(row: NpcRow): Npc {
     temperament: row.temperament as Temperament,
     canSpeak: row.can_speak === 1,
     status: JSON.parse(row.status) as NpcStatus,
-    isPartyMember: row.is_party_member === 1
+    isPartyMember: row.is_party_member === 1,
+    backstory: row.backstory ?? '',
+    combatTier,
+    retiredAdventurerProfile: profile,
+    hp: row.hp,
+    maxHp: row.max_hp,
+    ac: row.ac,
+    attackBonus: row.attack_bonus,
+    damageRoll: row.damage_roll ? parseDamageRoll(row.damage_roll) : null,
+    conditions: parseNpcConditions(row.conditions),
+    catalogCreatureKey: row.catalog_creature_key,
+    encounterOutcome: (row.encounter_outcome as NpcYieldOutcome | null) ?? null
   }
 }
 
 const DEFAULT_STATUS: NpcStatus = { alive: true }
+
+function applyTierStatsToRow(
+  db: Database.Database,
+  id: string,
+  tier: Exclude<NpcCombatTier, 'catalog'>,
+  profile?: RetiredAdventurerProfile | null
+): void {
+  const stats = getNpcCombatStats(tier, profile ?? undefined)
+  db.prepare(
+    `UPDATE npcs SET hp = ?, max_hp = ?, ac = ?, attack_bonus = ?, damage_roll = ?,
+     combat_tier = ?, retired_adventurer_profile = ? WHERE id = ?`
+  ).run(
+    stats.hp,
+    stats.maxHp,
+    stats.ac,
+    stats.attackBonus,
+    serializeDamageRoll(stats.damageRoll),
+    tier,
+    profile ?? null,
+    id
+  )
+}
+
+export function hydrateNpcVillagerTier(db: Database.Database, id: string): void {
+  const npc = getNpcById(db, id)
+  if (!npc || npc.catalogCreatureKey || npcHasCombatStats(npc)) {
+    return
+  }
+  applyTierStatsToRow(db, id, 'villager')
+}
+
+export function applyRetiredAdventurerUpgrade(
+  db: Database.Database,
+  id: string,
+  profile: RetiredAdventurerProfile
+): void {
+  const npc = getNpcById(db, id)
+  if (!npc || npc.catalogCreatureKey || npc.combatTier === 'catalog') {
+    return
+  }
+  if (npc.combatTier === 'retired_adventurer' && npc.retiredAdventurerProfile) {
+    return
+  }
+  applyTierStatsToRow(db, id, 'retired_adventurer', profile)
+}
 
 export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
   const id = randomUUID()
   const status = input.status ?? DEFAULT_STATUS
   const temperament = input.temperament ?? 'neutral'
   const canSpeak = input.canSpeak ?? true
+  const backstory = input.backstory ?? ''
 
   db.prepare(
-    `INSERT INTO npcs (id, campaign_id, region_id, name, role, disposition, alignment, temperament, can_speak, status, is_party_member)
-     VALUES (@id, @campaignId, @regionId, @name, @role, @disposition, @alignment, @temperament, @canSpeak, @status, 0)`
+    `INSERT INTO npcs (
+      id, campaign_id, region_id, name, role, disposition, alignment, temperament,
+      can_speak, status, is_party_member, backstory, catalog_creature_key, combat_tier
+    ) VALUES (
+      @id, @campaignId, @regionId, @name, @role, @disposition, @alignment, @temperament,
+      @canSpeak, @status, 0, @backstory, @catalogCreatureKey, 'villager'
+    )`
   ).run({
     id,
     campaignId: input.campaignId,
@@ -84,22 +194,16 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
     alignment: input.alignment ?? null,
     temperament,
     canSpeak: canSpeak ? 1 : 0,
-    status: JSON.stringify(status)
+    status: JSON.stringify(status),
+    backstory,
+    catalogCreatureKey: input.catalogCreatureKey ?? null
   })
 
-  return {
-    id,
-    campaignId: input.campaignId,
-    regionId: input.regionId,
-    name: input.name,
-    role: input.role,
-    disposition: input.disposition,
-    alignment: input.alignment ?? null,
-    temperament,
-    canSpeak,
-    status,
-    isPartyMember: false
+  if (!input.skipCombatHydration && !input.catalogCreatureKey) {
+    hydrateNpcVillagerTier(db, id)
   }
+
+  return getNpcById(db, id) as Npc
 }
 
 export function getNpcById(db: Database.Database, id: string): Npc | undefined {
@@ -147,4 +251,100 @@ export function updateNpcTraits(db: Database.Database, id: string, input: Update
     (input.canSpeak ?? npc.canSpeak) ? 1 : 0,
     id
   )
+}
+
+export interface NpcCombatStatsInput {
+  hp: number
+  maxHp: number
+  ac: number
+  attackBonus?: number
+  damageRoll?: import('../../engine/damage').DamageRoll
+  catalogCreatureKey?: string | null
+  temperament?: Temperament
+  canSpeak?: boolean
+  combatTier?: NpcCombatTier
+}
+
+export function setNpcCombatStats(db: Database.Database, id: string, stats: NpcCombatStatsInput): void {
+  const npc = getNpcById(db, id)
+  if (!npc) {
+    return
+  }
+  db.prepare(
+    `UPDATE npcs SET hp = ?, max_hp = ?, ac = ?, attack_bonus = COALESCE(?, attack_bonus),
+     damage_roll = COALESCE(?, damage_roll), catalog_creature_key = COALESCE(?, catalog_creature_key),
+     combat_tier = COALESCE(?, combat_tier), temperament = COALESCE(?, temperament),
+     can_speak = COALESCE(?, can_speak) WHERE id = ?`
+  ).run(
+    stats.hp,
+    stats.maxHp,
+    stats.ac,
+    stats.attackBonus ?? null,
+    stats.damageRoll ? serializeDamageRoll(stats.damageRoll) : null,
+    stats.catalogCreatureKey ?? null,
+    stats.combatTier ?? null,
+    stats.temperament ?? null,
+    stats.canSpeak === undefined ? null : stats.canSpeak ? 1 : 0,
+    id
+  )
+}
+
+export function applyNpcDamage(db: Database.Database, id: string, damage: number): number {
+  const npc = getNpcById(db, id)
+  if (!npc || npc.hp === null) {
+    return 0
+  }
+  const hpAfter = Math.max(0, npc.hp - damage)
+  db.prepare('UPDATE npcs SET hp = ? WHERE id = ?').run(hpAfter, id)
+  return hpAfter
+}
+
+export function setNpcConditions(db: Database.Database, id: string, conditions: Condition[]): void {
+  db.prepare('UPDATE npcs SET conditions = ? WHERE id = ?').run(JSON.stringify(conditions), id)
+}
+
+export function setNpcEncounterOutcome(
+  db: Database.Database,
+  id: string,
+  outcome: NpcYieldOutcome
+): void {
+  const npc = getNpcById(db, id)
+  if (!npc) {
+    return
+  }
+  if (outcome === 'slain') {
+    updateNpcStatus(db, id, { ...npc.status, alive: false })
+  }
+  db.prepare('UPDATE npcs SET encounter_outcome = ? WHERE id = ?').run(outcome, id)
+}
+
+export function npcHasCombatStats(npc: Npc): boolean {
+  return npc.hp !== null && npc.maxHp !== null && npc.ac !== null
+}
+
+export function isHostileNpc(npc: Npc): boolean {
+  return npc.disposition.toLowerCase().startsWith('hostile') && npc.status.alive
+}
+
+export function isNpcOutOfFight(npc: Npc): boolean {
+  if (npc.encounterOutcome !== null) {
+    return true
+  }
+  return npc.hp !== null && npc.hp <= 0
+}
+
+export function findNpcByNameInRegion(
+  db: Database.Database,
+  regionId: string,
+  nameQuery: string
+): Npc | undefined {
+  const normalized = nameQuery.trim().toLowerCase()
+  if (!normalized) {
+    return undefined
+  }
+  return listNpcsByRegion(db, regionId).find((npc) => npc.name.toLowerCase().includes(normalized))
+}
+
+export function isNpcAttackableInRegion(npc: Npc, regionId: string): boolean {
+  return npc.regionId === regionId && npc.status.alive && !npc.isPartyMember
 }

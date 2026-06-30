@@ -20,6 +20,9 @@ import {
 import {
   ADDITIONAL_REGION,
   LEGACY_NORMALIZE_PAYLOAD,
+  LEGACY_CAMPAIGN_SEED_PAYLOAD,
+  npcReviewResponses,
+  PRE_EXPANSION_CAMPAIGN_PAYLOAD,
   SETUP_INPUT,
   TRIM_NPCS_PAYLOAD,
   VALID_GENERATION
@@ -43,37 +46,7 @@ describe('normalizeCampaignGeneration', () => {
   })
 
   it('accepts the pre-expansion campaign shape with two regions and two NPCs', () => {
-    const normalized = normalizeCampaignGeneration({
-      regions: [
-        { name: 'The Azure Deep', description: 'A new oceanic frontier.', historyBackstory: 'Just discovered.' },
-        { name: 'Harbor of First Light', description: 'Explorer port.', historyBackstory: 'Built last season.' }
-      ],
-      npcs: [
-        {
-          name: 'Captain Reyes',
-          role: 'explorer',
-          disposition: 'Offers a charter if the party surveys the reef.',
-          regionName: 'The Azure Deep',
-          temperament: 'cunning',
-          canSpeak: true,
-          alignment: 'chaotic_good'
-        },
-        {
-          name: 'Sister Mael',
-          role: 'chronicler',
-          disposition: 'Seeks witnesses to the first landing.',
-          regionName: 'Harbor of First Light',
-          temperament: 'curious',
-          canSpeak: true,
-          alignment: 'neutral_good'
-        }
-      ],
-      story_thread: {
-        title: 'Ventures on the New Ocean',
-        state: 'starting',
-        summary: 'Explorers push into uncharted waters.'
-      }
-    })
+    const normalized = normalizeCampaignGeneration(PRE_EXPANSION_CAMPAIGN_PAYLOAD)
 
     expect(normalized?.regions).toHaveLength(2)
     expect(normalized?.npcs).toHaveLength(2)
@@ -83,46 +56,7 @@ describe('normalizeCampaignGeneration', () => {
 
 describe('generateCampaignSeed legacy compatibility', () => {
   it('accepts older-shaped model output after normalization', async () => {
-    const legacy = JSON.stringify({
-      regions: [
-        {
-          name: 'The Azure Deep',
-          description: 'A newly charted oceanic region.',
-          historyBackstory: 'Sailors only recently proved it navigable.'
-        },
-        {
-          name: 'Harbor of First Light',
-          description: 'The explorer port.',
-          historyBackstory: 'Founded to support the first voyages.'
-        }
-      ],
-      npcs: [
-        {
-          name: 'Captain Reyes',
-          role: 'explorer',
-          disposition: 'Offers a charter if the party surveys the reef.',
-          regionName: 'The Azure Deep',
-          temperament: 'cunning',
-          canSpeak: true,
-          alignment: 'chaotic_good'
-        },
-        {
-          name: 'Sister Mael',
-          role: 'chronicler',
-          disposition: 'Seeks witnesses to the first landing.',
-          regionName: 'Harbor of First Light',
-          temperament: 'curious',
-          canSpeak: true,
-          alignment: 'neutral_good'
-        }
-      ],
-      story_thread: {
-        title: 'Ventures on the New Ocean',
-        state: 'starting',
-        summary: 'Explorers push into uncharted waters.'
-      }
-    })
-    const provider = createScriptedProvider([legacy])
+    const provider = createScriptedProvider([JSON.stringify(LEGACY_CAMPAIGN_SEED_PAYLOAD)])
     const result = await generateCampaignSeed(
       provider,
       'A new oceanic region has been discovered and explorers are venturing out'
@@ -176,7 +110,7 @@ describe('generateAdditionalRegion', () => {
 describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 npcs/threads)', () => {
   it('writes regions (with history and quest hooks), NPCs, and the story thread', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION])
+    const provider = createScriptedProvider([VALID_GENERATION, ...npcReviewResponses(6)])
 
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 
@@ -202,13 +136,22 @@ describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 
 describe('persistRegionWithNpcs', () => {
   it('appends a region with history, quests, and three NPCs', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION])
+    const provider = createScriptedProvider([VALID_GENERATION, ...npcReviewResponses(6)])
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
     const additional = JSON.parse(ADDITIONAL_REGION) as {
       region: GeneratedRegion
       npcs: GeneratedNpc[]
     }
-    persistRegionWithNpcs(db, campaign.id, additional.region, additional.npcs)
+    const reviewProvider = createScriptedProvider(
+      additional.npcs.map(() => '{"upgrade":false}')
+    )
+    await persistRegionWithNpcs({
+      db,
+      provider: reviewProvider,
+      campaignId: campaign.id,
+      generatedRegion: additional.region,
+      generatedNpcs: additional.npcs
+    })
 
     const regions = listRegionsByCampaign(db, campaign.id)
     expect(regions).toHaveLength(3)
@@ -222,7 +165,7 @@ describe('persistRegionWithNpcs', () => {
 describe('generateAndPersistCampaign atomicity (007.4, persistence half)', () => {
   it('leaves no partial rows from a malformed attempt — exactly one complete campaign after malformed-then-valid', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider(['not json', VALID_GENERATION])
+    const provider = createScriptedProvider(['not json', VALID_GENERATION, ...npcReviewResponses(6)])
 
     await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 

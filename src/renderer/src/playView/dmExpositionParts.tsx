@@ -1,5 +1,8 @@
+import type { PlayLogEntry } from '../../../main/narrationLog'
+import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { PendingAlignmentShift } from '../../../shared/alignment/types'
 import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/types'
+import { pickCurrentSceneText } from '../../../shared/inCampaignLayout/sceneContext'
 import { FormattedText } from '../shared/FormattedText'
 
 export interface AlignmentShiftWarningBannerProps {
@@ -23,6 +26,89 @@ export function AlignmentShiftWarningBanner(
         </p>
       ) : null}
     </div>
+  )
+}
+
+export function DefeatDispositionBanner(props: { narrationText: string }): JSX.Element {
+  return (
+    <div className="dm-defeat-disposition-banner" role="alert">
+      <p className="dm-defeat-disposition-title">Defeated</p>
+      <p>{props.narrationText}</p>
+    </div>
+  )
+}
+
+export function XpRewardBanner(props: { narrationText: string }): JSX.Element {
+  return (
+    <div className="dm-xp-reward-banner" role="status">
+      <p className="dm-xp-reward-title">Experience</p>
+      <p>{props.narrationText}</p>
+    </div>
+  )
+}
+
+export function LootRewardBanner(props: { narrationText: string }): JSX.Element {
+  return (
+    <div className="dm-loot-reward-banner" role="status">
+      <p className="dm-loot-reward-title">Loot</p>
+      <p>{props.narrationText}</p>
+    </div>
+  )
+}
+
+export function ImprisonedStatusBanner(): JSX.Element {
+  return (
+    <div className="dm-imprisoned-status" role="status">
+      <p>You are imprisoned and cannot act freely until you escape.</p>
+    </div>
+  )
+}
+
+export function DmExpositionSceneHeader(props: {
+  entries: PlayLogEntry[]
+  expositionStatus: ExpositionStatus
+  onRetryExposition: () => void
+  pendingAlignmentShift: PendingAlignmentShift | null
+  playerAlignment: string | null
+  defeatDispositionNarration: string | null
+  xpNarration: string | null
+  lootNarration: string | null
+  playerImprisoned: boolean
+}): JSX.Element {
+  const sceneText = pickCurrentSceneText(props.entries)
+  const isLoading = props.expositionStatus.state === 'loading'
+  return (
+    <header className="dm-exposition-header">
+      <h2>Scene</h2>
+      {props.pendingAlignmentShift ? (
+        <AlignmentShiftWarningBanner
+          pending={props.pendingAlignmentShift}
+          playerAlignment={props.playerAlignment}
+        />
+      ) : null}
+      {props.playerImprisoned ? <ImprisonedStatusBanner /> : null}
+      {props.defeatDispositionNarration ? (
+        <DefeatDispositionBanner narrationText={props.defeatDispositionNarration} />
+      ) : null}
+      {props.xpNarration ? <XpRewardBanner narrationText={props.xpNarration} /> : null}
+      {props.lootNarration ? <LootRewardBanner narrationText={props.lootNarration} /> : null}
+      {isLoading ? <p className="dm-exposition-status dm-exposition-loading">Updating scene…</p> : null}
+      {props.expositionStatus.state === 'error' ? (
+        <div className="dm-exposition-status dm-exposition-error" role="alert">
+          <p>{props.expositionStatus.errorMessage}</p>
+          <button type="button" onClick={props.onRetryExposition}>
+            Retry
+          </button>
+        </div>
+      ) : null}
+      <div className="dm-exposition-scene" aria-live="polite">
+        {sceneText ? (
+          FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: sceneText })
+        ) : (
+          <p className="dm-exposition-scene-empty">No scene set yet — act to begin.</p>
+        )}
+      </div>
+    </header>
   )
 }
 

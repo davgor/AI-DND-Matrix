@@ -1,6 +1,8 @@
 import type {
   CampaignsApi,
   CharactersApi,
+  CombatApi,
+  ProgressionApi,
   FilesApi,
   GuidedCreationApi,
   SettingsApi,
@@ -17,6 +19,8 @@ declare global {
     characters: CharactersApi
     guidedCreation: GuidedCreationApi
     turn: TurnApi
+    combat: CombatApi
+    progression: ProgressionApi
     startup: StartupApi
     settings: SettingsApi
   }

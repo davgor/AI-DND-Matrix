@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { npcReviewResponses } from '../agents/campaignGeneration.fixtures'
 import {
   generateCampaignFromPrompt,
   getCampaignDetail,
@@ -21,6 +22,7 @@ const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: stri
     {
       name: `${prefix} One`,
       role: 'guide',
+      backstory: `${prefix} One has lived in ${name} for years.`,
       disposition: 'friendly',
       regionName: name,
       temperament: 'neutral',
@@ -30,6 +32,7 @@ const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: stri
     {
       name: `${prefix} Two`,
       role: 'merchant',
+      backstory: `${prefix} Two runs a stall in ${name}.`,
       disposition: 'curious',
       regionName: name,
       temperament: 'curious',
@@ -39,6 +42,7 @@ const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: stri
     {
       name: npcName,
       role: 'shopkeeper',
+      backstory: `${npcName} keeps a shop on the main road through ${name}.`,
       disposition: 'friendly',
       regionName: name,
       temperament: 'cautious',
@@ -56,7 +60,10 @@ const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: stri
 describe('generateCampaignFromPrompt + selectCampaign + listCampaignsForSidebar', () => {
   it('generates, persists, and immediately marks the campaign as last-played', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION('Oakhollow', 'Mira', 'Main Arc')])
+    const provider = createScriptedProvider([
+      VALID_GENERATION('Oakhollow', 'Mira', 'Main Arc'),
+      ...npcReviewResponses(6)
+    ])
 
     const detail = await generateCampaignFromPrompt(db, provider, 'A flooded kingdom')
 
@@ -73,7 +80,10 @@ describe('generateCampaignFromPrompt + selectCampaign + listCampaignsForSidebar'
 
   it('selecting a campaign touches last-played and returns its detail', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION('Oakhollow', 'Mira', 'Main Arc')])
+    const provider = createScriptedProvider([
+      VALID_GENERATION('Oakhollow', 'Mira', 'Main Arc'),
+      ...npcReviewResponses(6)
+    ])
     const generated = await generateCampaignFromPrompt(db, provider, 'A flooded kingdom')
 
     const detail = selectCampaign(db, generated.campaign!.id)
@@ -84,8 +94,14 @@ describe('generateCampaignFromPrompt + selectCampaign + listCampaignsForSidebar'
 describe('multi-campaign isolation (008.5)', () => {
   it('never mixes one campaign\'s regions/NPCs/threads with another\'s', async () => {
     const db = createTestDb()
-    const providerA = createScriptedProvider([VALID_GENERATION('Oakhollow', 'Mira', 'The Sunken Crown')])
-    const providerB = createScriptedProvider([VALID_GENERATION('Frosthaven', 'Borin', 'The Frozen Pact')])
+    const providerA = createScriptedProvider([
+      VALID_GENERATION('Oakhollow', 'Mira', 'The Sunken Crown'),
+      ...npcReviewResponses(6)
+    ])
+    const providerB = createScriptedProvider([
+      VALID_GENERATION('Frosthaven', 'Borin', 'The Frozen Pact'),
+      ...npcReviewResponses(6)
+    ])
 
     const campaignA = await generateCampaignFromPrompt(db, providerA, 'A flooded kingdom')
     const campaignB = await generateCampaignFromPrompt(db, providerB, 'A frozen wasteland')

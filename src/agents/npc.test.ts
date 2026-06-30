@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { appendNpcMemory } from '../db/repositories/npcMemories'
-import { createNpc } from '../db/repositories/npcs'
+import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createWorldFact } from '../db/repositories/worldFacts'
 import { createScriptedProvider } from './providers/mockHarness'
@@ -75,7 +75,23 @@ describe('assembleNpcContext', () => {
   })
 })
 
-describe('generateNpcReaction', () => {
+describe('generateNpcReaction backstory', () => {
+  it('includes persisted backstory in speaking NPC prompts', async () => {
+    const db = createTestDb()
+    const { npcA } = seedTwoNpcs(db)
+    db.prepare('UPDATE npcs SET backstory = ? WHERE id = ?').run(
+      'Bram has chopped wood on this lane for twenty years.',
+      npcA.id
+    )
+    const npc = getNpcById(db, npcA.id)!
+    const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
+    await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'The player arrives.')
+    expect(provider.calls[0]?.prompt).toContain('Bram has chopped wood')
+    expect(provider.calls[0]?.prompt).toContain('do not contradict')
+  })
+})
+
+describe('generateNpcReaction dialogue', () => {
   it('returns the NPC dialogue with no attack when none is proposed', async () => {
     const db = createTestDb()
     const { npcA } = seedTwoNpcs(db)

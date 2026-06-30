@@ -5,6 +5,7 @@ import { useInCampaignLayoutMode } from '../inCampaign/useInCampaignLayoutMode'
 import { PromotionPrompt } from './PromotionPrompt'
 import { RecapBanner } from './RecapBanner'
 import { InCampaignPlayColumns, type PlayViewCampaignProps } from './InCampaignPlayColumns'
+import { LevelUpModal } from './LevelUpModal'
 import { usePlayViewController } from './usePlayViewController'
 import './playView.css'
 
@@ -45,6 +46,11 @@ export function PlayView(props: PlayViewProps): JSX.Element {
           <>
             <RecapBanner recap={controller.recap} />
             <PromotionPrompt promotion={controller.promotion} />
+            <LevelUpModal
+              characterId={props.characterId}
+              refreshToken={controller.characterRefreshToken}
+              onComplete={controller.notifyPerkChosen}
+            />
           </>
         }
       />

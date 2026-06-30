@@ -4,6 +4,8 @@ import { CharacterInventorySection } from './CharacterInventorySection'
 import { CharacterIdentitySection } from './CharacterIdentitySection'
 import { CharacterJournalSection } from './CharacterJournalSection'
 import { CharacterLogBookModal } from './CharacterLogBookModal'
+import { CharacterPerksSection } from './CharacterPerksSection'
+import { CharacterXpSection } from './CharacterXpSection'
 import './characterInventory.css'
 import './characterIdentity.css'
 import './characterJournal.css'
@@ -36,10 +38,12 @@ export function CharacterSheetBody(props: CharacterSheetBodyProps): JSX.Element 
       <CharacterSheetImages character={character} compact={props.compact} />
       <h2 className="character-sheet-name">{character.name}</h2>
       <p className="character-sheet-class">
-        {character.characterClass} - Level {character.level}
+        {character.characterClass} — Level {character.level}
       </p>
+      <CharacterXpSection character={character} compact={props.compact} />
       <CharacterSheetVitals character={character} ac={stats.ac} />
       <AbilityScoresList abilityScores={stats.abilityScores} />
+      <CharacterPerksSection stats={character.stats} />
       <CharacterIdentitySection character={character} />
       <CharacterJournalSection character={character} />
       <div className="character-log-book-actions">

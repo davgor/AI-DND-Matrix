@@ -1,8 +1,10 @@
+import type { FleeTurnOutcome } from '../../../shared/combat/flee/types'
+import type { CombatStateSnapshot } from '../../../shared/combat/types'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
 import type { PlayLogController } from './usePlayLog'
 import type { PromotionPromptController } from './usePromotionPrompt'
-import { failedExposition } from './submitPlayerTurn'
+import { failedTurnSubmission } from './turnSubmissionFailure'
 import { runTurnSubmission } from './runTurnSubmission'
 
 export async function refreshPlayerAlignmentState(
@@ -30,6 +32,12 @@ export async function executeTurnSubmission(input: {
   characterRefreshToken: number
   pendingAlignmentShift: PendingAlignmentShift | null
   playerAlignment: Alignment | null
+  combatState: CombatStateSnapshot | null
+  fleeOutcome: FleeTurnOutcome | null
+  defeatDispositionNarration: string | null
+  xpNarration: string | null
+  lootNarration: string | null
+  playerImprisoned: boolean
 }> {
   try {
     const outcome = await runTurnSubmission(input)
@@ -38,15 +46,15 @@ export async function executeTurnSubmission(input: {
       lastCheck: outcome.lastCheck,
       characterRefreshToken: outcome.characterRefreshToken,
       pendingAlignmentShift: outcome.pendingAlignmentShift,
-      playerAlignment: outcome.playerAlignment
+      playerAlignment: outcome.playerAlignment,
+      combatState: outcome.combatState,
+      fleeOutcome: outcome.fleeOutcome,
+      defeatDispositionNarration: outcome.defeatDispositionNarration,
+      xpNarration: outcome.xpNarration,
+      lootNarration: outcome.lootNarration,
+      playerImprisoned: outcome.playerImprisoned
     }
   } catch {
-    return {
-      expositionStatus: failedExposition('Could not update the scene. Check your connection and try again.'),
-      lastCheck: null,
-      characterRefreshToken: input.characterRefreshToken,
-      pendingAlignmentShift: null,
-      playerAlignment: null
-    }
+    return failedTurnSubmission(input.characterRefreshToken)
   }
 }

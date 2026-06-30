@@ -3,6 +3,8 @@ import {
   filterPlayerInteractionEntries
 } from '../../../shared/inCampaignLayout/sceneContext'
 import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
+import type { CombatStateSnapshot } from '../../../shared/combat/types'
+import type { FleeTurnOutcome } from '../../../shared/combat/flee/types'
 import { usePlayLog, type PlayLogController } from './usePlayLog'
 import { useRollVisibility, type RollVisibilityController } from './useRollVisibility'
 import { useSessionRecap, type SessionRecapController } from './useSessionRecap'
@@ -24,6 +26,13 @@ export interface PlayViewController extends RollVisibilityController, PlayLogCon
   promotion: PromotionPromptController
   pendingAlignmentShift: PendingAlignmentShift | null
   playerAlignment: Alignment | null
+  combatState: CombatStateSnapshot | null
+  fleeOutcome: FleeTurnOutcome | null
+  defeatDispositionNarration: string | null
+  xpNarration: string | null
+  lootNarration: string | null
+  playerImprisoned: boolean
+  notifyPerkChosen: () => void
 }
 
 export function usePlayViewController(campaignId: string, characterId: string): PlayViewController {
@@ -46,6 +55,13 @@ export function usePlayViewController(campaignId: string, characterId: string): 
     recap,
     promotion,
     pendingAlignmentShift: turn.pendingAlignmentShift,
-    playerAlignment: turn.playerAlignment
+    playerAlignment: turn.playerAlignment,
+    combatState: turn.combatState,
+    fleeOutcome: turn.fleeOutcome,
+    defeatDispositionNarration: turn.defeatDispositionNarration,
+    xpNarration: turn.xpNarration,
+    lootNarration: turn.lootNarration,
+    playerImprisoned: turn.playerImprisoned,
+    notifyPerkChosen: turn.notifyPerkChosen
   }
 }

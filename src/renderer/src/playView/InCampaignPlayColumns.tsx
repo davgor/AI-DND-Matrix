@@ -6,7 +6,7 @@ import type { useSidebarController } from '../sidebar/useSidebarController'
 import { PlayerSheetRail } from '../characterSheet/PlayerSheetRail'
 import { InCampaignLayout } from '../inCampaign/InCampaignLayout'
 import type { InCampaignLayoutMode } from '../../../shared/inCampaignLayout/types'
-import { DmExpositionPanel } from './DmExpositionPanel'
+import { PlayDmExpositionColumn } from './PlayDmExpositionColumn'
 import { PlayerActionPanel } from './PlayerActionPanel'
 import type { usePlayViewController } from './usePlayViewController'
 
@@ -39,18 +39,7 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
           onRequestDelete={props.onRequestDelete}
         />
       }
-      dmExposition={
-        <DmExpositionPanel
-          entries={controller.dmEntries}
-          expositionStatus={controller.expositionStatus}
-          onRetryExposition={controller.retryExposition}
-          showRolls={controller.showRolls}
-          onToggleShowRolls={controller.toggleShowRolls}
-          lastCheck={controller.lastCheck}
-          pendingAlignmentShift={controller.pendingAlignmentShift}
-          playerAlignment={controller.playerAlignment}
-        />
-      }
+      dmExposition={<PlayDmExpositionColumn layoutMode={props.layoutMode} controller={controller} />}
       playerInteraction={
         <PlayerActionPanel
           entries={controller.playerEntries}

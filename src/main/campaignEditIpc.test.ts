@@ -4,6 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { npcReviewResponses } from '../agents/campaignGeneration.fixtures'
 import { editNpcDisposition, editNpcTraits, editRegionDescription, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
 
 function makeRegion(name: string) {
@@ -21,6 +22,7 @@ function makeNpcs(regionName: string, prefix: string) {
     {
       name: `${prefix} One`,
       role: 'guide',
+      backstory: `${prefix} One has lived in ${regionName} for years.`,
       disposition: 'friendly',
       regionName,
       temperament: 'neutral',
@@ -30,6 +32,7 @@ function makeNpcs(regionName: string, prefix: string) {
     {
       name: `${prefix} Two`,
       role: 'merchant',
+      backstory: `${prefix} Two runs a stall in ${regionName}.`,
       disposition: 'curious',
       regionName,
       temperament: 'curious',
@@ -39,6 +42,7 @@ function makeNpcs(regionName: string, prefix: string) {
     {
       name: `${prefix} Three`,
       role: 'guard',
+      backstory: `${prefix} Three keeps watch near ${regionName}.`,
       disposition: 'wary',
       regionName,
       temperament: 'disciplined',
@@ -131,7 +135,7 @@ describe('editNpcTraits', () => {
 describe('generateRegionForCampaign', () => {
   it('adds a generated region with extras and three NPCs', async () => {
     const { db, campaign } = seedCampaignWithRegionAndNpc()
-    const provider = createScriptedProvider([ADDITIONAL_REGION])
+    const provider = createScriptedProvider([ADDITIONAL_REGION, ...npcReviewResponses(3)])
 
     const detail = await generateRegionForCampaign(db, provider, {
       campaignId: campaign.id,

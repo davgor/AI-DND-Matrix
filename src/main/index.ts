@@ -18,6 +18,8 @@ import { registerRecapHandlers } from './recapIpc'
 import { registerSettingsHandlers } from './settingsIpc'
 import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
+import { registerCombatHandlers } from './combatIpc'
+import { registerProgressionHandlers } from './progressionIpc'
 
 Menu.setApplicationMenu(null)
 loadConfig()
@@ -75,6 +77,8 @@ app.whenReady().then(() => {
   registerLogBookHandlers()
   registerGuidedCreationHandlers()
   registerTurnHandlers()
+  registerCombatHandlers()
+  registerProgressionHandlers()
   registerRecapHandlers()
   registerNarrationLogHandlers()
   registerPromotionHandlers()

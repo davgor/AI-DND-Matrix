@@ -1,11 +1,9 @@
-import { useEffect, useState } from 'react'
-import type { TurnResult } from '../../../main/turnIpc'
-import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
-import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
 import type { PlayLogController } from './usePlayLog'
 import type { PromotionPromptController } from './usePromotionPrompt'
-import { idleExposition, loadingExposition } from './submitPlayerTurn'
-import { executeTurnSubmission, refreshPlayerAlignmentState } from './turnSubmissionActions'
+import { idleExposition } from './submitPlayerTurn'
+import { useAlignmentCombatBootstrap } from './useAlignmentCombatBootstrap'
+import { createSubmitAction } from './useTurnSubmitAction'
+import { useTurnSubmissionState } from './useTurnSubmissionState'
 
 export function useTurnSubmission(input: {
   campaignId: string
@@ -13,48 +11,34 @@ export function useTurnSubmission(input: {
   playLog: PlayLogController
   promotion: PromotionPromptController
 }) {
-  const [inputValue, setInputValue] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [lastCheck, setLastCheck] = useState<TurnResult['check'] | null>(null)
-  const [characterRefreshToken, setCharacterRefreshToken] = useState(0)
-  const [expositionStatus, setExpositionStatus] = useState<ExpositionStatus>(idleExposition())
-  const [pendingAlignmentShift, setPendingAlignmentShift] = useState<PendingAlignmentShift | null>(null)
-  const [playerAlignment, setPlayerAlignment] = useState<Alignment | null>(null)
-
-  useEffect(() => {
-    void refreshPlayerAlignmentState(input.campaignId, input.characterId).then((state) => {
-      setPendingAlignmentShift(state.pending)
-      setPlayerAlignment(state.alignment)
-    })
-  }, [input.campaignId, input.characterId, characterRefreshToken])
-
-  async function submitAction(): Promise<void> {
-    if (!inputValue.trim() || submitting) return
-    setSubmitting(true)
-    setExpositionStatus(loadingExposition())
-    const outcome = await executeTurnSubmission({ ...input, playerInput: inputValue, characterRefreshToken })
-    setInputValue('')
-    setLastCheck(outcome.lastCheck)
-    setCharacterRefreshToken(outcome.characterRefreshToken)
-    setExpositionStatus(outcome.expositionStatus)
-    setPendingAlignmentShift(outcome.pendingAlignmentShift)
-    if (outcome.playerAlignment) setPlayerAlignment(outcome.playerAlignment)
-    setSubmitting(false)
-  }
+  const state = useTurnSubmissionState()
+  const alignmentCombat = useAlignmentCombatBootstrap(
+    input.campaignId,
+    input.characterId,
+    state.characterRefreshToken
+  )
+  const submitAction = createSubmitAction({ ...input, state, alignmentCombat })
 
   return {
-    inputValue,
-    setInputValue,
-    submitting,
+    inputValue: state.inputValue,
+    setInputValue: state.setInputValue,
+    submitting: state.submitting,
     submitAction,
-    lastCheck,
-    expositionStatus,
+    lastCheck: state.lastCheck,
+    expositionStatus: state.expositionStatus,
     retryExposition: () => {
-      setExpositionStatus(idleExposition())
+      state.setExpositionStatus(idleExposition())
       void input.playLog.refreshLog()
     },
-    characterRefreshToken,
-    pendingAlignmentShift,
-    playerAlignment
+    characterRefreshToken: state.characterRefreshToken,
+    pendingAlignmentShift: alignmentCombat.pendingAlignmentShift,
+    playerAlignment: alignmentCombat.playerAlignment,
+    combatState: alignmentCombat.combatState,
+    fleeOutcome: state.fleeOutcome,
+    defeatDispositionNarration: state.defeatDispositionNarration,
+    xpNarration: state.xpNarration,
+    lootNarration: state.lootNarration,
+    playerImprisoned: state.playerImprisoned,
+    notifyPerkChosen: () => state.setCharacterRefreshToken((token) => token + 1)
   }
 }

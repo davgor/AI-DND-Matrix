@@ -2,9 +2,7 @@ import type { PlayLogEntry } from '../../../main/narrationLog'
 import type { TurnResult } from '../../../main/turnIpc'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { PendingAlignmentShift } from '../../../shared/alignment/types'
-import { pickCurrentSceneText } from '../../../shared/inCampaignLayout/sceneContext'
-import { FormattedText } from '../shared/FormattedText'
-import { AlignmentShiftWarningBanner, renderFeedLine } from './dmExpositionParts'
+import { DmExpositionSceneHeader, renderFeedLine } from './dmExpositionParts'
 
 export interface DmExpositionPanelProps {
   entries: PlayLogEntry[]
@@ -15,6 +13,10 @@ export interface DmExpositionPanelProps {
   lastCheck: TurnResult['check'] | null
   pendingAlignmentShift: PendingAlignmentShift | null
   playerAlignment: string | null
+  defeatDispositionNarration: string | null
+  xpNarration: string | null
+  lootNarration: string | null
+  playerImprisoned: boolean
 }
 
 function formatRoll(check: NonNullable<TurnResult['check']>): string {
@@ -22,36 +24,19 @@ function formatRoll(check: NonNullable<TurnResult['check']>): string {
 }
 
 export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
-  const sceneText = pickCurrentSceneText(props.entries)
-  const isLoading = props.expositionStatus.state === 'loading'
-
   return (
     <div className="play-view-panel play-view-dm-panel dm-exposition-panel">
-      <header className="dm-exposition-header">
-        <h2>Scene</h2>
-        {props.pendingAlignmentShift ? (
-          <AlignmentShiftWarningBanner
-            pending={props.pendingAlignmentShift}
-            playerAlignment={props.playerAlignment}
-          />
-        ) : null}
-        {isLoading ? <p className="dm-exposition-status dm-exposition-loading">Updating scene…</p> : null}
-        {props.expositionStatus.state === 'error' ? (
-          <div className="dm-exposition-status dm-exposition-error" role="alert">
-            <p>{props.expositionStatus.errorMessage}</p>
-            <button type="button" onClick={props.onRetryExposition}>
-              Retry
-            </button>
-          </div>
-        ) : null}
-        <div className="dm-exposition-scene" aria-live="polite">
-          {sceneText ? (
-            FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: sceneText })
-          ) : (
-            <p className="dm-exposition-scene-empty">No scene set yet — act to begin.</p>
-          )}
-        </div>
-      </header>
+      <DmExpositionSceneHeader
+        entries={props.entries}
+        expositionStatus={props.expositionStatus}
+        onRetryExposition={props.onRetryExposition}
+        pendingAlignmentShift={props.pendingAlignmentShift}
+        playerAlignment={props.playerAlignment}
+        defeatDispositionNarration={props.defeatDispositionNarration}
+        xpNarration={props.xpNarration}
+        lootNarration={props.lootNarration}
+        playerImprisoned={props.playerImprisoned}
+      />
       <label className="play-view-roll-toggle">
         <input type="checkbox" checked={props.showRolls} onChange={props.onToggleShowRolls} />
         Show rolls

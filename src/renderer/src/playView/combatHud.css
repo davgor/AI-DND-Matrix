@@ -1,0 +1,117 @@
+.combat-hud {
+  background: var(--surface-scene);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.combat-hud--compact {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+}
+
+.combat-hud-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.combat-hud-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--text-accent);
+}
+
+.combat-hud-round {
+  color: var(--text-muted);
+}
+
+.combat-hud-initiative {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.combat-hud-initiative li {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.combat-hud-initiative-active {
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.combat-hud-initiative-roll {
+  color: var(--text-dim);
+}
+
+.combat-hud-combatants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.combat-hud-combatants li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.combat-hud-hp {
+  color: var(--text-muted);
+}
+
+.combat-hud-condition {
+  background: rgba(232, 160, 144, 0.15);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 11px;
+}
+
+.combat-hud-fleeing {
+  color: var(--text-accent);
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.combat-hud-player-exited {
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0 0 6px;
+}
+
+.combat-hud-yield-badge {
+  border-radius: 4px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.combat-hud-yield-badge--surrendered {
+  background: rgba(144, 200, 144, 0.2);
+  color: var(--text-accent);
+}
+
+.combat-hud-yield-badge--fled {
+  background: rgba(200, 200, 144, 0.2);
+  color: var(--text-muted);
+}
+
+.combat-hud-yield-badge--incapacitated {
+  background: rgba(160, 160, 200, 0.2);
+  color: var(--text-dim);
+}

@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3'
 import type { Alignment, Temperament } from '../shared/alignment/types'
 import { isAlignment, isTemperament } from '../shared/alignment/types'
 import { createCampaign, type Campaign, type DeathMode, type RespawnRules } from '../db/repositories/campaigns'
-import { createNpc } from '../db/repositories/npcs'
+import { createNpcWithCombatReview } from '../db/repositories/npcCombatHydration'
 import { createRegion } from '../db/repositories/regions'
 import { createRegionHistoryEntry } from '../db/repositories/regionHistory'
 import { createStoryThread } from '../db/repositories/storyThreads'
@@ -37,6 +37,7 @@ export interface GeneratedNpc {
   temperament: Temperament
   canSpeak: boolean
   alignment?: Alignment
+  backstory?: string
 }
 
 export interface GeneratedStoryThread {
@@ -149,7 +150,7 @@ function normalizeGeneratedRegion(value: unknown): GeneratedRegion | undefined {
 
 function readNpcBehaviorFields(
   record: Record<string, unknown>
-): Pick<GeneratedNpc, 'temperament' | 'canSpeak' | 'alignment'> | undefined {
+): Pick<GeneratedNpc, 'temperament' | 'canSpeak' | 'alignment' | 'backstory'> | undefined {
   const temperament = record['temperament']
   const canSpeak = record['canSpeak'] ?? record['can_speak']
   if (!isTemperament(temperament) || typeof canSpeak !== 'boolean') {
@@ -157,7 +158,10 @@ function readNpcBehaviorFields(
   }
   if (canSpeak) {
     const alignment = record['alignment']
-    return isAlignment(alignment) ? { temperament, canSpeak, alignment } : undefined
+    const backstory = readString(record, 'backstory')
+    return isAlignment(alignment) && backstory
+      ? { temperament, canSpeak, alignment, backstory }
+      : undefined
   }
   return { temperament, canSpeak }
 }
@@ -315,20 +319,30 @@ function isGeneratedRegion(value: unknown): value is GeneratedRegion {
   )
 }
 
+function hasValidNpcBackstory(n: Record<string, unknown>): boolean {
+  const canSpeak = n['canSpeak']
+  return canSpeak === false || (typeof n['backstory'] === 'string' && n['backstory'].trim().length > 0)
+}
+
+function hasValidNpcAlignment(n: Record<string, unknown>): boolean {
+  const canSpeak = n['canSpeak']
+  return canSpeak === false || isAlignment(n['alignment'])
+}
+
 function isGeneratedNpc(value: unknown): value is GeneratedNpc {
   if (typeof value !== 'object' || value === null) {
     return false
   }
   const n = value as Record<string, unknown>
-  const canSpeak = n['canSpeak']
   return (
     typeof n['name'] === 'string' &&
     typeof n['role'] === 'string' &&
     typeof n['disposition'] === 'string' &&
     typeof n['regionName'] === 'string' &&
     isTemperament(n['temperament']) &&
-    typeof canSpeak === 'boolean' &&
-    (canSpeak === false || isAlignment(n['alignment']))
+    typeof n['canSpeak'] === 'boolean' &&
+    hasValidNpcBackstory(n) &&
+    hasValidNpcAlignment(n)
   )
 }
 
@@ -419,6 +433,7 @@ const REGION_JSON_EXAMPLE = JSON.stringify({
 const NPC_JSON_EXAMPLE = JSON.stringify({
   name: 'Captain Elira Voss',
   role: 'harbor master',
+  backstory: 'Elira spent twenty years charting reefs before settling ashore as harbor master.',
   disposition: 'Cautious but curious; offers charts if the party investigates the missing crews.',
   regionName: 'Tidemark Reach',
   alignment: 'lawful_neutral',
@@ -432,8 +447,9 @@ function buildGenerationPrompt(premisePrompt: string): string {
     premisePrompt,
     `Generate ${MIN_REGIONS}-${MAX_REGIONS} starting regions, exactly ${NPCS_PER_REGION} key NPCs per region, and one main story thread.`,
     'Each region must include: name, description, historyBackstory, recentHistory, potentialQuests (2-3 short quest hooks).',
-    'Each NPC must include: name, role, disposition (with a player hook), regionName matching a region name exactly, temperament (aggressive|cautious|curious|territorial|skittish|disciplined|cunning|mindless|neutral), and canSpeak (boolean).',
-    'Speaking NPCs (canSpeak true) must include alignment (lawful_good|neutral_good|chaotic_good|lawful_neutral|true_neutral|chaotic_neutral|lawful_evil|neutral_evil|chaotic_evil). Beasts and mindless undead use canSpeak false and omit alignment.',
+    'Each NPC must include: name, role, disposition (attitude toward the player, consistent with backstory), regionName matching a region name exactly, temperament (aggressive|cautious|curious|territorial|skittish|disciplined|cunning|mindless|neutral), and canSpeak (boolean).',
+    'Speaking NPCs (canSpeak true) must include alignment and backstory (1-3 sentences of past history). Most NPCs are ordinary people with mundane backstories — combative or adventuring pasts are unlikely exceptions, not the default cast. When a veteran past is included, state it plainly in backstory.',
+    'Speaking NPCs (canSpeak true) must include alignment (lawful_good|neutral_good|chaotic_good|lawful_neutral|true_neutral|chaotic_neutral|lawful_evil|neutral_evil|chaotic_evil). Beasts and mindless undead use canSpeak false and omit alignment and backstory.',
     'Example region object:',
     REGION_JSON_EXAMPLE,
     'Example NPC object:',
@@ -469,12 +485,16 @@ function buildAdditionalRegionPrompt(
   ].join('\n')
 }
 
-export function persistRegionWithNpcs(
-  db: Database.Database,
-  campaignId: string,
-  generatedRegion: GeneratedRegion,
+export interface PersistRegionWithNpcsInput {
+  db: Database.Database
+  provider: Provider
+  campaignId: string
+  generatedRegion: GeneratedRegion
   generatedNpcs: GeneratedNpc[]
-): void {
+}
+
+export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): Promise<void> {
+  const { db, provider, campaignId, generatedRegion, generatedNpcs } = input
   const region = createRegion(db, {
     campaignId,
     name: generatedRegion.name,
@@ -507,7 +527,7 @@ export function persistRegionWithNpcs(
         `Generated NPC "${generatedNpc.name}" references wrong region "${generatedNpc.regionName}"`
       )
     }
-    createNpc(db, {
+    await createNpcWithCombatReview(db, provider, {
       campaignId,
       regionId: region.id,
       name: generatedNpc.name,
@@ -515,7 +535,8 @@ export function persistRegionWithNpcs(
       disposition: generatedNpc.disposition,
       alignment: generatedNpc.alignment ?? null,
       temperament: generatedNpc.temperament,
-      canSpeak: generatedNpc.canSpeak
+      canSpeak: generatedNpc.canSpeak,
+      backstory: generatedNpc.backstory ?? ''
     })
   }
 }
@@ -603,12 +624,16 @@ function persistGeneratedRegionsWithQuests(
   return regionIdsByName
 }
 
-function persistCampaignNpcsFromGeneration(
-  db: Database.Database,
-  campaignId: string,
-  npcs: GeneratedNpc[],
+interface PersistCampaignNpcsInput {
+  db: Database.Database
+  provider: Provider
+  campaignId: string
+  npcs: GeneratedNpc[]
   regionIdsByName: Map<string, string>
-): void {
+}
+
+async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput): Promise<void> {
+  const { db, provider, campaignId, npcs, regionIdsByName } = input
   for (const generatedNpc of npcs) {
     const regionId = regionIdsByName.get(generatedNpc.regionName)
     if (!regionId) {
@@ -616,7 +641,7 @@ function persistCampaignNpcsFromGeneration(
         `Generated NPC "${generatedNpc.name}" references unknown region "${generatedNpc.regionName}"`
       )
     }
-    createNpc(db, {
+    await createNpcWithCombatReview(db, provider, {
       campaignId,
       regionId,
       name: generatedNpc.name,
@@ -624,16 +649,18 @@ function persistCampaignNpcsFromGeneration(
       disposition: generatedNpc.disposition,
       alignment: generatedNpc.alignment ?? null,
       temperament: generatedNpc.temperament,
-      canSpeak: generatedNpc.canSpeak
+      canSpeak: generatedNpc.canSpeak,
+      backstory: generatedNpc.backstory ?? ''
     })
   }
 }
 
-export function persistGeneratedCampaign(
+export async function persistGeneratedCampaign(
   db: Database.Database,
+  provider: Provider,
   input: CampaignSetupInput,
   generation: CampaignGenerationResult
-): Campaign {
+): Promise<Campaign> {
   const campaign = createCampaign(db, {
     name: input.name,
     premisePrompt: input.premisePrompt,
@@ -642,7 +669,13 @@ export function persistGeneratedCampaign(
   })
 
   const regionIdsByName = persistGeneratedRegionsWithQuests(db, campaign.id, generation.regions)
-  persistCampaignNpcsFromGeneration(db, campaign.id, generation.npcs, regionIdsByName)
+  await persistCampaignNpcsFromGeneration({
+    db,
+    provider,
+    campaignId: campaign.id,
+    npcs: generation.npcs,
+    regionIdsByName
+  })
 
   createStoryThread(db, {
     campaignId: campaign.id,
@@ -660,5 +693,5 @@ export async function generateAndPersistCampaign(
   input: CampaignSetupInput
 ): Promise<Campaign> {
   const generation = await generateCampaignSeed(provider, input.premisePrompt)
-  return db.transaction(() => persistGeneratedCampaign(db, input, generation))()
+  return persistGeneratedCampaign(db, provider, input, generation)
 }

@@ -1,0 +1,34 @@
+.character-perks-section {
+  margin-top: 1rem;
+}
+
+.character-perks-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.character-perks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.character-perk-item {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.character-perk-level {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.character-perk-mechanical {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}

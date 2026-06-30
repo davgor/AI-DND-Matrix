@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../testUtils'
 import { createCampaign } from './campaigns'
-import {
-  createNpc,
-  getNpcById,
-  listNpcsByRegion,
-  markNpcPromoted,
-  updateNpcDisposition,
-  updateNpcStatus
-} from './npcs'
+import { createNpc, getNpcById, listNpcsByRegion, markNpcPromoted, updateNpcDisposition, updateNpcStatus } from './npcs'
 import { createRegion } from './regions'
 
 function seedRegion(db: ReturnType<typeof createTestDb>) {
@@ -33,9 +26,12 @@ describe('npcs repository: create + getById round-trip', () => {
       disposition: 'friendly'
     })
 
-    expect(getNpcById(db, created.id)).toEqual(created)
-    expect(created.status).toEqual({ alive: true })
-    expect(created.isPartyMember).toBe(false)
+    const loaded = getNpcById(db, created.id)
+    expect(loaded?.name).toBe('Bram the Woodcutter')
+    expect(loaded?.hp).toBe(6)
+    expect(loaded?.combatTier).toBe('villager')
+    expect(loaded?.status).toEqual({ alive: true })
+    expect(loaded?.isPartyMember).toBe(false)
   })
 })
 
