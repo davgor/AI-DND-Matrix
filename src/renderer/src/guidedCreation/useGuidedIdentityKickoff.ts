@@ -26,12 +26,9 @@ export function useGuidedIdentityKickoff(input: {
     [
       input.campaignId,
       input.characterId,
-      input.kickingOff,
-      input.loading,
       input.onStateChange,
       input.phase,
       input.refresh,
-      input.sending,
       input.setError,
       input.setKickingOff,
       input.state?.messages

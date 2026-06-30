@@ -28,9 +28,9 @@ function startIdentityKickoff(input: {
       input.setError('The DM could not start the interview. Try reloading.')
     })
     .finally(() => {
-      if (!cancelled) {
-        input.setKickingOff(false)
-      }
+      // Always clear — effect re-runs (e.g. after refresh updates messages) call cleanup
+      // and must not leave kickingOff stuck true once the kickoff promise settles.
+      input.setKickingOff(false)
     })
   return () => {
     cancelled = true
