@@ -2,9 +2,20 @@
 
 A single-player, text-adventure-style TTRPG desktop app (Electron + React + TypeScript). Two cooperating AI agents run the game — a **DM agent** that sets scenes, drives the plot, and designs encounters, and **NPC/party-member agents** that roleplay individual characters and enemies. Campaigns are generated from a free-text prompt and then played; world state is durable and causally consistent — if you burn down a village, every later scene remembers it's gone.
 
+Each campaign supports **multiple player characters** in one shared world. After the first character finishes guided creation, re-opening the campaign lands on a **Campaign Hub** (world preview + character cast rail) instead of jumping straight into play.
+
 ## Status
 
-Core gameplay loop (campaign generation, character creation, play, NPC promotion, packaging) is implemented; see `/board` for the ticket backlog and the full design plan at the bottom of this README.
+**Shipped through epic 039** (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: campaign creation with configurable region/NPC counts, onboarding review, guided character creation, hub-based multi-character management, turn-based play with combat, progression, loot, and packaging.
+
+**Next committed backlog** (`board/backlog/revisit/`):
+
+- **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
+- **021** — consolidated end-to-end smoke test (v1 definition of done)
+
+**Exploratory** (`board/backlog/moonshots/`): image generation (m001), host-driven multiplayer (m002), mod-driven homebrew catalog (m003). Not committed delivery scope until promoted to the main backlog.
+
+Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-progress`, `done`). Smoke runbooks are in `/docs/runbooks`.
 
 ## Setup
 
@@ -33,6 +44,7 @@ Core gameplay loop (campaign generation, character creation, play, NPC promotion
 - **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick.
 - **NPCs have isolated memory.** Each NPC has its own private memory log; it only ever sees its own memories plus world facts explicitly tagged to its region/faction. No NPC can "know" something only another NPC experienced.
 - **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — Claude (Anthropic Messages API) and [Player2](http://127.0.0.1:4315) (local) are both implemented, swappable via runtime config with no code changes required.
+- **Campaign-level world, character-level story.** Regions, NPCs, story threads, events, and `current_state_summary` are shared across all player characters in a campaign. Journal, log book, narration history, party roster ownership, `currentRegionId`, and guided-creation state are per character.
 
 ## Tech Stack
 
@@ -40,7 +52,7 @@ Core gameplay loop (campaign generation, character creation, play, NPC promotion
 - SQLite (`better-sqlite3`) for persistence, one save per campaign
 - Vitest + npm for testing
 - oxlint (strict, complexity-aware) for linting
-- GitHub Actions for PR checks (tests + lint + build, required); deploy-on-merge packaging is scaffolded but disabled until promoted
+- GitHub Actions: `CI Checks` (test + lint + build) on PRs and pushes to `main`; successful merges to `main` trigger `Deploy`, which packages a Windows `.exe` and publishes a GitHub Release
 
 ## Architecture
 
@@ -49,12 +61,18 @@ Core gameplay loop (campaign generation, character creation, play, NPC promotion
   /main          Electron main process: frameless window lifecycle, SQLite access, IPC handlers
   /preload       contextBridge-exposed IPC API surface for renderer
   /renderer      React + TS UI:
-                   /titlebar      custom draggable titlebar (min/max/close)
-                   /sidebar       collapsible campaign list
-                   /play          side-by-side DM narration panel + player speech/action panel
-                   /setup         campaign generation review, character creation
+                   /titlebar        custom draggable titlebar (min/max/close)
+                   /sidebar         collapsible campaign list
+                   /campaignStart   new-campaign modal (premise, death mode, generation counts)
+                   /campaignReview  onboarding world review + generate region/NPC
+                   /campaignHub     multi-character hub (world preview + cast rail)
+                   /characterSetup  mechanical character creation
+                   /guidedCreation  AI-guided identity + opening scene
+                   /play            DM narration + player action panels, combat, obituary drafting
+                   /characterSheet  stats, inventory, journal, log book
+                   /settings        provider configuration (Claude, Player2, llama.cpp scaffold)
   /engine        Pure TS, no Electron/LLM deps: rules engine (checks, combat, dice), world-state model
-  /agents        Agent orchestration: dm.ts, npc.ts, partyMember.ts, provider interface + Claude adapter
+  /agents        Agent orchestration: dm.ts, npc.ts, partyMember.ts, campaign generation, provider adapters
   /db            SQLite schema, migrations, repository layer
   /shared        Types shared between main/renderer/engine/agents
 ```
@@ -68,17 +86,57 @@ A custom, simplified tabletop RPG-inspired ruleset, fully deterministic and unit
 - **Four abilities**: Body (STR+CON), Agility (DEX), Mind (INT+WIS), Presence (CHA). Modifier = `floor((score-10)/2)`. Score generation: point buy, standard array, or roll-for-stats — player's choice.
 - **Core resolution**: `d20 + ability modifier + (proficiency bonus if proficient) vs DC/AC`, with advantage/disadvantage (roll 2d20, take higher/lower). No separate skill list — the DM agent flags an ability + a proficiency boolean per check from context; the engine owns the actual bonus amount.
 - **Saves**: all four abilities have a corresponding save. **AC**: `10 + Agility modifier + armor bonus`. **HP**: archetype hit die (fixed average) + Body modifier per level. **Crits**: natural 20 doubles damage dice.
-- **Damage types**: Physical, Fire, Cold, Poison, Arcane, with resistance/vulnerability. **Conditions**: Prone, Stunned, Poisoned, Restrained, Unconscious.
-- **Inventory/economy**: narrative item list (no weight tracking), single currency debited/credited only by the engine, prices narrated contextually by the DM agent (engine clamps any proposed price, same guardrail pattern as DC).
-- **Combat**: initiative rolled once per encounter (`d20 + Agility`); one Action + Movement per turn; combat actions are typed in the same free-text box as exploration. At 0 HP, characters fall Unconscious and make dying saves — only losing that sequence triggers the campaign's death mode.
-- **Death modes** (chosen per campaign): **Legendary** (permanent death), **Standard** (auto-saved snapshot after every resolved action is restored — no explicit player save step), **Respawn** (world-defined respawn rules mechanically applied: relocate, deduct cost, enforce limits).
+- **Damage types**: Physical, Fire, Cold, Poison, Arcane, with resistance/vulnerability and weapon enchantment overlays. **Conditions**: Prone, Stunned, Poisoned, Restrained, Unconscious.
+- **Inventory/economy**: narrative item list with equipment slots, single currency debited/credited only by the engine, encounter/quest loot tables, prices narrated contextually by the DM agent (engine clamps any proposed price, same guardrail pattern as DC).
+- **Combat**: initiative rolled once per encounter (`d20 + Agility`); one Action + Movement per turn; typed combat actions in the same free-text box as exploration. NPCs use catalog or villager/retired-adventurer combat tiers. Flee, surrender, non-lethal victory, and execute defeat are modeled. At 0 HP, characters fall Unconscious and make dying saves — only losing that sequence triggers the campaign's death mode (unless story-driven death is flagged).
+- **Death modes** (chosen per campaign): **Legendary** (permanent death + AI obituary), **Standard** (auto-saved snapshot after every resolved action is restored — no explicit player save step; story-driven death can still persist), **Respawn** (world-defined respawn rules mechanically applied: relocate, deduct cost, enforce limits).
+- **Progression**: XP awards and agent-assisted level-up perk selection; emergent homebrew detection from tagged play patterns.
 - **In-game time**: a simple day counter per campaign — long rest advances it 1 day, travel advances it by a DM-estimated, engine-clamped amount. Drives region-history compression below.
 - **Abilities/spells cost turns, not mana.** Every non-basic ability resolves immediately, then locks the character out of acting for as many turns as the player chose to spend — formulaic scaling per extra turn, same system for every archetype.
 - **Archetypes & emergent homebrew**: five seed archetypes (Fighter, Rogue, Mage, Cleric, Ranger). Levels 1–20. The engine deterministically detects an emergent direction from repeated tagged events (e.g. a Fighter repeatedly attempting arcane actions crossing a count threshold); only once detected does the DM agent propose flavor for a new feature inside a fixed mechanical template — the engine computes the real numbers, the agent only supplies the fiction.
 
 ## Persistence
 
-Each campaign is one SQLite save covering regions (with a preseeded, periodically-compressed `region_history`), NPCs, characters (including currency), per-NPC private memories, world facts (explicitly emitted by the DM agent on world-altering narration, not auto-derived), story threads (state/summary updated by the DM agent as the plot progresses), an append-only event log, and auto-written save snapshots (one after every resolved action, used to revert on death under Standard mode). Schema changes ship as numbered, forward-only migrations applied automatically on open.
+Each campaign is one SQLite save covering:
+
+- **World (campaign-scoped):** regions (with preseeded, periodically-compressed `region_history`), NPCs (alignment, temperament, combat stats, yield/surrender state), world facts (explicitly emitted by the DM agent on world-altering narration, not auto-derived), story threads, an append-only event log, `current_state_summary`, and a preseeded TTRPG content catalog.
+- **Characters (per player character):** abilities, HP, inventory/equipment, currency, journal, log book, guided-creation phase, `currentRegionId`, narration/turn history, life status (`alive` | `dead`), death cause, persisted obituary JSON, and owned AI party members (`owner_player_character_id`).
+- **Recovery:** auto-written save snapshots after every resolved action (Standard-mode combat revert).
+
+Schema changes ship as numbered, forward-only migrations applied automatically on open.
+
+## Roadmap
+
+Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` → `in-progress` → `done` when every acceptance criterion is checked.
+
+### Completed (001–039)
+
+| Range | Theme |
+|-------|--------|
+| 001–006 | Scaffold, CI, SQLite, rules engine, Claude + Player2 providers, agent orchestration |
+| 007–012 | Campaign generation, sidebar, character creation UI, core play loop, NPC promotion, packaging |
+| 014–019 | Startup loading, settings, campaign-start modal, four-column play UI, delete campaign |
+| 022–031 | TTRPG terminology scrub, content catalog, items/equipment, log book, guided creation, journal, alignment/temperament, DM turn review, text emphasis, combat encounters |
+| 032–037 | Attackable NPCs, flee, surrender/non-lethal outcomes, encounter/quest loot, XP + level-up perks, weapon enchantments |
+| 038 | **Campaign hub** — multi-character cast, death/obituaries, per-character party rosters, inactive-character AI proxy, cross-character log-book writes, history-aware region generation, travel to ungenerated destinations |
+| 039 | **Configurable generation counts** — region count (0–5) and NPCs per region (0–10) on campaign start; review continue/play gates; per-region generate NPC on review |
+
+### Revisit backlog
+
+| Epic | Intent |
+|------|--------|
+| **020** | Local llama.cpp provider: managed `llama-server` lifecycle, adapter behind the existing provider interface, settings wiring, packaged runtime, and smoke parity across major flows without a cloud API key |
+| **021** | Single v1 end-to-end smoke matrix covering campaign creation through restart integrity (cloud-provider runbook; pairs with 020's local parity tickets) |
+
+### Moonshots (exploratory)
+
+| Id | Intent |
+|----|--------|
+| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback |
+| **m002** | Host-driven multiplayer with host-side AI routing and guest party-member identities |
+| **m003** | Mod packs that seed homebrew catalog content from structured text files |
+
+See `board/backlog/moonshots/README.md` for promotion rules when a moonshot graduates to the main backlog.
 
 ## Development Workflow
 
@@ -86,7 +144,7 @@ Each campaign is one SQLite save covering regions (with a preseeded, periodicall
 - **Ticket board**: see `/board` — text-file tickets (`/board/backlog`, `/board/in-progress`, `/board/done`), each with acceptance criteria that must all be checked before a ticket is done.
 - **Agent skills**: the `complete-ticket` workflow lives in `.claude/skills/complete-ticket/SKILL.md` (Claude Code) and `.cursor/skills/complete-ticket/SKILL.md` (Cursor) — keep both in sync.
 - **CI**: tests + oxlint + build run on both direct `push` to `main` and `pull_request` targeting `main`. `.github/workflows/pr-checks.yml` defines three jobs — `test`, `lint`, `build`. To enforce this on direct pushes too, create a branch protection rule or ruleset for `main`, enable required status checks, and select `test`, `lint`, and `build` by name.
-- **Local dev**: `npm run dev` boots Electron + the React dev server + a dev SQLite file in one command (once scaffolded). `npm run package` produces a distributable `.exe`.
+- **Local dev**: `npm run dev` boots Electron + the React dev server + a dev SQLite file in one command. `npm run package` produces a distributable `.exe`.
 
 ## License / Distribution
 

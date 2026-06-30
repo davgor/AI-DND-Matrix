@@ -306,19 +306,14 @@ function parseGenerationNpcs(
   return normalizeNpcList(parsedNpcs, regionNames, npcsPerRegion)
 }
 
-export function normalizeCampaignGeneration(
-  value: unknown,
-  counts: GenerationCounts = resolveInitialGenerationCounts()
-): CampaignGenerationResult | undefined {
-  if (typeof value !== 'object' || value === null) {
-    return undefined
-  }
-  const candidate = value as Record<string, unknown>
+function resolveRegions(
+  candidate: Record<string, unknown>,
+  counts: GenerationCounts
+): GeneratedRegion[] | undefined {
   const rawRegions = candidate['regions']
   if (!Array.isArray(rawRegions)) {
     return undefined
   }
-
   let regions = rawRegions
     .map((region) => normalizeGeneratedRegion(region))
     .filter((region): region is GeneratedRegion => region !== undefined)
@@ -330,6 +325,21 @@ export function normalizeCampaignGeneration(
     return undefined
   } else {
     regions = regions.slice(0, counts.regionCount)
+  }
+  return regions
+}
+
+export function normalizeCampaignGeneration(
+  value: unknown,
+  counts: GenerationCounts = resolveInitialGenerationCounts()
+): CampaignGenerationResult | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const candidate = value as Record<string, unknown>
+  const regions = resolveRegions(candidate, counts)
+  if (!regions) {
+    return undefined
   }
 
   const regionNames = regions.map((region) => region.name)
