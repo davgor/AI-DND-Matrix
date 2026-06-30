@@ -6,6 +6,7 @@ import type {
   EncounterOutcome,
   InitiativeEntry
 } from '../../shared/combat/types'
+export type { CombatEncounter }
 import { combatantRefKey } from '../../shared/combat/types'
 import type { EncounterPursuitState } from '../../shared/combat/flee/types'
 

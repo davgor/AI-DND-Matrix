@@ -45,7 +45,7 @@ function applyFeatureCategory(input: {
   const flavor: FeatureFlavor = {
     name: input.proposal.name,
     description: input.proposal.description,
-    damageType: input.proposal.flavorTags.includes('arcane') ? 'Arcane' : 'Physical'
+    damageType: input.proposal.flavorTags.includes('arcane') ? 'arcane' : 'physical'
   }
   const computed = computeFeatureFromTemplate(PASSIVE_TEMPLATE, input.levelGained, flavor)
   return { ...input.stats, customFeatures: [...(input.stats.customFeatures ?? []), computed] }

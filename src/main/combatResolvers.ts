@@ -138,7 +138,7 @@ export function resolvePlayerAttack(input: PlayerAttackInput): PlayerAttackSyncR
     targetHpAfter: hpAfter,
     targetDefeated: resolution.targetDefeated
   }
-  appendEvent(db, { campaignId: player.campaignId, type: 'combat_attack', payload: attackResult })
+  appendEvent(db, { campaignId: player.campaignId, type: 'combat_attack', payload: attackResult as unknown as Record<string, unknown> })
   if (!resolution.hit) {
     return { attackResult }
   }

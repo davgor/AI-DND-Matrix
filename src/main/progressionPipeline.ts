@@ -167,7 +167,7 @@ export function submitPerkChoice(
   const stats = appliedResult.stats as CharacterPerkStats
   stats.pendingLevelUpQueue = queue
   stats.lastLevelUpXp = character.xp
-  updateCharacter(db, characterId, { stats, hp })
+  updateCharacter(db, characterId, { stats: stats as unknown as Record<string, unknown>, hp })
 
   appendEvent(db, {
     campaignId: character.campaignId,

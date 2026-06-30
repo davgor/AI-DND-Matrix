@@ -49,7 +49,7 @@ describe('turnIpc modification + enchanted attack', () => {
       campaignId: campaign.id,
       characterId: player.id,
       playerInput: 'I enchant my longsword with fire'
-    })
+    }, Math.random)
     expect(enchantTurn.itemModification?.summary).toContain('fire')
     expect(getEquippedWeaponDamageProfile(db, player.id).components).toHaveLength(2)
     expect(getCatalogItemById(db, longsword.id)!.mechanicalProperties).toEqual(catalogBefore)

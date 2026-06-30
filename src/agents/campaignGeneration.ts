@@ -344,16 +344,22 @@ function hasValidNpcTemperament(n: Record<string, unknown>): boolean {
   return parseTemperament(n['temperament']) !== undefined
 }
 
+function hasValidNpcStringFields(n: Record<string, unknown>): boolean {
+  return (
+    typeof n['name'] === 'string' &&
+    typeof n['role'] === 'string' &&
+    typeof n['disposition'] === 'string' &&
+    typeof n['regionName'] === 'string'
+  )
+}
+
 function isGeneratedNpc(value: unknown): value is GeneratedNpc {
   if (typeof value !== 'object' || value === null) {
     return false
   }
   const n = value as Record<string, unknown>
   return (
-    typeof n['name'] === 'string' &&
-    typeof n['role'] === 'string' &&
-    typeof n['disposition'] === 'string' &&
-    typeof n['regionName'] === 'string' &&
+    hasValidNpcStringFields(n) &&
     hasValidNpcTemperament(n) &&
     readCanSpeak(n['canSpeak'] ?? n['can_speak']) !== undefined &&
     hasValidNpcBackstory(n) &&

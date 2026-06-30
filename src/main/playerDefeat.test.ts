@@ -24,6 +24,7 @@ function seedDefeatFixture() {
     campaignId: campaign.id,
     name: 'Kael',
     archetype: 'fighter',
+    alignment: 'true_neutral',
     abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 }
   })
   const victor = createNpc(db, {

@@ -42,7 +42,7 @@ describe('weapon enchantment smoke', () => {
       campaignId: seeded.campaignId,
       characterId: seeded.playerId,
       playerInput: 'I enchant my longsword to deal fire damage'
-    })
+    }, Math.random)
 
     expect(getEquippedWeaponDamageProfile(db, seeded.playerId).components).toHaveLength(2)
     expect(JSON.stringify(getCatalogItemById(db, seeded.longswordId)!.mechanicalProperties)).toBe(catalogSnapshot)
