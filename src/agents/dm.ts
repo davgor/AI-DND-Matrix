@@ -302,6 +302,7 @@ export type ItemGrantProposal = { catalogItemId: string } | { proposeNew: Propos
 
 export interface NarrationResult {
   narrationText: string
+  sceneUpdate?: string
   worldFact?: { content: string; factionTag?: string }
   storyThreadUpdate?: { threadId: string; state: string; summary: string }
   reactingNpcIds?: string[]
@@ -431,7 +432,9 @@ function buildNarrationPrompt(outcome: CheckOutcome, context: NarrationContext):
     `Story thread: ${JSON.stringify(context.storyThreadState)}`,
     `NPCs present in this region (recruitment proposals only from these exact ids): ${JSON.stringify(context.presentNpcs)}`,
     logBookSection,
-    'Respond ONLY with JSON: {"narrationText":string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean}',
+    'Respond ONLY with JSON: {"narrationText":string,"sceneUpdate"?:string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean}',
+    'sceneUpdate rewrites the surroundings description only when the location or environment materially changes (arriving somewhere new, weather shifts, the room layout changes). Omit during casual conversation.',
+    'narrationText is brief DM flavor for the exposition panel when something environmental happens (a stranger enters, a door bursts open). Omit when NPC dialogue carries the moment. Never put NPC words in narrationText. Use an empty string when there is nothing to add.',
     'Set storyDrivenDeath when the player character dies narratively (e.g. sacrificial death) even if combat rules would normally revert — engine persists permanent death.',
     'A world_fact is always recorded against the current region automatically — do not try to specify which region, you have no way to know its id.',
     'Only set "proposedPromotionNpcId" when the player\'s words clearly imply recruiting that NPC into the party (e.g. asking them to join, offering them a place at their side) — the player must confirm before anything actually happens.',
@@ -450,6 +453,10 @@ function isValidNarrationResult(value: unknown): value is NarrationResult {
   }
   const record = value as Record<string, unknown>
   if (typeof record['narrationText'] !== 'string') {
+    return false
+  }
+  const sceneUpdate = record['sceneUpdate']
+  if (sceneUpdate !== undefined && typeof sceneUpdate !== 'string') {
     return false
   }
   const journalEntry = record['journalEntry']
