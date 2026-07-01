@@ -9,26 +9,20 @@ import { canEnterPlay, type OnboardingStage } from '../../../shared/guidedCreati
 import { createEnterPlayHandler } from '../onboarding/enterPlayHandler'
 import { createReadyToEnterPlayHandler } from '../onboarding/readyToEnterPlayHandler'
 
-export function usePlayEntryState(input: {
+type PlayEntryInput = {
   detail: CampaignDetail | null
   stage: OnboardingStage
   setStage: (stage: OnboardingStage) => void
   activeCharacterId: string | null
   setActiveCharacterId: (id: string | null) => void
   refreshDetail: () => Promise<void>
-}) {
-  const [enterPlayBlockerMessage, setEnterPlayBlockerMessage] = useState<string | null>(null)
+}
 
-  const activePlayer = input.detail?.characters.find(
-    (character) => character.id === input.activeCharacterId && character.kind === 'player'
-  )
-  const inCampaign =
-    input.stage === 'main' &&
-    Boolean(input.detail?.campaign) &&
-    Boolean(activePlayer) &&
-    canEnterPlay(activePlayer)
-
-  function handleResumeFromHub(characterId: string): void {
+function createResumeFromHubHandler(
+  input: PlayEntryInput,
+  setEnterPlayBlockerMessage: (message: string | null) => void
+): (characterId: string) => void {
+  return (characterId: string) => {
     if (!input.detail) {
       return
     }
@@ -45,17 +39,10 @@ export function usePlayEntryState(input: {
     input.setActiveCharacterId(characterId)
     input.setStage('main')
   }
+}
 
-  const handleEnterPlay = createEnterPlayHandler({
-    detail: input.detail,
-    setEnterPlayBlockerMessage,
-    onEnterPlay: (characterId) => {
-      input.setActiveCharacterId(characterId)
-      input.setStage('main')
-    }
-  })
-
-  function createHandleReadyToEnterPlay(characterId: string): () => Promise<void> {
+function createReadyToEnterPlayFactory(input: PlayEntryInput, setEnterPlayBlockerMessage: (message: string | null) => void) {
+  return (characterId: string): () => Promise<void> => {
     if (!input.detail?.campaign) {
       return async () => {}
     }
@@ -71,13 +58,35 @@ export function usePlayEntryState(input: {
       }
     })
   }
+}
+
+export function usePlayEntryState(input: PlayEntryInput) {
+  const [enterPlayBlockerMessage, setEnterPlayBlockerMessage] = useState<string | null>(null)
+
+  const activePlayer = input.detail?.characters.find(
+    (character) => character.id === input.activeCharacterId && character.kind === 'player'
+  )
+  const inCampaign =
+    input.stage === 'main' &&
+    Boolean(input.detail?.campaign) &&
+    Boolean(activePlayer) &&
+    canEnterPlay(activePlayer)
+
+  const handleEnterPlay = createEnterPlayHandler({
+    detail: input.detail,
+    setEnterPlayBlockerMessage,
+    onEnterPlay: (characterId) => {
+      input.setActiveCharacterId(characterId)
+      input.setStage('main')
+    }
+  })
 
   return {
     activePlayer,
     inCampaign,
     enterPlayBlockerMessage,
-    handleResumeFromHub,
+    handleResumeFromHub: createResumeFromHubHandler(input, setEnterPlayBlockerMessage),
     handleEnterPlay,
-    createHandleReadyToEnterPlay
+    createHandleReadyToEnterPlay: createReadyToEnterPlayFactory(input, setEnterPlayBlockerMessage)
   }
 }
