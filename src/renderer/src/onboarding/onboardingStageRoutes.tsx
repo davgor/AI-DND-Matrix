@@ -70,7 +70,7 @@ function GuidedOpeningSceneRoute(props: OnboardingStageContentProps): JSX.Elemen
     <GuidedOpeningSceneStage
       campaignId={props.detail.campaign.id}
       character={player}
-      onReadyToEnterPlay={props.createHandleReadyToEnterPlay(player.id)}
+      onEnterPlay={props.onEnterPlay}
       enterPlayBlockerMessage={props.enterPlayBlockerMessage}
       onRefresh={props.onRefreshDetail}
     />

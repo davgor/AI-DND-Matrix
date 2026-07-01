@@ -23,7 +23,6 @@ import { registerTurnHandlers } from './turnIpc'
 import { registerCombatHandlers } from './combatIpc'
 import { registerProgressionHandlers } from './progressionIpc'
 import { initAutoUpdate, registerAutoUpdateHandlers } from './autoUpdate'
-import { configureSpellcheck } from './spellcheck'
 
 Menu.setApplicationMenu(null)
 loadConfig()
@@ -38,8 +37,7 @@ function createMainWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
-      spellcheck: true
+      sandbox: true
     }
   })
 
@@ -48,7 +46,6 @@ function createMainWindow(): BrowserWindow {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
-  configureSpellcheck(mainWindow)
   return mainWindow
 }
 

@@ -28,7 +28,7 @@ describe('runIdentityKickoffEffect', () => {
     const kickoffPromise = new Promise<{ ok: boolean; kickedOff: boolean }>((resolve) => {
       resolveKickoff = resolve
     })
-    vi.spyOn(guidedIdentityKickoff, 'kickoffGuidedPhase').mockReturnValue(kickoffPromise)
+    vi.spyOn(guidedIdentityKickoff, 'kickoffGuidedIdentity').mockReturnValue(kickoffPromise)
 
     const setKickingOff = vi.fn()
     const kickoffStartedRef = { current: false }

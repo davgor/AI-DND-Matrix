@@ -1,23 +1,15 @@
 import type { GuidedMessagePhase } from '../../../shared/guidedCreation/types'
 
-export async function kickoffGuidedPhase(input: {
+export async function kickoffGuidedIdentity(input: {
   campaignId: string
   characterId: string
-  phase: GuidedMessagePhase
   refresh: () => Promise<void>
   onStateChange?: () => void
 }): Promise<{ ok: boolean; kickedOff: boolean }> {
-  const kickoff =
-    input.phase === 'identity'
-      ? window.guidedCreation.kickoffIdentity({
-          campaignId: input.campaignId,
-          characterId: input.characterId
-        })
-      : window.guidedCreation.kickoffOpeningScene({
-          campaignId: input.campaignId,
-          characterId: input.characterId
-        })
-  const result = await kickoff
+  const result = await window.guidedCreation.kickoffIdentity({
+    campaignId: input.campaignId,
+    characterId: input.characterId
+  })
   if (result.ok && result.kickedOff) {
     await input.refresh()
     input.onStateChange?.()
@@ -25,25 +17,20 @@ export async function kickoffGuidedPhase(input: {
   return result
 }
 
-/** @deprecated Use kickoffGuidedPhase */
-export const kickoffGuidedIdentity = kickoffGuidedPhase
-
-export function shouldStartPhaseKickoff(input: {
+export function shouldStartIdentityKickoff(input: {
   phase: GuidedMessagePhase
   loading: boolean
   kickingOff: boolean
   sending: boolean
-  phaseMessageCount: number
+  identityMessageCount: number
   kickoffStarted: boolean
 }): boolean {
   return (
     !input.loading &&
     !input.kickingOff &&
     !input.sending &&
+    input.phase === 'identity' &&
     !input.kickoffStarted &&
-    input.phaseMessageCount === 0
+    input.identityMessageCount === 0
   )
 }
-
-/** @deprecated Use shouldStartPhaseKickoff */
-export const shouldStartIdentityKickoff = shouldStartPhaseKickoff

@@ -7,7 +7,6 @@ import { getDb } from './db'
 
 export type LogSpeaker = 'dm' | 'player' | 'npc' | 'partyMember'
 export type PlayerLineKind = 'raw' | 'actionExpression'
-export type DmLineKind = 'scene' | 'flavor'
 
 export interface PlayLogEntry {
   id: string
@@ -16,20 +15,6 @@ export interface PlayLogEntry {
   text: string
   reactionKind?: NpcReactionKind
   playerLineKind?: PlayerLineKind
-  dmLineKind?: DmLineKind
-}
-
-function dmLineKindFromPayload(payload: Record<string, unknown>): DmLineKind {
-  const kind = payload['dmLineKind']
-  return kind === 'scene' ? 'scene' : 'flavor'
-}
-
-function dmLogEntry(
-  event: Event,
-  text: string,
-  dmLineKind: DmLineKind
-): PlayLogEntry {
-  return { id: event.id, timestamp: event.timestamp, speaker: 'dm', text, dmLineKind }
 }
 
 function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
@@ -62,13 +47,7 @@ function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
     })
   }
   if (payload.narrationText) {
-    entries.push({
-      id: `${event.id}-dm`,
-      timestamp: event.timestamp,
-      speaker: 'dm',
-      text: payload.narrationText,
-      dmLineKind: dmLineKindFromPayload(payload as Record<string, unknown>)
-    })
+    entries.push({ id: `${event.id}-dm`, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText })
   }
   return entries
 }
@@ -103,7 +82,7 @@ function playerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
     })
   }
   if (payload.narrationText) {
-    entries.push(dmLogEntry(event, payload.narrationText, 'scene'))
+    entries.push({ id: `${event.id}-dm`, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText })
   }
   return entries
 }
@@ -139,7 +118,7 @@ function dmNarrationOnlyEntries(event: Event): PlayLogEntry[] {
   if (payload.auditOnly || typeof payload.narrationText !== 'string') {
     return []
   }
-  return [dmLogEntry(event, payload.narrationText, dmLineKindFromPayload(payload as Record<string, unknown>))]
+  return [{ id: event.id, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText }]
 }
 
 const DM_NARRATION_EVENT_TYPES = new Set(['dying_resolution', 'loot_resolved', 'opening_scene'])
@@ -157,10 +136,17 @@ function progressionEventEntries(event: Event): PlayLogEntry[] | null {
 function xpAwardedEntries(event: Event): PlayLogEntry[] {
   const payload = event.payload as { narrationText?: string; amount?: number }
   if (typeof payload.narrationText === 'string') {
-    return [dmLogEntry(event, payload.narrationText, 'flavor')]
+    return [{ id: event.id, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText }]
   }
   if (typeof payload.amount === 'number') {
-    return [dmLogEntry(event, `You gain ${payload.amount} experience.`, 'flavor')]
+    return [
+      {
+        id: event.id,
+        timestamp: event.timestamp,
+        speaker: 'dm',
+        text: `You gain ${payload.amount} experience.`
+      }
+    ]
   }
   return []
 }
@@ -170,16 +156,14 @@ function perkChosenEntries(event: Event): PlayLogEntry[] {
   if (typeof payload.mechanicalSummary !== 'string') {
     return []
   }
-  return [dmLogEntry(event, `Perk chosen: ${payload.mechanicalSummary}`, 'flavor')]
-}
-
-function dmNarrationEventEntries(event: Event): PlayLogEntry[] {
-  const text = (event.payload as Record<string, unknown>)['narrationText']
-  if (typeof text !== 'string') {
-    return []
-  }
-  const dmLineKind: DmLineKind = event.type === 'opening_scene' ? 'scene' : 'flavor'
-  return [dmLogEntry(event, text, dmLineKind)]
+  return [
+    {
+      id: event.id,
+      timestamp: event.timestamp,
+      speaker: 'dm',
+      text: `Perk chosen: ${payload.mechanicalSummary}`
+    }
+  ]
 }
 
 export function eventToLogEntries(event: Event): PlayLogEntry[] {
@@ -204,7 +188,7 @@ export function eventToLogEntries(event: Event): PlayLogEntry[] {
     return singleTextEntry(event, 'partyMember', 'content')
   }
   if (DM_NARRATION_EVENT_TYPES.has(event.type)) {
-    return dmNarrationEventEntries(event)
+    return singleTextEntry(event, 'dm', 'narrationText')
   }
   return []
 }

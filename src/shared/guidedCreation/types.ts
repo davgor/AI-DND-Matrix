@@ -72,25 +72,6 @@ export interface GuidedCreationKickoffFailure {
 
 export type GuidedCreationKickoffResult = GuidedCreationKickoffSuccess | GuidedCreationKickoffFailure
 
-export interface GuidedCreationReadyToEnterPlayInput {
-  campaignId: string
-  characterId: string
-}
-
-export interface GuidedCreationReadyToEnterPlaySuccess {
-  ok: true
-  guidedCreationPhase: 'complete'
-}
-
-export interface GuidedCreationReadyToEnterPlayFailure {
-  ok: false
-  reason: GuidedCreationFailureReason
-}
-
-export type GuidedCreationReadyToEnterPlayResult =
-  | GuidedCreationReadyToEnterPlaySuccess
-  | GuidedCreationReadyToEnterPlayFailure
-
 export type GuidedCreationFailureReason =
   | 'not_found'
   | 'invalid_phase'

@@ -85,33 +85,28 @@ body {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
-.app-root ::-webkit-scrollbar,
-.app-root textarea::-webkit-scrollbar {
+.app-root ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-.app-root ::-webkit-scrollbar-track,
-.app-root textarea::-webkit-scrollbar-track {
+.app-root ::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
   border-radius: var(--radius-pill);
 }
 
-.app-root ::-webkit-scrollbar-thumb,
-.app-root textarea::-webkit-scrollbar-thumb {
+.app-root ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border: 2px solid transparent;
   border-radius: var(--radius-pill);
   background-clip: padding-box;
 }
 
-.app-root ::-webkit-scrollbar-thumb:hover,
-.app-root textarea::-webkit-scrollbar-thumb:hover {
+.app-root ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
 }
 
-.app-root ::-webkit-scrollbar-corner,
-.app-root textarea::-webkit-scrollbar-corner {
+.app-root ::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -173,10 +168,6 @@ body {
   padding: 0.5rem 0.65rem;
   font-family: inherit;
   font-size: 0.95rem;
-}
-
-.app-root textarea {
-  color-scheme: dark;
 }
 
 .app-root input:focus,
