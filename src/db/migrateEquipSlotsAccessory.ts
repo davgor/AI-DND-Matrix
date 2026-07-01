@@ -1,4 +1,4 @@
-import type { AccessoryEquipSlot } from '../../shared/items/types'
+import type { AccessoryEquipSlot } from '../shared/items/types'
 
 const NAME_SLOT_RULES: Array<{ pattern: RegExp; slot: AccessoryEquipSlot }> = [
   { pattern: /ring/, slot: 'ring1' },

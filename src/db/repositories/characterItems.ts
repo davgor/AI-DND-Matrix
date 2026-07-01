@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
 import { validateEquip, slotsToClearOnEquip, getValidEquipSlots, type EquipFailureReason } from '../../engine/equipment'
 import type { ArmorTier } from '../../engine/armorClass'
-import { ACCESSORY_EQUIP_SLOTS, type EquipSlot } from '../../shared/items/types'
+import { ACCESSORY_EQUIP_SLOTS, type CharacterItemView, type EquipSlot } from '../../shared/items/types'
 import { getCatalogItemById } from './items'
 import { enrichCharacterItemViews } from './weaponDamageProfile'
 

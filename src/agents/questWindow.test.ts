@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Quest } from '../shared/quests/types'
 import type { CharacterQuest } from '../shared/quests/types'
-import { MAX_ACTIVE_QUESTS_IN_CONTEXT, windowActiveQuestsForNarration } from './questWindow'
+import { MAX_ACTIVE_QUESTS_IN_CONTEXT } from '../shared/quests/types'
+import { windowActiveQuestsForNarration } from './questWindow'
 
 function quest(id: string, kind: Quest['kind']): Quest {
   return {

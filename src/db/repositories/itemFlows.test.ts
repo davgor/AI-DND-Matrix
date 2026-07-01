@@ -49,6 +49,7 @@ describe('itemFlows grant and purchase', () => {
       rarity: 'rare',
       mechanicalProperties: {
         kind: 'weapon',
+        handedness: 'oneHand',
         damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 },
         damageType: 'physical'
       },
@@ -93,6 +94,7 @@ describe('itemFlows consume and remove', () => {
       rarity: 'common',
       mechanicalProperties: {
         kind: 'weapon',
+        handedness: 'oneHand',
         damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 },
         damageType: 'physical'
       },

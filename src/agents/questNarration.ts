@@ -12,7 +12,8 @@ import {
   upsertCharacterQuest
 } from '../db/repositories/quests'
 import { updateStoryThreadStateAndSummary } from '../db/repositories/storyThreads'
-import type { QuestKind, QuestScale } from '../shared/quests/types'
+import type { QuestScale } from '../shared/loot/types'
+import type { QuestKind } from '../shared/quests/types'
 import type { NarrationResult } from './dm'
 
 export interface QuestProposal {

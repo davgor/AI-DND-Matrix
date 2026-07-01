@@ -1,4 +1,4 @@
-import type { EquipSlot, WeaponHandedness } from '../../shared/items/types'
+import type { EquipSlot, WeaponHandedness } from '../shared/items/types'
 import { inferAccessorySlotFromName } from './migrateEquipSlotsAccessory'
 
 const NEW_EQUIP_SLOT_CHECK = `(

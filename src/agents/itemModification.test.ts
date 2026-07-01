@@ -18,6 +18,7 @@ const longswordRow: CharacterItemView = {
     rarity: 'uncommon',
     mechanicalProperties: {
       kind: 'weapon',
+      handedness: 'oneHand',
       damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 },
       damageType: 'physical'
     },

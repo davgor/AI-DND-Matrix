@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
-import type { EquipFailureReason, EquipSlot } from '../shared/items/types'
+import type { EquipFailureReason } from '../engine/equipment'
+import type { EquipSlot } from '../shared/items/types'
 import {
   equipCharacterItem,
   getValidEquipSlotsForItem,
