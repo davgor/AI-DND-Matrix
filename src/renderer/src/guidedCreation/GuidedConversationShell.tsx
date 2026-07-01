@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { GuidedMessagePhase } from '../../../shared/guidedCreation/types'
 import { FoundationProgress } from './FoundationProgress'
 import { GuidedConversationComposer } from './GuidedConversationComposer'
@@ -16,8 +17,6 @@ export interface GuidedConversationShellProps {
   onPhaseComplete?: () => void
   advanceLabel?: string
   onAdvance?: () => void
-  handoffLabel?: string
-  onHandoff?: () => void
   onStateChange?: () => void
 }
 
@@ -28,8 +27,13 @@ export function GuidedConversationShell(props: GuidedConversationShellProps): JS
     props.phase,
     props.onStateChange
   )
+  const threadRef = useRef<HTMLDivElement | null>(null)
   const phaseMessages =
     conversation.state?.messages.filter((message) => message.phase === props.phase) ?? []
+
+  useEffect(() => {
+    threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight })
+  }, [phaseMessages.length, conversation.sending, conversation.kickingOff])
 
   return (
     <div className="guided-conversation">
@@ -42,6 +46,7 @@ export function GuidedConversationShell(props: GuidedConversationShellProps): JS
         ) : null}
       </header>
       <GuidedConversationThread
+        threadRef={threadRef}
         loading={conversation.loading}
         kickingOff={conversation.kickingOff}
         messages={phaseMessages}
@@ -57,11 +62,9 @@ export function GuidedConversationShell(props: GuidedConversationShellProps): JS
         sending={conversation.sending}
         phaseComplete={props.phaseComplete}
         advanceLabel={props.advanceLabel}
-        handoffLabel={props.handoffLabel}
         onInputChange={conversation.setInputValue}
         onSend={() => void conversation.sendMessage()}
         onAdvance={props.onAdvance}
-        onHandoff={props.onHandoff}
       />
     </div>
   )

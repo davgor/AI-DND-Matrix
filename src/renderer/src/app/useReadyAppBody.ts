@@ -12,6 +12,7 @@ export function useReadyAppBodyState(input: {
 }) {
   const [activeCharacterId, setActiveCharacterId] = useState<string | null>(null)
   const hub = useHubCampaignState({ ...input, setActiveCharacterId })
+  const play = usePlayEntryState({ ...input, activeCharacterId, setActiveCharacterId })
 
   async function refreshDetail(): Promise<void> {
     if (!input.detail?.campaign) {
@@ -23,13 +24,6 @@ export function useReadyAppBodyState(input: {
       await hub.refreshHubSnapshot()
     }
   }
-
-  const play = usePlayEntryState({
-    ...input,
-    activeCharacterId,
-    setActiveCharacterId,
-    refreshDetail
-  })
 
   return {
     ...hub,

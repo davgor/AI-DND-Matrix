@@ -4,11 +4,9 @@ export interface GuidedConversationComposerProps {
   sending: boolean
   phaseComplete: boolean
   advanceLabel?: string
-  handoffLabel?: string
   onInputChange: (value: string) => void
   onSend: () => void
   onAdvance?: () => void
-  onHandoff?: () => void
 }
 
 export function GuidedConversationComposer(props: GuidedConversationComposerProps): JSX.Element {
@@ -34,17 +32,7 @@ export function GuidedConversationComposer(props: GuidedConversationComposerProp
         >
           {props.sending ? 'Sending…' : 'Send'}
         </button>
-        {props.handoffLabel && props.onHandoff ? (
-          <button
-            type="button"
-            className="guided-conversation-advance"
-            disabled={props.inputDisabled || props.sending}
-            onClick={props.onHandoff}
-          >
-            {props.handoffLabel}
-          </button>
-        ) : null}
-        {!props.handoffLabel && props.phaseComplete && props.advanceLabel && props.onAdvance ? (
+        {props.phaseComplete && props.advanceLabel && props.onAdvance ? (
           <button type="button" className="guided-conversation-advance" onClick={props.onAdvance}>
             {props.advanceLabel}
           </button>

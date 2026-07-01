@@ -7,14 +7,12 @@ import type { EmphasisToken } from './types'
 const OPENERS = [
   { open: '**', close: '**', type: 'strong' as const },
   { open: '__', close: '__', type: 'strong' as const },
-  { open: '""', close: '""', type: 'em' as const },
-  { open: "''", close: "''", type: 'em' as const },
   { open: '*', close: '*', type: 'em' as const },
   { open: '_', close: '_', type: 'em' as const }
 ]
 
 function isEscapable(character: string): boolean {
-  return character === '*' || character === '_' || character === '"' || character === "'" || character === '\\'
+  return character === '*' || character === '_' || character === '\\'
 }
 
 function matchesAt(input: string, index: number, marker: string): boolean {
@@ -44,52 +42,6 @@ function readLiteralUntil(
   return { content: '', next: start, closed: false }
 }
 
-function isWordCharacter(character: string): boolean {
-  return /[A-Za-z0-9_]/.test(character)
-}
-
-function trySingleQuoteEmphasis(
-  input: string,
-  index: number,
-  end: number
-): { type: 'em'; content: string; next: number } | null {
-  const quote = input[index]
-  if (quote !== '"' && quote !== "'") {
-    return null
-  }
-  if (index + 1 < end && input[index + 1] === quote) {
-    return null
-  }
-  if (index > 0 && isWordCharacter(input[index - 1]!)) {
-    return null
-  }
-
-  let content = ''
-  let i = index + 1
-  while (i < end) {
-    const character = input[i]!
-    if (character === '\\' && i + 1 < end && input[i + 1] === quote) {
-      content += quote
-      i += 2
-      continue
-    }
-    if (character === quote) {
-      if (i + 1 < end && input[i + 1] === quote) {
-        content += character
-        i += 1
-        continue
-      }
-      if (content.length === 0) {
-        return null
-      }
-      return { type: 'em', content, next: i + 1 }
-    }
-    content += character
-    i += 1
-  }
-  return null
-}
-
 function tryEmphasisSpan(
   input: string,
   index: number,
@@ -110,7 +62,7 @@ function tryEmphasisSpan(
       next: literal.next + opener.close.length
     }
   }
-  return trySingleQuoteEmphasis(input, index, end)
+  return null
 }
 
 export function tokenizeTextEmphasis(input: string): EmphasisToken[] {

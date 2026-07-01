@@ -41,7 +41,6 @@ import {
   updateCharacter,
   type Character
 } from '../db/repositories/characters'
-import { setOpeningScene } from '../db/repositories/guidedCreation'
 import { appendEvent } from '../db/repositories/events'
 import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { getNpcById } from '../db/repositories/npcs'
@@ -175,14 +174,7 @@ function resolveRestTurn(db: Database.Database, turn: RestTurnInput): TurnResult
   appendEvent(db, {
     campaignId,
     type: 'rest',
-    payload: {
-      characterId: character.id,
-      kind,
-      hpRestored: rest.hpRestored,
-      narrationText,
-      playerInput,
-      dmLineKind: 'scene'
-    }
+    payload: { characterId: character.id, kind, hpRestored: rest.hpRestored, narrationText, playerInput }
   })
   createSaveSnapshot(db, campaignId)
 
@@ -219,7 +211,7 @@ function resolveTravelTurn(
   appendEvent(db, {
     campaignId,
     type: 'travel',
-    payload: { days, narrationText, playerInput, characterId, destinationRegionId, dmLineKind: 'scene' }
+    payload: { days, narrationText, playerInput, characterId, destinationRegionId }
   })
   createSaveSnapshot(db, campaignId)
   return {
@@ -485,7 +477,6 @@ function appendDmNarrationEvent(
     characterId: string
     narrationText: string
     resolved: ResolvedCheckOutcome
-    dmLineKind?: 'flavor' | 'scene'
   }
 ): void {
   appendEvent(db, {
@@ -494,28 +485,7 @@ function appendDmNarrationEvent(
     payload: {
       characterId: input.characterId,
       outcome: input.resolved.outcome,
-      narrationText: input.narrationText,
-      dmLineKind: input.dmLineKind ?? 'flavor'
-    }
-  })
-}
-
-function appendDmSceneEvent(
-  db: Database.Database,
-  input: {
-    campaignId: string
-    characterId: string
-    sceneText: string
-  }
-): void {
-  setOpeningScene(db, input.characterId, input.sceneText)
-  appendEvent(db, {
-    campaignId: input.campaignId,
-    type: 'opening_scene',
-    payload: {
-      characterId: input.characterId,
-      narrationText: input.sceneText,
-      dmLineKind: 'scene'
+      narrationText: input.narrationText
     }
   })
 }
@@ -613,34 +583,19 @@ async function executeDmNarrationBeat(
     characterId: input.character.id
   })
   await applyQuestRewardsToBeat(db, provider, { ...input, narrationResult, previousThreadState })
-  const sceneUpdate = narrationResult.sceneUpdate?.trim()
-  if (sceneUpdate) {
-    appendDmSceneEvent(db, {
-      campaignId: input.campaignId,
-      characterId: input.character.id,
-      sceneText: sceneUpdate
-    })
-  }
-  const flavorText = narrationResult.narrationText.trim()
-  if (flavorText) {
-    appendDmNarrationEvent(db, {
-      campaignId: input.campaignId,
-      characterId: input.character.id,
-      narrationText: flavorText,
-      resolved: input.resolved,
-      dmLineKind: 'flavor'
-    })
-  }
+  appendDmNarrationEvent(db, {
+    campaignId: input.campaignId,
+    characterId: input.character.id,
+    narrationText: narrationResult.narrationText,
+    resolved: input.resolved
+  })
   input.state.narrationResult = narrationResult
-  if (!input.state.lootNarration && flavorText) {
-    input.state.narrationText = flavorText
+  if (!input.state.lootNarration) {
+    input.state.narrationText = narrationResult.narrationText
   }
-  if (flavorText || sceneUpdate) {
-    const sceneContextAddition = sceneUpdate ?? flavorText
-    input.state.sceneContext = input.state.sceneContext
-      ? `${input.state.sceneContext} ${sceneContextAddition}`
-      : sceneContextAddition
-  }
+  input.state.sceneContext = input.state.sceneContext
+    ? `${input.state.sceneContext} ${input.state.narrationText}`
+    : input.state.narrationText
 }
 
 function executePlayerActionExpressionBeat(

@@ -11,7 +11,6 @@ export interface OnboardingStageContentProps {
   onCharacterSetupComplete: () => void
   onGuidedIdentityAdvance: () => void
   onEnterPlay: () => void
-  createHandleReadyToEnterPlay: (characterId: string) => () => Promise<void>
   enterPlayBlockerMessage?: string | null
   onRefreshDetail: () => Promise<void>
   hubSnapshot?: PlayAwareHubSnapshot | null
