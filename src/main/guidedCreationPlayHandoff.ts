@@ -94,11 +94,6 @@ export function finalizeOpeningSceneForPlay(
 
   db.transaction(() => {
     completeOpeningScenePhase(db, characterId, openingScene)
-    appendEvent(db, {
-      campaignId,
-      type: 'opening_scene',
-      payload: { characterId, narrationText: openingScene, dmLineKind: 'scene' }
-    })
   })()
   importOpeningSceneTranscriptToNarrationLog(db, campaignId, characterId)
 

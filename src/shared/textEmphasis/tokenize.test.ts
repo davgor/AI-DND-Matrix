@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { tokenizeTextEmphasis } from './tokenize'
 
-describe('tokenizeTextEmphasis', () => {
+describe('tokenizeTextEmphasis basics', () => {
   it('returns plain text unchanged when there are no markers', () => {
     expect(tokenizeTextEmphasis('Rain drums on stone.')).toEqual([
       { type: 'text', content: 'Rain drums on stone.' }
@@ -36,7 +36,9 @@ describe('tokenizeTextEmphasis', () => {
       { type: 'text', content: '*not emphasis*' }
     ])
   })
+})
 
+describe('tokenizeTextEmphasis quotes', () => {
   it('tokenizes quote-wrapped italic spans', () => {
     expect(tokenizeTextEmphasis("''I raise an eyebrow''")).toEqual([
       { type: 'em', content: 'I raise an eyebrow' }
@@ -54,6 +56,16 @@ describe('tokenizeTextEmphasis', () => {
     ])
   })
 
+  it('leaves apostrophes in contractions as literal text', () => {
+    expect(tokenizeTextEmphasis("don't think they are \"supposed\" to do that")).toEqual([
+      { type: 'text', content: "don't think they are " },
+      { type: 'em', content: 'supposed' },
+      { type: 'text', content: ' to do that' }
+    ])
+  })
+})
+
+describe('tokenizeTextEmphasis edge cases', () => {
   it('tokenizes spoken prose with inline action markers', () => {
     expect(
       tokenizeTextEmphasis(
@@ -66,14 +78,6 @@ describe('tokenizeTextEmphasis', () => {
           'Text I am saying some things, notice how there are no quotations or anything around the spoken text\n'
       },
       { type: 'em', content: 'I look closely at the AI bot that is reading my prompts' }
-    ])
-  })
-
-  it('leaves apostrophes in contractions as literal text', () => {
-    expect(tokenizeTextEmphasis("don't think they are \"supposed\" to do that")).toEqual([
-      { type: 'text', content: "don't think they are " },
-      { type: 'em', content: 'supposed' },
-      { type: 'text', content: ' to do that' }
     ])
   })
 

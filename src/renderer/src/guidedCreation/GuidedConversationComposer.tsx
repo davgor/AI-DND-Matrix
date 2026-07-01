@@ -11,6 +11,29 @@ export interface GuidedConversationComposerProps {
   onHandoff?: () => void
 }
 
+function GuidedConversationActions(props: GuidedConversationComposerProps): JSX.Element | null {
+  if (props.handoffLabel && props.onHandoff) {
+    return (
+      <button
+        type="button"
+        className="guided-conversation-advance"
+        disabled={props.inputDisabled || props.sending}
+        onClick={props.onHandoff}
+      >
+        {props.handoffLabel}
+      </button>
+    )
+  }
+  if (!props.handoffLabel && props.phaseComplete && props.advanceLabel && props.onAdvance) {
+    return (
+      <button type="button" className="guided-conversation-advance" onClick={props.onAdvance}>
+        {props.advanceLabel}
+      </button>
+    )
+  }
+  return null
+}
+
 export function GuidedConversationComposer(props: GuidedConversationComposerProps): JSX.Element {
   return (
     <div className="guided-conversation-composer panel-card">
@@ -34,21 +57,7 @@ export function GuidedConversationComposer(props: GuidedConversationComposerProp
         >
           {props.sending ? 'Sending…' : 'Send'}
         </button>
-        {props.handoffLabel && props.onHandoff ? (
-          <button
-            type="button"
-            className="guided-conversation-advance"
-            disabled={props.inputDisabled || props.sending}
-            onClick={props.onHandoff}
-          >
-            {props.handoffLabel}
-          </button>
-        ) : null}
-        {!props.handoffLabel && props.phaseComplete && props.advanceLabel && props.onAdvance ? (
-          <button type="button" className="guided-conversation-advance" onClick={props.onAdvance}>
-            {props.advanceLabel}
-          </button>
-        ) : null}
+        <GuidedConversationActions {...props} />
       </div>
     </div>
   )
