@@ -69,6 +69,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ steps.version.outputs.version }}" release/* \
+          mapfile -t assets < <(find release -maxdepth 1 -type f | sort)
+          if [ "${#assets[@]}" -eq 0 ]; then
+            echo "No release artifacts found in release/"
+            exit 1
+          fi
+          printf 'Uploading:\n%s\n' "${assets[@]}"
+          gh release create "v${{ steps.version.outputs.version }}" "${assets[@]}" \
             --title "AI TTRPG Matrix v${{ steps.version.outputs.version }}" \
             --generate-notes

@@ -2,7 +2,7 @@
 
 Packaged Windows builds use **electron-updater** with GitHub Releases as the update server.
 
-CI builds with `electron-builder --publish never` (artifacts only). The deploy workflow uploads `release/*` via `gh release create`; electron-builder does not publish during the build step.
+CI builds with `electron-builder --publish never` (artifacts only). The deploy workflow uploads release **files** only (`latest.yml`, installers, blockmaps) via `gh release create`; the `win-unpacked` build folder is not uploaded.
 
 ## Installers vs portable
 
