@@ -192,28 +192,6 @@ export function tokenizeChatMessage(input: string): EmphasisToken[] {
   return tokens
 }
 
-function isEmphasisToken(token: EmphasisToken | undefined): boolean {
-  return token?.type === 'em' || token?.type === 'strong'
-}
-
-function normalizeAdjacentTextToken(
-  text: string,
-  previous: EmphasisToken | undefined,
-  next: EmphasisToken | undefined
-): string | null {
-  let normalizedText = text.replace(/\n{2,}/g, '\n')
-  if (isEmphasisToken(previous)) {
-    normalizedText = normalizedText.replace(/^\n+/, '')
-  }
-  if (isEmphasisToken(next)) {
-    normalizedText = normalizedText.replace(/\n+$/, '')
-  }
-  if (normalizedText.trim().length === 0 && isEmphasisToken(previous) && isEmphasisToken(next)) {
-    return null
-  }
-  return normalizedText.length > 0 ? normalizedText : null
-}
-
 export function normalizeChatMessageTokens(tokens: EmphasisToken[]): EmphasisToken[] {
   const normalized: EmphasisToken[] = []
 
@@ -224,10 +202,24 @@ export function normalizeChatMessageTokens(tokens: EmphasisToken[]): EmphasisTok
       continue
     }
 
+    let text = token.content.replace(/\n{2,}/g, '\n')
     const previous = normalized[normalized.length - 1]
     const next = tokens[index + 1]
-    const text = normalizeAdjacentTextToken(token.content, previous, next)
-    if (text) {
+
+    if (previous?.type === 'em' || previous?.type === 'strong') {
+      text = text.replace(/^\n+/, '')
+    }
+    if (next?.type === 'em' || next?.type === 'strong') {
+      text = text.replace(/\n+$/, '')
+    }
+    if (
+      text.trim().length === 0 &&
+      (previous?.type === 'em' || previous?.type === 'strong') &&
+      (next?.type === 'em' || next?.type === 'strong')
+    ) {
+      continue
+    }
+    if (text.length > 0) {
       normalized.push({ type: 'text', content: text })
     }
   }

@@ -589,20 +589,6 @@ async function applyQuestRewardsToBeat(
   })
 }
 
-function updateBeatSceneContext(
-  state: BeatExecutionState,
-  flavorText: string,
-  sceneUpdate: string | undefined
-): void {
-  if (!flavorText && !sceneUpdate) {
-    return
-  }
-  const sceneContextAddition = sceneUpdate ?? flavorText
-  state.sceneContext = state.sceneContext
-    ? `${state.sceneContext} ${sceneContextAddition}`
-    : sceneContextAddition
-}
-
 async function executeDmNarrationBeat(
   db: Database.Database,
   provider: Provider,
@@ -649,7 +635,12 @@ async function executeDmNarrationBeat(
   if (!input.state.lootNarration && flavorText) {
     input.state.narrationText = flavorText
   }
-  updateBeatSceneContext(input.state, flavorText, sceneUpdate)
+  if (flavorText || sceneUpdate) {
+    const sceneContextAddition = sceneUpdate ?? flavorText
+    input.state.sceneContext = input.state.sceneContext
+      ? `${input.state.sceneContext} ${sceneContextAddition}`
+      : sceneContextAddition
+  }
 }
 
 function executePlayerActionExpressionBeat(

@@ -40,7 +40,6 @@
     "electron": "^42.5.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
-    "happy-dom": "^20.10.6",
     "oxlint": "^1.71.0",
     "typescript": "^5.5.2",
     "vite": "^7.3.6",
