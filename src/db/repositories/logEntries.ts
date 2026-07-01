@@ -83,3 +83,47 @@ export function listLogEntriesByCharacterAndCategory(
     .all(characterId, category) as LogEntryRow[]
   return rows.map(rowToEntry)
 }
+
+export function getLogEntryById(db: Database.Database, id: string): LogEntry | undefined {
+  const row = db.prepare('SELECT * FROM log_entries WHERE id = ?').get(id) as LogEntryRow | undefined
+  return row ? rowToEntry(row) : undefined
+}
+
+export interface UpdateLogEntryInput {
+  title?: string
+  content?: string
+  category?: LogCategory
+  relatedEntityId?: string | null
+}
+
+export function updateLogEntryForCharacter(
+  db: Database.Database,
+  characterId: string,
+  entryId: string,
+  updates: UpdateLogEntryInput
+): LogEntry | null {
+  const existing = getLogEntryById(db, entryId)
+  if (!existing || existing.characterId !== characterId) {
+    return null
+  }
+  const title = updates.title ?? existing.title
+  const content = updates.content ?? existing.content
+  const category = updates.category ?? existing.category
+  const relatedEntityId =
+    updates.relatedEntityId !== undefined ? updates.relatedEntityId : existing.relatedEntityId
+  db.prepare(
+    `UPDATE log_entries SET title = ?, content = ?, category = ?, related_entity_id = ? WHERE id = ? AND character_id = ?`
+  ).run(title, content, category, relatedEntityId, entryId, characterId)
+  return getLogEntryById(db, entryId) ?? null
+}
+
+export function deleteLogEntryForCharacter(
+  db: Database.Database,
+  characterId: string,
+  entryId: string
+): boolean {
+  const result = db
+    .prepare('DELETE FROM log_entries WHERE id = ? AND character_id = ?')
+    .run(entryId, characterId)
+  return result.changes > 0
+}

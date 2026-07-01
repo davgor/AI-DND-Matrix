@@ -17,7 +17,7 @@ export function buildItemModificationPrompt(ctx: ItemModificationContext): strin
   const weaponSummaries = ctx.ownedWeapons.map((row) => ({
     characterItemId: row.id,
     name: row.item.name,
-    equipped: row.equippedSlot === 'weapon',
+    equipped: row.equippedSlot === 'mainHand',
     existingComponents: row.weaponProfile?.components ?? null
   }))
   return [

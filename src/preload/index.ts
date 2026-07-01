@@ -20,7 +20,9 @@ import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { CombatStateSnapshot } from '../shared/combat/types'
 import type { TurnInput, TurnResult } from '../main/turnIpc'
 import type { GenerateObituaryInput, GenerateObituaryResult } from '../main/obituaryIpc'
-import type { LogEntry } from '../shared/logBook/types'
+import type { CharacterQuestView, CreateQuestInput, QuestIpcError, QuestStatus, UpdateQuestInput } from '../shared/quests/types'
+import type { LogEntry, UpdateLogEntryInput } from '../shared/logBook/types'
+import type { LogCategory } from '../shared/logBook/types'
 import type { CharacterJournalEntry } from '../shared/journal/types'
 import type { CharacterItemView } from '../shared/items/types'
 import type { EquipSlot } from '../shared/items/types'
@@ -116,10 +118,71 @@ const characters = {
   consumeItem: (input: { characterId: string; itemId: string }): Promise<
     { ok: true; hpAfter: number } | { ok: false; reason: string }
   > => ipcRenderer.invoke('characters:consumeItem', input),
+  dropItem: (input: {
+    characterId: string
+    characterItemId: string
+    quantity?: number
+  }): Promise<{ ok: boolean }> => ipcRenderer.invoke('characters:dropItem', input),
+  validEquipSlots: (characterItemId: string, characterId: string): Promise<EquipSlot[]> =>
+    ipcRenderer.invoke('characters:validEquipSlots', characterItemId, characterId),
   listLogEntries: (characterId: string): Promise<LogEntry[]> =>
     ipcRenderer.invoke('characters:listLogEntries', characterId),
   listJournalEntries: (characterId: string): Promise<CharacterJournalEntry[]> =>
     ipcRenderer.invoke('characters:listJournalEntries', characterId)
+}
+
+const logBook = {
+  createEntry: (input: {
+    campaignId: string
+    characterId: string
+    category: LogCategory
+    title: string
+    content: string
+    relatedEntityId?: string | null
+  }): Promise<LogEntry | null> => ipcRenderer.invoke('logBook:createEntry', input),
+  updateEntry: (input: {
+    characterId: string
+    entryId: string
+    updates: UpdateLogEntryInput
+  }): Promise<LogEntry | null> => ipcRenderer.invoke('logBook:updateEntry', input),
+  deleteEntry: (input: { characterId: string; entryId: string }): Promise<boolean> =>
+    ipcRenderer.invoke('logBook:deleteEntry', input)
+}
+
+const quests = {
+  listForCharacter: (characterId: string): Promise<CharacterQuestView[]> =>
+    ipcRenderer.invoke('quests:listForCharacter', characterId),
+  accept: (input: { characterId: string; questId: string }): Promise<CharacterQuestView | QuestIpcError> =>
+    ipcRenderer.invoke('quests:accept', input),
+  abandon: (input: { characterId: string; questId: string }): Promise<CharacterQuestView | QuestIpcError> =>
+    ipcRenderer.invoke('quests:abandon', input),
+  updateNotes: (input: {
+    characterId: string
+    questId: string
+    notes: string
+  }): Promise<CharacterQuestView | QuestIpcError> =>
+    ipcRenderer.invoke('quests:updateNotes', input),
+  create: (
+    input: CreateQuestInput & { characterId: string }
+  ): Promise<CharacterQuestView | QuestIpcError> => ipcRenderer.invoke('quests:create', input),
+  update: (input: {
+    questId: string
+    characterId: string
+    updates: UpdateQuestInput
+  }): Promise<CharacterQuestView | QuestIpcError> => ipcRenderer.invoke('quests:update', input),
+  delete: (input: { questId: string; characterId: string }): Promise<{ ok: true } | QuestIpcError> =>
+    ipcRenderer.invoke('quests:delete', input),
+  forceStatus: (input: {
+    characterId: string
+    questId: string
+    status: QuestStatus
+  }): Promise<CharacterQuestView | QuestIpcError> =>
+    ipcRenderer.invoke('quests:forceStatus', input),
+  promoteWorldFact: (input: {
+    characterId: string
+    worldFactId: string
+  }): Promise<CharacterQuestView | QuestIpcError> =>
+    ipcRenderer.invoke('quests:promoteWorldFact', input)
 }
 
 const turn = {
@@ -197,6 +260,8 @@ contextBridge.exposeInMainWorld('windowControls', windowControls)
 contextBridge.exposeInMainWorld('campaigns', campaigns)
 contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
+contextBridge.exposeInMainWorld('logBook', logBook)
+contextBridge.exposeInMainWorld('quests', quests)
 contextBridge.exposeInMainWorld('turn', turn)
 contextBridge.exposeInMainWorld('combat', combat)
 contextBridge.exposeInMainWorld('progression', progression)
@@ -210,6 +275,8 @@ export type WindowControls = typeof windowControls
 export type CampaignsApi = typeof campaigns
 export type FilesApi = typeof files
 export type CharactersApi = typeof characters
+export type LogBookApi = typeof logBook
+export type QuestsApi = typeof quests
 export type TurnApi = typeof turn
 export type CombatApi = typeof combat
 export type ProgressionApi = typeof progression

@@ -1,7 +1,6 @@
 import type Database from 'better-sqlite3'
 import { clampItemRarity, deriveMechanicalProperties } from '../../engine/itemTemplate'
-import type { EquipSlot, ItemType } from '../../shared/items/types'
-import type { CatalogItem } from '../../shared/items/types'
+import type { CatalogItem, EquipSlot, ItemType } from '../../shared/items/types'
 import { findCatalogItemByName, getCatalogItemById, upsertCatalogItemByName } from './items'
 
 export interface ProposedCatalogItemInput {
@@ -13,13 +12,13 @@ export interface ProposedCatalogItemInput {
 
 function defaultEquipSlot(itemType: ItemType): EquipSlot | null {
   if (itemType === 'weapon') {
-    return 'weapon'
+    return 'mainHand'
   }
   if (itemType === 'armor') {
     return 'armor'
   }
   if (itemType === 'magicItem') {
-    return 'trinket'
+    return 'ring1'
   }
   return null
 }

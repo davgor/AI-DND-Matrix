@@ -57,7 +57,7 @@ describe('item system end-to-end smoke', () => {
     ])
     const bow = findCatalogItemByName(db, 'Glimmering Shortbow')!
     const bowRow = listCharacterItems(db, character.id).find((row) => row.itemId === bow.id)!
-    equipCharacterItem(db, character.id, bowRow.id, 'weapon')
+    equipCharacterItem(db, character.id, bowRow.id, 'mainHand')
     expect(resolvePlayerEquippedAttackDamage(db, character.id, () => 0.99, 15)).toBeGreaterThan(0)
 
     const chain = findCatalogItemByName(db, 'Chain Hauberk')!
@@ -83,9 +83,9 @@ describe('item system end-to-end smoke', () => {
     const longsword = findCatalogItemByName(db, 'Longsword')!
     const daggerRow = addItemToCharacter(db, character.id, dagger.id)
     const swordRow = addItemToCharacter(db, character.id, longsword.id)
-    equipCharacterItem(db, character.id, daggerRow.id, 'weapon')
+    equipCharacterItem(db, character.id, daggerRow.id, 'mainHand')
     const daggerRoll = getEquippedWeaponDamageRoll(db, character.id)
-    equipCharacterItem(db, character.id, swordRow.id, 'weapon')
+    equipCharacterItem(db, character.id, swordRow.id, 'mainHand')
     expect(getEquippedWeaponDamageRoll(db, character.id).diceSize).toBeGreaterThan(daggerRoll.diceSize)
   })
 })
@@ -108,15 +108,15 @@ describe('item system persistence smoke', () => {
     const character = seedPlayer(db)
     const bow = findCatalogItemByName(db, 'Hunting Bow')!
     const row = addItemToCharacter(db, character.id, bow.id)
-    equipCharacterItem(db, character.id, row.id, 'weapon')
-    const equippedId = listCharacterItems(db, character.id).find((r) => r.equippedSlot === 'weapon')?.id
+    equipCharacterItem(db, character.id, row.id, 'mainHand')
+    const equippedId = listCharacterItems(db, character.id).find((r) => r.equippedSlot === 'mainHand')?.id
     const filePath = db.name
     db.close()
 
     const reopened = new Database(filePath)
     expect(
       listCharacterItems(reopened, character.id).find((row) => row.id === equippedId)?.equippedSlot
-    ).toBe('weapon')
+    ).toBe('mainHand')
     reopened.close()
   })
 })

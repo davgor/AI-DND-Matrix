@@ -121,6 +121,14 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | 038 | **Campaign hub** — multi-character cast, death/obituaries, per-character party rosters, inactive-character AI proxy, cross-character log-book writes, history-aware region generation, travel to ungenerated destinations |
 | 039 | **Configurable generation counts** — region count (0–5) and NPCs per region (0–10) on campaign start; review continue/play gates; per-region generate NPC on review |
 
+### In progress
+
+| Epic | Intent |
+|------|--------|
+| **043** | **Play view UX refresh** — session chrome, scene vs feed hierarchy, play sheet tabs, status alerts, composer polish; see `src/shared/inCampaignLayout/PLAY_VIEW_UX_SPEC.md` |
+| **044** | **Character sheet overlay, equipment slots, inventory modals, log book depth** — expanded equip model, commerce, sheet overlay from play rail; see `src/shared/items/SPEC.md` |
+| **045** | **Quest log** — main story + side quests, DM proposals, XP/loot on completion; see `src/shared/quests/SPEC.md` and `docs/runbooks/quest-log-smoke-test.md` |
+
 ### Revisit backlog
 
 | Epic | Intent |

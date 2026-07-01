@@ -52,6 +52,18 @@ export interface HubRecentEvent {
   summary: string
 }
 
+export interface HubCharacterQuestSummary {
+  characterId: string
+  mainQuestHookLine: string | null
+  mainQuestTitle: string | null
+  activeSideQuestCount: number
+}
+
+export interface HubRegionQuestAvailability {
+  regionId: string
+  availableQuestCount: number
+}
+
 /** Extends campaign detail with play-aware fields for the hub preview panel. */
 export interface PlayAwareHubSnapshot {
   campaign: Campaign | undefined
@@ -63,6 +75,8 @@ export interface PlayAwareHubSnapshot {
   currentStateSummary: string
   recentEvents: HubRecentEvent[]
   cast: HubCastMember[]
+  questSummariesByCharacterId: HubCharacterQuestSummary[]
+  regionQuestAvailability: HubRegionQuestAvailability[]
 }
 
 /** Campaign opens Campaign Hub when at least one player has completed guided creation. */

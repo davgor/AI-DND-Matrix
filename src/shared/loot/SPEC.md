@@ -7,7 +7,7 @@ Realistic loot resolves at two beat points — **encounter end** and **quest com
 | `LootSource` | When it fires |
 |--------------|---------------|
 | `encounter_end` | Combat encounter resolves with `outcome: defeated` and at least one lootable foe |
-| `quest_complete` | Story thread transitions into `completed`, `resolved`, or `done` |
+| `quest_complete` | Character quest → `completed`, or story thread terminal state synced to linked main quest |
 
 **XP ordering (epic 036):** when XP awards exist, run XP → level-up ceremony (if threshold crossed) → loot. Loot must not run before level-up gates clear.
 
@@ -16,7 +16,7 @@ Realistic loot resolves at two beat points — **encounter end** and **quest com
 Assembled per source:
 
 - **Encounter:** per-foe summaries (`catalog` bucket, `combat_tier`, role, outcome), region id, player level/character id
-- **Quest:** thread id, hook text (summary), quest scale (`minor` | `major`), region id, player level
+- **Quest:** `questId` (preferred), legacy `questThreadId`, hook text (summary), quest scale (`minor` | `major`), region id, player level
 
 ### Lootable foes (encounter)
 

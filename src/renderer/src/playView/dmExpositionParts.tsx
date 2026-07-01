@@ -2,7 +2,8 @@ import type { PlayLogEntry } from '../../../main/narrationLog'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { PendingAlignmentShift } from '../../../shared/alignment/types'
 import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/types'
-import { pickCurrentSceneText } from '../../../shared/inCampaignLayout/sceneContext'
+import type { SceneSummaryInput } from '../../../shared/inCampaignLayout/sceneContext'
+import { pickSceneSummary } from '../../../shared/inCampaignLayout/sceneContext'
 import { FormattedText } from '../shared/FormattedText'
 
 export interface AlignmentShiftWarningBannerProps {
@@ -64,34 +65,19 @@ export function ImprisonedStatusBanner(): JSX.Element {
   )
 }
 
-export function DmExpositionSceneHeader(props: {
+export interface DmExpositionSceneHeaderProps {
   entries: PlayLogEntry[]
+  sceneContext: SceneSummaryInput
   expositionStatus: ExpositionStatus
   onRetryExposition: () => void
-  pendingAlignmentShift: PendingAlignmentShift | null
-  playerAlignment: string | null
-  defeatDispositionNarration: string | null
-  xpNarration: string | null
-  lootNarration: string | null
-  playerImprisoned: boolean
-}): JSX.Element {
-  const sceneText = pickCurrentSceneText(props.entries)
+}
+
+export function DmExpositionSceneHeader(props: DmExpositionSceneHeaderProps): JSX.Element {
+  const sceneText = pickSceneSummary(props.entries, props.sceneContext)
   const isLoading = props.expositionStatus.state === 'loading'
   return (
     <header className="dm-exposition-header">
       <h2>Scene</h2>
-      {props.pendingAlignmentShift ? (
-        <AlignmentShiftWarningBanner
-          pending={props.pendingAlignmentShift}
-          playerAlignment={props.playerAlignment}
-        />
-      ) : null}
-      {props.playerImprisoned ? <ImprisonedStatusBanner /> : null}
-      {props.defeatDispositionNarration ? (
-        <DefeatDispositionBanner narrationText={props.defeatDispositionNarration} />
-      ) : null}
-      {props.xpNarration ? <XpRewardBanner narrationText={props.xpNarration} /> : null}
-      {props.lootNarration ? <LootRewardBanner narrationText={props.lootNarration} /> : null}
       {isLoading ? <p className="dm-exposition-status dm-exposition-loading">Updating scene…</p> : null}
       {props.expositionStatus.state === 'error' ? (
         <div className="dm-exposition-status dm-exposition-error" role="alert">
@@ -102,14 +88,23 @@ export function DmExpositionSceneHeader(props: {
         </div>
       ) : null}
       <div className="dm-exposition-scene" aria-live="polite">
-        {sceneText ? (
-          FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: sceneText })
-        ) : (
-          <p className="dm-exposition-scene-empty">No scene set yet — act to begin.</p>
-        )}
+        {FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: sceneText })}
       </div>
     </header>
   )
+}
+
+function speakerLabel(entry: PlayLogEntry): string | null {
+  if (entry.speaker === 'dm') {
+    return 'DM'
+  }
+  if (entry.speaker === 'npc') {
+    return entry.speakerName ?? 'NPC'
+  }
+  if (entry.speaker === 'partyMember') {
+    return entry.speakerName ?? 'Ally'
+  }
+  return null
 }
 
 function renderNpcLine(entry: { reactionKind?: string; text: string }): JSX.Element {
@@ -127,14 +122,26 @@ function renderNpcLine(entry: { reactionKind?: string; text: string }): JSX.Elem
   )
 }
 
-function renderFeedLine(entry: { speaker: string; reactionKind?: string; playerLineKind?: string; text: string }): JSX.Element {
-  if (entry.speaker === 'player' && entry.playerLineKind === 'actionExpression') {
-    return <strong>{entry.text}</strong>
+function renderFeedLine(entry: PlayLogEntry): JSX.Element {
+  const label = speakerLabel(entry)
+  const body =
+    entry.speaker === 'player' && entry.playerLineKind === 'actionExpression' ? (
+      <strong>{entry.text}</strong>
+    ) : entry.speaker === 'npc' || entry.speaker === 'partyMember' ? (
+      renderNpcLine(entry)
+    ) : (
+      <>{entry.text}</>
+    )
+
+  if (!label) {
+    return body
   }
-  if (entry.speaker === 'npc' || entry.speaker === 'partyMember') {
-    return renderNpcLine(entry)
-  }
-  return <>{entry.text}</>
+
+  return (
+    <>
+      <span className="dm-feed-speaker">{label}:</span> {body}
+    </>
+  )
 }
 
 export { renderNpcLine, renderFeedLine }

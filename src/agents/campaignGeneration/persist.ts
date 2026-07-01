@@ -3,7 +3,11 @@ import { createCampaign, type Campaign } from '../../db/repositories/campaigns'
 import { createNpcWithCombatReview } from '../../db/repositories/npcCombatHydration'
 import { createRegion } from '../../db/repositories/regions'
 import { createRegionHistoryEntry } from '../../db/repositories/regionHistory'
-import { createStoryThread } from '../../db/repositories/storyThreads'
+import { createStoryThread, listStoryThreadsByCampaign } from '../../db/repositories/storyThreads'
+import {
+  importSideQuestsFromQuestHooks,
+  seedMainQuestForCampaign
+} from '../../db/repositories/quests'
 import { createWorldFact } from '../../db/repositories/worldFacts'
 import type { Provider } from '../providers/types'
 import type {
@@ -157,6 +161,17 @@ export async function persistGeneratedCampaign(
     state: generation.storyThread.state,
     summary: generation.storyThread.summary
   })
+
+  const [thread] = listStoryThreadsByCampaign(db, campaign.id)
+  if (thread) {
+    seedMainQuestForCampaign(db, {
+      campaignId: campaign.id,
+      storyThreadId: thread.id,
+      title: thread.title,
+      summary: thread.summary
+    })
+    importSideQuestsFromQuestHooks(db, campaign.id)
+  }
 
   return campaign
 }

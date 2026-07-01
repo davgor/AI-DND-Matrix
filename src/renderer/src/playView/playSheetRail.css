@@ -1,0 +1,94 @@
+.play-sheet-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 4px 6px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.play-sheet-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 6px 4px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.play-sheet-tab-active {
+  color: var(--text-accent);
+  border-bottom-color: var(--accent-gold);
+  font-weight: 600;
+}
+
+.play-sheet-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  min-height: 0;
+  font-size: 13px;
+}
+
+.play-sheet-combat-vitals,
+.play-sheet-ability-scores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.play-sheet-combat-vitals dt,
+.play-sheet-ability-scores dt {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.play-sheet-combat-vitals dd,
+.play-sheet-ability-scores dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.play-sheet-conditions {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.play-sheet-conditions li {
+  background: rgba(232, 160, 144, 0.15);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.play-sheet-equipped-weapon {
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.play-sheet-identity-line {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+}
+
+.play-sheet-log-book-button {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.play-sheet-rail .player-sheet-rail-toggle {
+  flex-shrink: 0;
+}
+
+.play-sheet-rail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}

@@ -18,7 +18,7 @@ describe('characterItems equip rejection', () => {
       source: 'seed'
     })
     const row = addItemToCharacter(db, character.id, potion.id)
-    expect(equipCharacterItem(db, character.id, row.id, 'weapon')).toEqual({
+    expect(equipCharacterItem(db, character.id, row.id, 'mainHand')).toEqual({
       ok: false,
       reason: 'not_equippable'
     })

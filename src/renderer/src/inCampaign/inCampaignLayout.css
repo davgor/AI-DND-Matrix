@@ -5,6 +5,7 @@
   flex: 1;
   height: 100%;
   min-width: 0;
+  min-height: 0;
   position: relative;
   grid-template-columns: var(--col-campaigns) minmax(240px, 1.2fr) minmax(220px, 1fr) var(--col-sheet);
   grid-template-areas: 'campaigns dm player sheet';
@@ -62,13 +63,24 @@
   pointer-events: auto;
 }
 
+.in-campaign-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
 .in-campaign-layout--sheet-overlay .in-campaign-column--sheet {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   width: min(320px, 90vw);
-  z-index: 20;
+  z-index: 25;
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.45);
   border-left: 1px solid var(--border-medium);
 }
@@ -112,4 +124,9 @@
   z-index: 30;
   box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5);
   border-right: 1px solid var(--border-medium);
+}
+
+.in-campaign-layout--sheet-overlay .in-campaign-column--campaigns,
+.in-campaign-layout--compact .in-campaign-column--campaigns {
+  padding-top: 0;
 }

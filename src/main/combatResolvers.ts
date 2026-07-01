@@ -1,12 +1,12 @@
 import type Database from 'better-sqlite3'
 import type { AbilityScores, RandomFn } from '../engine/abilities'
 import { abilityModifier } from '../engine/abilities'
-import { computeAC } from '../engine/armorClass'
 import { resolveNpcAttack } from '../engine/npcAttack'
 import { resolvePlayerAttackAgainstNpc } from '../engine/playerAttack'
 import { checkYieldEligibility } from '../engine/yieldEligibility'
 import { proficiencyBonus } from '../engine/proficiency'
-import { getEquippedArmorTier, getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
+import { getEquippedAccessoryBonuses, getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
+import { computeCharacterTotalAc } from '../db/repositories/itemCommerce'
 import { resolveNpcResistanceProfile } from '../db/repositories/npcResistances'
 import {
   getActiveCombatant,
@@ -74,11 +74,12 @@ export interface PlayerAttackSyncResult {
   }
 }
 
-function computeAttackModifier(player: Character): number {
+function computeAttackModifier(db: Database.Database, player: Character): number {
   const scores = (player.stats as { abilityScores?: AbilityScores }).abilityScores
   const agility = scores?.agility ?? 10
   const proficient = Boolean((player.stats as { weaponProficient?: boolean }).weaponProficient)
-  return abilityModifier(agility) + (proficient ? proficiencyBonus(player.level) : 0)
+  const accessoryBonus = getEquippedAccessoryBonuses(db, player.id).attackBonus
+  return abilityModifier(agility) + (proficient ? proficiencyBonus(player.level) : 0) + accessoryBonus
 }
 
 interface YieldPendingInput {
@@ -118,7 +119,7 @@ export function resolvePlayerAttack(input: PlayerAttackInput): PlayerAttackSyncR
   const weaponProfile = getEquippedWeaponDamageProfile(db, player.id)
   const resolution = resolvePlayerAttackAgainstNpc({
     rng,
-    attackModifier: computeAttackModifier(player),
+    attackModifier: computeAttackModifier(db, player),
     weaponComponents: weaponProfile.components,
     targetAc: targetNpc.ac,
     targetHp: targetNpc.hp,
@@ -190,7 +191,7 @@ async function resolveNpcCombatTurn(input: CatchUpInput & { npcId: string }): Pr
     rng,
     attackBonus,
     damageRoll,
-    targetAc: computeAC(scores?.agility ?? 10, getEquippedArmorTier(db, player.id)),
+    targetAc: computeCharacterTotalAc(db, player.id, scores?.agility ?? 10),
     targetHp: player.hp
   })
 

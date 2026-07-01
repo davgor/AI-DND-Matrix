@@ -7,18 +7,18 @@ Progression mirrors epic **035** loot: engine-authoritative budgets, agent narra
 | `XPSource` | When it fires |
 |------------|---------------|
 | `encounter_end` | Combat encounter resolves with `outcome: defeated` and at least one XP-earning foe |
-| `quest_complete` | Story thread transitions into `completed`, `resolved`, or `done` |
+| `quest_complete` | Character quest status → `completed`, or story thread terminal state synced to linked main quest |
 
 **Orchestration order:** XP award → level-up ceremony (if threshold crossed) → loot. Loot must not run before level-up gates clear.
 
-**Same-turn dedupe:** encounter XP and quest XP are separate sources — both may fire the same turn (encounter then quest beat), each awarding once for its source.
+**Same-turn dedupe:** encounter XP and quest XP are separate sources — both may fire the same turn (encounter then quest beat), each awarding once for its source. When `storyThreadUpdate` and `questCompletions` both complete the same main quest, reward passes dedupe on `questId`.
 
 ## XPContext
 
 Assembled per source (shared foe summaries with loot):
 
 - **Encounter:** defeated foes (`slain`, `incapacitated`, `surrender` — not `flee`), combat tier, buckets, round count, region, player level
-- **Quest:** thread id, hook text, quest scale (`minor` | `major`), region, player level
+- **Quest:** `questId` (preferred), legacy `questThreadId`, hook text, quest scale (`minor` | `major`), region, player level
 
 Skip XP agent when `XPBudget.max === 0` (all fled / zero earners).
 

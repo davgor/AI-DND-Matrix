@@ -31,15 +31,16 @@ describe('characterItems equipped reads', () => {
       mechanicalProperties: {
         kind: 'weapon',
         damageRoll: { diceCount: 1, diceSize: 12, modifier: 1 },
-        damageType: 'physical'
+        damageType: 'physical',
+        handedness: 'twoHand'
       },
-      equipSlot: 'weapon',
+      equipSlot: 'mainHand',
       source: 'seed'
     })
     const armorRow = addItemToCharacter(db, character.id, armor.id)
     const weaponRow = addItemToCharacter(db, character.id, weapon.id)
     equipCharacterItem(db, character.id, armorRow.id, 'armor')
-    equipCharacterItem(db, character.id, weaponRow.id, 'weapon')
+    equipCharacterItem(db, character.id, weaponRow.id, 'mainHand')
 
     expect(getEquippedArmorTier(db, character.id)).toBe('medium')
     expect(getEquippedWeaponDamageRoll(db, character.id)).toEqual({

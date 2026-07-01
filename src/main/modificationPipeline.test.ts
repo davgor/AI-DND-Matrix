@@ -10,7 +10,7 @@ describe('modification persist success', () => {
     const { db, campaign, character, row } = seedPipelineCampaign()
     const longsword = findCatalogItemByName(db, 'Longsword')!
     const catalogSnapshot = getCatalogItemById(db, longsword.id)!.mechanicalProperties
-    equipCharacterItem(db, character.id, row.id, 'weapon')
+    equipCharacterItem(db, character.id, row.id, 'mainHand')
     const result = persistValidatedModification({
       db,
       campaignId: campaign.id,

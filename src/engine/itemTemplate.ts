@@ -54,13 +54,18 @@ function magicBonusesForRarity(rarity: ItemRarity): { acBonus: number; attackBon
 export function deriveMechanicalProperties(itemType: ItemType, rarity: ItemRarity): MechanicalProperties {
   switch (itemType) {
     case 'weapon':
-      return { kind: 'weapon', damageRoll: weaponDamageForRarity(rarity), damageType: 'physical' }
+      return {
+        kind: 'weapon',
+        damageRoll: weaponDamageForRarity(rarity),
+        damageType: 'physical',
+        handedness: 'oneHand'
+      }
     case 'armor':
       return { kind: 'armor', armorTier: armorTierForRarity(rarity) }
     case 'potion':
       return { kind: 'potion', healAmount: potionHealForRarity(rarity) }
     case 'magicItem':
-      return { kind: 'magicItem', ...magicBonusesForRarity(rarity) }
+      return { kind: 'magicItem', ...magicBonusesForRarity(rarity), accessorySlot: 'ring1' }
     default:
       return { kind: 'misc' }
   }

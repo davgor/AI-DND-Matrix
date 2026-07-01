@@ -10,5 +10,16 @@ export const ARMOR_BONUS: Record<ArmorTier, number> = {
 }
 
 export function computeAC(agilityScore: number, armorTier: ArmorTier): number {
-  return 10 + abilityModifier(agilityScore) + ARMOR_BONUS[armorTier]
+  return computeTotalAC({ agilityScore, armorTier })
+}
+
+export function computeTotalAC(input: {
+  agilityScore: number
+  armorTier: ArmorTier
+  shieldBonus?: number
+  accessoryAcBonus?: number
+}): number {
+  const shield = input.shieldBonus ?? 0
+  const accessory = input.accessoryAcBonus ?? 0
+  return 10 + abilityModifier(input.agilityScore) + ARMOR_BONUS[input.armorTier] + shield + accessory
 }

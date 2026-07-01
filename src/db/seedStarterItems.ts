@@ -18,40 +18,107 @@ const STARTER_ITEMS: SeedSpec[] = [
     itemType: 'weapon',
     description: 'A small blade for close work.',
     rarity: 'common',
-    equipSlot: 'weapon',
-    mechanicalProperties: { kind: 'weapon', damageRoll: { diceCount: 1, diceSize: 4, modifier: 0 }, damageType: 'physical' }
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 1, diceSize: 4, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'oneHand'
+    }
+  },
+  {
+    name: 'Handaxe',
+    itemType: 'weapon',
+    description: 'A light axe for throwing or melee.',
+    rarity: 'common',
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'oneHand'
+    }
   },
   {
     name: 'Shortsword',
     itemType: 'weapon',
     description: 'A balanced one-handed sword.',
     rarity: 'common',
-    equipSlot: 'weapon',
-    mechanicalProperties: { kind: 'weapon', damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 }, damageType: 'physical' }
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'oneHand'
+    }
   },
   {
     name: 'Longsword',
     itemType: 'weapon',
     description: 'A reliable steel longsword.',
     rarity: 'uncommon',
-    equipSlot: 'weapon',
-    mechanicalProperties: { kind: 'weapon', damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 }, damageType: 'physical' }
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'oneHand'
+    }
   },
   {
     name: 'Greataxe',
     itemType: 'weapon',
     description: 'A heavy axe that cleaves through armor.',
     rarity: 'rare',
-    equipSlot: 'weapon',
-    mechanicalProperties: { kind: 'weapon', damageRoll: { diceCount: 1, diceSize: 12, modifier: 0 }, damageType: 'physical' }
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 1, diceSize: 12, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'twoHand'
+    }
+  },
+  {
+    name: 'Greatsword',
+    itemType: 'weapon',
+    description: 'A massive two-handed blade.',
+    rarity: 'rare',
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 2, diceSize: 6, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'twoHand'
+    }
   },
   {
     name: 'Hunting Bow',
     itemType: 'weapon',
     description: 'A strung bow for ranged attacks.',
     rarity: 'common',
-    equipSlot: 'weapon',
-    mechanicalProperties: { kind: 'weapon', damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 }, damageType: 'physical' }
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'twoHand'
+    }
+  },
+  {
+    name: 'Wooden Shield',
+    itemType: 'misc',
+    description: 'A sturdy wooden shield.',
+    rarity: 'common',
+    equipSlot: 'offHand',
+    mechanicalProperties: { kind: 'shield', acBonus: 2 }
+  },
+  {
+    name: 'Kite Shield',
+    itemType: 'misc',
+    description: 'A large kite-shaped shield.',
+    rarity: 'uncommon',
+    equipSlot: 'offHand',
+    mechanicalProperties: { kind: 'shield', acBonus: 3 }
   },
   {
     name: 'Traveler\'s Leathers',
@@ -102,12 +169,36 @@ const STARTER_ITEMS: SeedSpec[] = [
     mechanicalProperties: { kind: 'potion', healAmount: 14 }
   },
   {
+    name: 'Boots of Speed',
+    itemType: 'magicItem',
+    description: 'Light boots that quicken your step.',
+    rarity: 'uncommon',
+    equipSlot: 'feet',
+    mechanicalProperties: { kind: 'magicItem', acBonus: 0, attackBonus: 0, accessorySlot: 'feet' }
+  },
+  {
+    name: 'Iron Greaves',
+    itemType: 'magicItem',
+    description: 'Reinforced leg guards.',
+    rarity: 'common',
+    equipSlot: 'feet',
+    mechanicalProperties: { kind: 'magicItem', acBonus: 0, attackBonus: 0, accessorySlot: 'feet' }
+  },
+  {
+    name: 'Leather Belt',
+    itemType: 'magicItem',
+    description: 'A sturdy leather belt.',
+    rarity: 'common',
+    equipSlot: 'belt',
+    mechanicalProperties: { kind: 'magicItem', acBonus: 0, attackBonus: 0, accessorySlot: 'belt' }
+  },
+  {
     name: 'Ring of Warding',
     itemType: 'magicItem',
     description: 'A silver band that deflects harm.',
     rarity: 'uncommon',
-    equipSlot: 'trinket',
-    mechanicalProperties: { kind: 'magicItem', acBonus: 1, attackBonus: 0 }
+    equipSlot: 'ring1',
+    mechanicalProperties: { kind: 'magicItem', acBonus: 1, attackBonus: 0, accessorySlot: 'ring1' }
   }
 ]
 

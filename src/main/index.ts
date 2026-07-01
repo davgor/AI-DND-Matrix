@@ -21,6 +21,7 @@ import { registerSettingsIntroHandlers } from './settingsIntroIpc'
 import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
 import { registerCombatHandlers } from './combatIpc'
+import { registerQuestHandlers } from './questIpc'
 import { registerProgressionHandlers } from './progressionIpc'
 import { initAutoUpdate, registerAutoUpdateHandlers } from './autoUpdate'
 
@@ -79,6 +80,7 @@ app.whenReady().then(() => {
   registerItemHandlers()
   registerJournalHandlers()
   registerLogBookHandlers()
+  registerQuestHandlers()
   registerGuidedCreationHandlers()
   registerTurnHandlers()
   registerCombatHandlers()

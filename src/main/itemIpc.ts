@@ -1,11 +1,12 @@
 import { ipcMain } from 'electron'
-import type { EquipSlot } from '../shared/items/types'
+import type { EquipFailureReason, EquipSlot } from '../shared/items/types'
 import {
   equipCharacterItem,
+  getValidEquipSlotsForItem,
   listCharacterItems,
   unequipCharacterSlot
 } from '../db/repositories/characterItems'
-import { consumePotion } from '../db/repositories/itemFlows'
+import { consumePotion, removeOwnedItem } from '../db/repositories/itemFlows'
 import { getDb } from './db'
 
 export interface EquipItemInput {
@@ -24,11 +25,19 @@ export interface ConsumeItemInput {
   itemId: string
 }
 
+export interface DropItemInput {
+  characterId: string
+  characterItemId: string
+  quantity?: number
+}
+
+export type EquipItemResponse = { ok: true } | { ok: false; reason: EquipFailureReason }
+
 export function registerItemHandlers(): void {
   ipcMain.handle('characters:listItems', (_event, characterId: string) =>
     listCharacterItems(getDb(), characterId)
   )
-  ipcMain.handle('characters:equipItem', (_event, input: EquipItemInput) =>
+  ipcMain.handle('characters:equipItem', (_event, input: EquipItemInput): EquipItemResponse =>
     equipCharacterItem(getDb(), input.characterId, input.characterItemId, input.slot)
   )
   ipcMain.handle('characters:unequipItem', (_event, input: UnequipItemInput) => {
@@ -37,4 +46,21 @@ export function registerItemHandlers(): void {
   ipcMain.handle('characters:consumeItem', (_event, input: ConsumeItemInput) =>
     consumePotion(getDb(), input.characterId, input.itemId)
   )
+  ipcMain.handle('characters:dropItem', (_event, input: DropItemInput) => {
+    const removed = removeOwnedItem(
+      getDb(),
+      input.characterId,
+      input.characterItemId,
+      input.quantity ?? 1
+    )
+    return { ok: removed }
+  })
+  ipcMain.handle('characters:validEquipSlots', (_event, characterItemId: string, characterId: string) => {
+    const items = listCharacterItems(getDb(), characterId)
+    const row = items.find((entry) => entry.id === characterItemId)
+    if (!row) {
+      return []
+    }
+    return getValidEquipSlotsForItem(row.item)
+  })
 }

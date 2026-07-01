@@ -29,7 +29,7 @@ describe('turnIpc modification + enchanted attack', () => {
     const longsword = findCatalogItemByName(db, 'Longsword')!
     const catalogBefore = getCatalogItemById(db, longsword.id)!.mechanicalProperties
     const row = addItemToCharacter(db, player.id, longsword.id)
-    equipCharacterItem(db, player.id, row.id, 'weapon')
+    equipCharacterItem(db, player.id, row.id, 'mainHand')
 
     const provider = createScriptedProvider([
       '{"checkNeeded":false,"actionType":"modifyItem"}',

@@ -10,7 +10,7 @@ import { seedEquipCharacter } from './characterItemsEquipFixtures'
 import { createCatalogItem } from './items'
 
 describe('characterItems weapon swap', () => {
-  it('equips, swaps, and unequips weapon slot', () => {
+  it('equips, swaps, and unequips main hand slot', () => {
     const db = createTestDb()
     const character = seedEquipCharacter(db)
     const swordA = createCatalogItem(db, {
@@ -21,9 +21,10 @@ describe('characterItems weapon swap', () => {
       mechanicalProperties: {
         kind: 'weapon',
         damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 },
-        damageType: 'physical'
+        damageType: 'physical',
+        handedness: 'oneHand'
       },
-      equipSlot: 'weapon',
+      equipSlot: 'mainHand',
       source: 'seed'
     })
     const swordB = createCatalogItem(db, {
@@ -34,22 +35,23 @@ describe('characterItems weapon swap', () => {
       mechanicalProperties: {
         kind: 'weapon',
         damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 },
-        damageType: 'physical'
+        damageType: 'physical',
+        handedness: 'oneHand'
       },
-      equipSlot: 'weapon',
+      equipSlot: 'mainHand',
       source: 'seed'
     })
     const rowA = addItemToCharacter(db, character.id, swordA.id)
     const rowB = addItemToCharacter(db, character.id, swordB.id)
 
-    equipCharacterItem(db, character.id, rowA.id, 'weapon')
-    equipCharacterItem(db, character.id, rowB.id, 'weapon')
+    equipCharacterItem(db, character.id, rowA.id, 'mainHand')
+    equipCharacterItem(db, character.id, rowB.id, 'mainHand')
 
     const afterSwap = listCharacterItems(db, character.id)
     expect(afterSwap.find((row) => row.id === rowA.id)?.equippedSlot).toBeNull()
-    expect(afterSwap.find((row) => row.id === rowB.id)?.equippedSlot).toBe('weapon')
+    expect(afterSwap.find((row) => row.id === rowB.id)?.equippedSlot).toBe('mainHand')
 
-    unequipCharacterSlot(db, character.id, 'weapon')
+    unequipCharacterSlot(db, character.id, 'mainHand')
     expect(listCharacterItems(db, character.id).every((row) => row.equippedSlot === null)).toBe(true)
   })
 })

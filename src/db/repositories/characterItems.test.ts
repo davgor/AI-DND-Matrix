@@ -34,7 +34,7 @@ function seedWeapon(db: ReturnType<typeof createTestDb>, name: string, diceSize:
       damageRoll: { diceCount: 1, diceSize, modifier: 0 },
       damageType: 'physical'
     },
-    equipSlot: 'weapon',
+    equipSlot: 'mainHand',
     source: 'seed'
   })
 }

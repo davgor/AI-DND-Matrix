@@ -2,25 +2,60 @@ import { describe, expect, it } from 'vitest'
 import {
   filterDmExpositionEntries,
   filterPlayerInteractionEntries,
-  pickCurrentSceneText
+  pickSceneSummary
 } from './sceneContext'
 
 const ENTRIES = [
   { id: '1', timestamp: 't1', speaker: 'player' as const, text: 'I enter the tavern.' },
   { id: '2', timestamp: 't2', speaker: 'dm' as const, text: 'Smoke hangs in the rafters.' },
   { id: '3', timestamp: 't3', speaker: 'npc' as const, text: 'Welcome, traveler.' },
-  { id: '4', timestamp: 't4', speaker: 'dm' as const, text: 'The barkeep slides a mug forward.' }
+  {
+    id: '4',
+    timestamp: 't4',
+    speaker: 'dm' as const,
+    text: 'The barkeep slides a mug forward.',
+    sceneSetting: true
+  }
 ]
 
-describe('scene context helpers', () => {
-  it('picks the latest DM narration as current scene text', () => {
-    expect(pickCurrentSceneText(ENTRIES)).toBe('The barkeep slides a mug forward.')
+describe('pickSceneSummary', () => {
+  it('prefers the latest scene-setting DM line over region blurb', () => {
+    expect(
+      pickSceneSummary(ENTRIES, {
+        regionName: 'Oakhollow',
+        regionBlurb: 'A quiet logging village.'
+      })
+    ).toBe('The barkeep slides a mug forward.')
   })
 
-  it('returns null when no DM exposition exists yet', () => {
-    expect(pickCurrentSceneText([{ id: 'p', timestamp: 't', speaker: 'player', text: 'Hello' }])).toBeNull()
+  it('falls back to region blurb when no scene-setting DM line exists', () => {
+    const withoutSceneSetting = ENTRIES.filter((entry) => !entry.sceneSetting)
+    expect(
+      pickSceneSummary(withoutSceneSetting, {
+        regionName: 'Oakhollow',
+        regionBlurb: 'A quiet logging village.'
+      })
+    ).toBe('A quiet logging village.')
   })
 
+  it('uses quiet empty state with region name when no blurb or scene setting', () => {
+    expect(pickSceneSummary([], { regionName: 'Oakhollow' })).toBe('The scene is quiet in Oakhollow…')
+  })
+
+  it('uses generic quiet empty state when region is unknown', () => {
+    expect(pickSceneSummary([])).toBe('The scene is quiet…')
+  })
+
+  it('does not use latest DM narration when it is not scene-setting', () => {
+    const entries = [
+      { id: '1', timestamp: 't1', speaker: 'dm' as const, text: 'Rain drums on stone.' },
+      { id: '2', timestamp: 't2', speaker: 'dm' as const, text: 'A shadow moves.' }
+    ]
+    expect(pickSceneSummary(entries, { regionBlurb: 'Misty crossroads.' })).toBe('Misty crossroads.')
+  })
+})
+
+describe('scene feed filters', () => {
   it('splits exposition and player interaction feeds', () => {
     expect(filterDmExpositionEntries(ENTRIES)).toHaveLength(3)
     expect(filterPlayerInteractionEntries(ENTRIES)).toHaveLength(1)

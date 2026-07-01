@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3'
 import type { GuidedCreationMessage } from '../shared/guidedCreation/types'
 import { completeOpeningScenePhase, readGuidedCreationFields } from '../db/repositories/guidedCreation'
+import { getCampaignById } from '../db/repositories/campaigns'
+import { seedCharacterQuestMembership } from '../db/repositories/quests'
 import { listGuidedCreationMessagesByPhase } from '../db/repositories/guidedCreationMessages'
 import { appendEvent, listEventsByCampaign } from '../db/repositories/events'
 
@@ -81,6 +83,8 @@ export function finalizeOpeningSceneForPlay(
   }
 
   if (fields.guidedCreationPhase === 'complete') {
+    const campaign = getCampaignById(db, campaignId)
+    seedCharacterQuestMembership(db, campaignId, characterId, campaign?.inGameDate ?? 0)
     importOpeningSceneTranscriptToNarrationLog(db, campaignId, characterId)
     return { ok: true }
   }
@@ -95,6 +99,8 @@ export function finalizeOpeningSceneForPlay(
   db.transaction(() => {
     completeOpeningScenePhase(db, characterId, openingScene)
   })()
+  const campaign = getCampaignById(db, campaignId)
+  seedCharacterQuestMembership(db, campaignId, characterId, campaign?.inGameDate ?? 0)
   importOpeningSceneTranscriptToNarrationLog(db, campaignId, characterId)
 
   return { ok: true }

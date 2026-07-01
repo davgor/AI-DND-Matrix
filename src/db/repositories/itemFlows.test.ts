@@ -52,7 +52,7 @@ describe('itemFlows grant and purchase', () => {
         damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 },
         damageType: 'physical'
       },
-      equipSlot: 'weapon',
+      equipSlot: 'mainHand',
       source: 'seed'
     })
     expect(purchaseItemForCharacter(db, character.id, item.id, 20)).toEqual({
@@ -96,11 +96,11 @@ describe('itemFlows consume and remove', () => {
         damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 },
         damageType: 'physical'
       },
-      equipSlot: 'weapon',
+      equipSlot: 'mainHand',
       source: 'seed'
     })
     const row = addItemToCharacter(db, character.id, sword.id)
-    equipCharacterItem(db, character.id, row.id, 'weapon')
+    equipCharacterItem(db, character.id, row.id, 'mainHand')
     expect(removeOwnedItem(db, character.id, row.id)).toBe(true)
     expect(db.prepare('SELECT COUNT(*) as count FROM character_items WHERE character_id = ?').get(character.id)).toEqual({
       count: 0

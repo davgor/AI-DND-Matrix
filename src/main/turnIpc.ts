@@ -22,8 +22,8 @@ import {
 import { reviewTurn } from '../agents/turnReview'
 import type { TurnBeat, TurnRoutingPlan } from '../shared/turnRouting/types'
 import type { Provider } from '../agents/providers/types'
-import { computeAC } from '../engine/armorClass'
-import { getEquippedArmorTier, getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
+import { getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
+import { computeCharacterTotalAc, type CommerceSideEffect } from '../db/repositories/itemCommerce'
 import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damage'
 import { resolveWeaponDamage } from '../engine/weaponDamage'
 import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
@@ -47,7 +47,7 @@ import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { getNpcById } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
-import { applyQuestRewardsToBeatState } from './questRewardBeats'
+import { applyNarrationQuestRewards } from './narrationQuestRewards'
 import { assertNoPendingLevelUp } from './progressionPipeline'
 import type { LootGrantAccepted } from '../shared/loot/types'
 import { createSaveSnapshot } from '../db/repositories/saves'
@@ -127,6 +127,8 @@ export interface TurnResult {
   leveledUp?: boolean
   levelsGained?: number
   itemModification?: { characterItemId: string; kind: string; summary: string }
+  commerceEffect?: CommerceSideEffect
+  purchaseRejected?: boolean
 }
 
 function buildTurnResultExtras(
@@ -314,9 +316,8 @@ function resolveNpcAttackAgainstPlayer(
   rng: RandomFn
 ): NpcAttackOutcome {
   const stats = player.stats as { abilityScores?: AbilityScores; ac?: number }
-  const armorTier = getEquippedArmorTier(db, player.id)
   const agility = stats.abilityScores?.agility ?? 10
-  const ac = stats.ac ?? computeAC(agility, armorTier)
+  const ac = stats.ac ?? computeCharacterTotalAc(db, player.id, agility)
   const d20 = rollD20(rng)
   if (d20 + NPC_ATTACK_BONUS < ac) {
     return { hit: false }
@@ -356,6 +357,7 @@ async function resolveTargetedNpcReaction(
     type: 'npc_reaction',
     payload: {
       npcId: input.npcId,
+      npcName: npc.name,
       text: reaction.text,
       reactionKind: reaction.reactionKind,
       attack: Boolean(reaction.attack)
@@ -387,7 +389,7 @@ async function resolvePartyMemberActions(
     appendEvent(db, {
       campaignId: member.campaignId,
       type: 'party_member_action',
-      payload: { characterId: member.id, content: action.actionText }
+      payload: { characterId: member.id, memberName: member.name, content: action.actionText }
     })
     results.push({ characterId: member.id, name: member.name, actionText: action.actionText })
   }
@@ -535,6 +537,8 @@ interface BeatExecutionState {
   leveledUp?: boolean
   levelsGained?: number
   encounterXpRan?: boolean
+  commerceEffect?: CommerceSideEffect
+  rewardedQuestIds?: Set<string>
 }
 
 async function executeNpcResponseBeat(
@@ -562,31 +566,39 @@ async function executeNpcResponseBeat(
   }
 }
 
-async function applyQuestRewardsToBeat(
+function finalizeNarrationBeatEvents(
   db: Database.Database,
-  provider: Provider,
   input: {
     campaignId: string
-    regionId: string
-    character: Character
+    characterId: string
+    resolved: ResolvedCheckOutcome
     narrationResult: NarrationResult
-    previousThreadState?: string
     state: BeatExecutionState
   }
-): Promise<void> {
-  const update = input.narrationResult.storyThreadUpdate
-  if (!update || !input.previousThreadState) {
-    return
+): void {
+  const sceneUpdate = input.narrationResult.sceneUpdate?.trim()
+  if (sceneUpdate) {
+    appendDmSceneEvent(db, {
+      campaignId: input.campaignId,
+      characterId: input.characterId,
+      sceneText: sceneUpdate
+    })
   }
-  await applyQuestRewardsToBeatState(db, provider, {
-    campaignId: input.campaignId,
-    regionId: input.regionId,
-    character: input.character,
-    threadId: update.threadId,
-    previousThreadState: input.previousThreadState,
-    newThreadState: update.state,
-    state: input.state
-  })
+  const flavorText = input.narrationResult.narrationText.trim()
+  if (flavorText) {
+    appendDmNarrationEvent(db, {
+      campaignId: input.campaignId,
+      characterId: input.characterId,
+      narrationText: flavorText,
+      resolved: input.resolved,
+      dmLineKind: 'flavor'
+    })
+  }
+  input.state.narrationResult = input.narrationResult
+  if (!input.state.lootNarration && flavorText) {
+    input.state.narrationText = flavorText
+  }
+  updateBeatSceneContext(input.state, flavorText, sceneUpdate)
 }
 
 function updateBeatSceneContext(
@@ -601,6 +613,27 @@ function updateBeatSceneContext(
   state.sceneContext = state.sceneContext
     ? `${state.sceneContext} ${sceneContextAddition}`
     : sceneContextAddition
+}
+
+function applyNarrationPersistence(
+  db: Database.Database,
+  input: {
+    campaignId: string
+    regionId: string
+    characterId: string
+    narrationResult: NarrationResult
+    state: BeatExecutionState
+  }
+): string[] {
+  const sideEffects = persistNarrationSideEffects(db, input.narrationResult, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    characterId: input.characterId
+  })
+  if (sideEffects.commerce) {
+    input.state.commerceEffect = sideEffects.commerce
+  }
+  return sideEffects.completedQuestIds ?? []
 }
 
 async function executeDmNarrationBeat(
@@ -621,35 +654,31 @@ async function executeDmNarrationBeat(
     const threads = listStoryThreadsByCampaign(db, input.campaignId)
     previousThreadState = threads.find((t) => t.id === narrationResult.storyThreadUpdate!.threadId)?.state
   }
-  persistNarrationSideEffects(db, narrationResult, {
+  const completedQuestIds = applyNarrationPersistence(db, {
     campaignId: input.campaignId,
     regionId: input.regionId,
-    characterId: input.character.id
+    characterId: input.character.id,
+    narrationResult,
+    state: input.state
   })
-  await applyQuestRewardsToBeat(db, provider, { ...input, narrationResult, previousThreadState })
-  const sceneUpdate = narrationResult.sceneUpdate?.trim()
-  if (sceneUpdate) {
-    appendDmSceneEvent(db, {
-      campaignId: input.campaignId,
-      characterId: input.character.id,
-      sceneText: sceneUpdate
-    })
-  }
-  const flavorText = narrationResult.narrationText.trim()
-  if (flavorText) {
-    appendDmNarrationEvent(db, {
-      campaignId: input.campaignId,
-      characterId: input.character.id,
-      narrationText: flavorText,
-      resolved: input.resolved,
-      dmLineKind: 'flavor'
-    })
-  }
-  input.state.narrationResult = narrationResult
-  if (!input.state.lootNarration && flavorText) {
-    input.state.narrationText = flavorText
-  }
-  updateBeatSceneContext(input.state, flavorText, sceneUpdate)
+  await applyNarrationQuestRewards({
+    db,
+    provider,
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    character: input.character,
+    narrationResult,
+    previousThreadState,
+    completedQuestIds,
+    state: input.state
+  })
+  finalizeNarrationBeatEvents(db, {
+    campaignId: input.campaignId,
+    characterId: input.character.id,
+    resolved: input.resolved,
+    narrationResult,
+    state: input.state
+  })
 }
 
 function executePlayerActionExpressionBeat(
@@ -837,6 +866,8 @@ function buildRoutedTurnResult(
     xpAmount: state.xpAmount,
     leveledUp: state.leveledUp,
     levelsGained: state.levelsGained,
+    commerceEffect: state.commerceEffect,
+    purchaseRejected: state.commerceEffect?.purchases.some((purchase) => !purchase.ok) ?? false,
     ...buildTurnResultExtras(db, characterId, state.narrationResult?.commitAlignmentShift?.newAlignment)
   }
 }

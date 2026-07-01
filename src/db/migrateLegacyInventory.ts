@@ -20,7 +20,7 @@ function inferLegacyItemType(name: string): ItemType {
 
 function inferLegacyEquipSlot(itemType: ItemType): EquipSlot | null {
   if (itemType === 'weapon') {
-    return 'weapon'
+    return 'mainHand'
   }
   if (itemType === 'armor') {
     return 'armor'

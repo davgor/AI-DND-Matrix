@@ -28,6 +28,10 @@ export function deleteCampaignCascade(
     db.prepare(
       `DELETE FROM guided_creation_messages WHERE campaign_id = ?`
     ).run(campaignId)
+    db.prepare(
+      `DELETE FROM character_quests WHERE character_id IN (SELECT id FROM characters WHERE campaign_id = ?)`
+    ).run(campaignId)
+    db.prepare('DELETE FROM quests WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM characters WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM npcs WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM world_facts WHERE campaign_id = ?').run(campaignId)

@@ -1,10 +1,9 @@
 import type Database from 'better-sqlite3'
-import {
-  isLootCompletedState
-} from '../shared/loot/types'
+import { isLootCompletedState } from '../shared/loot/types'
 import type { LootContext, QuestScale } from '../shared/loot/types'
 import type { StoryThread } from '../db/repositories/storyThreads'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
+import { assembleQuestLootContextFromQuest } from './questLootFromQuest'
 
 const MAJOR_TITLE_KEYWORDS = [
   'quest',
@@ -50,12 +49,28 @@ function findThreadById(
 export function assembleQuestLootContext(params: {
   db: Database.Database
   campaignId: string
-  threadId: string
+  questId?: string
+  threadId?: string
   regionId: string
   playerCharacterId: string
   playerLevel: number
 }): LootContext | null {
-  const { db, campaignId, threadId, regionId, playerCharacterId, playerLevel } = params
+  const { db, campaignId, questId, threadId, regionId, playerCharacterId, playerLevel } = params
+
+  if (questId) {
+    return assembleQuestLootContextFromQuest({
+      db,
+      campaignId,
+      questId,
+      regionId,
+      playerCharacterId,
+      playerLevel
+    })
+  }
+
+  if (!threadId) {
+    return null
+  }
 
   const thread = findThreadById(db, campaignId, threadId)
   if (!thread) return null

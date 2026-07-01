@@ -1,0 +1,132 @@
+.quest-log-overlay {
+  z-index: 60;
+}
+
+.quest-log-modal {
+  width: min(720px, 92vw);
+  max-height: min(84vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+
+.quest-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.quest-log-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.quest-log-body {
+  overflow: auto;
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.quest-log-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.quest-log-hook {
+  font-style: italic;
+  opacity: 0.9;
+  margin: 0 0 0.5rem;
+}
+
+.quest-log-card {
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quest-log-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.quest-log-card-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.quest-log-badges {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.quest-log-badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+
+.quest-log-objectives {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.quest-log-objective {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.quest-log-objective input {
+  margin-top: 0.2rem;
+}
+
+.quest-log-objective.done span {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.quest-log-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.quest-log-curate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.quest-log-curate-form input,
+.quest-log-curate-form textarea,
+.quest-log-curate-form select {
+  width: 100%;
+}
+
+.quest-log-empty {
+  opacity: 0.7;
+  font-style: italic;
+}

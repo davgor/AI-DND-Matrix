@@ -15,6 +15,8 @@ export interface PlayLogEntry {
   text: string
   reactionKind?: NpcReactionKind
   playerLineKind?: PlayerLineKind
+  sceneSetting?: boolean
+  speakerName?: string
 }
 
 function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
@@ -87,16 +89,12 @@ function playerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
   return entries
 }
 
-function singleTextEntry(event: Event, speaker: LogSpeaker, field: string): PlayLogEntry[] {
-  const text = (event.payload as Record<string, unknown>)[field]
-  return typeof text === 'string' ? [{ id: event.id, timestamp: event.timestamp, speaker, text }] : []
-}
-
 function npcReactionEntries(event: Event): PlayLogEntry[] {
   const payload = event.payload as {
     dialogue?: string
     text?: string
     reactionKind?: NpcReactionKind
+    npcName?: string
   }
   const text = payload.text ?? payload.dialogue
   if (typeof text !== 'string') {
@@ -108,20 +106,45 @@ function npcReactionEntries(event: Event): PlayLogEntry[] {
       timestamp: event.timestamp,
       speaker: 'npc',
       text: payload.reactionKind === 'action' ? stripActionMarkers(text) : text,
-      reactionKind: payload.reactionKind ?? 'dialogue'
+      reactionKind: payload.reactionKind ?? 'dialogue',
+      speakerName: typeof payload.npcName === 'string' ? payload.npcName : undefined
     }
   ]
 }
 
 function dmNarrationOnlyEntries(event: Event): PlayLogEntry[] {
-  const payload = event.payload as { narrationText?: string; auditOnly?: boolean }
+  const payload = event.payload as { narrationText?: string; auditOnly?: boolean; sceneSetting?: boolean }
   if (payload.auditOnly || typeof payload.narrationText !== 'string') {
     return []
   }
-  return [{ id: event.id, timestamp: event.timestamp, speaker: 'dm', text: payload.narrationText }]
+  return [
+    {
+      id: event.id,
+      timestamp: event.timestamp,
+      speaker: 'dm',
+      text: payload.narrationText,
+      sceneSetting: payload.sceneSetting === true
+    }
+  ]
 }
 
 const DM_NARRATION_EVENT_TYPES = new Set(['dying_resolution', 'loot_resolved', 'opening_scene'])
+
+function dmNarrationEventEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as { narrationText?: string }
+  if (typeof payload.narrationText !== 'string') {
+    return []
+  }
+  return [
+    {
+      id: event.id,
+      timestamp: event.timestamp,
+      speaker: 'dm',
+      text: payload.narrationText,
+      sceneSetting: event.type === 'opening_scene'
+    }
+  ]
+}
 
 function progressionEventEntries(event: Event): PlayLogEntry[] | null {
   if (event.type === 'xp_awarded') {
@@ -166,6 +189,22 @@ function perkChosenEntries(event: Event): PlayLogEntry[] {
   ]
 }
 
+function partyMemberActionEntries(event: Event): PlayLogEntry[] {
+  const payload = event.payload as { content?: string; memberName?: string }
+  if (typeof payload.content !== 'string') {
+    return []
+  }
+  return [
+    {
+      id: event.id,
+      timestamp: event.timestamp,
+      speaker: 'partyMember',
+      text: payload.content,
+      speakerName: typeof payload.memberName === 'string' ? payload.memberName : undefined
+    }
+  ]
+}
+
 export function eventToLogEntries(event: Event): PlayLogEntry[] {
   const progression = progressionEventEntries(event)
   if (progression) {
@@ -185,10 +224,10 @@ export function eventToLogEntries(event: Event): PlayLogEntry[] {
     return npcReactionEntries(event)
   }
   if (event.type === 'party_member_action') {
-    return singleTextEntry(event, 'partyMember', 'content')
+    return partyMemberActionEntries(event)
   }
   if (DM_NARRATION_EVENT_TYPES.has(event.type)) {
-    return singleTextEntry(event, 'dm', 'narrationText')
+    return dmNarrationEventEntries(event)
   }
   return []
 }
