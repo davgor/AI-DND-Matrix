@@ -4,14 +4,15 @@ import { FormattedText } from '../shared/FormattedText'
 import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
 
 describe('DmExpositionPanel scene states', () => {
-  it('shows empty scene copy when exposition feed has no DM lines', () => {
+  it('shows empty scene copy when no surroundings are set', () => {
     expect(pickCurrentSceneText([])).toBeNull()
   })
 
-  it('emphasizes the latest DM line as active scene context', () => {
+  it('uses scene narration for surroundings and ignores flavor lines', () => {
     const scene = pickCurrentSceneText([
-      { id: '1', timestamp: 't', speaker: 'dm', text: 'Rain drums on stone.' },
-      { id: '2', timestamp: 't2', speaker: 'npc', text: 'Halt!' }
+      { id: '1', timestamp: 't', speaker: 'dm', text: 'Rain drums on stone.', dmLineKind: 'scene' },
+      { id: '2', timestamp: 't2', speaker: 'npc', text: 'Halt!' },
+      { id: '3', timestamp: 't3', speaker: 'dm', text: 'A rider appears.', dmLineKind: 'flavor' }
     ])
     expect(scene).toBe('Rain drums on stone.')
   })

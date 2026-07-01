@@ -16,7 +16,8 @@ export function PlayDmExpositionColumn(props: {
         compact={props.layoutMode === 'narrow'}
       />
       <DmExpositionPanel
-        entries={controller.dmEntries}
+        sceneText={controller.sceneText}
+        flavorEntries={controller.dmFlavorEntries}
         expositionStatus={controller.expositionStatus}
         onRetryExposition={controller.retryExposition}
         showRolls={controller.showRolls}

@@ -30,6 +30,8 @@ import type { StartupEventPayload } from '../shared/startup/types'
 import type {
   GuidedCreationKickoffInput,
   GuidedCreationKickoffResult,
+  GuidedCreationReadyToEnterPlayInput,
+  GuidedCreationReadyToEnterPlayResult,
   GuidedCreationSendMessageInput,
   GuidedCreationSendMessageResult,
   GuidedCreationState
@@ -162,7 +164,13 @@ const guidedCreation = {
   sendMessage: (input: GuidedCreationSendMessageInput): Promise<GuidedCreationSendMessageResult> =>
     ipcRenderer.invoke('guidedCreation:sendMessage', input),
   kickoffIdentity: (input: GuidedCreationKickoffInput): Promise<GuidedCreationKickoffResult> =>
-    ipcRenderer.invoke('guidedCreation:kickoffIdentity', input)
+    ipcRenderer.invoke('guidedCreation:kickoffIdentity', input),
+  kickoffOpeningScene: (input: GuidedCreationKickoffInput): Promise<GuidedCreationKickoffResult> =>
+    ipcRenderer.invoke('guidedCreation:kickoffOpeningScene', input),
+  readyToEnterPlay: (
+    input: GuidedCreationReadyToEnterPlayInput
+  ): Promise<GuidedCreationReadyToEnterPlayResult> =>
+    ipcRenderer.invoke('guidedCreation:readyToEnterPlay', input)
 }
 
 const settings = {

@@ -42,7 +42,7 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
       dmExposition={<PlayDmExpositionColumn layoutMode={props.layoutMode} controller={controller} />}
       playerInteraction={
         <PlayerActionPanel
-          entries={controller.playerEntries}
+          entries={controller.conversationEntries}
           inputValue={controller.inputValue}
           onInputChange={controller.setInputValue}
           onSubmit={() => void controller.submitAction()}

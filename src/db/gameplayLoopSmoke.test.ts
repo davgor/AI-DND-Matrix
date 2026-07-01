@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from '../main/turnIpc'
 import { buildNarrationLog } from '../main/narrationLog'
-import { filterDmExpositionEntries } from '../shared/inCampaignLayout/sceneContext'
+import { filterConversationEntries, filterDmFlavorEntries } from '../shared/inCampaignLayout/sceneContext'
 import { seedGameplayLoopSmokeCampaign } from './gameplayLoopSmokeFixtures'
 
 function routingPlan(...beats: object[]) {
@@ -84,10 +84,11 @@ describe('gameplay loop smoke: narrated check turn', () => {
     expect(check.narrationText).toContain('knot holds')
     expect(check.check).toBeDefined()
 
-    const exposition = filterDmExpositionEntries(buildNarrationLog(db, campaign.id))
-    expect(exposition.map((entry) => entry.speaker)).toContain('npc')
-    expect(exposition.some((entry) => entry.playerLineKind === 'actionExpression')).toBe(true)
-    expect(exposition.map((entry) => entry.speaker)).toContain('dm')
+    const conversation = filterConversationEntries(buildNarrationLog(db, campaign.id))
+    const flavor = filterDmFlavorEntries(buildNarrationLog(db, campaign.id))
+    expect(conversation.map((entry) => entry.speaker)).toContain('npc')
+    expect(conversation.some((entry) => entry.playerLineKind === 'actionExpression')).toBe(true)
+    expect(flavor.map((entry) => entry.speaker)).toContain('dm')
   })
 })
 

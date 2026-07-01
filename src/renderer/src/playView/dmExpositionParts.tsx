@@ -1,8 +1,6 @@
-import type { PlayLogEntry } from '../../../main/narrationLog'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { PendingAlignmentShift } from '../../../shared/alignment/types'
 import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/types'
-import { pickCurrentSceneText } from '../../../shared/inCampaignLayout/sceneContext'
 import { FormattedText } from '../shared/FormattedText'
 
 export interface AlignmentShiftWarningBannerProps {
@@ -65,7 +63,7 @@ export function ImprisonedStatusBanner(): JSX.Element {
 }
 
 export function DmExpositionSceneHeader(props: {
-  entries: PlayLogEntry[]
+  sceneText: string | null
   expositionStatus: ExpositionStatus
   onRetryExposition: () => void
   pendingAlignmentShift: PendingAlignmentShift | null
@@ -75,7 +73,6 @@ export function DmExpositionSceneHeader(props: {
   lootNarration: string | null
   playerImprisoned: boolean
 }): JSX.Element {
-  const sceneText = pickCurrentSceneText(props.entries)
   const isLoading = props.expositionStatus.state === 'loading'
   return (
     <header className="dm-exposition-header">
@@ -102,8 +99,8 @@ export function DmExpositionSceneHeader(props: {
         </div>
       ) : null}
       <div className="dm-exposition-scene" aria-live="polite">
-        {sceneText ? (
-          FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: sceneText })
+        {props.sceneText ? (
+          FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: props.sceneText })
         ) : (
           <p className="dm-exposition-scene-empty">No scene set yet — act to begin.</p>
         )}
@@ -137,4 +134,4 @@ function renderFeedLine(entry: { speaker: string; reactionKind?: string; playerL
   return <>{entry.text}</>
 }
 
-export { renderNpcLine, renderFeedLine }
+export { renderNpcLine, renderFeedLine as renderConversationLine, renderFeedLine }

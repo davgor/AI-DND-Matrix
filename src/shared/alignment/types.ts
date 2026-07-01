@@ -3,8 +3,8 @@
  * (relationship to the player) and party-member personality (companion flavor).
  *
  * Player alignment is set once at character setup and changed only by the DM
- * via alignmentShiftWarning → commitAlignmentShift. Speaking NPCs use dialogue;
- * non-speaking creatures use **wrapped** action descriptions in the exposition feed.
+ * via alignmentShiftWarning → commitAlignmentShift. Speaking NPCs use dialogue in the
+ * conversation feed; non-speaking creatures use **wrapped** action descriptions there too.
  */
 
 export const ALIGNMENTS = [

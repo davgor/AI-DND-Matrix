@@ -1,5 +1,7 @@
-import type { KeyboardEvent } from 'react'
+import { useMemo, useRef, type KeyboardEvent } from 'react'
 import type { PlayLogEntry } from '../../../main/narrationLog'
+import { STREAM_ITEM_ID_ATTR, useScrollToNewStreamItem } from '../shared/scrollStreamItem'
+import { renderConversationLine } from './dmExpositionParts'
 
 export interface PlayerActionPanelProps {
   entries: PlayLogEntry[]
@@ -11,6 +13,14 @@ export interface PlayerActionPanelProps {
 }
 
 export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
+  const logRef = useRef<HTMLDivElement | null>(null)
+  const streamItemIds = useMemo(
+    () => props.entries.map((entry) => entry.id),
+    [props.entries]
+  )
+
+  useScrollToNewStreamItem(logRef, streamItemIds)
+
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
     if (event.key === 'Enter') {
       props.onSubmit()
@@ -21,11 +31,11 @@ export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
 
   return (
     <div className="play-view-panel play-view-player-panel">
-      <h2>Your Actions</h2>
-      <div className="play-view-log">
+      <h2>Conversation</h2>
+      <div className="play-view-log" ref={logRef}>
         {props.entries.map((entry) => (
-          <p key={entry.id} className="play-view-log-entry">
-            {entry.text}
+          <p key={entry.id} className="play-view-log-entry" {...{ [STREAM_ITEM_ID_ATTR]: entry.id }}>
+            {renderConversationLine(entry)}
           </p>
         ))}
       </div>

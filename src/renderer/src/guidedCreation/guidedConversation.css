@@ -1,3 +1,15 @@
+.guided-creation-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.guided-play-blocker {
+  margin: 24px 24px 0;
+}
+
 .guided-conversation {
   flex: 1;
   display: flex;
@@ -5,6 +17,12 @@
   gap: 16px;
   padding: 24px;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.guided-conversation-header {
+  flex-shrink: 0;
 }
 
 .guided-conversation-header,
@@ -52,10 +70,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 280px;
+  min-height: 0;
 }
 
 .guided-conversation-message {
+  flex-shrink: 0;
   max-width: 85%;
   padding: 12px 14px;
   border-radius: var(--radius-md);
@@ -88,6 +107,23 @@
   line-height: 1.5;
 }
 
+.guided-conversation-message-body {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.guided-conversation-message-body em {
+  display: block;
+  font-style: italic;
+  margin: 0;
+}
+
+.guided-conversation-message-body em + em {
+  margin-top: 0.35em;
+}
+
 .guided-conversation-empty,
 .guided-conversation-status {
   color: var(--text-muted);
@@ -95,6 +131,10 @@
 
 .guided-conversation-error {
   color: var(--color-error);
+}
+
+.guided-conversation-composer {
+  flex-shrink: 0;
 }
 
 .guided-conversation-composer textarea {

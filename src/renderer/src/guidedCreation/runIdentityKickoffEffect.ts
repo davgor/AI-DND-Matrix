@@ -1,9 +1,10 @@
 import type { GuidedCreationState, GuidedMessagePhase } from '../../../shared/guidedCreation/types'
-import { kickoffGuidedIdentity, shouldStartIdentityKickoff } from './guidedIdentityKickoff'
+import { kickoffGuidedPhase, shouldStartPhaseKickoff } from './guidedIdentityKickoff'
 
-function startIdentityKickoff(input: {
+function startPhaseKickoff(input: {
   campaignId: string
   characterId: string
+  phase: GuidedMessagePhase
   kickoffStartedRef: { current: boolean }
   refresh: () => Promise<void>
   setKickingOff: (value: boolean) => void
@@ -14,9 +15,10 @@ function startIdentityKickoff(input: {
   input.kickoffStartedRef.current = true
   input.setKickingOff(true)
   input.setError(null)
-  void kickoffGuidedIdentity({
+  void kickoffGuidedPhase({
     campaignId: input.campaignId,
     characterId: input.characterId,
+    phase: input.phase,
     refresh: input.refresh,
     onStateChange: input.onStateChange
   })
@@ -51,19 +53,19 @@ export function runIdentityKickoffEffect(input: {
   setError: (value: string | null) => void
   onStateChange?: () => void
 }): (() => void) | void {
-  const identityMessageCount =
-    input.state?.messages.filter((message) => message.phase === 'identity').length ?? 0
+  const phaseMessageCount =
+    input.state?.messages.filter((message) => message.phase === input.phase).length ?? 0
   if (
-    !shouldStartIdentityKickoff({
+    !shouldStartPhaseKickoff({
       phase: input.phase,
       loading: input.loading,
       kickingOff: input.kickingOff,
       sending: input.sending,
-      identityMessageCount,
+      phaseMessageCount,
       kickoffStarted: input.kickoffStartedRef.current
     })
   ) {
     return
   }
-  return startIdentityKickoff(input)
+  return startPhaseKickoff(input)
 }

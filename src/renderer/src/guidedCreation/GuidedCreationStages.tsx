@@ -12,33 +12,33 @@ export function GuidedIdentityStage(props: GuidedIdentityStageProps): JSX.Elemen
   const ready = props.character.guidedCreationPhase !== 'identity'
 
   return (
-    <GuidedConversationShell
-      campaignId={props.campaignId}
-      characterId={props.character.id}
-      phase="identity"
-      title="Tell me about yourself"
-      subtitle="The DM will help you shape who your character is before the story begins."
-      phaseComplete={ready}
-      advanceLabel="Help me set the stage"
-      onAdvance={props.onAdvance}
-      onStateChange={() => void props.onRefresh()}
-    />
+    <div className="guided-creation-stage">
+      <GuidedConversationShell
+        campaignId={props.campaignId}
+        characterId={props.character.id}
+        phase="identity"
+        title="Tell me about yourself"
+        subtitle="The DM will help you shape who your character is before the story begins."
+        phaseComplete={ready}
+        advanceLabel="Help me set the stage"
+        onAdvance={props.onAdvance}
+        onStateChange={() => void props.onRefresh()}
+      />
+    </div>
   )
 }
 
 export interface GuidedOpeningSceneStageProps {
   campaignId: string
   character: Character
-  onEnterPlay: () => void
+  onReadyToEnterPlay: () => void | Promise<void>
   enterPlayBlockerMessage?: string | null
   onRefresh: () => Promise<void>
 }
 
 export function GuidedOpeningSceneStage(props: GuidedOpeningSceneStageProps): JSX.Element {
-  const ready = props.character.guidedCreationPhase === 'complete'
-
   return (
-    <div className="guided-opening-scene-stage">
+    <div className="guided-creation-stage">
       {props.enterPlayBlockerMessage ? (
         <p className="guided-play-blocker panel-card" role="alert">
           {props.enterPlayBlockerMessage}
@@ -49,10 +49,10 @@ export function GuidedOpeningSceneStage(props: GuidedOpeningSceneStageProps): JS
         characterId={props.character.id}
         phase="opening_scene"
         title="Help me set the stage"
-        subtitle="Negotiate where the story begins. When you are ready, enter the world."
-        phaseComplete={ready}
-        advanceLabel="Enter the world"
-        onAdvance={props.onEnterPlay}
+        subtitle="Negotiate where the story begins. When you are ready, continue into the campaign."
+        phaseComplete={false}
+        handoffLabel="I'm ready"
+        onHandoff={() => void props.onReadyToEnterPlay()}
         onStateChange={() => void props.onRefresh()}
       />
     </div>

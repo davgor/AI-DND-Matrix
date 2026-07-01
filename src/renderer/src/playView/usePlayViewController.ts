@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import {
-  filterDmExpositionEntries,
-  filterPlayerInteractionEntries
+  filterConversationEntries,
+  filterDmFlavorEntries,
+  pickCurrentSceneText
 } from '../../../shared/inCampaignLayout/sceneContext'
 import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
@@ -13,8 +15,9 @@ import { useTurnSubmission } from './useTurnSubmission'
 import { useObituaryDrafting } from './useObituaryDrafting'
 
 export interface PlayViewController extends RollVisibilityController, PlayLogController {
-  dmEntries: ReturnType<typeof filterDmExpositionEntries>
-  playerEntries: ReturnType<typeof filterPlayerInteractionEntries>
+  dmFlavorEntries: ReturnType<typeof filterDmFlavorEntries>
+  conversationEntries: ReturnType<typeof filterConversationEntries>
+  sceneText: string | null
   inputValue: string
   setInputValue: (value: string) => void
   submitting: boolean
@@ -50,10 +53,19 @@ export function usePlayViewController(campaignId: string, characterId: string): 
   const promotion = usePromotionPrompt(campaignId, () => void playLog.refreshLog())
   const obituary = useObituaryDrafting()
   const turn = useTurnSubmission({ campaignId, characterId, playLog, promotion, obituary })
+  const [persistedScene, setPersistedScene] = useState<string | null>(null)
+
+  useEffect(() => {
+    void window.characters.listByCampaign(campaignId).then((characters) => {
+      const character = characters.find((row) => row.id === characterId)
+      setPersistedScene(character?.openingScene ?? null)
+    })
+  }, [campaignId, characterId, turn.characterRefreshToken])
 
   return {
-    dmEntries: filterDmExpositionEntries(playLog.log),
-    playerEntries: filterPlayerInteractionEntries(playLog.log),
+    dmFlavorEntries: filterDmFlavorEntries(playLog.log),
+    conversationEntries: filterConversationEntries(playLog.log),
+    sceneText: pickCurrentSceneText(playLog.log, persistedScene),
     ...turn,
     ...rollVisibility,
     ...playLog,

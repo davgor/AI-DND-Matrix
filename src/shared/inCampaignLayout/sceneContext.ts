@@ -1,21 +1,40 @@
-import type { PlayLogEntry } from '../../main/narrationLog'
+import type { DmLineKind, PlayLogEntry } from '../../main/narrationLog'
 
-export function pickCurrentSceneText(entries: PlayLogEntry[]): string | null {
+export function pickCurrentSceneText(
+  entries: PlayLogEntry[],
+  persistedScene?: string | null
+): string | null {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry = entries[index]
-    if (entry?.speaker === 'dm') {
+    if (entry?.speaker === 'dm' && entry.dmLineKind === 'scene') {
       return entry.text
     }
   }
-  return null
+  const trimmed = persistedScene?.trim()
+  return trimmed ? trimmed : null
 }
 
-export function filterDmExpositionEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
+export function filterDmFlavorEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
   return entries.filter(
-    (entry) => entry.speaker !== 'player' || entry.playerLineKind === 'actionExpression'
+    (entry) =>
+      entry.speaker === 'dm' &&
+      (entry.dmLineKind === 'flavor' || entry.dmLineKind === undefined)
   )
 }
 
-export function filterPlayerInteractionEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
-  return entries.filter((entry) => entry.speaker === 'player' && entry.playerLineKind !== 'actionExpression')
+export function filterConversationEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
+  return entries.filter(
+    (entry) =>
+      entry.speaker === 'npc' ||
+      entry.speaker === 'partyMember' ||
+      entry.speaker === 'player'
+  )
 }
+
+/** @deprecated Use filterDmFlavorEntries */
+export const filterDmExpositionEntries = filterDmFlavorEntries
+
+/** @deprecated Use filterConversationEntries */
+export const filterPlayerInteractionEntries = filterConversationEntries
+
+export type { DmLineKind }

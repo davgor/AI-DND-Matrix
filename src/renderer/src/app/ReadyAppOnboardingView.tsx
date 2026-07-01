@@ -19,6 +19,7 @@ export function ReadyAppOnboardingView(props: {
   onCharacterSetupComplete: () => void
   onGuidedIdentityAdvance: () => void
   onEnterPlay: () => void
+  createHandleReadyToEnterPlay: (characterId: string) => () => Promise<void>
   enterPlayBlockerMessage: string | null
   onRefreshDetail: () => Promise<void>
 }): JSX.Element {
@@ -37,6 +38,7 @@ export function ReadyAppOnboardingView(props: {
         onCharacterSetupComplete={props.onCharacterSetupComplete}
         onGuidedIdentityAdvance={props.onGuidedIdentityAdvance}
         onEnterPlay={props.onEnterPlay}
+        createHandleReadyToEnterPlay={props.createHandleReadyToEnterPlay}
         enterPlayBlockerMessage={props.enterPlayBlockerMessage}
         onRefreshDetail={props.onRefreshDetail}
       />

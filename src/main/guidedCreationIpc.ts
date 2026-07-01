@@ -18,6 +18,8 @@ import type {
   GuidedCreationFailureReason,
   GuidedCreationKickoffInput,
   GuidedCreationKickoffResult,
+  GuidedCreationReadyToEnterPlayInput,
+  GuidedCreationReadyToEnterPlayResult,
   GuidedCreationSendMessageInput,
   GuidedCreationSendMessageResult,
   GuidedCreationState
@@ -25,7 +27,12 @@ import type {
 import { buildAgentProvider } from './campaignIpc'
 import { getDb } from './db'
 import { kickoffIdentityInterviewIfNeeded, persistIdentityInterviewTurn } from './guidedCreationIdentity'
-import { buildOpeningSceneIdentity, persistOpeningSceneTurn } from './guidedCreationOpeningScene'
+import {
+  buildOpeningSceneIdentity,
+  kickoffOpeningSceneInterviewIfNeeded,
+  persistOpeningSceneTurn
+} from './guidedCreationOpeningScene'
+import { finalizeOpeningSceneForPlay } from './guidedCreationPlayHandoff'
 
 function failure(reason: GuidedCreationFailureReason): GuidedCreationSendMessageResult {
   return { ok: false, reason }
@@ -209,6 +216,38 @@ export async function kickoffGuidedCreationIdentity(
   }
 }
 
+export async function readyGuidedCreationToEnterPlay(
+  db: Database.Database,
+  input: GuidedCreationReadyToEnterPlayInput
+): Promise<GuidedCreationReadyToEnterPlayResult> {
+  const character = getCharacterById(db, input.characterId)
+  if (!character || character.campaignId !== input.campaignId) {
+    return { ok: false, reason: 'not_found' }
+  }
+
+  try {
+    const result = finalizeOpeningSceneForPlay(db, input.campaignId, input.characterId)
+    if (!result.ok) {
+      return result
+    }
+    return { ok: true, guidedCreationPhase: 'complete' }
+  } catch {
+    return { ok: false, reason: 'provider_error' }
+  }
+}
+
+export async function kickoffGuidedCreationOpeningScene(
+  db: Database.Database,
+  provider: Provider,
+  input: GuidedCreationKickoffInput
+): Promise<GuidedCreationKickoffResult> {
+  try {
+    return await kickoffOpeningSceneInterviewIfNeeded(db, provider, input)
+  } catch {
+    return { ok: false, reason: 'provider_error' }
+  }
+}
+
 export function registerGuidedCreationHandlers(): void {
   ipcMain.handle('guidedCreation:getState', (_event, characterId: string) =>
     getGuidedCreationState(getDb(), characterId)
@@ -222,5 +261,11 @@ export function registerGuidedCreationHandlers(): void {
   })
   ipcMain.handle('guidedCreation:kickoffIdentity', async (_event, input: GuidedCreationKickoffInput) =>
     kickoffGuidedCreationIdentity(getDb(), buildAgentProvider(), input)
+  )
+  ipcMain.handle('guidedCreation:kickoffOpeningScene', async (_event, input: GuidedCreationKickoffInput) =>
+    kickoffGuidedCreationOpeningScene(getDb(), buildAgentProvider(), input)
+  )
+  ipcMain.handle('guidedCreation:readyToEnterPlay', async (_event, input: GuidedCreationReadyToEnterPlayInput) =>
+    readyGuidedCreationToEnterPlay(getDb(), input)
   )
 }

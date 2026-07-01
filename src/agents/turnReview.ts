@@ -45,7 +45,7 @@ function buildTurnReviewPrompt(context: TurnReviewContext): string {
     '{"disposition":"converse|act|narrate|composite","beats":Array<beat>}',
     'Beat kinds:',
     '- {"kind":"playerActionExpression","actionDescription":string} — third-person prose for a visible physical action (no ** markers; server wraps).',
-    '- {"kind":"dmNarration"} — DM describes scene consequences or check outcomes. Omit when the player only talks to an NPC.',
+    '- {"kind":"dmNarration"} — DM adds environmental flavor or check outcomes. Omit when the player only talks to an NPC (npcResponse carries dialogue).',
     '- {"kind":"npcResponse","npcIds":string[]} — targeted NPC/creature reactions. Only ids from present NPCs.',
     '- {"kind":"partyMember"} — AI companion acts. Omit on converse-only dialogue turns.',
     'Order beats: player action expression before narration; narration before npc responses that depend on it.',

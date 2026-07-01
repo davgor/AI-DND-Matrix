@@ -7,6 +7,7 @@ import {
 } from '../../../shared/campaignPlay/campaignPlayReady'
 import { canEnterPlay, type OnboardingStage } from '../../../shared/guidedCreation/stageRouting'
 import { createEnterPlayHandler } from '../onboarding/enterPlayHandler'
+import { createReadyToEnterPlayHandler } from '../onboarding/readyToEnterPlayHandler'
 
 export function usePlayEntryState(input: {
   detail: CampaignDetail | null
@@ -14,6 +15,7 @@ export function usePlayEntryState(input: {
   setStage: (stage: OnboardingStage) => void
   activeCharacterId: string | null
   setActiveCharacterId: (id: string | null) => void
+  refreshDetail: () => Promise<void>
 }) {
   const [enterPlayBlockerMessage, setEnterPlayBlockerMessage] = useState<string | null>(null)
 
@@ -53,11 +55,29 @@ export function usePlayEntryState(input: {
     }
   })
 
+  function createHandleReadyToEnterPlay(characterId: string): () => Promise<void> {
+    if (!input.detail?.campaign) {
+      return async () => {}
+    }
+    return createReadyToEnterPlayHandler({
+      detail: input.detail,
+      campaignId: input.detail.campaign.id,
+      characterId,
+      refreshDetail: input.refreshDetail,
+      setEnterPlayBlockerMessage,
+      onEnterPlay: (id) => {
+        input.setActiveCharacterId(id)
+        input.setStage('main')
+      }
+    })
+  }
+
   return {
     activePlayer,
     inCampaign,
     enterPlayBlockerMessage,
     handleResumeFromHub,
-    handleEnterPlay
+    handleEnterPlay,
+    createHandleReadyToEnterPlay
   }
 }

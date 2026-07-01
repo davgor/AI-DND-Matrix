@@ -1,4 +1,9 @@
+import { useMemo, useRef } from 'react'
 import type { GuidedCreationMessage } from '../../../shared/guidedCreation/types'
+import { STREAM_ITEM_ID_ATTR, useScrollToNewStreamItem } from '../shared/scrollStreamItem'
+import { ChatFormattedText } from './ChatFormattedText'
+
+const THINKING_STATUS_ID = 'guided-conversation-thinking'
 
 export interface GuidedConversationThreadProps {
   loading: boolean
@@ -6,12 +11,22 @@ export interface GuidedConversationThreadProps {
   messages: GuidedCreationMessage[]
   sending: boolean
   error: string | null
-  threadRef: React.RefObject<HTMLDivElement | null>
 }
 
 export function GuidedConversationThread(props: GuidedConversationThreadProps): JSX.Element {
+  const threadRef = useRef<HTMLDivElement | null>(null)
+  const streamItemIds = useMemo(() => {
+    const ids = props.messages.map((message) => message.id)
+    if (props.sending || props.kickingOff) {
+      ids.push(THINKING_STATUS_ID)
+    }
+    return ids
+  }, [props.kickingOff, props.messages, props.sending])
+
+  useScrollToNewStreamItem(threadRef, streamItemIds)
+
   return (
-    <div className="guided-conversation-thread panel-card" ref={props.threadRef}>
+    <div className="guided-conversation-thread panel-card" ref={threadRef}>
       {props.loading ? (
         <p className="guided-conversation-empty">Loading conversation…</p>
       ) : props.messages.length === 0 ? (
@@ -22,6 +37,7 @@ export function GuidedConversationThread(props: GuidedConversationThreadProps): 
         props.messages.map((message) => (
           <div
             key={message.id}
+            {...{ [STREAM_ITEM_ID_ATTR]: message.id }}
             className={
               message.role === 'dm'
                 ? 'guided-conversation-message guided-conversation-message-dm'
@@ -29,12 +45,14 @@ export function GuidedConversationThread(props: GuidedConversationThreadProps): 
             }
           >
             <span className="guided-conversation-speaker">{message.role === 'dm' ? 'DM' : 'You'}</span>
-            <p>{message.content}</p>
+            <ChatFormattedText text={message.content} />
           </div>
         ))
       )}
       {props.sending || props.kickingOff ? (
-        <p className="guided-conversation-status">The DM is thinking…</p>
+        <p className="guided-conversation-status" {...{ [STREAM_ITEM_ID_ATTR]: THINKING_STATUS_ID }}>
+          The DM is thinking…
+        </p>
       ) : null}
       {props.error ? <p className="guided-conversation-error">{props.error}</p> : null}
     </div>
