@@ -13,7 +13,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "prepackage": "npm run rebuild:electron",
-    "package": "electron-vite build && electron-builder --win",
+    "package": "electron-vite build && electron-builder --win --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "oxlint src",
     "pretest": "npm run rebuild:node",

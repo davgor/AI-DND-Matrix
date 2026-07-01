@@ -2,6 +2,8 @@
 
 Packaged Windows builds use **electron-updater** with GitHub Releases as the update server.
 
+CI builds with `electron-builder --publish never` (artifacts only). The deploy workflow uploads `release/*` via `gh release create`; electron-builder does not publish during the build step.
+
 ## Installers vs portable
 
 | Artifact | Auto-update | GitHub Release |
