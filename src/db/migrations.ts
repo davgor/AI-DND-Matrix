@@ -3,6 +3,8 @@ import type Database from 'better-sqlite3'
 export interface Migration {
   version: number
   up: (db: Database.Database) => void
+  /** When true, runs outside a SQLite transaction (needed for FK-off table rebuilds). */
+  disableTransaction?: boolean
 }
 
 export function runMigrations(db: Database.Database, migrations: Migration[]): void {
@@ -13,9 +15,14 @@ export function runMigrations(db: Database.Database, migrations: Migration[]): v
     .sort((a, b) => a.version - b.version)
 
   for (const migration of pending) {
-    db.transaction(() => {
+    const apply = (): void => {
       migration.up(db)
       db.pragma(`user_version = ${migration.version}`)
-    })()
+    }
+    if (migration.disableTransaction) {
+      apply()
+    } else {
+      db.transaction(apply)()
+    }
   }
 }

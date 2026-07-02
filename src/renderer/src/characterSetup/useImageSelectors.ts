@@ -9,9 +9,12 @@ export interface ImageSelectors {
   selectSheetBackground: () => Promise<void>
 }
 
-export function useImageSelectors(): ImageSelectors {
-  const [portraitPath, setPortraitPath] = useState<string | null>(null)
-  const [sheetBackgroundPath, setSheetBackgroundPath] = useState<string | null>(null)
+export function useImageSelectors(
+  initialPortraitPath: string | null = null,
+  initialSheetBackgroundPath: string | null = null
+): ImageSelectors {
+  const [portraitPath, setPortraitPath] = useState<string | null>(initialPortraitPath)
+  const [sheetBackgroundPath, setSheetBackgroundPath] = useState<string | null>(initialSheetBackgroundPath)
 
   async function selectPortrait(): Promise<void> {
     setPortraitPath(await window.files.selectPortrait())

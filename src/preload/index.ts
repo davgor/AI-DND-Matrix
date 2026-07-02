@@ -13,7 +13,9 @@ import type { CampaignDetail } from '../main/campaignIpc'
 import type { CreateCampaignRequest, CreateCampaignProgress } from '../shared/campaignCreate/types'
 import type {
   CreatePartyMembersInput,
-  CreatePlayerCharacterInput
+  CreatePlayerCharacterInput,
+  ReplaceSetupPartyMembersInput,
+  UpdatePlayerCharacterSetupInput
 } from '../main/characterCreationIpc'
 import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
@@ -103,6 +105,10 @@ const characters = {
     ipcRenderer.invoke('characters:createPlayer', input),
   createPartyMembers: (input: CreatePartyMembersInput): Promise<Character[]> =>
     ipcRenderer.invoke('characters:createPartyMembers', input),
+  updatePlayerSetup: (input: UpdatePlayerCharacterSetupInput): Promise<Character> =>
+    ipcRenderer.invoke('characters:updatePlayerSetup', input),
+  replaceSetupPartyMembers: (input: ReplaceSetupPartyMembersInput): Promise<Character[]> =>
+    ipcRenderer.invoke('characters:replaceSetupPartyMembers', input),
   listByCampaign: (campaignId: string): Promise<Character[]> =>
     ipcRenderer.invoke('characters:listByCampaign', campaignId),
   listItems: (characterId: string): Promise<CharacterItemView[]> =>
@@ -224,6 +230,28 @@ const startup = {
   }
 }
 
+const startingLoadout = {
+  getOffer: (input: { characterId: string }): Promise<
+    | { ok: true; offer: import('../shared/startingLoadout/types').StartingLoadoutOffer }
+    | {
+        ok: false
+        reason: string
+        missingItems?: string[]
+        missingSpells?: string[]
+      }
+  > => ipcRenderer.invoke('startingLoadout:getOffer', input),
+  apply: (input: {
+    characterId: string
+    selections: {
+      weaponName: string
+      armorName: string
+      offHandChoice: string
+      spellKeys: string[]
+    }
+  }): Promise<import('../shared/startingLoadout/types').ApplyStartingLoadoutResult> =>
+    ipcRenderer.invoke('startingLoadout:apply', input)
+}
+
 const guidedCreation = {
   getState: (characterId: string): Promise<GuidedCreationState | undefined> =>
     ipcRenderer.invoke('guidedCreation:getState', characterId),
@@ -273,6 +301,7 @@ contextBridge.exposeInMainWorld('combat', combat)
 contextBridge.exposeInMainWorld('progression', progression)
 contextBridge.exposeInMainWorld('startup', startup)
 contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
+contextBridge.exposeInMainWorld('startingLoadout', startingLoadout)
 contextBridge.exposeInMainWorld('settings', settings)
 contextBridge.exposeInMainWorld('settingsIntro', settingsIntro)
 contextBridge.exposeInMainWorld('autoUpdate', autoUpdate)
@@ -289,6 +318,7 @@ export type CombatApi = typeof combat
 export type ProgressionApi = typeof progression
 export type StartupApi = typeof startup
 export type GuidedCreationApi = typeof guidedCreation
+export type StartingLoadoutApi = typeof startingLoadout
 export type SettingsApi = typeof settings
 export type SettingsIntroApi = typeof settingsIntro
 export type AutoUpdateApi = typeof autoUpdate

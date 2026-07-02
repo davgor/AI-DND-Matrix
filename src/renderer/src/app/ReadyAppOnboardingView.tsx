@@ -17,6 +17,8 @@ export function ReadyAppOnboardingView(props: {
   onDetailChange: (detail: CampaignDetail) => void
   onReviewContinue: () => void
   onCharacterSetupComplete: () => void
+  onEquipmentSelectionComplete: () => void
+  onEquipmentSelectionBack: () => void
   onGuidedIdentityAdvance: () => void
   onEnterPlay: () => void
   enterPlayBlockerMessage: string | null
@@ -35,6 +37,8 @@ export function ReadyAppOnboardingView(props: {
         onDetailChange={props.onDetailChange}
         onReviewContinue={props.onReviewContinue}
         onCharacterSetupComplete={props.onCharacterSetupComplete}
+      onEquipmentSelectionComplete={props.onEquipmentSelectionComplete}
+      onEquipmentSelectionBack={props.onEquipmentSelectionBack}
         onGuidedIdentityAdvance={props.onGuidedIdentityAdvance}
         onEnterPlay={props.onEnterPlay}
         enterPlayBlockerMessage={props.enterPlayBlockerMessage}

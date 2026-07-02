@@ -9,6 +9,7 @@ function baseState(overrides: Partial<CharacterSetupState> = {}): CharacterSetup
     archetype: 'fighter',
     alignment: 'true_neutral',
     abilityScores: VALID_SCORES,
+    abilityScoreMethod: 'pointBuy',
     ...overrides
   }
 }
@@ -34,5 +35,27 @@ describe('validateCharacterSetup (009.6)', () => {
 
   it('allows a fully valid form', () => {
     expect(validateCharacterSetup(baseState())).toBeNull()
+  })
+
+  it('blocks invalid point buy scores even when all four values are present', () => {
+    expect(
+      validateCharacterSetup(
+        baseState({
+          abilityScores: { body: 16, agility: 14, mind: 15, presence: 13 },
+          abilityScoreMethod: 'pointBuy'
+        })
+      )
+    ).toBe('Point buy scores must stay within the 8-15 range and 15-point budget.')
+  })
+
+  it('allows rolled stats when the roll method is selected', () => {
+    expect(
+      validateCharacterSetup(
+        baseState({
+          abilityScores: { body: 16, agility: 14, mind: 15, presence: 13 },
+          abilityScoreMethod: 'roll'
+        })
+      )
+    ).toBeNull()
   })
 })

@@ -45,7 +45,8 @@ describe('migration v25 quests backfill', () => {
       campaignId: campaign.id,
       name: 'Hero',
       characterClass: 'fighter',
-      kind: 'player'
+      kind: 'player',
+      guidedCreationPhase: 'identity'
     })
 
     runMigrations(db, migrations.filter((migration) => migration.version >= 24))

@@ -29,6 +29,20 @@ interface ReadyAppShellProps {
   onCampaignCreated: (detail: CampaignDetail) => Promise<void>
 }
 
+async function handleEquipmentSelectionComplete(props: ReadyAppShellProps): Promise<void> {
+  if (props.detail?.campaign) {
+    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
+  }
+  props.setStage('guidedIdentity')
+}
+
+async function handleEquipmentSelectionBack(props: ReadyAppShellProps): Promise<void> {
+  if (props.detail?.campaign) {
+    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
+  }
+  props.setStage('characterSetup')
+}
+
 function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
   const body = useReadyAppBodyState(props)
   const campaignCallbacks = {
@@ -72,6 +86,8 @@ function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
       onDetailChange={props.setDetail}
       onReviewContinue={() => props.setStage('characterSetup')}
       onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
+      onEquipmentSelectionComplete={() => void handleEquipmentSelectionComplete(props)}
+      onEquipmentSelectionBack={() => void handleEquipmentSelectionBack(props)}
       onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
       onEnterPlay={body.handleEnterPlay}
       enterPlayBlockerMessage={body.enterPlayBlockerMessage}
@@ -84,7 +100,7 @@ async function handleCharacterSetupComplete(props: ReadyAppShellProps): Promise<
   if (props.detail?.campaign) {
     props.setDetail(await window.campaigns.select(props.detail.campaign.id))
   }
-  props.setStage('guidedIdentity')
+  props.setStage('equipmentSelection')
 }
 
 function ReadyAppShell(props: ReadyAppShellProps): JSX.Element {

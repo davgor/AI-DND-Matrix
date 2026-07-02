@@ -6,7 +6,7 @@ This epic inserts an **equipment selection** onboarding page between `CharacterS
 
 Builds on **009** (character setup UI), **023** (spell catalog + archetype hints), **024** (items/equip), **026** (guided creation stage machine), **044** (mainHand/offHand/armor slots), **046** (spellbook display of `knownSpellKeys`).
 
-Broken down into sub-tickets **047.1–047.10**. This epic is done when all are complete and `npm test`, `npm run lint`, and `npm run build` pass.
+Broken down into sub-tickets **047.1–047.11**. This epic is done when all are complete and `npm test`, `npm run lint`, and `npm run build` pass.
 
 ## Target UX flow
 
@@ -81,7 +81,7 @@ Add `equipment` to `guided_creation_phase`:
 - Equipped gear and known spells appear on character sheet / spellbook before first play turn
 - Smoke runbook covers setup → equipment → identity → play; mid-equipment reload resumes correctly
 
-047.1 archetype loadout spec + seed data gaps · 047.2 guided_creation_phase `equipment` migration · 047.3 engine loadout validation · 047.4 apply-starting-loadout repository + IPC · 047.5 onboarding stage routing + resume · 047.6 equipment selection UI (weapons/armor/off-hand) · 047.7 spell selection UI (casters) · 047.8 wire CharacterSetup → equipment → identity handoff · 047.9 sheet/spellbook reflect starting gear pre-play · 047.10 smoke test + runbook update
+047.1 archetype loadout spec + seed data gaps · 047.2 guided_creation_phase `equipment` migration · 047.3 engine loadout validation · 047.4 apply-starting-loadout repository + IPC · 047.5 onboarding stage routing + resume · 047.6 equipment selection UI (weapons/armor/off-hand) · 047.7 spell selection UI (casters) · 047.8 wire CharacterSetup → equipment → identity handoff · 047.9 sheet/spellbook reflect starting gear pre-play · 047.10 smoke test + runbook update · 047.11 equipment selection back navigation · 047.12 preserve character setup on equipment back
 
 ## Relationship to other epics
 
@@ -105,10 +105,10 @@ Add `equipment` to `guided_creation_phase`:
 Author `src/engine/startingLoadout/SPEC.md` and a typed data module mapping each seed archetype to offered weapon, armor, off-hand, and spell catalog keys. Fill any gaps in `seedStarterItems.ts` (e.g. longbow, mace, shield if not already present) so every spec reference resolves to a real catalog row.
 
 #### Acceptance Criteria
-- [ ] `SPEC.md` documents per-archetype option lists, pick counts, and off-hand / 2H interaction rules
-- [ ] Typed `STARTING_LOADOUT_PACKAGES` (or equivalent) maps each `Archetype` to catalog item names/keys and spell keys — no inline mechanical numbers
-- [ ] Every referenced starter item exists in the seeded `items` catalog after migration
-- [ ] Unit test asserts package completeness for all five archetypes and that spell keys exist in `SPELL_SEEDS_V1`
+- [x] `SPEC.md` documents per-archetype option lists, pick counts, and off-hand / 2H interaction rules
+- [x] Typed `STARTING_LOADOUT_PACKAGES` (or equivalent) maps each `Archetype` to catalog item names/keys and spell keys — no inline mechanical numbers
+- [x] Every referenced starter item exists in the seeded `items` catalog after migration
+- [x] Unit test asserts package completeness for all five archetypes and that spell keys exist in `SPELL_SEEDS_V1`
 
 ### 047.2 `guided_creation_phase` `equipment` migration
 
@@ -116,10 +116,10 @@ Author `src/engine/startingLoadout/SPEC.md` and a typed data module mapping each
 Extend `GUIDED_CREATION_PHASES`, DB check constraint, and `defaultGuidedPhase` so new player characters begin in `equipment`. Migrate existing rows: players already in `identity` with no equipped starting gear may stay in `identity` (or document a one-time backfill policy in the migration).
 
 #### Acceptance Criteria
-- [ ] `equipment` is a valid `GuidedCreationPhase` in shared types and SQLite constraint
-- [ ] `createCharacter` for `kind: 'player'` defaults `guided_creation_phase` to `equipment`
-- [ ] Migration upgrades existing DBs without breaking players mid-identity or mid-opening-scene
-- [ ] Schema/migration test covers new phase value and default for new player rows
+- [x] `equipment` is a valid `GuidedCreationPhase` in shared types and SQLite constraint
+- [x] `createCharacter` for `kind: 'player'` defaults `guided_creation_phase` to `equipment`
+- [x] Migration upgrades existing DBs without breaking players mid-identity or mid-opening-scene
+- [x] Schema/migration test covers new phase value and default for new player rows
 
 ### 047.3 Engine loadout validation
 
@@ -127,10 +127,10 @@ Extend `GUIDED_CREATION_PHASES`, DB check constraint, and `defaultGuidedPhase` s
 Pure engine functions that take `(archetype, selections)` and return either a validated loadout plan or typed rejection reasons (invalid item for archetype, too many/few spells, off-hand conflicts with 2H weapon, unknown catalog key).
 
 #### Acceptance Criteria
-- [ ] Validator ensures each picked item is in the archetype's offered list for its slot category
-- [ ] Validator enforces spell pick count and level-1 / archetype constraints using catalog metadata shape (not DB)
-- [ ] Validator rejects 2H mainHand + shield off-hand combinations with a clear error code
-- [ ] Unit tests cover happy path per archetype, invalid cross-archetype picks, and conflict cases
+- [x] Validator ensures each picked item is in the archetype's offered list for its slot category
+- [x] Validator enforces spell pick count and level-1 / archetype constraints using catalog metadata shape (not DB)
+- [x] Validator rejects 2H mainHand + shield off-hand combinations with a clear error code
+- [x] Unit tests cover happy path per archetype, invalid cross-archetype picks, and conflict cases
 
 ### 047.4 Apply-starting-loadout repository + IPC
 
@@ -138,10 +138,10 @@ Pure engine functions that take `(archetype, selections)` and return either a va
 Implement `applyStartingLoadout(db, { characterId, selections })` that runs in a single transaction: grant catalog items to `character_items`, equip into correct slots via existing equip logic, merge spell keys into `characters.stats.knownSpellKeys`, recompute AC from equipped armor, and advance `guided_creation_phase` from `equipment` to `identity`. Expose typed IPC for the renderer.
 
 #### Acceptance Criteria
-- [ ] Repository uses existing item grant/equip paths (**024** / **044**) — no parallel inventory writes
-- [ ] Transaction is all-or-nothing; partial grants on failure are impossible
-- [ ] IPC rejects calls when character is not in `equipment` phase or selections fail validation
-- [ ] Unit tests cover grant+equip+spell write, AC update, phase advance, and rejection paths
+- [x] Repository uses existing item grant/equip paths (**024** / **044**) — no parallel inventory writes
+- [x] Transaction is all-or-nothing; partial grants on failure are impossible
+- [x] IPC rejects calls when character is not in `equipment` phase or selections fail validation
+- [x] Unit tests cover grant+equip+spell write, AC update, phase advance, and rejection paths
 
 ### 047.5 Onboarding stage routing + resume
 
@@ -149,11 +149,11 @@ Implement `applyStartingLoadout(db, { characterId, selections })` that runs in a
 Add `equipmentSelection` to `OnboardingStage`, update `stageForGuidedPhase`, `stageAfterCampaignSelect`, and `App.tsx` handoff so reload mid-equipment returns to the equipment page. Block guided identity kickoff until phase is `identity`.
 
 #### Acceptance Criteria
-- [ ] `OnboardingStage` includes `equipmentSelection` between `characterSetup` and `guidedIdentity`
-- [ ] `stageForGuidedPhase('equipment')` returns `equipmentSelection`
-- [ ] `handleCharacterSetupComplete` transitions to `equipmentSelection`, not `guidedIdentity`
-- [ ] `findIncompletePlayerCharacter` treats `equipment` as incomplete guided creation
-- [ ] Unit tests in `stageRouting.test.ts` cover new stage and resume from `equipment` phase
+- [x] `OnboardingStage` includes `equipmentSelection` between `characterSetup` and `guidedIdentity`
+- [x] `stageForGuidedPhase('equipment')` returns `equipmentSelection`
+- [x] `handleCharacterSetupComplete` transitions to `equipmentSelection`, not `guidedIdentity`
+- [x] `findIncompletePlayerCharacter` treats `equipment` as incomplete guided creation
+- [x] Unit tests in `stageRouting.test.ts` cover new stage and resume from `equipment` phase
 
 ### 047.6 Equipment selection UI (weapons, armor, off-hand)
 
@@ -161,11 +161,11 @@ Add `equipmentSelection` to `OnboardingStage`, update `stageForGuidedPhase`, `st
 Build the equipment selection onboarding view: fetch offered options for the player's archetype (via IPC), render pick-one groups for weapon, armor, and off-hand, show live slot-conflict hints (e.g. greataxe disables shield), styled consistently with `CharacterSetup` / tavern onboarding — not `PlayView`.
 
 #### Acceptance Criteria
-- [ ] Page loads offered options from IPC based on persisted player character's archetype
-- [ ] Player can select exactly one weapon and one armor option; off-hand group respects archetype package (hidden when not applicable)
-- [ ] Selecting a 2H weapon disables or clears incompatible off-hand choice with visible explanation
-- [ ] Confirm button stays disabled until required slot picks are made
-- [ ] Renderer test covers option rendering and 2H/off-hand mutual exclusion UI state
+- [x] Page loads offered options from IPC based on persisted player character's archetype
+- [x] Player can select exactly one weapon and one armor option; off-hand group respects archetype package (hidden when not applicable)
+- [x] Selecting a 2H weapon disables or clears incompatible off-hand choice with visible explanation
+- [x] Confirm button stays disabled until required slot picks are made
+- [x] Renderer test covers option rendering and 2H/off-hand mutual exclusion UI state
 
 ### 047.7 Spell selection UI (casters)
 
@@ -173,10 +173,10 @@ Build the equipment selection onboarding view: fetch offered options for the pla
 For archetypes with a spell pick quota, show a multi-select (or pick-N) list of offered level-1 catalog spells with name, effect type, range, and turn cost. Martial archetypes with only one optional ability show a compact single-pick or auto-grant per spec.
 
 #### Acceptance Criteria
-- [ ] Spell section appears only when archetype package has `spellPickCount > 0`
-- [ ] Player cannot select more than the allowed count; confirm blocked until count is exact
-- [ ] Spell labels come from catalog metadata returned by IPC, not hardcoded strings in the renderer
-- [ ] Renderer test covers pick limit enforcement and hidden section for fighter-with-one-ability edge case
+- [x] Spell section appears only when archetype package has `spellPickCount > 0`
+- [x] Player cannot select more than the allowed count; confirm blocked until count is exact
+- [x] Spell labels come from catalog metadata returned by IPC, not hardcoded strings in the renderer
+- [x] Renderer test covers pick limit enforcement and hidden section for fighter-with-one-ability edge case
 
 ### 047.8 Wire CharacterSetup → equipment → identity handoff
 
@@ -184,11 +184,11 @@ For archetypes with a spell pick quota, show a multi-select (or pick-N) list of 
 Change `CharacterSetup` primary button to **Choose your gear** (or **Continue to equipment**). On equipment confirm, call apply-loadout IPC, refresh campaign detail, transition to `guidedIdentity`, and allow identity kickoff. Update hub second-character path to use the same sequence.
 
 #### Acceptance Criteria
-- [ ] `CharacterSetup` no longer says **Tell me about yourself**; that label moves to equipment confirm
-- [ ] Successful equipment confirm refreshes detail and sets stage to `guidedIdentity`
-- [ ] Identity kickoff (`kickoffGuidedCreationIdentity`) does not run until loadout IPC succeeds
-- [ ] Campaign hub "create character" flow reaches equipment selection before identity
-- [ ] `guided-creation-smoke-test.md` updated to include equipment step
+- [x] `CharacterSetup` no longer says **Tell me about yourself**; that label moves to equipment confirm
+- [x] Successful equipment confirm refreshes detail and sets stage to `guidedIdentity`
+- [x] Identity kickoff (`kickoffGuidedCreationIdentity`) does not run until loadout IPC succeeds
+- [x] Campaign hub "create character" flow reaches equipment selection before identity
+- [x] `guided-creation-smoke-test.md` updated to include equipment step
 
 ### 047.9 Sheet / spellbook reflect starting gear pre-play
 
@@ -196,10 +196,10 @@ Change `CharacterSetup` primary button to **Choose your gear** (or **Continue to
 Verify equipped items and known spells from starting loadout appear in the character sheet overlay and spellbook (if **046** is done) during guided identity — before first play turn. Fix any missing refresh if inventory reads stale immediately after loadout apply.
 
 #### Acceptance Criteria
-- [ ] After equipment confirm, character sheet shows equipped weapon/armor in correct slots
-- [ ] AC on sheet matches equipped armor tier
-- [ ] Known starting spells appear in spellbook modal (when 046 is merged) or in stats-driven spell list
-- [ ] No duplicate items on re-render or campaign detail refresh
+- [x] After equipment confirm, character sheet shows equipped weapon/armor in correct slots
+- [x] AC on sheet matches equipped armor tier
+- [x] Known starting spells appear in spellbook modal (when 046 is merged) or in stats-driven spell list
+- [x] No duplicate items on re-render or campaign detail refresh
 
 ### 047.10 Smoke test + runbook update
 
@@ -207,7 +207,29 @@ Verify equipped items and known spells from starting loadout appear in the chara
 Add `docs/runbooks/starting-equipment-smoke-test.md` and a focused DB/integration test that applies a loadout for each archetype and asserts inventory, equip state, spells, and phase transition.
 
 #### Acceptance Criteria
-- [ ] Integration test applies fighter and mage loadouts end-to-end against real catalog seed data
-- [ ] Runbook steps: character setup → equipment picks → confirm → identity → verify sheet gear
-- [ ] Runbook documents mid-equipment app restart resumes on equipment page
-- [ ] Runbook documents 2H + shield conflict is blocked in UI before submit
+- [x] Integration test applies fighter and mage loadouts end-to-end against real catalog seed data
+- [x] Runbook steps: character setup → equipment picks → confirm → identity → verify sheet gear
+- [x] Runbook documents mid-equipment app restart resumes on equipment page
+- [x] Runbook documents 2H + shield conflict is blocked in UI before submit
+
+### 047.11 Equipment selection back navigation
+
+#### Description
+Add a **Back** control on the equipment selection page that returns the player to character setup without applying a loadout or advancing guided-creation phase.
+
+#### Acceptance Criteria
+- [x] Back button visible on equipment selection (loading, error, and main form states)
+- [x] Back navigates onboarding stage to `characterSetup`
+- [x] Renderer test verifies Back invokes `onBack`
+- [x] `npm test`, `npm run lint`, and `npm run build` pass
+
+### 047.12 Preserve character setup when returning from equipment
+
+#### Description
+Returning from equipment selection to character setup should restore the previously entered character details and party members from the persisted equipment-phase player instead of showing a blank form or creating duplicate characters on resubmit.
+
+#### Acceptance Criteria
+- [x] Character setup hydrates from the equipment-phase player in campaign detail
+- [x] Resubmit updates the existing player and replaces setup party members
+- [x] Back from equipment refreshes campaign detail before showing character setup
+- [x] Unit tests cover draft hydration and setup update IPC

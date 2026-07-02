@@ -4,7 +4,8 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { abilityModifier } from '../engine/abilities'
 import { HIT_DIE_SIZE } from '../engine/hp'
 
-import { createPartyMembers, createPlayerCharacter } from './characterCreationIpc'
+import { createPartyMembers, createPlayerCharacter, replaceSetupPartyMembers, updatePlayerCharacterSetup } from './characterCreationIpc'
+import { listCharactersByCampaign } from '../db/repositories/characters'
 
 function seedCampaign() {
   const db = createTestDb()
@@ -39,6 +40,21 @@ describe('createPlayerCharacter (009.3)', () => {
     expect(stats.hitDieRolls).toHaveLength(1)
     expect(stats.ac).toBe(10 + abilityModifier(abilityScores.agility))
     expect(character.currency).toBeGreaterThan(0)
+    expect(character.guidedCreationPhase).toBe('equipment')
+  })
+
+  it('persists the ability score assignment method in stats', () => {
+    const { db, campaign } = seedCampaign()
+    const character = createPlayerCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      archetype: 'fighter',
+      abilityScores: { body: 16, agility: 14, mind: 15, presence: 13 },
+      abilityScoreMethod: 'roll',
+      alignment: 'lawful_good'
+    })
+
+    expect((character.stats as { abilityScoreMethod?: string }).abilityScoreMethod).toBe('roll')
   })
 
   it('persists portrait and sheet-background paths when provided', () => {
@@ -92,5 +108,64 @@ describe('createPartyMembers (009.4)', () => {
     const { db, campaign } = seedCampaign()
     const members = createPartyMembers(db, { campaignId: campaign.id, members: [] })
     expect(members).toHaveLength(0)
+  })
+})
+
+describe('updatePlayerCharacterSetup', () => {
+  it('updates an equipment-phase player without creating a duplicate', () => {
+    const { db, campaign } = seedCampaign()
+    const player = createPlayerCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      archetype: 'fighter',
+      abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
+      alignment: 'lawful_good'
+    })
+
+    const updated = updatePlayerCharacterSetup(db, {
+      characterId: player.id,
+      name: 'Kael Thornwick',
+      archetype: 'ranger',
+      abilityScores: { body: 12, agility: 16, mind: 10, presence: 12 },
+      abilityScoreMethod: 'standardArray',
+      alignment: 'chaotic_good',
+      portraitPath: '/new.png'
+    })
+
+    expect(updated.name).toBe('Kael Thornwick')
+    expect(updated.characterClass).toBe('ranger')
+    expect(updated.alignment).toBe('chaotic_good')
+    expect(updated.portraitPath).toBe('/new.png')
+    expect((updated.stats as { abilityScoreMethod?: string }).abilityScoreMethod).toBe('standardArray')
+    expect(listCharactersByCampaign(db, campaign.id).filter((row) => row.kind === 'player')).toHaveLength(1)
+  })
+})
+
+describe('replaceSetupPartyMembers', () => {
+  it('replaces shared setup party members for an equipment-phase player', () => {
+    const { db, campaign } = seedCampaign()
+    const player = createPlayerCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      archetype: 'fighter',
+      abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
+      alignment: 'lawful_good'
+    })
+    createPartyMembers(db, {
+      campaignId: campaign.id,
+      members: [{ name: 'Brom', characterClass: 'ranger', personality: 'gruff' }]
+    })
+
+    const replaced = replaceSetupPartyMembers(db, {
+      campaignId: campaign.id,
+      playerCharacterId: player.id,
+      members: [{ name: 'Lyra', characterClass: 'cleric', personality: 'kind' }]
+    })
+
+    expect(replaced).toHaveLength(1)
+    expect(replaced[0]?.name).toBe('Lyra')
+    const party = listCharactersByCampaign(db, campaign.id).filter((row) => row.kind === 'ai_party_member')
+    expect(party).toHaveLength(1)
+    expect(party[0]?.name).toBe('Lyra')
   })
 })

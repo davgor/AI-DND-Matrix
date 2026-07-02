@@ -95,10 +95,10 @@ describe('guidedCreation phase transitions', () => {
     expect(fields?.openingScene).toContain('tavern')
   })
 
-  it('starts new player characters in identity phase', () => {
+  it('starts new player characters in equipment phase', () => {
     const db = createTestDb()
     const { hero } = seedPlayer(db)
-    expect(readGuidedCreationFields(db, hero.id)?.guidedCreationPhase).toBe('identity')
+    expect(readGuidedCreationFields(db, hero.id)?.guidedCreationPhase).toBe('equipment')
     setGuidedCreationPhase(db, hero.id, 'complete')
     expect(readGuidedCreationFields(db, hero.id)?.guidedCreationPhase).toBe('complete')
   })

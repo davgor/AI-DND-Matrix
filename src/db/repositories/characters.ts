@@ -55,6 +55,7 @@ export interface CreateCharacterInput {
   sheetBackgroundPath?: string | null
   alignment?: Alignment | null
   ownerPlayerCharacterId?: string | null
+  guidedCreationPhase?: GuidedCreationPhase
 }
 
 export interface UpdateCharacterInput {
@@ -139,7 +140,7 @@ function rowToCharacter(row: CharacterRow): Character {
 }
 
 function defaultGuidedPhase(kind: CharacterKind): GuidedCreationPhase {
-  return kind === 'player' ? 'identity' : 'none'
+  return kind === 'player' ? 'equipment' : 'none'
 }
 
 function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
@@ -173,7 +174,7 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     identityWhere: null,
     identityWhat: null,
     openingScene: null,
-    guidedCreationPhase: defaultGuidedPhase(input.kind),
+    guidedCreationPhase: input.guidedCreationPhase ?? defaultGuidedPhase(input.kind),
     alignment: input.alignment ?? null,
     pendingAlignmentShift: null,
     lifeStatus: 'alive',
@@ -220,7 +221,7 @@ function insertCharacterRow(
     sourceNpcId: values.sourceNpcId,
     portraitPath: values.portraitPath,
     sheetBackgroundPath: values.sheetBackgroundPath,
-    guidedCreationPhase: defaultGuidedPhase(input.kind),
+    guidedCreationPhase: input.guidedCreationPhase ?? defaultGuidedPhase(input.kind),
     alignment: input.alignment ?? null,
     ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null
   })

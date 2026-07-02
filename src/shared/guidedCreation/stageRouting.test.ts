@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Character } from '../../db/repositories/characters'
-import { canEnterPlay, stageAfterCampaignSelect } from './stageRouting'
+import { canEnterPlay, findGuidedCreationPlayer, stageAfterCampaignSelect } from './stageRouting'
 
 function player(phase: Character['guidedCreationPhase']): Character {
   return {
@@ -36,6 +36,7 @@ function player(phase: Character['guidedCreationPhase']): Character {
 
 describe('guided creation stage routing', () => {
   it('blocks play until guided creation is complete', () => {
+    expect(canEnterPlay(player('equipment'))).toBe(false)
     expect(canEnterPlay(player('identity'))).toBe(false)
     expect(canEnterPlay(player('opening_scene'))).toBe(false)
     expect(canEnterPlay(player('complete'))).toBe(true)
@@ -43,8 +44,14 @@ describe('guided creation stage routing', () => {
 
   it('resumes the correct onboarding stage after campaign select', () => {
     expect(stageAfterCampaignSelect([])).toBe('review')
+    expect(stageAfterCampaignSelect([player('equipment')])).toBe('equipmentSelection')
     expect(stageAfterCampaignSelect([player('identity')])).toBe('guidedIdentity')
     expect(stageAfterCampaignSelect([player('opening_scene')])).toBe('guidedOpeningScene')
     expect(stageAfterCampaignSelect([player('complete')])).toBe('campaignHub')
+  })
+
+  it('prefers the equipment-phase player when multiple players exist', () => {
+    const characters = [player('complete'), player('equipment')]
+    expect(findGuidedCreationPlayer(characters)?.guidedCreationPhase).toBe('equipment')
   })
 })

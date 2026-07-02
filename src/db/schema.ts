@@ -5,6 +5,7 @@ import { migrateLegacyCharacterInventory } from './migrateLegacyInventory'
 import { migrateHpBackfill } from './migrateHpBackfill'
 import { migrateEquipSlotsV24 } from './migrateEquipSlotsV24'
 import { migrateQuestsV25 } from './migrateQuestsV25'
+import { migrateGuidedCreationEquipmentPhaseV26 } from './migrateGuidedCreationEquipmentPhaseV26'
 import { seedStarterItemCatalog } from './seedStarterItems'
 
 function addColumnIfMissing(
@@ -467,6 +468,26 @@ export const migrations: Migration[] = [
     version: 25,
     up: (db) => {
       migrateQuestsV25(db)
+    }
+  },
+  {
+    version: 26,
+    disableTransaction: true,
+    up: (db) => {
+      migrateGuidedCreationEquipmentPhaseV26(db)
+    }
+  },
+  {
+    version: 27,
+    up: (db) => {
+      seedStarterItemCatalog(db)
+      seedCreatureAndSpellCatalogV1(db)
+    }
+  },
+  {
+    version: 28,
+    up: (db) => {
+      seedCreatureAndSpellCatalogV1(db)
     }
   }
 ]

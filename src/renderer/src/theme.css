@@ -200,7 +200,8 @@ body {
   .sidebar-toggle,
   .sidebar-campaign-button,
   .ability-score-step,
-  .field-random-dice
+  .field-random-dice,
+  .equipment-selection-option
 ),
 .modal-overlay .btn {
   border: 1px solid var(--accent-gold);
@@ -229,7 +230,8 @@ body {
   .sidebar-toggle,
   .sidebar-campaign-button,
   .ability-score-step,
-  .field-random-dice
+  .field-random-dice,
+  .equipment-selection-option
 ):hover:not(:disabled),
 .modal-overlay .btn:hover:not(:disabled) {
   background: rgba(201, 166, 107, 0.22);
@@ -251,7 +253,8 @@ body {
   .sidebar-toggle,
   .sidebar-campaign-button,
   .ability-score-step,
-  .field-random-dice
+  .field-random-dice,
+  .equipment-selection-option
 ):disabled,
 .modal-overlay .btn:disabled {
   opacity: 0.55;

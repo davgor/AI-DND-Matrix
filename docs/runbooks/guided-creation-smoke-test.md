@@ -30,12 +30,13 @@ Flow:
 ## Manual smoke (full app + UI)
 
 1. Run `npm run dev` with a configured provider.
-2. Create a campaign, complete mechanical character setup, click **Tell me about yourself**.
-3. Chat through identity until all four foundations complete; click **Help me set the stage**.
-4. Negotiate the opening scene until **Enter the world** appears.
-5. Confirm play view loads with the opening scene in DM exposition.
-6. Open the character sheet — Who / Why / Where / What and opening scene should display.
-7. Restart mid-identity or mid-scene; confirm the conversation resumes.
+2. Create a campaign, complete mechanical character setup, click **Choose your gear**.
+3. Pick weapon, armor, off-hand (if shown), and spells; confirm with **Tell me about yourself**.
+4. Chat through identity until all four foundations complete; click **Help me set the stage**.
+5. Negotiate the opening scene until **Enter the world** appears.
+6. Confirm play view loads with the opening scene in DM exposition.
+7. Open the character sheet — equipped gear, known spells (spellbook), Who / Why / Where / What and opening scene should display.
+8. Restart mid-equipment or mid-identity; confirm the flow resumes on the correct step.
 
 ## Recorded run (template)
 
