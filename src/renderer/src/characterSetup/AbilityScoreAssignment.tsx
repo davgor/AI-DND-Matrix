@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   abilityModifier,
   createSeededRandom,
@@ -13,6 +13,8 @@ import {
   type Ability,
   type AbilityScores
 } from '../../../engine/abilities'
+import type { AbilityScoreMethod } from '../../../shared/characterSetup/abilityScoreMethod'
+import { inferAbilityScoreMethod } from '../../../shared/characterSetup/abilityScoreMethod'
 
 const ABILITIES: Ability[] = ['body', 'agility', 'mind', 'presence']
 const ABILITY_LABELS: Record<Ability, string> = {
@@ -21,9 +23,8 @@ const ABILITY_LABELS: Record<Ability, string> = {
   mind: 'Mind',
   presence: 'Presence'
 }
-type Method = 'pointBuy' | 'standardArray' | 'roll'
 
-const METHOD_OPTIONS: Array<{ value: Method; label: string }> = [
+const METHOD_OPTIONS: Array<{ value: AbilityScoreMethod; label: string }> = [
   { value: 'pointBuy', label: 'Point Buy' },
   { value: 'standardArray', label: 'Standard Array' },
   { value: 'roll', label: 'Roll for Stats' }
@@ -31,10 +32,52 @@ const METHOD_OPTIONS: Array<{ value: Method; label: string }> = [
 
 export interface AbilityScoreAssignmentProps {
   onAssigned: (scores: AbilityScores | null) => void
+  initialScores?: AbilityScores | null
+  initialMethod?: AbilityScoreMethod
+  onMethodChange?: (method: AbilityScoreMethod) => void
 }
 
-function usePointBuy(onAssigned: (scores: AbilityScores | null) => void) {
-  const [scores, setScores] = useState<AbilityScores>({ body: 8, agility: 8, mind: 8, presence: 8 })
+function resolveInitialMethod(
+  initialMethod: AbilityScoreMethod | undefined,
+  initialScores: AbilityScores | null | undefined
+): AbilityScoreMethod {
+  if (initialMethod) {
+    return initialMethod
+  }
+  if (initialScores) {
+    return inferAbilityScoreMethod(initialScores)
+  }
+  return 'pointBuy'
+}
+
+function emptyStandardAssignment(): Record<Ability, number | ''> {
+  return { body: '', agility: '', mind: '', presence: '' }
+}
+
+function standardAssignmentFromScores(scores: AbilityScores): Record<Ability, number | ''> {
+  return {
+    body: scores.body,
+    agility: scores.agility,
+    mind: scores.mind,
+    presence: scores.presence
+  }
+}
+
+function usePointBuy(
+  onAssigned: (scores: AbilityScores | null) => void,
+  active: boolean,
+  initialScores?: AbilityScores | null
+) {
+  const [scores, setScores] = useState<AbilityScores>(
+    initialScores ?? { body: 8, agility: 8, mind: 8, presence: 8 }
+  )
+
+  useEffect(() => {
+    if (!active || !initialScores) {
+      return
+    }
+    onAssigned(initialScores)
+  }, [active, initialScores, onAssigned])
 
   function update(ability: Ability, value: number): void {
     const next = { ...scores, [ability]: value }
@@ -46,13 +89,23 @@ function usePointBuy(onAssigned: (scores: AbilityScores | null) => void) {
   return { scores, update }
 }
 
-function useStandardArray(onAssigned: (scores: AbilityScores | null) => void) {
-  const [assignment, setAssignment] = useState<Record<Ability, number | ''>>({
-    body: '',
-    agility: '',
-    mind: '',
-    presence: ''
-  })
+function useStandardArray(
+  onAssigned: (scores: AbilityScores | null) => void,
+  active: boolean,
+  initialScores?: AbilityScores | null
+) {
+  const [assignment, setAssignment] = useState<Record<Ability, number | ''>>(() =>
+    initialScores && resolveStandardArray(initialScores).valid
+      ? standardAssignmentFromScores(initialScores)
+      : emptyStandardAssignment()
+  )
+
+  useEffect(() => {
+    if (!active || !initialScores || !resolveStandardArray(initialScores).valid) {
+      return
+    }
+    onAssigned(initialScores)
+  }, [active, initialScores, onAssigned])
 
   function update(ability: Ability, value: number): void {
     const next = { ...assignment, [ability]: value }
@@ -68,21 +121,42 @@ function useStandardArray(onAssigned: (scores: AbilityScores | null) => void) {
   return { assignment, update }
 }
 
-export function AbilityScoreAssignment(props: AbilityScoreAssignmentProps): JSX.Element {
-  const [method, setMethod] = useState<Method>('pointBuy')
-  const pointBuy = usePointBuy(props.onAssigned)
-  const standardArray = useStandardArray(props.onAssigned)
-  const [rolled, setRolled] = useState<AbilityScores | null>(null)
+function useRollAssignment(
+  onAssigned: (scores: AbilityScores | null) => void,
+  active: boolean,
+  initialScores?: AbilityScores | null
+) {
+  const [rolled, setRolled] = useState<AbilityScores | null>(initialScores ?? null)
 
-  function changeMethod(next: Method): void {
-    setMethod(next)
-    props.onAssigned(null)
-  }
+  useEffect(() => {
+    if (!active || !initialScores) {
+      return
+    }
+    setRolled(initialScores)
+    onAssigned(initialScores)
+  }, [active, initialScores, onAssigned])
 
   function rollStats(): void {
     const scores = rollForStats(createSeededRandom(Date.now()))
     setRolled(scores)
-    props.onAssigned(scores)
+    onAssigned(scores)
+  }
+
+  return { rolled, rollStats }
+}
+
+export function AbilityScoreAssignment(props: AbilityScoreAssignmentProps): JSX.Element {
+  const [method, setMethod] = useState<AbilityScoreMethod>(() =>
+    resolveInitialMethod(props.initialMethod, props.initialScores)
+  )
+  const pointBuy = usePointBuy(props.onAssigned, method === 'pointBuy', props.initialScores)
+  const standardArray = useStandardArray(props.onAssigned, method === 'standardArray', props.initialScores)
+  const roll = useRollAssignment(props.onAssigned, method === 'roll', props.initialScores)
+
+  function changeMethod(next: AbilityScoreMethod): void {
+    setMethod(next)
+    props.onMethodChange?.(next)
+    props.onAssigned(null)
   }
 
   return (
@@ -113,9 +187,7 @@ export function AbilityScoreAssignment(props: AbilityScoreAssignmentProps): JSX.
       {method === 'standardArray' && (
         <StandardArrayFields assignment={standardArray.assignment} onChange={standardArray.update} />
       )}
-      {method === 'roll' && (
-        <RollFields rolled={rolled} onRoll={rollStats} />
-      )}
+      {method === 'roll' && <RollFields rolled={roll.rolled} onRoll={roll.rollStats} />}
     </section>
   )
 }

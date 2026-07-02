@@ -56,16 +56,6 @@
   color: var(--text-muted);
 }
 
-.party-member-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.party-member-row input {
-  flex: 1;
-}
-
 /* Ability score assignment */
 .ability-score-assignment {
   margin: 1.25rem 0;

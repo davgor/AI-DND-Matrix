@@ -43,6 +43,12 @@ describe('campaign hub smoke (038.19)', () => {
     expect(stageAfterCampaignSelect(characters)).toBe('campaignHub')
   })
 
+  it('onboarding campaign in equipment phase routes to equipment selection', () => {
+    const characters = [player({ guidedCreationPhase: 'equipment' })]
+    expect(isHubEligible(characters)).toBe(false)
+    expect(stageAfterCampaignSelect(characters)).toBe('equipmentSelection')
+  })
+
   it('onboarding campaign with incomplete guided creation stays on guided path', () => {
     const characters = [player({ guidedCreationPhase: 'identity' })]
     expect(isHubEligible(characters)).toBe(false)

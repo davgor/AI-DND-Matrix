@@ -8,7 +8,7 @@ import { createCampaign } from './repositories/campaigns'
 import { createCharacter } from './repositories/characters'
 import { createRegion } from './repositories/regions'
 import { createStoryThread } from './repositories/storyThreads'
-import { readGuidedCreationFields } from './repositories/guidedCreation'
+import { readGuidedCreationFields, setGuidedCreationPhase } from './repositories/guidedCreation'
 import { listGuidedCreationMessagesByCharacter } from './repositories/guidedCreationMessages'
 
 function seedCampaign(db: ReturnType<typeof createTestDb>) {
@@ -39,6 +39,7 @@ describe('guided creation end-to-end smoke', () => {
     const db = createTestDb()
     const { campaign, player } = seedCampaign(db)
     expect(canEnterPlay(player)).toBe(false)
+    setGuidedCreationPhase(db, player.id, 'identity')
 
     const identityProvider = createScriptedProvider([
       JSON.stringify({

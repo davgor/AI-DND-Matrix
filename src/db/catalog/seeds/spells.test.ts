@@ -15,6 +15,15 @@ describe('spell/ability preseed dataset v1', () => {
     expect(new Set(keys).size).toBe(keys.length)
   })
 
+  it('includes buff, debuff, and mixed-range starters', () => {
+    const effectTypes = new Set(SPELL_SEEDS_V1.map((seed) => seed.effectType))
+    expect(effectTypes).toEqual(
+      new Set(['buff', 'control', 'damage', 'debuff', 'healing', 'utility'])
+    )
+    const ranges = new Set(SPELL_SEEDS_V1.map((seed) => seed.range))
+    expect(ranges).toEqual(new Set(['melee', 'medium', 'ranged', 'self', 'touch']))
+  })
+
   it('every entry has effect type, range, cost, tags, and constraints', () => {
     for (const seed of SPELL_SEEDS_V1) {
       expect(seed.effectType).toBeTruthy()
@@ -31,7 +40,9 @@ describe('spell/ability preseed dataset v1', () => {
 
     expect(result.errors).toEqual([])
     expect(listAllSpells(db)).toHaveLength(SPELL_SEEDS_V1.length)
-    expect(listSpellsByBucket(db, 'undead').map((s) => s.key)).toEqual(['turn-undead'])
+    expect(listSpellsByBucket(db, 'undead').map((s) => s.key).sort()).toEqual(
+      ['bane', 'chill-touch', 'guiding-bolt', 'sacred-flame', 'turn-undead'].sort()
+    )
   })
 
   it('re-importing the dataset does not duplicate rows', () => {

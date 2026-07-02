@@ -1,7 +1,9 @@
-import { findIncompletePlayerCharacter, findPlayerCharacter, type OnboardingStage } from '../../../shared/guidedCreation/stageRouting'
+import { findGuidedCreationPlayer, type OnboardingStage } from '../../../shared/guidedCreation/stageRouting'
 import { CampaignHub } from '../campaignHub/CampaignHub'
 import { CampaignReview } from '../campaignReview/CampaignReview'
 import { CharacterSetup } from '../characterSetup/CharacterSetup'
+import { resolveCharacterSetupDraft } from '../characterSetup/characterSetupDraft'
+import { EquipmentSelection } from '../equipmentSelection/EquipmentSelection'
 import { GuidedIdentityStage, GuidedOpeningSceneStage } from '../guidedCreation/GuidedCreationStages'
 import { MainPanel } from '../mainPanel/MainPanel'
 import type { CampaignDetail } from '../../../main/campaignIpc'
@@ -39,11 +41,33 @@ function CharacterSetupStage(props: OnboardingStageContentProps): JSX.Element {
   if (!props.detail?.campaign) {
     return <MainPanel detail={props.detail} />
   }
-  return <CharacterSetup campaignId={props.detail.campaign.id} onComplete={props.onCharacterSetupComplete} />
+  const draft = resolveCharacterSetupDraft(props.detail.characters)
+  return (
+    <CharacterSetup
+      campaignId={props.detail.campaign.id}
+      draft={draft}
+      onComplete={props.onCharacterSetupComplete}
+    />
+  )
 }
 
-function guidedCreationPlayer(characters: CampaignDetail['characters']): ReturnType<typeof findPlayerCharacter> {
-  return findIncompletePlayerCharacter(characters) ?? findPlayerCharacter(characters)
+function guidedCreationPlayer(characters: CampaignDetail['characters']): ReturnType<typeof findGuidedCreationPlayer> {
+  return findGuidedCreationPlayer(characters)
+}
+
+function EquipmentSelectionStage(props: OnboardingStageContentProps): JSX.Element {
+  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  if (!player) {
+    return <MainPanel detail={props.detail} />
+  }
+  return (
+    <EquipmentSelection
+      characterId={player.id}
+      characterName={player.name}
+      onComplete={props.onEquipmentSelectionComplete}
+      onBack={props.onEquipmentSelectionBack}
+    />
+  )
 }
 
 function GuidedIdentityRoute(props: OnboardingStageContentProps): JSX.Element {
@@ -83,6 +107,8 @@ export function renderOnboardingStage(stage: OnboardingStage, props: OnboardingS
       return <ReviewStage {...props} />
     case 'characterSetup':
       return <CharacterSetupStage {...props} />
+    case 'equipmentSelection':
+      return <EquipmentSelectionStage {...props} />
     case 'guidedIdentity':
       return <GuidedIdentityRoute {...props} />
     case 'guidedOpeningScene':

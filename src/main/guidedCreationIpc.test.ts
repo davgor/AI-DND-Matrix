@@ -6,6 +6,7 @@ import { createCharacter } from '../db/repositories/characters'
 import { createRegion } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listGuidedCreationMessagesByCharacter } from '../db/repositories/guidedCreationMessages'
+import { setGuidedCreationPhase } from '../db/repositories/guidedCreation'
 import { sendGuidedCreationMessage, kickoffGuidedCreationIdentity } from './guidedCreationIpc'
 
 function seedGuidedCampaign(db: ReturnType<typeof createTestDb>) {
@@ -28,6 +29,7 @@ function seedGuidedCampaign(db: ReturnType<typeof createTestDb>) {
     kind: 'player',
     stats: { abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 } }
   })
+  setGuidedCreationPhase(db, player.id, 'identity')
   return { campaign, player }
 }
 

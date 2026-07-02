@@ -1,19 +1,22 @@
 import type { Archetype } from '../../../engine/hp'
 import { AbilityScoreAssignment } from './AbilityScoreAssignment'
-import { PartyMemberList } from './PartyMemberList'
 import { CharacterSetupCoreFields } from './CharacterSetupFields'
+import type { CharacterSetupDraft } from './characterSetupDraft'
 import { useCharacterSetup } from './useCharacterSetup'
+import { ProceedButton } from '../onboarding/ProceedButton'
 import './characterSetup.css'
 
 const ARCHETYPES: Archetype[] = ['fighter', 'rogue', 'mage', 'cleric', 'ranger']
 
 export interface CharacterSetupProps {
   campaignId: string
+  draft?: CharacterSetupDraft | null
   onComplete: () => void
 }
 
 export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
-  const setup = useCharacterSetup(props.campaignId, props.onComplete)
+  const setup = useCharacterSetup(props.campaignId, props.onComplete, props.draft)
+  const formKey = setup.resumeCharacterId ?? 'new'
 
   return (
     <div className="character-setup">
@@ -21,7 +24,13 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
 
       <CharacterSetupCoreFields setup={setup} archetypes={ARCHETYPES} />
 
-      <AbilityScoreAssignment onAssigned={setup.setAbilityScores} />
+      <AbilityScoreAssignment
+        key={formKey}
+        initialScores={setup.initialAbilityScores}
+        initialMethod={setup.initialAbilityScoreMethod}
+        onAssigned={setup.setAbilityScores}
+        onMethodChange={setup.setAbilityScoreMethod}
+      />
 
       <div className="portrait-upload">
         <button type="button" onClick={() => void setup.selectPortrait()}>
@@ -32,16 +41,13 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
         </button>
       </div>
 
-      <h2>AI Party Members</h2>
-      <PartyMemberList onChange={setup.setPartyMembers} />
-
       {setup.validationError && (
         <p className="character-setup-error">{setup.validationError}</p>
       )}
 
-      <button type="button" disabled={setup.submitting} onClick={() => void setup.handleSubmit()}>
-        {setup.submitting ? 'Creating...' : 'Tell me about yourself'}
-      </button>
+      <ProceedButton disabled={setup.submitting} onClick={() => void setup.handleSubmit()}>
+        {setup.submitting ? 'Creating...' : 'Choose your gear'}
+      </ProceedButton>
     </div>
   )
 }

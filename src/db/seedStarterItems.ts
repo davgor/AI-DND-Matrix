@@ -40,6 +40,19 @@ const STARTER_ITEMS: SeedSpec[] = [
     }
   },
   {
+    name: 'Mace',
+    itemType: 'weapon',
+    description: 'A flanged club favored by temple guardians.',
+    rarity: 'common',
+    equipSlot: 'mainHand',
+    mechanicalProperties: {
+      kind: 'weapon',
+      damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 },
+      damageType: 'physical',
+      handedness: 'oneHand'
+    }
+  },
+  {
     name: 'Shortsword',
     itemType: 'weapon',
     description: 'A balanced one-handed sword.',
