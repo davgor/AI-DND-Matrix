@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { Archetype } from '../hp'
+import type { Archetype } from '../../engine/hp'
 import type { StartingLoadoutOffer } from '../../shared/startingLoadout/types'
 import {
   getStartingLoadoutPackage,
