@@ -14,8 +14,12 @@ export function PlaySheetRailBody(props: {
 }): JSX.Element {
   const modals = usePlaySheetModals()
 
+  function handleTabSelect(tab: PlaySheetTab): void {
+    props.onSelectTab(tab)
+  }
+
   return (
-    <>
+    <div className="play-sheet-rail-body">
       <div className="play-sheet-tabs" role="tablist" aria-label="Character sheet sections">
         {(Object.keys(PLAY_SHEET_TAB_LABELS) as PlaySheetTab[]).map((tab) => (
           <button
@@ -24,12 +28,7 @@ export function PlaySheetRailBody(props: {
             role="tab"
             aria-selected={props.activeTab === tab}
             className={props.activeTab === tab ? 'play-sheet-tab play-sheet-tab-active' : 'play-sheet-tab'}
-            onClick={() => {
-              props.onSelectTab(tab)
-              if (tab === 'gear') {
-                modals.openSheet()
-              }
-            }}
+            onClick={() => handleTabSelect(tab)}
           >
             {PLAY_SHEET_TAB_LABELS[tab]}
           </button>
@@ -38,19 +37,18 @@ export function PlaySheetRailBody(props: {
       <PlaySheetTabPanel
         activeTab={props.activeTab}
         character={props.character}
-        onOpenSheet={modals.openSheet}
+        refreshToken={props.refreshToken}
         onOpenLogBook={modals.openLogBook}
         onOpenQuestLog={modals.openQuestLog}
+        onOpenInventory={() => modals.openInventory(null)}
+        onOpenJournal={modals.openJournal}
       />
-      <button type="button" className="play-sheet-open-full" onClick={modals.openSheet}>
-        Open character sheet
-      </button>
       <PlaySheetModals
         character={props.character}
         campaignId={props.character.campaignId}
         refreshToken={props.refreshToken}
         modals={modals}
       />
-    </>
+    </div>
   )
 }
