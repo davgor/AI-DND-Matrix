@@ -62,6 +62,11 @@ export function buildHubSnapshotFromDetail(detail: CampaignDetail): PlayAwareHub
     characters: detail.characters,
     currentStateSummary: detail.campaign?.currentStateSummary ?? '',
     recentEvents: [],
-    cast: buildHubCast(detail)
+    cast: buildHubCast(detail),
+    questSummariesByCharacterId: [],
+    regionQuestAvailability: detail.regions.map((region) => ({
+      regionId: region.id,
+      availableQuestCount: 0
+    }))
   }
 }

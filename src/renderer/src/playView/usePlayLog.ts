@@ -9,7 +9,7 @@ export interface PlayLogController {
 export function usePlayLog(
   campaignId: string,
   characterId: string,
-  onInitialLoad: (entries: PlayLogEntry[]) => void
+  onInitialLoad?: (entries: PlayLogEntry[]) => void
 ): PlayLogController {
   const [log, setLog] = useState<PlayLogEntry[]>([])
 
@@ -20,7 +20,7 @@ export function usePlayLog(
   }
 
   useEffect(() => {
-    void refreshLog().then(onInitialLoad)
+    void refreshLog().then((entries) => onInitialLoad?.(entries))
   }, [campaignId, characterId])
 
   return { log, refreshLog }

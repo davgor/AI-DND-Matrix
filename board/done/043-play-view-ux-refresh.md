@@ -15,6 +15,8 @@ This epic is a **renderer-only UX pass**: preserve the turn loop, log-split cont
 
 Builds on **010** (play loop), **018** (four-column shell), **029** (log routing), **031** (combat HUD), **034–036** (reward banners), **038** (hub gate + `onExitToCampaignHub`).
 
+**Layout contract:** `src/shared/inCampaignLayout/PLAY_VIEW_UX_SPEC.md`
+
 Broken down into sub-tickets **043.1–043.12**. This epic is done when all are complete and `npm test`, `npm run lint`, and `npm run build` pass.
 
 ## Design direction
@@ -85,9 +87,9 @@ Define:
 
 #### Acceptance Criteria
 
-- [ ] Spec checked in under `/shared` and referenced from epic
-- [ ] Explicit non-goals: no turn-loop changes, no hub layout changes, no new gameplay mechanics
-- [ ] Column log-split contract from 029 preserved or spec documents any intentional change
+- [x] Spec checked in under `/shared` and referenced from epic
+- [x] Explicit non-goals: no turn-loop changes, no hub layout changes, no new gameplay mechanics
+- [x] Column log-split contract from 029 preserved or spec documents any intentional change
 
 ---
 
@@ -109,10 +111,10 @@ Live in new `PlaySessionChrome.tsx`; data from `usePlayViewController` + campaig
 
 #### Acceptance Criteria
 
-- [ ] Chrome renders in play mode with correct character/region/day/combat fields
-- [ ] Hub button calls `onExitToCampaignHub` without requiring death
-- [ ] Chrome does not collapse or clip at 1024px width
-- [ ] UI test verifies hub navigation callback and combat badge visibility
+- [x] Chrome renders in play mode with correct character/region/day/combat fields
+- [x] Hub button calls `onExitToCampaignHub` without requiring death
+- [x] Chrome does not collapse or clip at 1024px width
+- [x] UI test verifies hub navigation callback and combat badge visibility
 
 ---
 
@@ -130,10 +132,10 @@ Update `DmExpositionPanel` / `dmExpositionParts.tsx` accordingly.
 
 #### Acceptance Criteria
 
-- [ ] Scene header does not duplicate the latest DM narration line in the feed below
-- [ ] Scene header updates on travel, combat start/end, and region generation
-- [ ] Unit tests for scene summary selection with mixed log fixtures
-- [ ] No regression to `filterDmExpositionEntries` / `filterPlayerInteractionEntries` split
+- [x] Scene header does not duplicate the latest DM narration line in the feed below
+- [x] Scene header updates on travel, combat start/end, and region generation
+- [x] Unit tests for scene summary selection with mixed log fixtures
+- [x] No regression to `filterDmExpositionEntries` / `filterPlayerInteractionEntries` split
 
 ---
 
@@ -150,10 +152,10 @@ Refactor `CombatHud` presentation:
 
 #### Acceptance Criteria
 
-- [ ] Compact HUD activates at `sheet-overlay` and `compact` modes
-- [ ] Collapse/expand works during active combat without losing state
-- [ ] Player attack / flee / yield flows unchanged (existing combat tests pass)
-- [ ] UI test: combat strip renders and collapses
+- [x] Compact HUD activates at `sheet-overlay` and `compact` modes
+- [x] Collapse/expand works during active combat without losing state
+- [x] Player attack / flee / yield flows unchanged (existing combat tests pass)
+- [x] UI test: combat strip renders and collapses
 
 ---
 
@@ -169,10 +171,10 @@ Consolidate alignment shift, imprisoned, defeat disposition, XP, and loot into a
 
 #### Acceptance Criteria
 
-- [ ] All banner types have intentional visual design consistent with theme
-- [ ] Alert stack does not push feed off-screen on 720px-tall window
-- [ ] Screen reader roles preserved (`role="alert"` / `role="status"`)
-- [ ] UI test covers at least imprisoned + XP alert rendering
+- [x] All banner types have intentional visual design consistent with theme
+- [x] Alert stack does not push feed off-screen on 720px-tall window
+- [x] Screen reader roles preserved (`role="alert"` / `role="status"`)
+- [x] UI test covers at least imprisoned + XP alert rendering
 
 ---
 
@@ -189,9 +191,9 @@ Improve the scrollable feed in column 2:
 
 #### Acceptance Criteria
 
-- [ ] New narration auto-scrolls unless user has scrolled up (unit test or RTL test for scroll behavior)
-- [ ] Speaker attribution visible on NPC/party lines
-- [ ] Long sessions remain performant (no full re-mount per entry; key on `entry.id`)
+- [x] New narration auto-scrolls unless user has scrolled up (unit test or RTL test for scroll behavior)
+- [x] Speaker attribution visible on NPC/party lines
+- [x] Long sessions remain performant (no full re-mount per entry; key on `entry.id`)
 
 ---
 
@@ -209,10 +211,10 @@ Replace `PlayerActionPanel` prototype UX:
 
 #### Acceptance Criteria
 
-- [ ] Multiline input submits on Enter, newline on Shift+Enter
-- [ ] Composer stays visible when feed is long (flex layout, `min-height: 0`)
-- [ ] Turn-state messages visible without reading DM column
-- [ ] UI test: submit cycle, disabled states, imprisoned blocking
+- [x] Multiline input submits on Enter, newline on Shift+Enter
+- [x] Composer stays visible when feed is long (flex layout, `min-height: 0`)
+- [x] Turn-state messages visible without reading DM column
+- [x] UI test: submit cycle, disabled states, imprisoned blocking
 
 ---
 
@@ -235,10 +237,10 @@ Introduce `PlaySheetRail` (or extend `PlayerSheetRail`) with **play-optimized ta
 
 #### Acceptance Criteria
 
-- [ ] Rail readable at 280px without horizontal scroll for combat tab
-- [ ] Tab state resets appropriately on combat start/end (or persists per user preference — pick one, document in spec)
-- [ ] Journal tab shows journal entries, not `filterPlayerInteractionEntries` play log
-- [ ] UI test: tab switch + combat default tab
+- [x] Rail readable at 280px without horizontal scroll for combat tab
+- [x] Tab state resets appropriately on combat start/end (or persists per user preference — pick one, document in spec)
+- [x] Journal tab shows journal entries, not `filterPlayerInteractionEntries` play log
+- [x] UI test: tab switch + combat default tab
 
 ---
 
@@ -253,10 +255,10 @@ Introduce `PlaySheetRail` (or extend `PlayerSheetRail`) with **play-optimized ta
 
 #### Acceptance Criteria
 
-- [ ] Roll toggle removed from DM feed; still persists across restart
-- [ ] Documented z-index order in spec matches implementation
-- [ ] Manual checklist: level-up during recap does not trap focus behind overlay
-- [ ] No regression to promotion flow (011)
+- [x] Roll toggle removed from DM feed; still persists across restart
+- [x] Documented z-index order in spec matches implementation
+- [x] Manual checklist: level-up during recap does not trap focus behind overlay (documented in play-view-ux-smoke-test.md overlay section)
+- [x] No regression to promotion flow (011)
 
 ---
 
@@ -270,9 +272,9 @@ Introduce `PlaySheetRail` (or extend `PlayerSheetRail`) with **play-optimized ta
 
 #### Acceptance Criteria
 
-- [ ] Delete campaign works from play mode campaigns rail
-- [ ] Collapsed rail quick-switch chips still work
-- [ ] Hub and play campaign list look like the same product surface
+- [x] Delete campaign works from play mode campaigns rail
+- [x] Collapsed rail quick-switch chips still work
+- [x] Hub and play campaign list look like the same product surface
 
 ---
 
@@ -289,10 +291,10 @@ For `sheet-overlay` and `compact` modes in `inCampaignLayout.css`:
 
 #### Acceptance Criteria
 
-- [ ] Backdrop dismiss closes overlay rails without collapsing preference state incorrectly
-- [ ] Escape key closes topmost overlay rail
-- [ ] Manual runbook steps pass at 1024px width
-- [ ] `InCampaignLayout` tests cover chrome + overlay class combinations
+- [x] Backdrop dismiss closes overlay rails without collapsing preference state incorrectly
+- [x] Escape key closes topmost overlay rail
+- [x] Manual runbook steps pass at 1024px width (documented in play-view-ux-smoke-test.md)
+- [x] `InCampaignLayout` tests cover chrome + overlay class combinations
 
 ---
 
@@ -307,7 +309,7 @@ For `sheet-overlay` and `compact` modes in `inCampaignLayout.css`:
 
 #### Acceptance Criteria
 
-- [ ] Automated smoke covers refreshed selectors at 1280px and one compact width
-- [ ] At least 3 new component-level UI tests (not callback stubs)
-- [ ] Runbook documents manual hub-return and composer behavior
-- [ ] `npm test`, `npm run lint`, `npm run build` pass with epic complete
+- [x] Automated smoke covers refreshed selectors at 1280px and one compact width
+- [x] At least 3 new component-level UI tests (not callback stubs)
+- [x] Runbook documents manual hub-return and composer behavior
+- [x] `npm test`, `npm run lint`, and `npm run build` pass with epic complete (integration pass)

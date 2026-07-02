@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
-import { validateEquip, slotsToClearOnEquip, type EquipFailureReason } from '../../engine/equipment'
+import { validateEquip, slotsToClearOnEquip, getValidEquipSlots, type EquipFailureReason } from '../../engine/equipment'
 import type { ArmorTier } from '../../engine/armorClass'
-import type { CharacterItemView, EquipSlot } from '../../shared/items/types'
+import { ACCESSORY_EQUIP_SLOTS, type CharacterItemView, type EquipSlot } from '../../shared/items/types'
 import { getCatalogItemById } from './items'
 import { enrichCharacterItemViews } from './weaponDamageProfile'
 
@@ -109,12 +109,16 @@ export function equipCharacterItem(
   slot: EquipSlot
 ): EquipItemResult {
   const items = listCharacterItems(db, characterId)
+  const owned = items.find((row) => row.id === characterItemId)
+  if (!owned) {
+    return { ok: false, reason: 'not_owned' }
+  }
   const validation = validateEquip(items, characterItemId, slot)
   if (!validation.ok) {
     return validation
   }
 
-  const clearIds = slotsToClearOnEquip(items, slot, characterItemId)
+  const clearIds = slotsToClearOnEquip(items, owned.item, slot, characterItemId)
   const clearStmt = db.prepare('UPDATE character_items SET equipped_slot = NULL WHERE id = ?')
   for (const id of clearIds) {
     clearStmt.run(id)
@@ -139,6 +143,40 @@ export function getEquippedArmorTier(db: Database.Database, characterId: string)
     return 'none'
   }
   return equipped.item.mechanicalProperties.armorTier
+}
+
+export function getEquippedShieldBonus(db: Database.Database, characterId: string): number {
+  const equipped = listCharacterItems(db, characterId).find((row) => row.equippedSlot === 'offHand')
+  if (!equipped || equipped.item.mechanicalProperties.kind !== 'shield') {
+    return 0
+  }
+  return equipped.item.mechanicalProperties.acBonus
+}
+
+export interface AccessoryBonuses {
+  acBonus: number
+  attackBonus: number
+}
+
+export function getEquippedAccessoryBonuses(db: Database.Database, characterId: string): AccessoryBonuses {
+  const accessorySlots = new Set<string>(ACCESSORY_EQUIP_SLOTS)
+  let acBonus = 0
+  let attackBonus = 0
+  for (const row of listCharacterItems(db, characterId)) {
+    if (!row.equippedSlot || !accessorySlots.has(row.equippedSlot)) {
+      continue
+    }
+    if (row.item.mechanicalProperties.kind !== 'magicItem') {
+      continue
+    }
+    acBonus += row.item.mechanicalProperties.acBonus
+    attackBonus += row.item.mechanicalProperties.attackBonus
+  }
+  return { acBonus, attackBonus }
+}
+
+export function getValidEquipSlotsForItem(item: CharacterItemView['item']): EquipSlot[] {
+  return getValidEquipSlots(item)
 }
 
 export function unequipCharacterItemRow(db: Database.Database, characterItemId: string): void {

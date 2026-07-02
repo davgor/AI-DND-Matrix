@@ -33,12 +33,26 @@ describe('renderFeedLine', () => {
     expect(action.props.children).toBe('Kael draws his sword.')
   })
 
-  it('renders italic npc dialogue and bold creature actions', () => {
-    const dialogue = renderFeedLine({ speaker: 'npc', reactionKind: 'dialogue', text: 'Hello.' })
-    const creature = renderFeedLine({ speaker: 'npc', reactionKind: 'action', text: 'The wolf lunges.' })
+  it('renders italic npc dialogue and bold creature actions with speaker labels', () => {
+    const dialogue = renderFeedLine({
+      speaker: 'npc',
+      reactionKind: 'dialogue',
+      text: 'Hello.',
+      id: '1',
+      timestamp: 't'
+    })
+    const creature = renderFeedLine({
+      speaker: 'npc',
+      reactionKind: 'action',
+      text: 'The wolf lunges.',
+      id: '2',
+      timestamp: 't'
+    })
 
-    expect(dialogue.type).toBe('em')
-    expect(creature.type).toBe('strong')
+    const dialogueBody = (dialogue.props.children as unknown[])[2] as JSX.Element
+    const creatureBody = (creature.props.children as unknown[])[2] as JSX.Element
+    expect(dialogueBody.type).toBe('em')
+    expect(creatureBody.type).toBe('strong')
   })
 })
 

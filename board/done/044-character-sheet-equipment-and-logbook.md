@@ -107,9 +107,9 @@ Document:
 
 #### Acceptance Criteria
 
-- [ ] Spec checked in with worked examples: greatsword+empty off-hand, sword+shield, handaxe+sword, boots+belt+ring
-- [ ] Conflict rules are pure functions spec'd for unit testing in 044.3
-- [ ] Explicit non-goals documented (multi-currency, non-weapon enchantments)
+- [x] Spec checked in with worked examples: greatsword+empty off-hand, sword+shield, handaxe+sword, boots+belt+ring
+- [x] Conflict rules are pure functions spec'd for unit testing in 044.3
+- [x] Explicit non-goals documented (multi-currency, non-weapon enchantments)
 
 ---
 
@@ -127,10 +127,10 @@ Expand `EQUIP_SLOTS`, `EquipSlot`, and DB constraints in `schema.ts` (`equipped_
 
 #### Acceptance Criteria
 
-- [ ] Forward-only migration applies on existing saves without data loss
-- [ ] `EQUIP_SLOTS` and CHECK constraint match spec
-- [ ] Unit tests: migration round-trip on fixture DB with legacy equipped items
-- [ ] `CatalogItem` / `CharacterItemRow` types updated; no `any` escapes
+- [x] Forward-only migration applies on existing saves without data loss
+- [x] `EQUIP_SLOTS` and CHECK constraint match spec
+- [x] Unit tests: migration round-trip on fixture DB with legacy equipped items
+- [x] `CatalogItem` / `CharacterItemRow` types updated; no `any` escapes
 
 ---
 
@@ -147,10 +147,10 @@ Replace flat `validateEquip` / `slotsToClearOnEquip` in `src/engine/equipment.ts
 
 #### Acceptance Criteria
 
-- [ ] Unit tests cover every row in spec conflict matrix
-- [ ] Swap-on-equip still works per slot
-- [ ] Invalid equips return typed `EquipFailureReason` including new reasons (`two_hand_blocks_off_hand`, `shield_blocks_two_hand`, etc.)
-- [ ] Existing 024.4 tests updated, not deleted
+- [x] Unit tests cover every row in spec conflict matrix
+- [x] Swap-on-equip still works per slot
+- [x] Invalid equips return typed `EquipFailureReason` including new reasons (`two_hand_blocks_off_hand`, `shield_blocks_two_hand`, etc.)
+- [x] Existing 024.4 tests updated, not deleted
 
 ---
 
@@ -167,10 +167,10 @@ Wire equipped accessory `acBonus` and `attackBonus` into combat:
 
 #### Acceptance Criteria
 
-- [ ] Unit tests: accessory AC changes effective AC; removing accessory reverts
-- [ ] Unit tests: attack bonus from ring/trinket affects player attack modifier
-- [ ] Bonuses documented as additive with documented cap in spec (if any)
-- [ ] No double-counting armor tier vs accessory bonuses
+- [x] Unit tests: accessory AC changes effective AC; removing accessory reverts
+- [x] Unit tests: attack bonus from ring/trinket affects player attack modifier
+- [x] Bonuses documented as additive with documented cap in spec (if any)
+- [x] No double-counting armor tier vs accessory bonuses
 
 ---
 
@@ -187,10 +187,10 @@ Add shield as first-class off-hand equipment:
 
 #### Acceptance Criteria
 
-- [ ] Equip wooden shield → AC increases; unequip → reverts
-- [ ] Cannot equip 2H weapon while shield equipped (and vice versa) per 044.3
-- [ ] At least one shield seeded in catalog
-- [ ] AC breakdown UI lists: base + agility + armor tier + shield + accessories
+- [x] Equip wooden shield → AC increases; unequip → reverts
+- [x] Cannot equip 2H weapon while shield equipped (and vice versa) per 044.3
+- [x] At least one shield seeded in catalog
+- [x] AC breakdown UI lists: base + agility + armor tier + shield + accessories
 
 ---
 
@@ -211,10 +211,10 @@ Set `handedness` on all weapons. Retire misleading single `trinket` slot assignm
 
 #### Acceptance Criteria
 
-- [ ] Every weapon has correct `handedness`
-- [ ] At least 2 shields, 3 accessory slot varieties (feet/belt/ring), 2H and 1H pairs
-- [ ] Seed idempotent
-- [ ] `itemSystemSmoke.test.ts` updated for new slots
+- [x] Every weapon has correct `handedness`
+- [x] At least 2 shields, 3 accessory slot varieties (feet/belt/ring), 2H and 1H pairs
+- [x] Seed idempotent
+- [x] `itemSystemSmoke.test.ts` updated for new slots
 
 ---
 
@@ -231,11 +231,11 @@ Close the unfinished 024.9 commerce path:
 
 #### Acceptance Criteria
 
-- [ ] DM can narrate a shop sale that debits currency and adds item to inventory
-- [ ] DM can grant currency via narration
-- [ ] Agent cannot set arbitrary prices — engine owns amounts
-- [ ] Unit + integration tests for grant, purchase, insufficient funds
-- [ ] Closes gap where `purchaseItemForCharacter` is test-only
+- [x] DM can narrate a shop sale that debits currency and adds item to inventory
+- [x] DM can grant currency via narration
+- [x] Agent cannot set arbitrary prices — engine owns amounts
+- [x] Unit + integration tests for grant, purchase, insufficient funds
+- [x] Closes gap where `purchaseItemForCharacter` is test-only
 
 ---
 
@@ -252,10 +252,10 @@ Expose missing inventory operations:
 
 #### Acceptance Criteria
 
-- [ ] Drop/remove reduces quantity; removes row at zero
-- [ ] Equip-to-slot picker data available to UI (list valid slots per item)
-- [ ] All `EquipFailureReason` values surfaced in IPC response
-- [ ] Preload + typed channel wiring matches existing item IPC pattern
+- [x] Drop/remove reduces quantity; removes row at zero
+- [x] Equip-to-slot picker data available to UI (list valid slots per item)
+- [x] All `EquipFailureReason` values surfaced in IPC response
+- [x] Preload + typed channel wiring matches existing item IPC pattern
 
 ---
 
@@ -273,10 +273,10 @@ Replace the inline `CharacterSheetBody` scroll stack as the **primary play/hub s
 
 #### Acceptance Criteria
 
-- [ ] Play mode opens sheet overlay, not infinite scroll in 280px rail
-- [ ] Overlay dismisses via backdrop, Escape, and close button
-- [ ] Campaign/session state unaffected by open/close
-- [ ] UI test: open from play rail, close, reopen
+- [x] Play mode opens sheet overlay, not infinite scroll in 280px rail
+- [x] Overlay dismisses via backdrop, Escape, and close button
+- [x] Campaign/session state unaffected by open/close
+- [x] UI test: open from play rail, close, reopen
 
 ---
 
@@ -295,11 +295,11 @@ Dedicated `InventoryModal` opened from sheet overlay:
 
 #### Acceptance Criteria
 
-- [ ] Equip handaxe to `mainHand`, sword to `offHand` from backpack in UI
-- [ ] Equip failure shows user-visible message (not silent)
-- [ ] Potion use updates HP and removes/decrements item
-- [ ] Modal refreshes after equip/drop/use without closing
-- [ ] UI tests for equip picker and error display
+- [x] Equip handaxe to `mainHand`, sword to `offHand` from backpack in UI
+- [x] Equip failure shows user-visible message (not silent)
+- [x] Potion use updates HP and removes/decrements item
+- [x] Modal refreshes after equip/drop/use without closing
+- [x] UI tests for equip picker and error display
 
 ---
 
@@ -314,10 +314,10 @@ Dedicated `InventoryModal` opened from sheet overlay:
 
 #### Acceptance Criteria
 
-- [ ] Currency matches `characters.currency` after grants/purchases/rest
-- [ ] Player sees balance change after shop narration turn
-- [ ] Insufficient funds message visible without opening devtools
-- [ ] UI test: currency display updates on mock IPC refresh
+- [x] Currency matches `characters.currency` after grants/purchases/rest
+- [x] Player sees balance change after shop narration turn
+- [x] Insufficient funds message visible without opening devtools
+- [x] UI test: currency display updates on mock IPC refresh
 
 ---
 
@@ -335,10 +335,10 @@ Visual equipment management inside sheet overlay (alongside or behind inventory 
 
 #### Acceptance Criteria
 
-- [ ] All spec slots render with correct equipped item or empty state
-- [ ] AC breakdown matches engine calculation exactly (unit test fixture IDs)
-- [ ] Click empty slot → inventory filtered to valid items for that slot
-- [ ] 2H weapon shows both hands occupied visually
+- [x] All spec slots render with correct equipped item or empty state
+- [x] AC breakdown matches engine calculation exactly (unit test fixture IDs)
+- [x] Click empty slot → inventory filtered to valid items for that slot
+- [x] 2H weapon shows both hands occupied visually
 
 ---
 
@@ -356,11 +356,11 @@ Rebuild `CharacterLogBookModal` UX:
 
 #### Acceptance Criteria
 
-- [ ] Search filters entries client-side without new IPC
-- [ ] Category filter works per tab/chip
-- [ ] Related entity link navigates or shows tooltip with resolved name
-- [ ] New DM-written entries appear after turn without manual modal reopen
-- [ ] Empty states per category preserved from 025
+- [x] Search filters entries client-side without new IPC
+- [x] Category filter works per tab/chip
+- [x] Related entity link navigates or shows tooltip with resolved name
+- [x] New DM-written entries appear after turn without manual modal reopen
+- [x] Empty states per category preserved from 025
 
 ---
 
@@ -377,11 +377,11 @@ Append-only log book gets DM curation paths:
 
 #### Acceptance Criteria
 
-- [ ] Create manual entry with category, title, content, optional `relatedEntityId`
-- [ ] Edit title/content of existing entry
-- [ ] Delete entry removes from DB and narration context window on next turn
-- [ ] Character isolation enforced — cannot edit another character's entries
-- [ ] Unit tests for CRUD + isolation
+- [x] Create manual entry with category, title, content, optional `relatedEntityId`
+- [x] Edit title/content of existing entry
+- [x] Delete entry removes from DB and narration context window on next turn
+- [x] Character isolation enforced — cannot edit another character's entries
+- [x] Unit tests for CRUD + isolation
 
 ---
 
@@ -398,11 +398,11 @@ Tighten agent + DM tooling for log book quality:
 
 #### Acceptance Criteria
 
-- [ ] Agent guidance documented in prompt; smoke shows thing entry links to granted item id when both emitted
-- [ ] Amend/delete proposals persist and reflect in next `assembleNarrationContext`
-- [ ] Manual curate UI edits entry without corrupting other categories
-- [ ] Invalid `entryId` in amendment dropped safely
-- [ ] `dmLogBook.test.ts` extended for amendments
+- [x] Agent guidance documented in prompt; smoke shows thing entry links to granted item id when both emitted
+- [x] Amend/delete proposals persist and reflect in next `assembleNarrationContext`
+- [x] Manual curate UI edits entry without corrupting other categories
+- [x] Invalid `entryId` in amendment dropped safely
+- [x] `dmLogBook.test.ts` extended for amendments
 
 ---
 
@@ -418,7 +418,7 @@ Tighten agent + DM tooling for log book quality:
 
 #### Acceptance Criteria
 
-- [ ] Automated smoke covers equip conflicts + trinket AC + purchase
-- [ ] Log book CRUD covered in integration test
-- [ ] Runbook checked in with manual desktop steps
-- [ ] `npm test`, `npm run lint`, `npm run build` pass with epic complete
+- [x] Automated smoke covers equip conflicts + trinket AC + purchase
+- [x] Log book CRUD covered in integration test
+- [x] Runbook checked in with manual desktop steps
+- [x] `npm test`, `npm run lint`, `npm run build` pass with epic complete

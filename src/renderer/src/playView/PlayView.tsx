@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useSidebarController } from '../sidebar/useSidebarController'
-import { usePlayerSheetCollapse } from '../characterSheet/PlayerSheetRail'
+import { usePlayerSheetCollapse } from './PlaySheetRail'
 import { useInCampaignLayoutMode } from '../inCampaign/useInCampaignLayoutMode'
 import { PromotionPrompt } from './PromotionPrompt'
 import { RecapBanner } from './RecapBanner'
@@ -33,38 +33,38 @@ export function PlayView(props: PlayViewProps): JSX.Element {
   }, [campaignsController, props.sidebarRef])
 
   return (
-    <>
-      <InCampaignPlayColumns
-        layoutMode={layoutMode}
-        campaignsController={campaignsController}
-        selectedCampaignId={props.selectedCampaignId}
-        onOpenNewCampaign={props.onOpenNewCampaign}
-        controller={controller}
-        campaignId={props.campaignId}
-        characterId={props.characterId}
-        sheetCollapsed={sheetCollapse.collapsed}
-        onToggleSheet={sheetCollapse.toggleCollapsed}
-        overlays={
-          <>
-            <RecapBanner recap={controller.recap} />
-            <PromotionPrompt promotion={controller.promotion} />
-            <LevelUpModal
-              characterId={props.characterId}
-              refreshToken={controller.characterRefreshToken}
-              onComplete={controller.notifyPerkChosen}
+    <InCampaignPlayColumns
+      layoutMode={layoutMode}
+      campaignsController={campaignsController}
+      selectedCampaignId={props.selectedCampaignId}
+      onOpenNewCampaign={props.onOpenNewCampaign}
+      onRequestDelete={props.onRequestDelete}
+      controller={controller}
+      campaignId={props.campaignId}
+      characterId={props.characterId}
+      sheetCollapsed={sheetCollapse.collapsed}
+      onToggleSheet={sheetCollapse.toggleCollapsed}
+      onExitToCampaignHub={props.onExitToCampaignHub}
+      overlays={
+        <>
+          <RecapBanner recap={controller.recap} />
+          <PromotionPrompt promotion={controller.promotion} />
+          <LevelUpModal
+            characterId={props.characterId}
+            refreshToken={controller.characterRefreshToken}
+            onComplete={controller.notifyPerkChosen}
+          />
+          {controller.obituaryRequest ? (
+            <ObituaryDraftingModal
+              request={controller.obituaryRequest}
+              onDismiss={() => {
+                controller.clearObituaryDrafting()
+                props.onExitToCampaignHub()
+              }}
             />
-            {controller.obituaryRequest ? (
-              <ObituaryDraftingModal
-                request={controller.obituaryRequest}
-                onDismiss={() => {
-                  controller.clearObituaryDrafting()
-                  props.onExitToCampaignHub()
-                }}
-              />
-            ) : null}
-          </>
-        }
-      />
-    </>
+          ) : null}
+        </>
+      }
+    />
   )
 }

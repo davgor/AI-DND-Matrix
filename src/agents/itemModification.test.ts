@@ -9,7 +9,7 @@ const longswordRow: CharacterItemView = {
   characterId: 'char-1',
   itemId: 'item-1',
   quantity: 1,
-  equippedSlot: 'weapon',
+  equippedSlot: 'mainHand',
   item: {
     id: 'item-1',
     name: 'Longsword',
@@ -18,10 +18,11 @@ const longswordRow: CharacterItemView = {
     rarity: 'uncommon',
     mechanicalProperties: {
       kind: 'weapon',
+      handedness: 'oneHand',
       damageRoll: { diceCount: 1, diceSize: 8, modifier: 0 },
       damageType: 'physical'
     },
-    equipSlot: 'weapon',
+    equipSlot: 'mainHand',
     source: 'seed'
   }
 }

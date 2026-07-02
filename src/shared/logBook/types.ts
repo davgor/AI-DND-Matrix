@@ -30,3 +30,10 @@ export interface LogEntryProposal {
   content: string
   relatedEntityId?: string
 }
+
+export interface UpdateLogEntryInput {
+  title?: string
+  content?: string
+  category?: LogCategory
+  relatedEntityId?: string | null
+}

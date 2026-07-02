@@ -1,0 +1,126 @@
+.character-sheet-overlay-panel,
+.inventory-modal {
+  max-width: 52rem;
+  width: min(92vw, 52rem);
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.character-sheet-overlay-header,
+.inventory-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.character-sheet-overlay-header-actions,
+.inventory-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.currency-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.equipment-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
+.ac-breakdown-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.ac-breakdown-total {
+  font-weight: 700;
+}
+
+.inventory-error {
+  color: #c44;
+  margin: 0.5rem 0;
+}
+
+.character-log-book-modal-v2 .character-log-book-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 20px;
+  margin-bottom: 0.75rem;
+}
+
+.character-log-book-search {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.character-log-book-search::-webkit-search-cancel-button {
+  filter: invert(0.7);
+}
+
+.character-log-book-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.character-log-book-filters button {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  color: var(--text-muted);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.character-log-book-filters button:hover {
+  border-color: var(--border-medium);
+  color: var(--text-secondary);
+}
+
+.log-book-filter-active {
+  border-color: var(--accent-gold) !important;
+  color: var(--text-accent) !important;
+  background: rgba(201, 166, 107, 0.1) !important;
+  font-weight: 600;
+}
+
+.character-log-book-modal-v2 .character-log-book-entry-cards {
+  padding: 0 20px 20px;
+  overflow-y: auto;
+}
+
+.character-log-book-entry-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.character-log-book-entry-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.character-log-book-related {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}

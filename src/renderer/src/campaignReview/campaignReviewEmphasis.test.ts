@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { RegionExtras } from '../../../main/campaignIpc'
 import { CampaignReviewRegionExtras } from './CampaignReviewRegionExtras'
 import { EditableFieldEditView, EditableFieldReadView } from './editableFieldViews'
-import { RecapBanner } from '../playView/RecapBanner'
+import { RecapModalBody } from '../playView/RecapModalPanel'
 import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
 
 describe('CampaignReviewRegionExtras emphasis rendering', () => {
@@ -32,19 +32,12 @@ describe('EditableField emphasis rendering', () => {
   })
 })
 
-describe('RecapBanner emphasis rendering', () => {
+describe('RecapModalBody emphasis rendering', () => {
   it('renders emphasis markers in recap text', () => {
-    const node = RecapBanner({
-      recap: {
-        visible: true,
-        text: 'Previously you *escaped* the **keep**.',
-        loading: false,
-        skip: () => {},
-        view: async () => {}
-      }
+    const recapParagraph = RecapModalBody({
+      loading: false,
+      text: 'Previously you *escaped* the **keep**.'
     })
-
-    const recapParagraph = node?.props.children[0] as JSX.Element
     expect(hasEmphasisTypes(recapParagraph, ['em', 'strong'])).toBe(true)
   })
 })

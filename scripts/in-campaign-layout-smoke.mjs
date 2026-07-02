@@ -326,6 +326,15 @@ async function smokeLayoutAndRails(cdp) {
   const fourColumn = await verifyFourColumnLayout(cdp)
   record('four-column layout regions', fourColumn)
 
+  const chrome = await cdp.evaluate(
+    `({
+      chrome: !!document.querySelector('.play-session-chrome'),
+      hubButton: !!document.querySelector('.play-session-chrome-hub-button'),
+      character: !!document.querySelector('.play-session-chrome-character')
+    })`
+  )
+  record('play session chrome', chrome.chrome && chrome.hubButton && chrome.character)
+
   await cdp.evaluate(`document.querySelector('.campaigns-rail-toggle')?.click()`)
   const campaignsCollapsed = await cdp.evaluate(
     `document.querySelector('.in-campaign-layout')?.classList.contains('in-campaign-layout--campaigns-collapsed')`
@@ -340,11 +349,26 @@ async function smokeLayoutAndRails(cdp) {
 
   const interaction = await cdp.evaluate(
     `({
-      input: !!document.querySelector('.play-view-input-row input'),
-      exposition: !!document.querySelector('.dm-exposition-panel')
+      textarea: !!document.querySelector('.play-view-input-row textarea'),
+      exposition: !!document.querySelector('.dm-exposition-panel'),
+      playSheetTabs: !!document.querySelector('.play-sheet-tabs')
     })`
   )
-  record('columns 2 and 3 interaction surfaces', interaction.input && interaction.exposition)
+  record('columns 2 and 3 interaction surfaces', interaction.textarea && interaction.exposition)
+
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 1024,
+    height: 720,
+    deviceScaleFactor: 1,
+    mobile: false
+  })
+  await sleep(300)
+  const compactLayout = await cdp.evaluate(
+    `document.querySelector('.in-campaign-layout')?.classList.contains('in-campaign-layout--sheet-overlay') ||
+      document.querySelector('.in-campaign-layout')?.classList.contains('in-campaign-layout--compact')`
+  )
+  record('compact width layout mode', compactLayout)
+  await cdp.send('Emulation.clearDeviceMetricsOverride')
 }
 
 async function smokeDev() {

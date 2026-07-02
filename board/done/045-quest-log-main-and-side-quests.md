@@ -122,9 +122,9 @@ Document:
 
 #### Acceptance Criteria
 
-- [ ] Spec checked in with worked examples: premise → main quest, region hook → side quest, completion → XP
-- [ ] Explicit sync rules between `story_threads` and main quest documented
-- [ ] Windowing constant for active quests in narration context defined
+- [x] Spec checked in with worked examples: premise → main quest, region hook → side quest, completion → XP
+- [x] Explicit sync rules between `story_threads` and main quest documented
+- [x] Windowing constant for active quests in narration context defined
 
 ---
 
@@ -148,10 +148,10 @@ Repository functions:
 
 #### Acceptance Criteria
 
-- [ ] Migration applies forward-only on existing saves
-- [ ] Character isolation: `listCharacterQuests` never leaks another character's status
-- [ ] Unit tests: create, list, status upsert, campaign/character isolation
-- [ ] CHECK constraints on `kind`, `status`, `scale`
+- [x] Migration applies forward-only on existing saves
+- [x] Character isolation: `listCharacterQuests` never leaks another character's status
+- [x] Unit tests: create, list, status upsert, campaign/character isolation
+- [x] CHECK constraints on `kind`, `status`, `scale`
 
 ---
 
@@ -173,10 +173,10 @@ Repository functions:
 
 #### Acceptance Criteria
 
-- [ ] New campaign creates main quest + character quest rows for each player character
-- [ ] Migration backfill tested on fixture DB with story thread and quest hooks
-- [ ] Side quests created from generation hooks with correct region linkage
-- [ ] `campaignGeneration` smoke still passes
+- [x] New campaign creates main quest + character quest rows for each player character
+- [x] Migration backfill tested on fixture DB with story thread and quest hooks
+- [x] Side quests created from generation hooks with correct region linkage
+- [x] `campaignGeneration` smoke still passes
 
 ---
 
@@ -193,9 +193,9 @@ Pure functions in `src/engine/quests.ts`:
 
 #### Acceptance Criteria
 
-- [ ] Unit tests for all valid/invalid transitions
-- [ ] `isQuestComplete` aligned with `isLootCompletedState` for completion status
-- [ ] Engine has no Electron/DB imports
+- [x] Unit tests for all valid/invalid transitions
+- [x] `isQuestComplete` aligned with `isLootCompletedState` for completion status
+- [x] Engine has no Electron/DB imports
 
 ---
 
@@ -213,10 +213,10 @@ Extend reward pipeline to key off quest log completion:
 
 #### Acceptance Criteria
 
-- [ ] Completing side quest via engine transition fires XP + loot
-- [ ] Completing main quest fires with `major` scale when appropriate
-- [ ] No double reward if both story thread and quest log update on same turn (dedupe test)
-- [ ] Existing `questLootContext.test.ts` patterns preserved or migrated
+- [x] Completing side quest via engine transition fires XP + loot
+- [x] Completing main quest fires with `major` scale when appropriate
+- [x] No double reward if both story thread and quest log update on same turn (dedupe test)
+- [x] Existing `questLootContext.test.ts` patterns preserved or migrated
 
 ---
 
@@ -258,10 +258,10 @@ Prompt guidance: propose side quests when NPCs offer jobs; complete when narrati
 
 #### Acceptance Criteria
 
-- [ ] Valid proposal persists quest + character quest for acting player
-- [ ] Invalid `questId` in update/completion dropped safely
-- [ ] `storyThreadUpdate` syncs main quest without duplicate quest row
-- [ ] Unit tests in `dmQuest.test.ts` (new)
+- [x] Valid proposal persists quest + character quest for acting player
+- [x] Invalid `questId` in update/completion dropped safely
+- [x] `storyThreadUpdate` syncs main quest without duplicate quest row
+- [x] Unit tests in `dmQuest.test.ts` (new)
 
 ---
 
@@ -279,10 +279,10 @@ Mirror windowing pattern from `logBookWindow.ts` (045.1 constant).
 
 #### Acceptance Criteria
 
-- [ ] Context includes active quests only, not `available`/`abandoned`
-- [ ] Bound respected in unit test with 5+ active quests fixture
-- [ ] Empty quest list omits section without error
-- [ ] `dm.test.ts` or dedicated test verifies prompt inclusion
+- [x] Context includes active quests only, not `available`/`abandoned`
+- [x] Bound respected in unit test with 5+ active quests fixture
+- [x] Empty quest list omits section without error
+- [x] `dm.test.ts` or dedicated test verifies prompt inclusion
 
 ---
 
@@ -304,9 +304,9 @@ Return typed errors for invalid transitions (`invalid_transition`, `not_found`).
 
 #### Acceptance Criteria
 
-- [ ] All channels wired through main/preload with same security pattern as log book IPC
-- [ ] Accept/abandon call engine validators from 045.4
-- [ ] Integration test: list → accept → complete round-trip
+- [x] All channels wired through main/preload with same security pattern as log book IPC
+- [x] Accept/abandon call engine validators from 045.4
+- [x] Integration test: list → accept → complete round-trip
 
 ---
 
@@ -328,11 +328,11 @@ CSS: `questLog.css` — distinct from log book (objective/checklist visual langu
 
 #### Acceptance Criteria
 
-- [ ] Main story quest always visible when seeded
-- [ ] Side quests filterable by status tabs or sections
-- [ ] Accept transitions to `active` via IPC
-- [ ] Completed quests show completion in-game date
-- [ ] UI test: render main + side fixtures; accept flow
+- [x] Main story quest always visible when seeded
+- [x] Side quests filterable by status tabs or sections
+- [x] Accept transitions to `active` via IPC
+- [x] Completed quests show completion in-game date
+- [x] UI test: render main + side fixtures; accept flow
 
 ---
 
@@ -353,10 +353,10 @@ Update 043/044 epic notes or cross-reference comments if those tickets are imple
 
 #### Acceptance Criteria
 
-- [ ] Quest log reachable from play mode without devtools
-- [ ] Hub shows main story connection to premise (hook line visible)
-- [ ] Opening from hub uses selected/hovered character context
-- [ ] No layout regression to hub or play shells
+- [x] Quest log reachable from play mode without devtools
+- [x] Hub shows main story connection to premise (hook line visible)
+- [x] Opening from hub uses selected/hovered character context
+- [x] No layout regression to hub or play shells
 
 ---
 
@@ -375,10 +375,10 @@ Uses 045.8 DM IPC channels. Not player-facing in normal mode.
 
 #### Acceptance Criteria
 
-- [ ] Manual side quest create appears in acting character's log as `active`
-- [ ] Edit updates persist and appear in next narration context
-- [ ] Force complete triggers reward pass once
-- [ ] Curate mode hidden behind toggle or dev setting per 045.1 decision
+- [x] Manual side quest create appears in acting character's log as `active`
+- [x] Edit updates persist and appear in next narration context
+- [x] Force complete triggers reward pass once
+- [x] Curate mode hidden behind toggle or dev setting per 045.1 decision
 
 ---
 
@@ -396,10 +396,10 @@ Clarify in UI copy: main story is always tracked; side quests are opt-in.
 
 #### Acceptance Criteria
 
-- [ ] Seeded hook from region X appears in quest log when character's `currentRegionId` matches (or always visible as `available` — pick one, document)
-- [ ] Accept/track flow tested end-to-end
-- [ ] Hub region card shows quest available indicator when applicable
-- [ ] No duplicate quest rows when DM also proposes same hook
+- [x] Seeded hook from region X appears in quest log when character's `currentRegionId` matches (or always visible as `available` — pick one, document)
+- [x] Accept/track flow tested end-to-end
+- [x] Hub region card shows quest available indicator when applicable
+- [x] No duplicate quest rows when DM also proposes same hook
 
 ---
 
@@ -414,7 +414,7 @@ Clarify in UI copy: main story is always tracked; side quests are opt-in.
 
 #### Acceptance Criteria
 
-- [ ] Automated smoke covers main seed + side accept + completion rewards
-- [ ] Multi-character fixture: Character A accepts side quest; Character B does not see it as `active`
-- [ ] Runbook manual steps documented
-- [ ] `npm test`, `npm run lint`, `npm run build` pass with epic complete
+- [x] Automated smoke covers main seed + side accept + completion rewards
+- [x] Multi-character fixture: Character A accepts side quest; Character B does not see it as `active`
+- [x] Runbook manual steps documented
+- [x] `npm test`, `npm run lint`, `npm run build` pass with epic complete

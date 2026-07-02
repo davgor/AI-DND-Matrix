@@ -3,17 +3,27 @@ import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { FormattedText } from '../shared/FormattedText'
 import { buildHubRegionBlocks } from './hubUtils'
+import { HubQuestTeaser } from './HubQuestTeaser'
 
 export interface CampaignHubWorldPreviewProps {
   snapshot: PlayAwareHubSnapshot
+  focusCharacterId?: string | null
 }
 
 export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JSX.Element {
   const { snapshot } = props
   const regionBlocks = buildHubRegionBlocks(snapshot)
+  const focusSummary =
+    props.focusCharacterId === undefined || props.focusCharacterId === null
+      ? snapshot.questSummariesByCharacterId[0]
+      : snapshot.questSummariesByCharacterId.find((row) => row.characterId === props.focusCharacterId)
+  const availabilityByRegion = new Map(
+    snapshot.regionQuestAvailability.map((row) => [row.regionId, row.availableQuestCount])
+  )
 
   return (
     <div className="campaign-hub-world-preview">
+      <HubQuestTeaser summary={focusSummary} />
       {snapshot.currentStateSummary ? (
         <section className="campaign-hub-section campaign-hub-current-state">
           <h2>Current state</h2>
@@ -31,6 +41,7 @@ export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JS
             region={region}
             extras={extras}
             npcs={npcs}
+            questAvailableCount={availabilityByRegion.get(region.id) ?? 0}
           />
         ))}
       </section>

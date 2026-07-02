@@ -25,7 +25,7 @@ export function seedWeaponEnchantmentSmoke(db: Database.Database) {
   seedStarterItemCatalog(db)
   const longsword = findCatalogItemByName(db, 'Longsword')!
   const row = addItemToCharacter(db, player.id, longsword.id)
-  equipCharacterItem(db, player.id, row.id, 'weapon')
+  equipCharacterItem(db, player.id, row.id, 'mainHand')
   const npc = createNpc(db, {
     campaignId: campaign.id,
     regionId: region.id,

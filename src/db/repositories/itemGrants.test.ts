@@ -31,10 +31,11 @@ describe('persistItemGrants catalog references', () => {
       rarity: 'common',
       mechanicalProperties: {
         kind: 'weapon',
+        handedness: 'oneHand',
         damageRoll: { diceCount: 1, diceSize: 6, modifier: 0 },
         damageType: 'physical'
       },
-      equipSlot: 'weapon',
+      equipSlot: 'mainHand',
       source: 'seed'
     })
 

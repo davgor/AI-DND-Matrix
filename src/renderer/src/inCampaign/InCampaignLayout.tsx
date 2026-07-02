@@ -6,6 +6,8 @@ export interface InCampaignLayoutProps {
   mode: InCampaignLayoutMode
   campaignsCollapsed: boolean
   sheetCollapsed: boolean
+  showOverlayBackdrop?: boolean
+  onBackdropDismiss?: () => void
   campaigns: ReactNode
   dmExposition: ReactNode
   playerInteraction: ReactNode
@@ -31,6 +33,14 @@ function layoutClassName(
 export function InCampaignLayout(props: InCampaignLayoutProps): JSX.Element {
   return (
     <div className={layoutClassName(props.mode, props.campaignsCollapsed, props.sheetCollapsed)}>
+      {props.showOverlayBackdrop ? (
+        <button
+          type="button"
+          className="in-campaign-overlay-backdrop"
+          aria-label="Close overlay panel"
+          onClick={props.onBackdropDismiss}
+        />
+      ) : null}
       <section className="in-campaign-column in-campaign-column--campaigns" aria-label="Campaigns">
         {props.campaigns}
       </section>

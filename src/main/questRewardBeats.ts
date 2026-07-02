@@ -16,10 +16,22 @@ type QuestBeatState = {
   lootGrants?: TurnResult['lootGrants']
   narrationText: string
   encounterXpRan?: boolean
+  rewardedQuestIds?: Set<string>
 }
 
 function appendBeatNarration(state: QuestBeatState, text: string): void {
   state.narrationText = state.narrationText ? `${state.narrationText} ${text}` : text
+}
+
+function markQuestRewarded(state: QuestBeatState, questId: string): boolean {
+  if (!state.rewardedQuestIds) {
+    state.rewardedQuestIds = new Set()
+  }
+  if (state.rewardedQuestIds.has(questId)) {
+    return false
+  }
+  state.rewardedQuestIds.add(questId)
+  return true
 }
 
 export async function applyQuestRewardsToBeatState(
@@ -47,6 +59,29 @@ export async function applyQuestRewardsToBeatState(
   })
 }
 
+export async function applyQuestLogRewardBeats(
+  db: Database.Database,
+  provider: Provider,
+  input: {
+    campaignId: string
+    regionId: string
+    character: Character
+    questId: string
+    state: QuestBeatState
+  }
+): Promise<void> {
+  if (!markQuestRewarded(input.state, input.questId)) {
+    return
+  }
+  await applyQuestRewardBeats(db, provider, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    character: input.character,
+    questId: input.questId,
+    state: input.state
+  })
+}
+
 export async function applyQuestRewardBeats(
   db: Database.Database,
   provider: Provider,
@@ -54,7 +89,8 @@ export async function applyQuestRewardBeats(
     campaignId: string
     regionId: string
     character: Character
-    threadId: string
+    threadId?: string
+    questId?: string
     state: QuestBeatState
   }
 ): Promise<void> {
@@ -63,6 +99,7 @@ export async function applyQuestRewardBeats(
     provider,
     campaignId: input.campaignId,
     threadId: input.threadId,
+    questId: input.questId,
     regionId: input.regionId,
     playerCharacterId: input.character.id,
     playerLevel: input.character.level,
@@ -82,6 +119,7 @@ export async function applyQuestRewardBeats(
     provider,
     campaignId: input.campaignId,
     threadId: input.threadId,
+    questId: input.questId,
     regionId: input.regionId,
     playerCharacterId: refreshed.id,
     playerLevel: refreshed.level,

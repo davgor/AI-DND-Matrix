@@ -82,7 +82,7 @@ export function getEquippedWeaponDamageProfile(
   db: Database.Database,
   characterId: string
 ): WeaponDamageProfile {
-  const equipped = listCharacterItemRows(db, characterId).find((row) => row.equippedSlot === 'weapon')
+  const equipped = listCharacterItemRows(db, characterId).find((row) => row.equippedSlot === 'mainHand')
   if (!equipped || equipped.item.mechanicalProperties.kind !== 'weapon') {
     return unarmedProfile()
   }
@@ -131,7 +131,7 @@ export function getEquippedWeaponRow(
   db: Database.Database,
   characterId: string
 ): CharacterItemView | undefined {
-  return listCharacterItemRows(db, characterId).find((row) => row.equippedSlot === 'weapon')
+  return listCharacterItemRows(db, characterId).find((row) => row.equippedSlot === 'mainHand')
 }
 
 export function summarizeWeaponProfile(profile: WeaponDamageProfile): string {

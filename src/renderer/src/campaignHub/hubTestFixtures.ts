@@ -80,6 +80,15 @@ export function makeTestHubSnapshot(overrides: Partial<PlayAwareHubSnapshot> = {
       }
     ],
     cast: [makeTestCastMember()],
+    questSummariesByCharacterId: [
+      {
+        characterId: 'char-alive',
+        mainQuestHookLine: campaign.premisePrompt,
+        mainQuestTitle: 'The Broken Crown',
+        activeSideQuestCount: 0
+      }
+    ],
+    regionQuestAvailability: [{ regionId: region.id, availableQuestCount: 1 }],
     ...overrides
   }
 }

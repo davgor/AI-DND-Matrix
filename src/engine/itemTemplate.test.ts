@@ -38,7 +38,7 @@ describe('deriveMechanicalProperties', () => {
 
   it('derives magic item bonuses from rarity', () => {
     const props = deriveMechanicalProperties('magicItem', 'epic')
-    expect(props).toEqual({ kind: 'magicItem', acBonus: 1, attackBonus: 1 })
+    expect(props).toEqual({ kind: 'magicItem', acBonus: 1, attackBonus: 1, accessorySlot: 'ring1' })
   })
 
   it('returns misc properties for misc items', () => {

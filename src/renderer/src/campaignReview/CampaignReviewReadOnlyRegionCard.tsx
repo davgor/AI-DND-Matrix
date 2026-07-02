@@ -9,12 +9,18 @@ export function CampaignReviewReadOnlyRegionCard(props: {
   region: Region
   extras: RegionExtras | undefined
   npcs: Npc[]
+  questAvailableCount?: number
 }): JSX.Element {
-  const { region, extras, npcs } = props
+  const { region, extras, npcs, questAvailableCount = 0 } = props
 
   return (
     <article className="campaign-review-region-card">
-      <h3>{region.name}</h3>
+      <h3>
+        {region.name}
+        {questAvailableCount > 0 ? (
+          <span className="campaign-review-quest-available-badge">Quest available</span>
+        ) : null}
+      </h3>
       {region.status.destroyed ? (
         <p className="campaign-review-region-destroyed">
           This region has been destroyed

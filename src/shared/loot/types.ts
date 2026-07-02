@@ -28,6 +28,7 @@ export interface LootContext {
   playerCharacterId: string
   campaignId: string
   questThreadId?: string
+  questId?: string
   questHookText?: string
   questScale?: QuestScale
 }

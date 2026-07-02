@@ -1,14 +1,14 @@
+import { useCallback } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
 import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
 import type { ReactNode } from 'react'
-import { CampaignsRail } from '../sidebar/CampaignsRail'
 import type { useSidebarController } from '../sidebar/useSidebarController'
-import { PlayerSheetRail } from '../characterSheet/PlayerSheetRail'
-import { InCampaignLayout } from '../inCampaign/InCampaignLayout'
-import type { InCampaignLayoutMode } from '../../../shared/inCampaignLayout/types'
-import { PlayDmExpositionColumn } from './PlayDmExpositionColumn'
-import { PlayerActionPanel } from './PlayerActionPanel'
+import { PlaySessionChrome } from './PlaySessionChrome'
+import { usePlaySessionChromeData } from './usePlaySessionChromeData'
+import { useOverlayDismiss } from './useOverlayDismiss'
+import { PlayViewGrid } from './PlayViewGrid'
 import type { usePlayViewController } from './usePlayViewController'
+import type { InCampaignLayoutMode } from '../../../shared/inCampaignLayout/types'
 
 interface InCampaignPlayColumnsProps {
   layoutMode: InCampaignLayoutMode
@@ -21,46 +21,69 @@ interface InCampaignPlayColumnsProps {
   characterId: string
   sheetCollapsed: boolean
   onToggleSheet: () => void
+  onExitToCampaignHub: () => void
   overlays?: ReactNode
+}
+
+function PlaySessionChromeBar(props: {
+  chromeData: ReturnType<typeof usePlaySessionChromeData>
+  campaignsCollapsed: boolean
+  controller: ReturnType<typeof usePlayViewController>
+  onExitToCampaignHub: () => void
+}): JSX.Element {
+  return (
+    <PlaySessionChrome
+      characterName={props.chromeData.characterName}
+      portraitPath={props.chromeData.portraitPath}
+      regionName={props.chromeData.regionName}
+      inGameDay={props.chromeData.inGameDay}
+      campaignName={props.chromeData.campaignName}
+      campaignsCollapsed={props.campaignsCollapsed}
+      combatState={props.controller.combatState}
+      showRolls={props.controller.showRolls}
+      onOpenRecap={() => void props.controller.recap.open()}
+      onToggleShowRolls={props.controller.toggleShowRolls}
+      onExitToCampaignHub={props.onExitToCampaignHub}
+    />
+  )
 }
 
 export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.Element {
   const { controller, campaignsController } = props
+  const chromeData = usePlaySessionChromeData(
+    props.campaignId,
+    props.characterId,
+    controller.characterRefreshToken
+  )
+  const onCollapseCampaigns = useCallback(() => {
+    if (!campaignsController.collapsed) campaignsController.toggleCollapsed()
+  }, [campaignsController])
+  const onCollapseSheet = useCallback(() => {
+    if (!props.sheetCollapsed) props.onToggleSheet()
+  }, [props.sheetCollapsed, props.onToggleSheet])
+  const overlayDismiss = useOverlayDismiss({
+    layoutMode: props.layoutMode,
+    campaignsCollapsed: campaignsController.collapsed,
+    sheetCollapsed: props.sheetCollapsed,
+    onCollapseCampaigns,
+    onCollapseSheet
+  })
+
   return (
-    <InCampaignLayout
-      mode={props.layoutMode}
-      campaignsCollapsed={campaignsController.collapsed}
-      sheetCollapsed={props.sheetCollapsed}
-      campaigns={
-        <CampaignsRail
-          controller={campaignsController}
-          selectedCampaignId={props.selectedCampaignId}
-          onOpenNewCampaign={props.onOpenNewCampaign}
-          onRequestDelete={props.onRequestDelete}
-        />
-      }
-      dmExposition={<PlayDmExpositionColumn layoutMode={props.layoutMode} controller={controller} />}
-      playerInteraction={
-        <PlayerActionPanel
-          entries={controller.playerEntries}
-          inputValue={controller.inputValue}
-          onInputChange={controller.setInputValue}
-          onSubmit={() => void controller.submitAction()}
-          submitting={controller.submitting}
-          inputBlocked={controller.obituaryBlocking}
-        />
-      }
-      playerSheet={
-        <PlayerSheetRail
-          campaignId={props.campaignId}
-          characterId={props.characterId}
-          collapsed={props.sheetCollapsed}
-          onToggleCollapsed={props.onToggleSheet}
-          refreshToken={controller.characterRefreshToken}
-        />
-      }
-      overlays={props.overlays}
-    />
+    <div className="play-view-shell">
+      <PlaySessionChromeBar
+        chromeData={chromeData}
+        campaignsCollapsed={campaignsController.collapsed}
+        controller={controller}
+        onExitToCampaignHub={props.onExitToCampaignHub}
+      />
+      <PlayViewGrid
+        {...props}
+        sceneContext={{ regionName: chromeData.regionName, regionBlurb: chromeData.regionBlurb }}
+        showOverlayBackdrop={overlayDismiss.showBackdrop}
+        onBackdropDismiss={overlayDismiss.onBackdropDismiss}
+      />
+    </div>
   )
 }
 

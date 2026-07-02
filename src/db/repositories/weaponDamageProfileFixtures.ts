@@ -20,6 +20,6 @@ export function seedLongswordHero() {
   })
   seedStarterItemCatalog(db)
   const row = addItemToCharacter(db, player.id, findCatalogItemByName(db, 'Longsword')!.id)
-  equipCharacterItem(db, player.id, row.id, 'weapon')
+  equipCharacterItem(db, player.id, row.id, 'mainHand')
   return { db, campaign, player, row }
 }

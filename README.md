@@ -121,6 +121,12 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | 038 | **Campaign hub** — multi-character cast, death/obituaries, per-character party rosters, inactive-character AI proxy, cross-character log-book writes, history-aware region generation, travel to ungenerated destinations |
 | 039 | **Configurable generation counts** — region count (0–5) and NPCs per region (0–10) on campaign start; review continue/play gates; per-region generate NPC on review |
 
+### In progress
+
+| Epic | Intent |
+|------|--------|
+| **046** | **Player spellbook modal** — known spells from catalog, journal tab entry point, DM spell grants; see `src/shared/spells/SPEC.md` and `docs/runbooks/spellbook-smoke-test.md` |
+
 ### Revisit backlog
 
 | Epic | Intent |

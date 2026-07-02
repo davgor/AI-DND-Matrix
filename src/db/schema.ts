@@ -3,6 +3,8 @@ import type { Migration } from './migrations'
 import { seedCreatureAndSpellCatalogV1 } from './catalog/seeds'
 import { migrateLegacyCharacterInventory } from './migrateLegacyInventory'
 import { migrateHpBackfill } from './migrateHpBackfill'
+import { migrateEquipSlotsV24 } from './migrateEquipSlotsV24'
+import { migrateQuestsV25 } from './migrateQuestsV25'
 import { seedStarterItemCatalog } from './seedStarterItems'
 
 function addColumnIfMissing(
@@ -259,7 +261,10 @@ export const migrations: Migration[] = [
           description TEXT NOT NULL DEFAULT '',
           rarity TEXT NOT NULL CHECK (rarity IN ('common', 'uncommon', 'rare', 'epic')),
           mechanical_properties TEXT NOT NULL DEFAULT '{}',
-          equip_slot TEXT CHECK (equip_slot IN ('weapon', 'armor', 'trinket') OR equip_slot IS NULL),
+          equip_slot TEXT CHECK (equip_slot IN (
+            'armor', 'mainHand', 'offHand',
+            'head', 'hands', 'feet', 'belt', 'neck', 'ring1', 'ring2'
+          ) OR equip_slot IS NULL),
           source TEXT NOT NULL DEFAULT 'seed' CHECK (source IN ('seed', 'ai_proposed', 'migrated'))
         );
 
@@ -268,7 +273,10 @@ export const migrations: Migration[] = [
           character_id TEXT NOT NULL REFERENCES characters(id),
           item_id TEXT NOT NULL REFERENCES items(id),
           quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
-          equipped_slot TEXT CHECK (equipped_slot IN ('weapon', 'armor', 'trinket') OR equipped_slot IS NULL),
+          equipped_slot TEXT CHECK (equipped_slot IN (
+            'armor', 'mainHand', 'offHand',
+            'head', 'hands', 'feet', 'belt', 'neck', 'ring1', 'ring2'
+          ) OR equipped_slot IS NULL),
           UNIQUE (character_id, item_id)
         );
       `)
@@ -447,6 +455,18 @@ export const migrations: Migration[] = [
     version: 23,
     up: (db) => {
       migrateHpBackfill(db)
+    }
+  },
+  {
+    version: 24,
+    up: (db) => {
+      migrateEquipSlotsV24(db)
+    }
+  },
+  {
+    version: 25,
+    up: (db) => {
+      migrateQuestsV25(db)
     }
   }
 ]

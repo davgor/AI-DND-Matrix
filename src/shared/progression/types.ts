@@ -41,6 +41,7 @@ export interface XPContext {
   campaignId: string
   roundCount?: number
   questThreadId?: string
+  questId?: string
   questHookText?: string
   questScale?: QuestScale
 }

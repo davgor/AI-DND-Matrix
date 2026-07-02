@@ -1,36 +1,35 @@
-import { FormattedText } from '../shared/FormattedText'
+import { useEffect } from 'react'
+import { ModalPortal } from '../shared/ModalPortal'
+import { RecapModalPanel } from './RecapModalPanel'
 import type { SessionRecapController } from './useSessionRecap'
 
 export interface RecapBannerProps {
   recap: SessionRecapController
 }
 
+function useRecapEscapeKey(visible: boolean, onClose: () => void): void {
+  useEffect(() => {
+    if (!visible) {
+      return
+    }
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [visible, onClose])
+}
+
 export function RecapBanner(props: RecapBannerProps): JSX.Element | null {
-  const { recap } = props
-  if (!recap.visible) {
+  useRecapEscapeKey(props.recap.visible, props.recap.skip)
+  if (!props.recap.visible) {
     return null
   }
-
-  if (recap.text) {
-    return (
-      <div className="play-view-recap">
-        {FormattedText({ as: 'p', text: recap.text })}
-        <button type="button" onClick={recap.skip}>
-          Continue
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="play-view-recap">
-      <p>Previously on this campaign...</p>
-      <button type="button" disabled={recap.loading} onClick={() => void recap.view()}>
-        {recap.loading ? 'Loading...' : 'View Recap'}
-      </button>
-      <button type="button" onClick={recap.skip}>
-        Skip
-      </button>
-    </div>
+    <ModalPortal>
+      <RecapModalPanel recap={props.recap} />
+    </ModalPortal>
   )
 }

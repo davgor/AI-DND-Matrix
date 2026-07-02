@@ -68,7 +68,8 @@ export async function runQuestXpPass(input: {
   db: Database.Database
   provider: Provider
   campaignId: string
-  threadId: string
+  threadId?: string
+  questId?: string
   regionId: string
   playerCharacterId: string
   playerLevel: number
@@ -81,6 +82,7 @@ export async function runQuestXpPass(input: {
     db: input.db,
     campaignId: input.campaignId,
     threadId: input.threadId,
+    questId: input.questId,
     regionId: input.regionId,
     playerCharacterId: input.playerCharacterId,
     playerLevel: input.playerLevel

@@ -31,10 +31,11 @@ function seedWeapon(db: ReturnType<typeof createTestDb>, name: string, diceSize:
     rarity: 'common',
     mechanicalProperties: {
       kind: 'weapon',
+      handedness: 'oneHand',
       damageRoll: { diceCount: 1, diceSize, modifier: 0 },
       damageType: 'physical'
     },
-    equipSlot: 'weapon',
+    equipSlot: 'mainHand',
     source: 'seed'
   })
 }

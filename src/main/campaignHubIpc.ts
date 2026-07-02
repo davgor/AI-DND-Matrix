@@ -1,6 +1,12 @@
 import type Database from 'better-sqlite3'
 import { ipcMain } from 'electron'
-import type { PlayAwareHubSnapshot, HubCastMember, HubRecentEvent } from '../shared/campaignHub/types'
+import type {
+  PlayAwareHubSnapshot,
+  HubCastMember,
+  HubRecentEvent,
+  HubCharacterQuestSummary,
+  HubRegionQuestAvailability
+} from '../shared/campaignHub/types'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listCharactersByCampaign } from '../db/repositories/characters'
 import { listEventsByCampaign } from '../db/repositories/events'
@@ -8,6 +14,7 @@ import { listNpcsByRegion } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { listCampaignsByLastPlayed } from '../db/repositories/campaigns'
+import { getMainQuestByCampaign, listCharacterQuests, listQuestsByCampaign } from '../db/repositories/quests'
 import { buildRegionExtras, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
 
@@ -61,6 +68,38 @@ function buildCast(db: Database.Database, campaignId: string): HubCastMember[] {
     }))
 }
 
+function buildQuestSummaries(db: Database.Database, campaignId: string): HubCharacterQuestSummary[] {
+  const mainQuest = getMainQuestByCampaign(db, campaignId)
+  const quests = listQuestsByCampaign(db, campaignId)
+  const sideQuestIds = new Set(quests.filter((quest) => quest.kind === 'side').map((quest) => quest.id))
+  return listCharactersByCampaign(db, campaignId)
+    .filter((character) => character.kind === 'player')
+    .map((character) => {
+      const memberships = listCharacterQuests(db, character.id)
+      const activeSideQuestCount = memberships.filter(
+        (row) => sideQuestIds.has(row.questId) && row.status === 'active'
+      ).length
+      return {
+        characterId: character.id,
+        mainQuestHookLine: mainQuest?.hookLine ?? null,
+        mainQuestTitle: mainQuest?.title ?? null,
+        activeSideQuestCount
+      }
+    })
+}
+
+function buildRegionQuestAvailability(
+  db: Database.Database,
+  campaignId: string,
+  regions: ReturnType<typeof listRegionsByCampaign>
+): HubRegionQuestAvailability[] {
+  const quests = listQuestsByCampaign(db, campaignId).filter((quest) => quest.kind === 'side')
+  return regions.map((region) => ({
+    regionId: region.id,
+    availableQuestCount: quests.filter((quest) => quest.regionId === region.id).length
+  }))
+}
+
 export function buildHubSnapshot(db: Database.Database, campaignId: string): PlayAwareHubSnapshot {
   const campaign = getCampaignById(db, campaignId)
   const regions = listRegionsByCampaign(db, campaignId)
@@ -77,7 +116,9 @@ export function buildHubSnapshot(db: Database.Database, campaignId: string): Pla
     ...detail,
     currentStateSummary: campaign?.currentStateSummary ?? '',
     recentEvents: buildRecentEvents(db, campaignId),
-    cast: buildCast(db, campaignId)
+    cast: buildCast(db, campaignId),
+    questSummariesByCharacterId: buildQuestSummaries(db, campaignId),
+    regionQuestAvailability: buildRegionQuestAvailability(db, campaignId, regions)
   }
 }
 
