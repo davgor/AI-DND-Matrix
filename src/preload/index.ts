@@ -185,6 +185,11 @@ const quests = {
     ipcRenderer.invoke('quests:promoteWorldFact', input)
 }
 
+const spellbook = {
+  listForCharacter: (characterId: string): Promise<import('../shared/spells/types').KnownSpellView[]> =>
+    ipcRenderer.invoke('spellbook:listForCharacter', characterId)
+}
+
 const turn = {
   resolve: (input: TurnInput): Promise<TurnResult> => ipcRenderer.invoke('turn:resolve', input),
   generateObituary: (input: GenerateObituaryInput): Promise<GenerateObituaryResult> =>
@@ -262,6 +267,7 @@ contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('logBook', logBook)
 contextBridge.exposeInMainWorld('quests', quests)
+contextBridge.exposeInMainWorld('spellbook', spellbook)
 contextBridge.exposeInMainWorld('turn', turn)
 contextBridge.exposeInMainWorld('combat', combat)
 contextBridge.exposeInMainWorld('progression', progression)
@@ -277,6 +283,7 @@ export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type LogBookApi = typeof logBook
 export type QuestsApi = typeof quests
+export type SpellbookApi = typeof spellbook
 export type TurnApi = typeof turn
 export type CombatApi = typeof combat
 export type ProgressionApi = typeof progression

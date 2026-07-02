@@ -58,7 +58,17 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding: 0 20px;
   margin-bottom: 0.75rem;
+}
+
+.character-log-book-search {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.character-log-book-search::-webkit-search-cancel-button {
+  filter: invert(0.7);
 }
 
 .character-log-book-filters {
@@ -67,8 +77,32 @@
   gap: 0.35rem;
 }
 
+.character-log-book-filters button {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  color: var(--text-muted);
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.character-log-book-filters button:hover {
+  border-color: var(--border-medium);
+  color: var(--text-secondary);
+}
+
 .log-book-filter-active {
-  font-weight: 700;
+  border-color: var(--accent-gold) !important;
+  color: var(--text-accent) !important;
+  background: rgba(201, 166, 107, 0.1) !important;
+  font-weight: 600;
+}
+
+.character-log-book-modal-v2 .character-log-book-entry-cards {
+  padding: 0 20px 20px;
+  overflow-y: auto;
 }
 
 .character-log-book-entry-cards {

@@ -1,4 +1,4 @@
-import type { AutoUpdateApi, CampaignsApi, CharactersApi, LogBookApi, CombatApi, FilesApi, GuidedCreationApi, ProgressionApi, QuestsApi, SettingsApi, SettingsIntroApi, StartupApi, TurnApi, WindowControls } from '../../preload'
+import type { AutoUpdateApi, CampaignsApi, CharactersApi, LogBookApi, CombatApi, FilesApi, GuidedCreationApi, ProgressionApi, QuestsApi, SettingsApi, SettingsIntroApi, SpellbookApi, StartupApi, TurnApi, WindowControls } from '../../preload'
 
 declare global {
   interface Window {
@@ -16,5 +16,6 @@ declare global {
     settingsIntro: SettingsIntroApi
     autoUpdate: AutoUpdateApi
     quests: QuestsApi
+    spellbook: SpellbookApi
   }
 }

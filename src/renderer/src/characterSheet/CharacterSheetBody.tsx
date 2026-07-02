@@ -48,7 +48,7 @@ export function CharacterSheetBody(props: CharacterSheetBodyProps): JSX.Element 
       <CharacterJournalSection character={character} />
       <div className="character-log-book-actions">
         <button type="button" onClick={() => setLogBookOpen(true)}>
-          Log Book
+          Knowledge base
         </button>
       </div>
       <CharacterInventorySection character={character} />

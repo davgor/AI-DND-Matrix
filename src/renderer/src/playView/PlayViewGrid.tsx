@@ -78,7 +78,6 @@ export function PlayViewGrid(props: {
           collapsed={props.sheetCollapsed}
           onToggleCollapsed={props.onToggleSheet}
           refreshToken={props.controller.characterRefreshToken}
-          combatState={props.controller.combatState}
         />
       }
       overlays={props.overlays}

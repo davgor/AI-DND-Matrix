@@ -10,9 +10,6 @@ export interface CharacterSheetOverlayProps {
   refreshToken: number
   onClose: () => void
   onOpenInventory: (slot?: EquipSlot) => void
-  onOpenLogBook: () => void
-  onOpenJournal: () => void
-  onOpenQuestLog: () => void
 }
 
 export function CharacterSheetOverlay(props: CharacterSheetOverlayProps): JSX.Element | null {
@@ -32,9 +29,6 @@ export function CharacterSheetOverlay(props: CharacterSheetOverlayProps): JSX.El
         <CharacterSheetOverlayBody
           character={props.character}
           onOpenInventory={props.onOpenInventory}
-          onOpenLogBook={props.onOpenLogBook}
-          onOpenJournal={props.onOpenJournal}
-          onOpenQuestLog={props.onOpenQuestLog}
         />
       </div>
     </div>

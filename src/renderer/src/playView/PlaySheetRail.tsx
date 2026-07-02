@@ -1,14 +1,9 @@
-import {
-  getPlayerSheetCollapsed,
-  setPlayerSheetCollapsed
-} from '../characterSheet/playerSheetPreferences'
 import '../characterSheet/playerSheetRail.css'
 import './playSheetRail.css'
 import { PlaySheetRailBody } from './PlaySheetRailBody'
 import { usePlaySheetRailState } from './usePlaySheetRailState'
-import type { CombatStateSnapshot } from '../../../shared/combat/types'
 import { useState } from 'react'
-
+import { setPlayerSheetCollapsed } from '../characterSheet/playerSheetPreferences'
 export type { PlaySheetTab } from './playSheetRailTabs'
 export { resolveDefaultPlaySheetTab } from './playSheetRailTabs'
 
@@ -18,15 +13,13 @@ export interface PlaySheetRailProps {
   collapsed: boolean
   onToggleCollapsed: () => void
   refreshToken: number
-  combatState: CombatStateSnapshot | null
 }
 
 export function PlaySheetRail(props: PlaySheetRailProps): JSX.Element {
   const railState = usePlaySheetRailState({
     campaignId: props.campaignId,
     characterId: props.characterId,
-    refreshToken: props.refreshToken,
-    combatState: props.combatState
+    refreshToken: props.refreshToken
   })
   const railClass = props.collapsed
     ? 'player-sheet-rail play-sheet-rail player-sheet-rail-collapsed'
@@ -63,7 +56,7 @@ export function PlaySheetRail(props: PlaySheetRailProps): JSX.Element {
 }
 
 export function usePlayerSheetCollapse(): { collapsed: boolean; toggleCollapsed: () => void } {
-  const [collapsed, setCollapsed] = useState(() => getPlayerSheetCollapsed(window.localStorage))
+  const [collapsed, setCollapsed] = useState(false)
 
   function toggleCollapsed(): void {
     setCollapsed((current) => {

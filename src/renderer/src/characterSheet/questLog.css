@@ -1,12 +1,9 @@
-.quest-log-overlay {
-  z-index: 60;
-}
-
 .quest-log-modal {
-  width: min(720px, 92vw);
+  width: min(720px, 100%);
   max-height: min(84vh, 900px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .quest-log-header {
@@ -14,22 +11,32 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.quest-log-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.25;
+  word-break: break-word;
 }
 
 .quest-log-header-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .quest-log-body {
   overflow: auto;
-  padding-top: 1rem;
+  padding: 12px 20px 20px;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .quest-log-section h3 {
@@ -44,15 +51,18 @@
   font-style: italic;
   opacity: 0.9;
   margin: 0 0 0.5rem;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .quest-log-card {
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
-  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .quest-log-card-header {
@@ -65,12 +75,21 @@
 .quest-log-card-title {
   margin: 0;
   font-size: 1rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.quest-log-card-summary {
+  margin: 0;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .quest-log-badges {
   display: flex;
   gap: 0.35rem;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .quest-log-badge {
@@ -100,6 +119,12 @@
 
 .quest-log-objective input {
   margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.quest-log-objective span {
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .quest-log-objective.done span {
@@ -129,4 +154,7 @@
 .quest-log-empty {
   opacity: 0.7;
   font-style: italic;
+  margin: 0;
+  line-height: 1.45;
+  word-break: break-word;
 }

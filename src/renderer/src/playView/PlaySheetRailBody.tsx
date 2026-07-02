@@ -26,6 +26,7 @@ export function PlaySheetRailBody(props: {
             key={tab}
             type="button"
             role="tab"
+            data-tab={tab}
             aria-selected={props.activeTab === tab}
             className={props.activeTab === tab ? 'play-sheet-tab play-sheet-tab-active' : 'play-sheet-tab'}
             onClick={() => handleTabSelect(tab)}
@@ -42,6 +43,7 @@ export function PlaySheetRailBody(props: {
         onOpenQuestLog={modals.openQuestLog}
         onOpenInventory={() => modals.openInventory(null)}
         onOpenJournal={modals.openJournal}
+        onOpenSpellbook={modals.openSpellbook}
       />
       <PlaySheetModals
         character={props.character}

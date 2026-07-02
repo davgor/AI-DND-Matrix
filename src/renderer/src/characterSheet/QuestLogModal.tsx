@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Character } from '../../../db/repositories/characters'
 import type { QuestKind, QuestScale } from '../../../shared/quests/types'
+import { ModalPortal } from '../shared/ModalPortal'
 import { QuestLogModalBody } from './QuestLogModalBody'
 import { useCharacterQuestLog } from './useCharacterQuestLog'
 import './questLog.css'
@@ -91,29 +92,36 @@ export function QuestLogModal(props: QuestLogModalProps): JSX.Element | null {
     void questLog.refresh()
   }
   return (
-    <div className="quest-log-overlay modal-overlay" role="presentation" onClick={props.onClose}>
-      <div className="quest-log-modal modal-panel" role="dialog" aria-labelledby="quest-log-title" onClick={(event) => event.stopPropagation()}>
-        <QuestLogHeader characterName={props.character.name} curateMode={curateMode} onCurateChange={setCurateMode} onClose={props.onClose} />
-        <QuestLogModalBody
-          entries={questLog.entries}
-          loading={questLog.loading}
-          curateMode={curateMode}
-          onAccept={(questId) => void window.quests.accept({ characterId: props.character.id, questId }).then(refresh)}
-          onAbandon={(questId) => {
-            if (window.confirm('Abandon this quest?')) {
-              void window.quests.abandon({ characterId: props.character.id, questId }).then(refresh)
+    <ModalPortal>
+      <div className="quest-log-overlay modal-overlay" role="presentation" onClick={props.onClose}>
+        <div
+          className="quest-log-modal modal-panel"
+          role="dialog"
+          aria-labelledby="quest-log-title"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <QuestLogHeader characterName={props.character.name} curateMode={curateMode} onCurateChange={setCurateMode} onClose={props.onClose} />
+          <QuestLogModalBody
+            entries={questLog.entries}
+            loading={questLog.loading}
+            curateMode={curateMode}
+            onAccept={(questId) => void window.quests.accept({ characterId: props.character.id, questId }).then(refresh)}
+            onAbandon={(questId) => {
+              if (window.confirm('Abandon this quest?')) {
+                void window.quests.abandon({ characterId: props.character.id, questId }).then(refresh)
+              }
+            }}
+            onForceComplete={(questId) =>
+              void window.quests.forceStatus({ characterId: props.character.id, questId, status: 'completed' }).then(refresh)
             }
-          }}
-          onForceComplete={(questId) =>
-            void window.quests.forceStatus({ characterId: props.character.id, questId, status: 'completed' }).then(refresh)
-          }
-          curatePanel={
-            curateMode ? (
-              <QuestCuratePanel campaignId={props.campaignId} characterId={props.character.id} onCreated={refresh} />
-            ) : null
-          }
-        />
+            curatePanel={
+              curateMode ? (
+                <QuestCuratePanel campaignId={props.campaignId} characterId={props.character.id} onCreated={refresh} />
+              ) : null
+            }
+          />
+        </div>
       </div>
-    </div>
+    </ModalPortal>
   )
 }

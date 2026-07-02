@@ -7,7 +7,6 @@ export interface PlaySessionChromeData {
   regionName: string | null
   inGameDay: number
   campaignName: string | null
-  mainQuestTitle: string | null
   loading: boolean
 }
 
@@ -39,8 +38,7 @@ function loadingChromeData(
     regionName: null,
     regionBlurb: null,
     inGameDay: campaign === undefined ? 0 : campaign.inGameDate,
-    campaignName: campaign === undefined ? null : campaign.name,
-    mainQuestTitle: null
+    campaignName: campaign === undefined ? null : campaign.name
   }
 }
 
@@ -56,8 +54,7 @@ function loadedChromeData(
     regionName: resolveRegionName(detail, character),
     regionBlurb: resolveRegionBlurb(detail, character),
     inGameDay: campaign === undefined ? 0 : campaign.inGameDate,
-    campaignName: campaign === undefined ? null : campaign.name,
-    mainQuestTitle: null
+    campaignName: campaign === undefined ? null : campaign.name
   }
 }
 

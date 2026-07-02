@@ -1,6 +1,17 @@
-import type { CharacterQuestView } from '../../../shared/quests/types'
+import type { CharacterQuestView, Quest } from '../../../shared/quests/types'
 import { FormattedText } from '../shared/FormattedText'
 import { QuestAbandonButton, QuestAcceptButton, QuestCurateButtons } from './QuestCardActions'
+
+function shouldShowQuestSummary(quest: Quest): boolean {
+  const summary = quest.summary.trim()
+  if (!summary) {
+    return false
+  }
+  if (quest.objectives.length === 0) {
+    return true
+  }
+  return !quest.objectives.every((objective) => objective.text.trim() === summary)
+}
 
 function QuestBadges(props: { view: CharacterQuestView }): JSX.Element {
   return (
@@ -42,7 +53,9 @@ export function QuestLogCard(props: {
         <h4 className="quest-log-card-title">{view.quest.title}</h4>
         <QuestBadges view={view} />
       </div>
-      {FormattedText({ as: 'p', text: view.quest.summary })}
+      {shouldShowQuestSummary(view.quest)
+        ? FormattedText({ as: 'p', className: 'quest-log-card-summary', text: view.quest.summary })
+        : null}
       <QuestObjectives view={view} />
       {completedDate !== null ? (
         <p className="quest-log-empty">Completed on day {completedDate}</p>

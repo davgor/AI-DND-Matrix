@@ -24,7 +24,7 @@ describe('PlaySessionChrome', () => {
       campaignsCollapsed: false,
       combatState: COMBAT_STATE,
       showRolls: false,
-      mainQuestTitle: 'Find the crown',
+      onOpenRecap: () => {},
       onToggleShowRolls: () => {},
       onExitToCampaignHub: () => {}
     })

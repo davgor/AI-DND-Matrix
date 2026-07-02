@@ -5,6 +5,7 @@ import { LogBookEntryList } from './LogBookEntryList'
 import { LogBookToolbar } from './LogBookToolbar'
 import { filterLogEntries, useCharacterLogBook } from './useCharacterLogBook'
 import './characterLogBook.css'
+import './characterSheetOverlay.css'
 
 export interface CharacterLogBookModalProps {
   character: Character
@@ -22,15 +23,15 @@ function LogBookModalHeader(props: {
   return (
     <header className="character-log-book-header">
       <div>
-        <p className="eyebrow">Knowledge</p>
-        <h2 id="character-log-book-title">{props.characterName}&apos;s Log Book</h2>
+        <p className="eyebrow">World knowledge</p>
+        <h2 id="character-log-book-title">{props.characterName}&apos;s Knowledge Base</h2>
       </div>
       <div className="character-log-book-header-actions">
         <label className="character-log-book-curate-toggle">
           <input type="checkbox" checked={props.curateMode} onChange={(event) => props.onCurateChange(event.target.checked)} />
           Curate
         </label>
-        <button type="button" className="character-log-book-close" aria-label="Close log book" onClick={props.onClose}>
+        <button type="button" className="character-log-book-close" aria-label="Close knowledge base" onClick={props.onClose}>
           ×
         </button>
       </div>

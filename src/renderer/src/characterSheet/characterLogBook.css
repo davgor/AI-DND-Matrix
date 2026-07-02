@@ -1,11 +1,5 @@
 .character-log-book-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
+  /* Viewport overlay layout from theme.css `.modal-overlay`. */
 }
 
 .character-log-book-modal {

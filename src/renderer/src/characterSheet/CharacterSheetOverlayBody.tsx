@@ -8,9 +8,6 @@ import { useCharacterInventory } from './useCharacterInventory'
 export function CharacterSheetOverlayBody(props: {
   character: Character
   onOpenInventory: (slot?: EquipSlot) => void
-  onOpenLogBook: () => void
-  onOpenJournal: () => void
-  onOpenQuestLog: () => void
 }): JSX.Element {
   const inventory = useCharacterInventory(props.character.id)
   const agility = (props.character.stats as { abilityScores?: { agility?: number } }).abilityScores?.agility ?? 10
@@ -40,15 +37,6 @@ export function CharacterSheetOverlayBody(props: {
       <div className="character-sheet-overlay-actions">
         <button type="button" onClick={() => props.onOpenInventory()}>
           Inventory
-        </button>
-        <button type="button" onClick={props.onOpenLogBook}>
-          Log Book
-        </button>
-        <button type="button" onClick={props.onOpenJournal}>
-          Journal
-        </button>
-        <button type="button" onClick={props.onOpenQuestLog}>
-          Quest Log
         </button>
       </div>
     </div>

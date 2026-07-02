@@ -1,5 +1,5 @@
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
-import { PlaySessionChromeQuestButton } from './PlaySessionChromeQuestButton'
+import { PlaySessionChromeRecapButton } from './PlaySessionChromeRecapButton'
 import { combatBadgeSummary, isCombatActive } from './usePlaySessionChromeData'
 
 export interface PlaySessionChromeProps {
@@ -11,8 +11,7 @@ export interface PlaySessionChromeProps {
   campaignsCollapsed: boolean
   combatState: CombatStateSnapshot | null
   showRolls: boolean
-  mainQuestTitle: string | null
-  onOpenQuestLog?: () => void
+  onOpenRecap: () => void
   onToggleShowRolls: () => void
   onExitToCampaignHub: () => void
 }
@@ -75,7 +74,7 @@ export function PlaySessionChrome(props: PlaySessionChromeProps): JSX.Element {
         ) : null}
       </div>
       <div className="play-session-chrome-actions">
-        <PlaySessionChromeQuestButton mainQuestTitle={props.mainQuestTitle} onOpenQuestLog={props.onOpenQuestLog} />
+        <PlaySessionChromeRecapButton onOpenRecap={props.onOpenRecap} />
         <label className="play-session-chrome-roll-toggle">
           <input type="checkbox" checked={props.showRolls} onChange={props.onToggleShowRolls} />
           Show rolls

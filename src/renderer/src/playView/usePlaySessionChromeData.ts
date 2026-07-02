@@ -13,7 +13,6 @@ export function usePlaySessionChromeData(
 ): PlaySessionChromeData & { regionBlurb: string | null } {
   const [detail, setDetail] = useState<CampaignDetail | null>(null)
   const [character, setCharacter] = useState<Character | null>(null)
-  const [mainQuestTitle, setMainQuestTitle] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -39,20 +38,7 @@ export function usePlaySessionChromeData(
     }
   }, [campaignId, characterId, refreshToken])
 
-  useEffect(() => {
-    let cancelled = false
-    void window.quests.listForCharacter(characterId).then((views) => {
-      if (!cancelled) {
-        setMainQuestTitle(views.find((row) => row.quest.kind === 'main')?.quest.title ?? null)
-      }
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [characterId, refreshToken])
-
-  const chrome = buildChromeData(detail, character)
-  return { ...chrome, mainQuestTitle: chrome.mainQuestTitle ?? mainQuestTitle }
+  return buildChromeData(detail, character)
 }
 
 export function isCombatActive(combatState: CombatStateSnapshot | null | undefined): boolean {

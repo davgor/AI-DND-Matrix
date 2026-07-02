@@ -15,9 +15,9 @@ export function LogBookToolbar(props: {
         placeholder="Search entries…"
         value={props.query}
         onChange={(event) => props.onQueryChange(event.target.value)}
-        aria-label="Search log book"
+        aria-label="Search knowledge base"
       />
-      <div className="character-log-book-filters" role="tablist" aria-label="Log book categories">
+      <div className="character-log-book-filters" role="tablist" aria-label="Knowledge base categories">
         {LOG_FILTER_CHIPS.map((chip) => (
           <button
             key={chip.id}

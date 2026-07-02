@@ -3,6 +3,7 @@ import type { EquipSlot } from '../../../shared/items/types'
 import type { Character } from '../../../db/repositories/characters'
 import { CharacterLogBookModal } from '../characterSheet/CharacterLogBookModal'
 import { QuestLogModal } from '../characterSheet/QuestLogModal'
+import { SpellbookModal } from '../characterSheet/SpellbookModal'
 import { CharacterSheetOverlay } from '../characterSheet/CharacterSheetOverlay'
 import { InventoryModal } from '../characterSheet/InventoryModal'
 import { PlaySheetJournalTab } from './playSheetJournalOverlay'
@@ -13,6 +14,7 @@ export function usePlaySheetModals(): {
   logBookOpen: boolean
   journalOpen: boolean
   questLogOpen: boolean
+  spellbookOpen: boolean
   inventoryFilterSlot: EquipSlot | null
   openSheet: () => void
   closeSheet: () => void
@@ -24,12 +26,15 @@ export function usePlaySheetModals(): {
   closeJournal: () => void
   openQuestLog: () => void
   closeQuestLog: () => void
+  openSpellbook: () => void
+  closeSpellbook: () => void
 } {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [inventoryOpen, setInventoryOpen] = useState(false)
   const [logBookOpen, setLogBookOpen] = useState(false)
   const [journalOpen, setJournalOpen] = useState(false)
   const [questLogOpen, setQuestLogOpen] = useState(false)
+  const [spellbookOpen, setSpellbookOpen] = useState(false)
   const [inventoryFilterSlot, setInventoryFilterSlot] = useState<EquipSlot | null>(null)
 
   return {
@@ -38,6 +43,7 @@ export function usePlaySheetModals(): {
     logBookOpen,
     journalOpen,
     questLogOpen,
+    spellbookOpen,
     inventoryFilterSlot,
     openSheet: () => setSheetOpen(true),
     closeSheet: () => setSheetOpen(false),
@@ -54,7 +60,9 @@ export function usePlaySheetModals(): {
     openJournal: () => setJournalOpen(true),
     closeJournal: () => setJournalOpen(false),
     openQuestLog: () => setQuestLogOpen(true),
-    closeQuestLog: () => setQuestLogOpen(false)
+    closeQuestLog: () => setQuestLogOpen(false),
+    openSpellbook: () => setSpellbookOpen(true),
+    closeSpellbook: () => setSpellbookOpen(false)
   }
 }
 
@@ -72,9 +80,6 @@ export function PlaySheetModals(props: {
         refreshToken={props.refreshToken}
         onClose={props.modals.closeSheet}
         onOpenInventory={(slot) => props.modals.openInventory(slot ?? null)}
-        onOpenLogBook={props.modals.openLogBook}
-        onOpenJournal={props.modals.openJournal}
-        onOpenQuestLog={props.modals.openQuestLog}
       />
       <InventoryModal
         character={props.character}
@@ -99,6 +104,12 @@ export function PlaySheetModals(props: {
         isOpen={props.modals.questLogOpen}
         refreshToken={props.refreshToken}
         onClose={props.modals.closeQuestLog}
+      />
+      <SpellbookModal
+        character={props.character}
+        isOpen={props.modals.spellbookOpen}
+        refreshToken={props.refreshToken}
+        onClose={props.modals.closeSpellbook}
       />
     </>
   )

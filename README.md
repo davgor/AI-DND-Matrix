@@ -125,9 +125,7 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 
 | Epic | Intent |
 |------|--------|
-| **043** | **Play view UX refresh** — session chrome, scene vs feed hierarchy, play sheet tabs, status alerts, composer polish; see `src/shared/inCampaignLayout/PLAY_VIEW_UX_SPEC.md` |
-| **044** | **Character sheet overlay, equipment slots, inventory modals, log book depth** — expanded equip model, commerce, sheet overlay from play rail; see `src/shared/items/SPEC.md` |
-| **045** | **Quest log** — main story + side quests, DM proposals, XP/loot on completion; see `src/shared/quests/SPEC.md` and `docs/runbooks/quest-log-smoke-test.md` |
+| **046** | **Player spellbook modal** — known spells from catalog, journal tab entry point, DM spell grants; see `src/shared/spells/SPEC.md` and `docs/runbooks/spellbook-smoke-test.md` |
 
 ### Revisit backlog
 

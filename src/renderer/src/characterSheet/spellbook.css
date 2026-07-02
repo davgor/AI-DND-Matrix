@@ -1,0 +1,89 @@
+.spellbook-overlay {
+  align-items: center;
+  justify-content: center;
+}
+
+.spellbook-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(32rem, 92vw);
+  max-height: min(80vh, 40rem);
+  overflow: hidden;
+}
+
+.spellbook-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.spellbook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+  overflow-y: auto;
+}
+
+.spellbook-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface-raised);
+}
+
+.spellbook-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.spellbook-card-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.spellbook-card-cost {
+  font-size: 0.8rem;
+  color: var(--accent-gold);
+  white-space: nowrap;
+}
+
+.spellbook-card-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.spellbook-effect {
+  text-transform: capitalize;
+}
+
+.spellbook-card-rules,
+.spellbook-card-tags,
+.spellbook-card-constraints {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.spellbook-card-tags {
+  color: var(--text-muted);
+}
+
+.spellbook-card-constraints {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.spellbook-empty,
+.spellbook-loading {
+  padding: 1.25rem;
+  color: var(--text-muted);
+}

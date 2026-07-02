@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
 import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
 import type { ReactNode } from 'react'
@@ -7,7 +7,6 @@ import { PlaySessionChrome } from './PlaySessionChrome'
 import { usePlaySessionChromeData } from './usePlaySessionChromeData'
 import { useOverlayDismiss } from './useOverlayDismiss'
 import { PlayViewGrid } from './PlayViewGrid'
-import { PlayChromeQuestLogHost } from './PlayChromeQuestLogHost'
 import type { usePlayViewController } from './usePlayViewController'
 import type { InCampaignLayoutMode } from '../../../shared/inCampaignLayout/types'
 
@@ -31,7 +30,6 @@ function PlaySessionChromeBar(props: {
   campaignsCollapsed: boolean
   controller: ReturnType<typeof usePlayViewController>
   onExitToCampaignHub: () => void
-  onOpenQuestLog: () => void
 }): JSX.Element {
   return (
     <PlaySessionChrome
@@ -43,8 +41,7 @@ function PlaySessionChromeBar(props: {
       campaignsCollapsed={props.campaignsCollapsed}
       combatState={props.controller.combatState}
       showRolls={props.controller.showRolls}
-      mainQuestTitle={props.chromeData.mainQuestTitle}
-      onOpenQuestLog={props.onOpenQuestLog}
+      onOpenRecap={() => void props.controller.recap.open()}
       onToggleShowRolls={props.controller.toggleShowRolls}
       onExitToCampaignHub={props.onExitToCampaignHub}
     />
@@ -71,7 +68,6 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
     onCollapseCampaigns,
     onCollapseSheet
   })
-  const [questLogOpen, setQuestLogOpen] = useState(false)
 
   return (
     <div className="play-view-shell">
@@ -80,20 +76,12 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
         campaignsCollapsed={campaignsController.collapsed}
         controller={controller}
         onExitToCampaignHub={props.onExitToCampaignHub}
-        onOpenQuestLog={() => setQuestLogOpen(true)}
       />
       <PlayViewGrid
         {...props}
         sceneContext={{ regionName: chromeData.regionName, regionBlurb: chromeData.regionBlurb }}
         showOverlayBackdrop={overlayDismiss.showBackdrop}
         onBackdropDismiss={overlayDismiss.onBackdropDismiss}
-      />
-      <PlayChromeQuestLogHost
-        campaignId={props.campaignId}
-        characterId={props.characterId}
-        refreshToken={controller.characterRefreshToken}
-        isOpen={questLogOpen}
-        onClose={() => setQuestLogOpen(false)}
       />
     </div>
   )

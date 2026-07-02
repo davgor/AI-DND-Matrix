@@ -42,11 +42,7 @@ export interface PlayViewController extends RollVisibilityController, PlayLogCon
 export function usePlayViewController(campaignId: string, characterId: string): PlayViewController {
   const rollVisibility = useRollVisibility()
   const recap = useSessionRecap(campaignId)
-  const playLog = usePlayLog(campaignId, characterId, (entries) => {
-    if (entries.length > 0) {
-      recap.show()
-    }
-  })
+  const playLog = usePlayLog(campaignId, characterId)
   const promotion = usePromotionPrompt(campaignId, () => void playLog.refreshLog())
   const obituary = useObituaryDrafting()
   const turn = useTurnSubmission({ campaignId, characterId, playLog, promotion, obituary })

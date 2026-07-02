@@ -78,11 +78,17 @@ describe('emphasis formatting smoke: narrative surfaces', () => {
         visible: true,
         text: 'Previously you *escaped* the **keep**.',
         loading: false,
+        open: async () => {},
+        show: () => {},
+        generate: async () => {},
         skip: () => {},
         view: async () => {}
       }
     })
-    expect(hasEmphasisTypes(recapNode?.props.children[0] as JSX.Element, ['em', 'strong'])).toBe(true)
+    const modal = (recapNode?.props.children as JSX.Element).props.children as JSX.Element
+    const body = (modal.props.children as JSX.Element[])[1]
+    const recapParagraph = body.props.children as JSX.Element
+    expect(hasEmphasisTypes(recapParagraph, ['em', 'strong'])).toBe(true)
   })
 })
 
