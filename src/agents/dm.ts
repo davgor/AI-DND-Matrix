@@ -5,7 +5,7 @@ import {
   isAlignmentShiftWarning,
   isCommitAlignmentShift
 } from '../shared/alignment/types'
-import { getCharacterById, listPlayerCharacters, markCharacterDead } from '../db/repositories/characters'
+import { markCharacterDead } from '../db/repositories/characters'
 import {
   clearPendingAlignmentShift,
   commitAlignmentShift,
@@ -14,14 +14,13 @@ import {
 import { clampDC } from '../engine/checks'
 import type { DamageType } from '../engine/damage'
 import type { EmergentDirectionCandidate } from '../engine/emergentDirection'
-import { takeRecent } from './contextWindow'
 import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 import { NARRATIVE_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
-import { listEventsByCampaign, type Event } from '../db/repositories/events'
-import { listNpcsByRegion, getNpcById } from '../db/repositories/npcs'
-import { getRegionById, type RegionStatus } from '../db/repositories/regions'
-import { listStoryThreadsByCampaign, updateStoryThreadStateAndSummary } from '../db/repositories/storyThreads'
+import type { Event } from '../db/repositories/events'
+import { getNpcById } from '../db/repositories/npcs'
+import { type RegionStatus } from '../db/repositories/regions'
+import { updateStoryThreadStateAndSummary } from '../db/repositories/storyThreads'
 import { createWorldFact } from '../db/repositories/worldFacts'
 import { persistItemGrants } from '../db/repositories/itemGrants'
 import type { CommerceSideEffect } from '../db/repositories/itemCommerce'
@@ -33,13 +32,11 @@ import {
   getLogEntryById,
   updateLogEntryForCharacter
 } from '../db/repositories/logEntries'
-import { listLogEntriesByCharacter } from '../db/repositories/logEntries'
 import type { ItemType } from '../shared/items/types'
 import type { LogEntry, LogEntryProposal } from '../shared/logBook/types'
 import type { CrossCharacterLogWrite, DeathCause } from '../shared/campaignHub/types'
-import { windowLogEntriesForNarration } from './logBookWindow'
-import { loadActiveQuestsForCharacter } from './narrationQuestContext'
-import { loadKnownSpellsForNarration, persistSpellGrants } from './narrationSpellContext'
+import { loadNarrationContextFields } from './narrationContextFields'
+import { persistSpellGrants } from './narrationSpellContext'
 import { buildActiveQuestsPromptSection } from './questWindow'
 import { buildKnownSpellsPromptSection } from './spellWindow'
 import type { ActiveQuestContext } from './questWindow'
@@ -52,9 +49,7 @@ import {
 import type { CombatIntent } from '../shared/combat/types'
 import { COMBAT_INTENTS } from '../shared/combat/types'
 import { isAttackLethality, type AttackLethality } from '../shared/npcCombat/types'
-import { getEquippedWeaponDamageProfile, summarizeWeaponProfile } from '../db/repositories/weaponDamageProfile'
 import { getActiveEncounter } from '../db/repositories/combatEncounters'
-import { buildCombatSummaryForNarration } from './dmCombatContext'
 
 export class DmSchemaError extends Error {}
 
@@ -345,27 +340,6 @@ export interface NarrationResult {
   spellGrants?: Array<{ catalogSpellKey: string }>
 }
 
-function listInactiveLivingPlayersInRegion(
-  db: Database.Database,
-  campaignId: string,
-  regionId: string,
-  characterId: string
-) {
-  return listPlayerCharacters(db, campaignId)
-    .filter((player) => {
-      if (player.id === characterId || player.lifeStatus !== 'alive') {
-        return false
-      }
-      const stats = player.stats as { currentRegionId?: string }
-      return stats.currentRegionId === regionId
-    })
-    .map((player) => ({
-      id: player.id,
-      name: player.name,
-      characterClass: player.characterClass
-    }))
-}
-
 export function assembleNarrationContext(input: {
   db: Database.Database
   campaignId: string
@@ -374,48 +348,11 @@ export function assembleNarrationContext(input: {
   playerInput: string
   lastCombatAttack?: Record<string, unknown>
 }): NarrationContext {
-  const { db, campaignId, regionId, characterId, playerInput, lastCombatAttack } = input
-  const region = getRegionById(db, regionId)
-  const recentEvents = takeRecent(listEventsByCampaign(db, campaignId))
-  const threads = listStoryThreadsByCampaign(db, campaignId)
-  const [primaryThread] = threads
-  const presentNpcs = listNpcsByRegion(db, regionId)
-    .filter((npc) => !npc.isPartyMember)
-    .map((npc) => ({ id: npc.id, name: npc.name }))
-  const allLogEntries = listLogEntriesByCharacter(db, characterId)
-  const logBookEntries = windowLogEntriesForNarration(allLogEntries, {
-    regionId,
-    presentNpcIds: presentNpcs.map((npc) => npc.id)
-  })
-  const character = getCharacterById(db, characterId)
-  const encounter = getActiveEncounter(db, campaignId)
-  const combatSummary = buildCombatSummaryForNarration(db, encounter)
-  const weaponProfile = getEquippedWeaponDamageProfile(db, characterId)
-  const equippedWeaponSummary =
-    weaponProfile.characterItemId !== null ? summarizeWeaponProfile(weaponProfile) : undefined
-  const inactiveLivingPlayersInRegion = listInactiveLivingPlayersInRegion(
-    db, campaignId, regionId, characterId
-  )
-  const activeQuests = loadActiveQuestsForCharacter(db, campaignId, characterId)
-  const knownSpells = loadKnownSpellsForNarration(db, characterId)
+  const fields = loadNarrationContextFields(input.db, input)
   return {
-    regionStatus: region?.status ?? { destroyed: false },
-    recentEvents,
-    storyThreadState: primaryThread
-      ? { id: primaryThread.id, state: primaryThread.state, summary: primaryThread.summary }
-      : null,
-    presentNpcs,
-    logBookEntries,
-    playerAlignment: character?.alignment ?? null,
-    pendingAlignmentShift: character?.pendingAlignmentShift ?? null,
-    playerInput,
-    combatSummary,
-    lastCombatAttack,
-    equippedWeaponSummary,
-    inactiveLivingPlayersInRegion:
-      inactiveLivingPlayersInRegion.length > 0 ? inactiveLivingPlayersInRegion : undefined,
-    activeQuests,
-    knownSpells
+    ...fields,
+    playerInput: input.playerInput,
+    lastCombatAttack: input.lastCombatAttack
   }
 }
 

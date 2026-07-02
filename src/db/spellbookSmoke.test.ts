@@ -1,4 +1,3 @@
-import type Database from 'better-sqlite3'
 import { getSpellByKey } from '../db/catalog/spells'
 import { getCharacterById, updateCharacter } from '../db/repositories/characters'
 import { appendKnownSpellKeys } from '../engine/knownSpells'

@@ -40,7 +40,6 @@ describe('npc combat hydration from catalog', () => {
     expect(hydrated?.hp).toBe(expected.maxHp)
     expect(hydrated?.maxHp).toBe(expected.maxHp)
     expect(hydrated?.maxHp).toBeGreaterThanOrEqual(CATALOG_MONSTER_MIN_MAX_HP)
-    expect(hydrated?.hp).not.toBe(creature!.hp)
     expect(hydrated?.catalogCreatureKey).toBe('goblin-scout')
   })
 

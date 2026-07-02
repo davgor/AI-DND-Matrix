@@ -5,7 +5,7 @@ import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
 import { CampaignReviewRegionExtras } from '../campaignReview/CampaignReviewRegionExtras'
 import { EditableFieldReadView } from '../campaignReview/editableFieldViews'
 import { CharacterLogBookSections } from '../characterSheet/CharacterLogBookSections'
-import { RecapBanner } from '../playView/RecapBanner'
+import { RecapModalBody } from '../playView/RecapModalPanel'
 import { renderNpcLine } from '../playView/dmExpositionParts'
 import type { LogEntry } from '../../../shared/logBook/types'
 import type { RegionExtras } from '../../../main/campaignIpc'
@@ -32,7 +32,7 @@ describe('emphasis formatting smoke: exposition', () => {
   })
 })
 
-describe('emphasis formatting smoke: narrative surfaces', () => {
+describe('emphasis formatting smoke: journal and log book', () => {
   it('renders journal-style text with emphasis markers', () => {
     const journalNode = FormattedText({ as: 'p', text: 'Met a *stranger* at the **crossroads**.' })
     expect(hasEmphasisTypes(journalNode, ['em', 'strong'])).toBe(true)
@@ -56,7 +56,9 @@ describe('emphasis formatting smoke: narrative surfaces', () => {
       .props.children[1] as JSX.Element
     expect(hasEmphasisTypes(logParagraph, ['em', 'strong'])).toBe(true)
   })
+})
 
+describe('emphasis formatting smoke: review and recap', () => {
   it('renders campaign review and editable read surfaces with emphasis markers', () => {
     const extras: RegionExtras = {
       backstory: 'Founded in *ancient* times.',
@@ -72,22 +74,11 @@ describe('emphasis formatting smoke: narrative surfaces', () => {
     )
   })
 
-  it('renders recap banner text with emphasis markers', () => {
-    const recapNode = RecapBanner({
-      recap: {
-        visible: true,
-        text: 'Previously you *escaped* the **keep**.',
-        loading: false,
-        open: async () => {},
-        show: () => {},
-        generate: async () => {},
-        skip: () => {},
-        view: async () => {}
-      }
+  it('renders recap body text with emphasis markers', () => {
+    const recapParagraph = RecapModalBody({
+      loading: false,
+      text: 'Previously you *escaped* the **keep**.'
     })
-    const modal = (recapNode?.props.children as JSX.Element).props.children as JSX.Element
-    const body = (modal.props.children as JSX.Element[])[1]
-    const recapParagraph = body.props.children as JSX.Element
     expect(hasEmphasisTypes(recapParagraph, ['em', 'strong'])).toBe(true)
   })
 })

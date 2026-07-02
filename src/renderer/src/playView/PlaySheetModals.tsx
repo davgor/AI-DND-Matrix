@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import type { EquipSlot } from '../../../shared/items/types'
 import type { Character } from '../../../db/repositories/characters'
 import { CharacterLogBookModal } from '../characterSheet/CharacterLogBookModal'
 import { QuestLogModal } from '../characterSheet/QuestLogModal'
@@ -7,64 +5,9 @@ import { SpellbookModal } from '../characterSheet/SpellbookModal'
 import { CharacterSheetOverlay } from '../characterSheet/CharacterSheetOverlay'
 import { InventoryModal } from '../characterSheet/InventoryModal'
 import { PlaySheetJournalTab } from './playSheetJournalOverlay'
+import { usePlaySheetModals } from './usePlaySheetModals'
 
-export function usePlaySheetModals(): {
-  sheetOpen: boolean
-  inventoryOpen: boolean
-  logBookOpen: boolean
-  journalOpen: boolean
-  questLogOpen: boolean
-  spellbookOpen: boolean
-  inventoryFilterSlot: EquipSlot | null
-  openSheet: () => void
-  closeSheet: () => void
-  openInventory: (slot: EquipSlot | null) => void
-  closeInventory: () => void
-  openLogBook: () => void
-  closeLogBook: () => void
-  openJournal: () => void
-  closeJournal: () => void
-  openQuestLog: () => void
-  closeQuestLog: () => void
-  openSpellbook: () => void
-  closeSpellbook: () => void
-} {
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [inventoryOpen, setInventoryOpen] = useState(false)
-  const [logBookOpen, setLogBookOpen] = useState(false)
-  const [journalOpen, setJournalOpen] = useState(false)
-  const [questLogOpen, setQuestLogOpen] = useState(false)
-  const [spellbookOpen, setSpellbookOpen] = useState(false)
-  const [inventoryFilterSlot, setInventoryFilterSlot] = useState<EquipSlot | null>(null)
-
-  return {
-    sheetOpen,
-    inventoryOpen,
-    logBookOpen,
-    journalOpen,
-    questLogOpen,
-    spellbookOpen,
-    inventoryFilterSlot,
-    openSheet: () => setSheetOpen(true),
-    closeSheet: () => setSheetOpen(false),
-    openInventory: (slot) => {
-      setInventoryFilterSlot(slot)
-      setInventoryOpen(true)
-    },
-    closeInventory: () => {
-      setInventoryOpen(false)
-      setInventoryFilterSlot(null)
-    },
-    openLogBook: () => setLogBookOpen(true),
-    closeLogBook: () => setLogBookOpen(false),
-    openJournal: () => setJournalOpen(true),
-    closeJournal: () => setJournalOpen(false),
-    openQuestLog: () => setQuestLogOpen(true),
-    closeQuestLog: () => setQuestLogOpen(false),
-    openSpellbook: () => setSpellbookOpen(true),
-    closeSpellbook: () => setSpellbookOpen(false)
-  }
-}
+export { usePlaySheetModals }
 
 export function PlaySheetModals(props: {
   character: Character
