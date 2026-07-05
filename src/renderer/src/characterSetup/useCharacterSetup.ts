@@ -5,6 +5,8 @@ import type { CharacterSetupState } from './characterSetupValidation'
 import { useImageSelectors } from './useImageSelectors'
 import { useSubmitCharacterSetup } from './useSubmitCharacterSetup'
 import { useCharacterSetupFormState } from './useCharacterSetupFormState'
+import { useState } from 'react'
+import type { PartyMemberDraft } from './PartyMemberSetup'
 
 export type { CharacterSetupController } from './characterSetupController'
 
@@ -12,9 +14,13 @@ export function useCharacterSetup(
   campaignId: string,
   onComplete: () => void,
   draft?: CharacterSetupDraft | null
-): CharacterSetupController {
+): CharacterSetupController & {
+  partyMembers: PartyMemberDraft[]
+  setPartyMembers: (members: PartyMemberDraft[]) => void
+} {
   const form = useCharacterSetupFormState(draft)
   const images = useImageSelectors(draft?.portraitPath ?? null, draft?.sheetBackgroundPath ?? null)
+  const [partyMembers, setPartyMembers] = useState<PartyMemberDraft[]>([])
 
   const formState: CharacterSetupState = {
     name: form.name,
@@ -29,9 +35,14 @@ export function useCharacterSetup(
       sheetBackgroundPath: images.sheetBackgroundPath,
       abilityScoreMethod: form.abilityScoreMethod
     },
+    partyMembers,
     onComplete,
     resumeCharacterId: draft?.playerCharacterId ?? null
   })
 
-  return buildCharacterSetupController(form, images, submission, draft)
+  return {
+    ...buildCharacterSetupController(form, images, submission, draft),
+    partyMembers,
+    setPartyMembers
+  }
 }

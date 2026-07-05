@@ -6,6 +6,7 @@ import { migrateHpBackfill } from './migrateHpBackfill'
 import { migrateEquipSlotsV24 } from './migrateEquipSlotsV24'
 import { migrateQuestsV25 } from './migrateQuestsV25'
 import { migrateGuidedCreationEquipmentPhaseV26 } from './migrateGuidedCreationEquipmentPhaseV26'
+import { migrateRaceSelectionCharactersV29 } from './migrateRaceSelectionCharactersV29'
 import { seedStarterItemCatalog } from './seedStarterItems'
 
 function addColumnIfMissing(
@@ -488,6 +489,35 @@ export const migrations: Migration[] = [
     version: 28,
     up: (db) => {
       seedCreatureAndSpellCatalogV1(db)
+    }
+  },
+  {
+    version: 29,
+    disableTransaction: true,
+    up: (db) => {
+      migrateRaceSelectionCharactersV29(db)
+    }
+  },
+  {
+    version: 30,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE campaign_races (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          race_key TEXT NOT NULL,
+          kind TEXT NOT NULL CHECK (kind IN ('preset', 'custom')),
+          label TEXT NOT NULL,
+          seed_prompt TEXT NOT NULL,
+          lore TEXT NOT NULL,
+          created_by_character_id TEXT REFERENCES characters(id),
+          created_at TEXT NOT NULL,
+          UNIQUE(campaign_id, race_key)
+        );
+
+        CREATE INDEX idx_campaign_races_campaign ON campaign_races(campaign_id);
+      `)
+      addColumnIfMissing(db, 'npcs', 'race_key', 'TEXT')
     }
   }
 ]

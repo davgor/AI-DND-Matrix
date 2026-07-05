@@ -6,6 +6,7 @@ export type OnboardingStage =
   | 'main'
   | 'review'
   | 'characterSetup'
+  | 'raceSelection'
   | 'equipmentSelection'
   | 'guidedIdentity'
   | 'guidedOpeningScene'
@@ -24,6 +25,12 @@ export function findIncompletePlayerCharacter(characters: Character[]): Characte
   )
 }
 
+export function findRacePhasePlayer(characters: Character[]): Character | undefined {
+  return characters.find(
+    (character) => character.kind === 'player' && character.guidedCreationPhase === 'race'
+  )
+}
+
 export function findEquipmentPhasePlayer(characters: Character[]): Character | undefined {
   return characters.find(
     (character) => character.kind === 'player' && character.guidedCreationPhase === 'equipment'
@@ -32,6 +39,7 @@ export function findEquipmentPhasePlayer(characters: Character[]): Character | u
 
 export function findGuidedCreationPlayer(characters: Character[]): Character | undefined {
   return (
+    findRacePhasePlayer(characters) ??
     findEquipmentPhasePlayer(characters) ??
     findIncompletePlayerCharacter(characters) ??
     findPlayerCharacter(characters)
@@ -47,6 +55,9 @@ export function canEnterPlay(player: Character | null | undefined): boolean {
 }
 
 export function stageForGuidedPhase(phase: GuidedCreationPhase | undefined): OnboardingStage {
+  if (phase === 'race') {
+    return 'raceSelection'
+  }
   if (phase === 'equipment') {
     return 'equipmentSelection'
   }

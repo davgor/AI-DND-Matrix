@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses } from '../agents/campaignGeneration/fixtures'
+import { npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 
@@ -25,7 +25,8 @@ function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'neutral',
       canSpeak: true,
-      alignment: 'true_neutral'
+      alignment: 'true_neutral',
+      race: 'human'
     },
     {
       name: `${prefix} Two`,
@@ -35,7 +36,8 @@ function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'curious',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      race: 'human'
     },
     {
       name: `${prefix} Three`,
@@ -45,7 +47,8 @@ function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'disciplined',
       canSpeak: true,
-      alignment: 'lawful_neutral'
+      alignment: 'lawful_neutral',
+      race: 'human'
     }
   ]
 }
@@ -82,7 +85,7 @@ describe('createCampaignFromRequest success', () => {
   it('persists one campaign on success', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION, ...npcReviewResponses(6)])
+    const provider = createScriptedProvider([VALID_GENERATION, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'session-1',
       premisePrompt: 'A haunted marsh',
@@ -103,7 +106,7 @@ describe('createCampaignFromRequest success', () => {
       npcs: makeNpcs('Lonely Reach', 'Lone'),
       storyThread: { title: 'Solo Arc', state: 'starting', summary: 'A small start.' }
     })
-    const provider = createScriptedProvider([oneRegionPayload, ...npcReviewResponses(1)])
+    const provider = createScriptedProvider([oneRegionPayload, RACE_LORE_RESPONSE, ...npcReviewResponses(1)])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'session-counts',
       premisePrompt: 'A sparse frontier',

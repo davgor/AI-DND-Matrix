@@ -13,6 +13,8 @@ import {
 } from './normalize'
 import { buildAdditionalRegionPrompt, buildGenerationPrompt, buildSingleNpcPrompt } from './prompts'
 import { persistGeneratedCampaign } from './persist'
+import { buildAvailableRaceOptions } from '../raceLore'
+import type { AvailableRaceOption } from '../../shared/raceSelection/types'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
@@ -38,12 +40,14 @@ const GENERATION_MAX_TOKENS = 10240
 const ADDITIONAL_REGION_MAX_TOKENS = 10240
 const SINGLE_NPC_MAX_TOKENS = 4096
 
-async function fillCampaignNpcShortfall(
-  provider: Provider,
-  premisePrompt: string,
-  partial: CampaignGenerationResult,
+async function fillCampaignNpcShortfall(input: {
+  provider: Provider
+  premisePrompt: string
+  partial: CampaignGenerationResult
   counts: GenerationCounts
-): Promise<CampaignGenerationResult | undefined> {
+  availableRaces: AvailableRaceOption[]
+}): Promise<CampaignGenerationResult | undefined> {
+  const { provider, premisePrompt, partial, counts, availableRaces } = input
   const npcs = [...partial.npcs]
   const allNames = (): string[] => npcs.map((npc) => npc.name)
 
@@ -57,7 +61,8 @@ async function fillCampaignNpcShortfall(
           regionName: region.name,
           regionDescription: region.description,
           existingNpcNames: allNames(),
-          seedPrompt: `Create another distinct local character in ${region.name}.`
+          seedPrompt: `Create another distinct local character in ${region.name}.`,
+          availableRaces
         })
         npcs.push(generated.npc)
         shortfall -= 1
@@ -70,16 +75,41 @@ async function fillCampaignNpcShortfall(
   return { ...partial, npcs }
 }
 
+async function finalizeGenerationResult(args: {
+  provider: Provider
+  premisePrompt: string
+  normalized: CampaignGenerationResult
+  counts: GenerationCounts
+  availableRaces: AvailableRaceOption[]
+}): Promise<CampaignGenerationResult> {
+  const { provider, premisePrompt, normalized, counts, availableRaces } = args
+  if (!needsNpcTopUp(normalized, counts)) {
+    return normalized
+  }
+  const repaired = await fillCampaignNpcShortfall({
+    provider,
+    premisePrompt,
+    partial: normalized,
+    counts,
+    availableRaces
+  })
+  if (repaired && isValidGenerationResult(repaired, counts)) {
+    return repaired
+  }
+  return normalized
+}
+
 export async function generateCampaignSeed(
   provider: Provider,
   premisePrompt: string,
-  countsInput?: Partial<GenerationCounts>
+  countsInput?: Partial<GenerationCounts>,
+  availableRaces: AvailableRaceOption[] = buildAvailableRaceOptions([])
 ): Promise<CampaignGenerationResult> {
   const counts = resolveInitialGenerationCounts(countsInput?.regionCount, countsInput?.npcsPerRegion)
   let lastLenient: CampaignGenerationResult | undefined
 
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildGenerationPrompt(premisePrompt, counts), {
+    const raw = await provider.generate(buildGenerationPrompt(premisePrompt, counts, availableRaces), {
       maxTokens: GENERATION_MAX_TOKENS
     })
     const parsed = tryParseJson(raw)
@@ -88,14 +118,7 @@ export async function generateCampaignSeed(
       continue
     }
     lastLenient = normalized
-    if (!needsNpcTopUp(normalized, counts)) {
-      return normalized
-    }
-    const repaired = await fillCampaignNpcShortfall(provider, premisePrompt, normalized, counts)
-    if (repaired && isValidGenerationResult(repaired, counts)) {
-      return repaired
-    }
-    return normalized
+    return finalizeGenerationResult({ provider, premisePrompt, normalized, counts, availableRaces })
   }
 
   if (lastLenient) {
@@ -118,6 +141,7 @@ export async function generateAdditionalRegion(
   request: AdditionalRegionRequest
 ): Promise<AdditionalRegionResult> {
   const npcCount = resolveAdditionalRegionNpcCount(request.npcCount)
+  const availableRaces = request.availableRaces ?? buildAvailableRaceOptions([])
   const seedPrompt = request.seedPrompt
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(
@@ -125,7 +149,7 @@ export async function generateAdditionalRegion(
         seedPrompt,
         npcCount,
         history: request.history
-      }),
+      }, availableRaces),
       { maxTokens: ADDITIONAL_REGION_MAX_TOKENS }
     )
     const parsed = tryParseJson(raw)
@@ -156,6 +180,7 @@ export async function generateSingleNpc(
     regionDescription: string
     existingNpcNames: string[]
     seedPrompt: string
+    availableRaces: AvailableRaceOption[]
   }
 ): Promise<GeneratedSingleNpcResult> {
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {

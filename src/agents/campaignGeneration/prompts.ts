@@ -4,6 +4,7 @@ import { listRegionsByCampaign } from '../../db/repositories/regions'
 import { listRegionHistoryByRegion } from '../../db/repositories/regionHistory'
 import { listStoryThreadsByCampaign } from '../../db/repositories/storyThreads'
 import { listEventsByCampaign } from '../../db/repositories/events'
+import type { AvailableRaceOption } from '../../shared/raceSelection/types'
 import type { CampaignHistoryContext, GenerationCounts } from './types'
 
 // ---------------------------------------------------------------------------
@@ -33,6 +34,7 @@ const NPC_JSON_EXAMPLE = JSON.stringify({
     'Polite but brisk. She shares rumors if the party looks competent and does not make extra work for the dock guard.',
   regionName: 'Tidemark Reach',
   alignment: 'lawful_neutral',
+  race: 'human',
   temperament: 'cautious',
   canSpeak: true
 })
@@ -53,15 +55,29 @@ const REGION_PROSE_RULES = [
 
 const NPC_PROSE_RULES = [
   'Speaking NPCs (canSpeak true): backstory must be two short paragraphs — everyday life, ties to the region, and one personal stake or secret. Most are ordinary people; veteran or adventuring pasts are rare exceptions stated plainly.',
-  'Speaking NPCs must include alignment and temperament. disposition is one or two sentences on how they treat the player.',
-  'Beasts and mindless undead use canSpeak false and omit alignment and backstory.'
+  'Speaking NPCs must include alignment, temperament, and race (use an exact race key from the available-races list). disposition is one or two sentences on how they treat the player.',
+  'Beasts and mindless undead use canSpeak false and omit alignment, backstory, and race.'
 ].join('\n')
+
+function formatAvailableRaces(availableRaces: AvailableRaceOption[]): string {
+  if (availableRaces.length === 0) {
+    return 'Available races: (none supplied)'
+  }
+  return [
+    'Available races (speaking NPCs must pick race using an exact key from this list):',
+    ...availableRaces.map((race) => `- ${race.key}: ${race.label} — ${race.blurb}`)
+  ].join('\n')
+}
 
 // ---------------------------------------------------------------------------
 // Prompt builders
 // ---------------------------------------------------------------------------
 
-export function buildGenerationPrompt(premisePrompt: string, counts: GenerationCounts): string {
+export function buildGenerationPrompt(
+  premisePrompt: string,
+  counts: GenerationCounts,
+  availableRaces: AvailableRaceOption[]
+): string {
   const regionLine =
     counts.regionCount === 0
       ? 'Generate no starting regions (empty regions array), and one main story thread.'
@@ -73,7 +89,8 @@ export function buildGenerationPrompt(premisePrompt: string, counts: GenerationC
     REGION_PROSE_RULES,
     NPC_NAMING_RULES,
     NPC_PROSE_RULES,
-    'Each NPC must include: name, role, disposition, regionName matching a region name exactly, temperament (aggressive|cautious|curious|territorial|skittish|disciplined|cunning|mindless|neutral), and canSpeak (boolean).',
+    formatAvailableRaces(availableRaces),
+    'Each NPC must include: name, role, disposition, regionName matching a region name exactly, temperament (aggressive|cautious|curious|territorial|skittish|disciplined|cunning|mindless|neutral), canSpeak (boolean), and race (exact key) when canSpeak is true.',
     'Example region object:',
     REGION_JSON_EXAMPLE,
     'Example NPC object:',
@@ -106,7 +123,8 @@ function formatCampaignHistoryLines(history: CampaignHistoryContext | undefined)
 export function buildAdditionalRegionPrompt(
   campaignPremise: string,
   existingRegionNames: string[],
-  request: { seedPrompt: string; npcCount: number; history?: CampaignHistoryContext }
+  request: { seedPrompt: string; npcCount: number; history?: CampaignHistoryContext },
+  availableRaces: AvailableRaceOption[]
 ): string {
   const { seedPrompt, npcCount, history } = request
   const existing =
@@ -130,6 +148,7 @@ export function buildAdditionalRegionPrompt(
     REGION_PROSE_RULES,
     NPC_NAMING_RULES,
     NPC_PROSE_RULES,
+    formatAvailableRaces(availableRaces),
     'Example region object:',
     REGION_JSON_EXAMPLE,
     'Example NPC object:',
@@ -145,6 +164,7 @@ export function buildSingleNpcPrompt(input: {
   regionDescription: string
   existingNpcNames: string[]
   seedPrompt: string
+  availableRaces: AvailableRaceOption[]
 }): string {
   const existingNpcs =
     input.existingNpcNames.length > 0
@@ -161,6 +181,7 @@ export function buildSingleNpcPrompt(input: {
     `Generate exactly one NPC tied to region "${input.regionName}" by exact regionName.`,
     NPC_NAMING_RULES,
     NPC_PROSE_RULES,
+    formatAvailableRaces(input.availableRaces),
     'Example NPC object:',
     NPC_JSON_EXAMPLE,
     'Respond ONLY with a single JSON object:',

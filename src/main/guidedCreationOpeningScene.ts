@@ -49,11 +49,18 @@ export function persistOpeningSceneTurn(
   }
 }
 
-export function buildOpeningSceneIdentity(fields: CharacterGuidedCreationFields) {
+import type { RaceLore } from '../shared/raceSelection/types'
+
+export function buildOpeningSceneIdentity(
+  fields: CharacterGuidedCreationFields,
+  raceContext: { raceName: string | null; raceLore: RaceLore | null }
+) {
   return {
     identityWho: fields.identityWho,
     identityWhy: fields.identityWhy,
     identityWhere: fields.identityWhere,
-    identityWhat: fields.identityWhat
+    identityWhat: fields.identityWhat,
+    raceName: raceContext.raceName,
+    raceLore: raceContext.raceLore
   }
 }

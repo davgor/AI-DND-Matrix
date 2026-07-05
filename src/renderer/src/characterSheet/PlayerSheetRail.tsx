@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { Character } from '../../../db/repositories/characters'
+import { resolveRaceDisplayLabel } from '../../../shared/raceSelection/resolveLabel'
+import { CharacterSheetBody } from './CharacterSheetBody'
 import {
   getPlayerSheetCollapsed,
   setPlayerSheetCollapsed
 } from './playerSheetPreferences'
-import { CharacterSheetBody } from './CharacterSheetBody'
 import './playerSheetRail.css'
 
 export interface PlayerSheetRailProps {
@@ -17,14 +18,20 @@ export interface PlayerSheetRailProps {
 
 export function PlayerSheetRail(props: PlayerSheetRailProps): JSX.Element {
   const [character, setCharacter] = useState<Character | null>(null)
+  const [raceLabel, setRaceLabel] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    window.characters.listByCampaign(props.campaignId).then((characters) => {
+    void Promise.all([
+      window.characters.listByCampaign(props.campaignId),
+      window.race.getCampaignRaces(props.campaignId)
+    ]).then(([characters, campaignRaces]) => {
       if (cancelled) {
         return
       }
-      setCharacter(characters.find((entry) => entry.id === props.characterId) ?? null)
+      const match = characters.find((entry) => entry.id === props.characterId) ?? null
+      setCharacter(match)
+      setRaceLabel(resolveRaceDisplayLabel(match?.raceKey, campaignRaces))
     })
     return () => {
       cancelled = true
@@ -47,7 +54,7 @@ export function PlayerSheetRail(props: PlayerSheetRailProps): JSX.Element {
       </button>
       {!props.collapsed ? (
         character ? (
-          <CharacterSheetBody character={character} compact={false} />
+          <CharacterSheetBody character={character} compact={false} raceLabel={raceLabel} />
         ) : (
           <p className="character-sheet-empty">No character created yet.</p>
         )

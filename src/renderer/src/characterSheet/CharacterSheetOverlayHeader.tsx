@@ -3,6 +3,7 @@ import { CurrencyChip } from './CurrencyChip'
 
 export function CharacterSheetOverlayHeader(props: {
   character: Character
+  raceLabel?: string | null
   onClose: () => void
 }): JSX.Element {
   return (
@@ -12,6 +13,7 @@ export function CharacterSheetOverlayHeader(props: {
         <h2 id="character-sheet-overlay-title">{props.character.name}</h2>
         <p className="character-sheet-overlay-subtitle">
           {props.character.characterClass} — Level {props.character.level}
+          {props.raceLabel ? ` · ${props.raceLabel}` : ''}
         </p>
       </div>
       <div className="character-sheet-overlay-header-actions">

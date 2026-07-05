@@ -4,6 +4,7 @@ import { CampaignReview } from '../campaignReview/CampaignReview'
 import { CharacterSetup } from '../characterSetup/CharacterSetup'
 import { resolveCharacterSetupDraft } from '../characterSetup/characterSetupDraft'
 import { EquipmentSelection } from '../equipmentSelection/EquipmentSelection'
+import { RaceSelection } from '../raceSelection/RaceSelection'
 import { GuidedIdentityStage, GuidedOpeningSceneStage } from '../guidedCreation/GuidedCreationStages'
 import { MainPanel } from '../mainPanel/MainPanel'
 import type { CampaignDetail } from '../../../main/campaignIpc'
@@ -53,6 +54,22 @@ function CharacterSetupStage(props: OnboardingStageContentProps): JSX.Element {
 
 function guidedCreationPlayer(characters: CampaignDetail['characters']): ReturnType<typeof findGuidedCreationPlayer> {
   return findGuidedCreationPlayer(characters)
+}
+
+function RaceSelectionStage(props: OnboardingStageContentProps): JSX.Element {
+  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  if (!props.detail?.campaign || !player) {
+    return <MainPanel detail={props.detail} />
+  }
+  return (
+    <RaceSelection
+      campaignId={props.detail.campaign.id}
+      characterId={player.id}
+      characterName={player.name}
+      onComplete={props.onRaceSelectionComplete}
+      onBack={props.onRaceSelectionBack}
+    />
+  )
 }
 
 function EquipmentSelectionStage(props: OnboardingStageContentProps): JSX.Element {
@@ -107,6 +124,8 @@ export function renderOnboardingStage(stage: OnboardingStage, props: OnboardingS
       return <ReviewStage {...props} />
     case 'characterSetup':
       return <CharacterSetupStage {...props} />
+    case 'raceSelection':
+      return <RaceSelectionStage {...props} />
     case 'equipmentSelection':
       return <EquipmentSelectionStage {...props} />
     case 'guidedIdentity':

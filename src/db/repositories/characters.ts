@@ -37,6 +37,7 @@ export interface Character extends CharacterGuidedCreationFields {
   deathCause: DeathCause | string | null
   obituary: CharacterObituary | null
   ownerPlayerCharacterId: string | null
+  raceKey: string | null
 }
 
 export interface CreateCharacterInput {
@@ -56,6 +57,7 @@ export interface CreateCharacterInput {
   alignment?: Alignment | null
   ownerPlayerCharacterId?: string | null
   guidedCreationPhase?: GuidedCreationPhase
+  raceKey?: string | null
 }
 
 export interface UpdateCharacterInput {
@@ -94,6 +96,7 @@ interface CharacterRow {
   death_cause?: string | null
   obituary_json?: string | null
   owner_player_character_id?: string | null
+  race_key?: string | null
 }
 
 function parseObituaryJson(raw: string | null | undefined): CharacterObituary | null {
@@ -135,12 +138,13 @@ function rowToCharacter(row: CharacterRow): Character {
     diedAt: row.died_at ?? null,
     deathCause: row.death_cause ?? null,
     obituary: parseObituaryJson(row.obituary_json),
-    ownerPlayerCharacterId: row.owner_player_character_id ?? null
+    ownerPlayerCharacterId: row.owner_player_character_id ?? null,
+    raceKey: row.race_key ?? null
   }
 }
 
 function defaultGuidedPhase(kind: CharacterKind): GuidedCreationPhase {
-  return kind === 'player' ? 'equipment' : 'none'
+  return kind === 'player' ? 'race' : 'none'
 }
 
 function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
@@ -181,7 +185,8 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     diedAt: null,
     deathCause: null,
     obituary: null,
-    ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null
+    ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null,
+    raceKey: input.raceKey ?? null
   }
 }
 
@@ -203,9 +208,9 @@ function insertCharacterRow(
 ): void {
   db.prepare(
     `INSERT INTO characters
-       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment, owner_player_character_id)
+       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment, owner_player_character_id, race_key)
      VALUES
-       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment, @ownerPlayerCharacterId)`
+       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment, @ownerPlayerCharacterId, @raceKey)`
   ).run({
     id,
     campaignId: input.campaignId,
@@ -223,7 +228,8 @@ function insertCharacterRow(
     sheetBackgroundPath: values.sheetBackgroundPath,
     guidedCreationPhase: input.guidedCreationPhase ?? defaultGuidedPhase(input.kind),
     alignment: input.alignment ?? null,
-    ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null
+    ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null,
+    raceKey: input.raceKey ?? null
   })
 }
 

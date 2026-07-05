@@ -46,6 +46,8 @@ import type {
 } from '../shared/settings/types'
 import type { SettingsIntroState } from '../shared/settingsIntro/types'
 import type { AutoUpdateState } from '../shared/autoUpdate/types'
+import type { CampaignRace, RaceApplyInput, RaceApplyResult, RacePreviewLoreResult } from '../shared/raceSelection/types'
+import type { RaceRosterGroup, PreviewLoreInput } from '../main/raceIpc'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -252,6 +254,15 @@ const startingLoadout = {
     ipcRenderer.invoke('startingLoadout:apply', input)
 }
 
+const race = {
+  getRoster: (): Promise<RaceRosterGroup[]> => ipcRenderer.invoke('race:getRoster'),
+  getCampaignRaces: (campaignId: string): Promise<CampaignRace[]> =>
+    ipcRenderer.invoke('race:getCampaignRaces', campaignId),
+  previewLore: (input: PreviewLoreInput): Promise<RacePreviewLoreResult> =>
+    ipcRenderer.invoke('race:previewLore', input),
+  apply: (input: RaceApplyInput): Promise<RaceApplyResult> => ipcRenderer.invoke('race:apply', input)
+}
+
 const guidedCreation = {
   getState: (characterId: string): Promise<GuidedCreationState | undefined> =>
     ipcRenderer.invoke('guidedCreation:getState', characterId),
@@ -302,6 +313,7 @@ contextBridge.exposeInMainWorld('progression', progression)
 contextBridge.exposeInMainWorld('startup', startup)
 contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
 contextBridge.exposeInMainWorld('startingLoadout', startingLoadout)
+contextBridge.exposeInMainWorld('race', race)
 contextBridge.exposeInMainWorld('settings', settings)
 contextBridge.exposeInMainWorld('settingsIntro', settingsIntro)
 contextBridge.exposeInMainWorld('autoUpdate', autoUpdate)
@@ -319,6 +331,7 @@ export type ProgressionApi = typeof progression
 export type StartupApi = typeof startup
 export type GuidedCreationApi = typeof guidedCreation
 export type StartingLoadoutApi = typeof startingLoadout
+export type RaceApi = typeof race
 export type SettingsApi = typeof settings
 export type SettingsIntroApi = typeof settingsIntro
 export type AutoUpdateApi = typeof autoUpdate

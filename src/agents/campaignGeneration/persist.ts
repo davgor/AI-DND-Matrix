@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import { resolveOrRealizeCampaignRace } from '../raceLore'
 import { createCampaign, type Campaign } from '../../db/repositories/campaigns'
 import { createNpcWithCombatReview } from '../../db/repositories/npcCombatHydration'
 import { createRegion } from '../../db/repositories/regions'
@@ -18,6 +19,20 @@ import type {
   PersistRegionWithNpcsInput
 } from './types'
 import { CampaignGenerationSchemaError } from './types'
+
+async function resolveNpcRaceIfSpeaking(
+  db: Database.Database,
+  provider: Provider,
+  campaignId: string,
+  generatedNpc: GeneratedNpc
+): Promise<void> {
+  if (generatedNpc.canSpeak && generatedNpc.raceKey) {
+    await resolveOrRealizeCampaignRace(db, provider, {
+      campaignId,
+      raceKey: generatedNpc.raceKey
+    })
+  }
+}
 
 export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): Promise<void> {
   const { db, provider, campaignId, generatedRegion, generatedNpcs } = input
@@ -53,6 +68,7 @@ export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): 
         `Generated NPC "${generatedNpc.name}" references wrong region "${generatedNpc.regionName}"`
       )
     }
+    await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
     await createNpcWithCombatReview(db, provider, {
       campaignId,
       regionId: region.id,
@@ -62,7 +78,8 @@ export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): 
       alignment: generatedNpc.alignment ?? null,
       temperament: generatedNpc.temperament,
       canSpeak: generatedNpc.canSpeak,
-      backstory: generatedNpc.backstory ?? ''
+      backstory: generatedNpc.backstory ?? '',
+      raceKey: generatedNpc.raceKey ?? null
     })
   }
 }
@@ -119,6 +136,7 @@ async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput
         `Generated NPC "${generatedNpc.name}" references unknown region "${generatedNpc.regionName}"`
       )
     }
+    await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
     await createNpcWithCombatReview(db, provider, {
       campaignId,
       regionId,
@@ -128,7 +146,8 @@ async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput
       alignment: generatedNpc.alignment ?? null,
       temperament: generatedNpc.temperament,
       canSpeak: generatedNpc.canSpeak,
-      backstory: generatedNpc.backstory ?? ''
+      backstory: generatedNpc.backstory ?? '',
+      raceKey: generatedNpc.raceKey ?? null
     })
   }
 }

@@ -137,7 +137,7 @@ function normalizeGeneratedRegion(value: unknown): GeneratedRegion | undefined {
 
 function readNpcBehaviorFields(
   record: Record<string, unknown>
-): Pick<GeneratedNpc, 'temperament' | 'canSpeak' | 'alignment' | 'backstory'> | undefined {
+): Pick<GeneratedNpc, 'temperament' | 'canSpeak' | 'alignment' | 'backstory' | 'raceKey'> | undefined {
   const temperament = parseTemperament(record['temperament'])
   const canSpeak = readCanSpeak(record['canSpeak'] ?? record['can_speak'])
   if (!temperament || canSpeak === undefined) {
@@ -146,7 +146,10 @@ function readNpcBehaviorFields(
   if (canSpeak) {
     const alignment = parseAlignment(record['alignment'])
     const backstory = readString(record, 'backstory')
-    return alignment && backstory ? { temperament, canSpeak, alignment, backstory } : undefined
+    const raceKey = readString(record, 'race', 'raceKey', 'race_key')
+    return alignment && backstory && raceKey
+      ? { temperament, canSpeak, alignment, backstory, raceKey }
+      : undefined
   }
   return { temperament, canSpeak }
 }
@@ -396,6 +399,11 @@ function hasValidNpcAlignment(n: Record<string, unknown>): boolean {
   return canSpeak === false || parseAlignment(n['alignment']) !== undefined
 }
 
+export function hasValidNpcRace(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readString(n, 'race', 'raceKey', 'race_key') !== undefined
+}
+
 function hasValidNpcTemperament(n: Record<string, unknown>): boolean {
   return parseTemperament(n['temperament']) !== undefined
 }
@@ -419,7 +427,8 @@ function isGeneratedNpc(value: unknown): value is GeneratedNpc {
     hasValidNpcTemperament(n) &&
     readCanSpeak(n['canSpeak'] ?? n['can_speak']) !== undefined &&
     hasValidNpcBackstory(n) &&
-    hasValidNpcAlignment(n)
+    hasValidNpcAlignment(n) &&
+    hasValidNpcRace(n)
   )
 }
 

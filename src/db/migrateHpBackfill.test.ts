@@ -16,6 +16,8 @@ function createPreHpMigrationDb(): Database.Database {
     migrations.filter((migration) => migration.version <= 22)
   )
   runMigrations(db, migrations.filter((migration) => migration.version === 26))
+  runMigrations(db, migrations.filter((migration) => migration.version === 29))
+  runMigrations(db, migrations.filter((migration) => migration.version === 30))
   return db
 }
 

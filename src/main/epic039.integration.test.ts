@@ -4,7 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses } from '../agents/campaignGeneration/fixtures'
+import { npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 import { generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 import { canContinueCampaignReview, getCampaignReviewContinueBlockers } from '../shared/campaignReview/campaignReviewValidation'
@@ -20,7 +20,7 @@ describe('epic 039 create handoff', () => {
       npcs: makeNpcs('Lonely Reach', 'Lone'),
       storyThread: { title: 'Solo Arc', state: 'starting', summary: 'A small start.' }
     })
-    const provider = createScriptedProvider([payload, ...npcReviewResponses(1)])
+    const provider = createScriptedProvider([payload, RACE_LORE_RESPONSE, ...npcReviewResponses(1)])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'epic-039-create',
       premisePrompt: 'A sparse frontier',
@@ -64,7 +64,7 @@ describe('epic 039 review gates', () => {
       region: makeRegion('Mistfen Crossing'),
       npcs: makeNpcs('Mistfen Crossing', 'Mist')
     })
-    const regionProvider = createScriptedProvider([regionPayload, ...npcReviewResponses(1)])
+    const regionProvider = createScriptedProvider([regionPayload, RACE_LORE_RESPONSE, ...npcReviewResponses(1)])
     const afterRegion = await generateRegionForCampaign(db, regionProvider, {
       campaignId: campaign.id,
       seedPrompt: 'A foggy crossing',
@@ -110,7 +110,7 @@ describe('epic 039 play gate', () => {
     expect(getCampaignPlayBlockers(blocked)).toHaveLength(1)
     expect(canEnterCampaignPlay(blocked)).toBe(false)
 
-    const provider = createScriptedProvider([SINGLE_NPC_PAYLOAD, '{"upgrade":false}'])
+    const provider = createScriptedProvider([SINGLE_NPC_PAYLOAD, RACE_LORE_RESPONSE, '{"upgrade":false}'])
     const afterNpc = await generateNpcForCampaign(db, provider, {
       campaignId: campaign.id,
       regionId: regionB.id,

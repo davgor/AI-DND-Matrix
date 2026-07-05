@@ -19,6 +19,7 @@ export function PlaySheetModals(props: {
     <>
       <CharacterSheetOverlay
         character={props.character}
+        campaignId={props.campaignId}
         isOpen={props.modals.sheetOpen}
         refreshToken={props.refreshToken}
         onClose={props.modals.closeSheet}

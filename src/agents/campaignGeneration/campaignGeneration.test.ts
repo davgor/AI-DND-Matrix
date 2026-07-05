@@ -7,6 +7,7 @@ import { listRegionHistoryByRegion } from '../../db/repositories/regionHistory'
 import { listStoryThreadsByCampaign } from '../../db/repositories/storyThreads'
 import { listQuestHooksByRegion } from '../../db/repositories/worldFacts'
 import { createScriptedProvider } from '../providers/mockHarness'
+import { buildAvailableRaceOptions } from '../raceLore'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
@@ -16,6 +17,7 @@ import {
   generateAndPersistCampaign,
   generateCampaignSeed,
   generateSingleNpc,
+  hasValidNpcRace,
   normalizeAdditionalRegion,
   normalizeCampaignGeneration,
   persistRegionWithNpcs,
@@ -29,6 +31,7 @@ import {
   makeNpcs,
   makeRegion,
   npcReviewResponses,
+  RACE_LORE_RESPONSE,
   PRE_EXPANSION_CAMPAIGN_PAYLOAD,
   SETUP_INPUT,
   TRIM_NPCS_PAYLOAD,
@@ -165,24 +168,27 @@ describe('generateCampaignSeed (007.1, 039.4)', () => {
 
 describe('buildGenerationPrompt', () => {
   it('asks for exact counts from the request', () => {
-    const prompt = buildGenerationPrompt('A marsh', { regionCount: 1, npcsPerRegion: 1 })
+    const availableRaces = buildAvailableRaceOptions([])
+    const prompt = buildGenerationPrompt('A marsh', { regionCount: 1, npcsPerRegion: 1 }, availableRaces)
     expect(prompt).toContain('exactly 1 starting region')
     expect(prompt).toContain('exactly 1 key NPC')
+    expect(prompt).toContain('human')
   })
 
   it('allows zero regions in the prompt', () => {
-    const prompt = buildGenerationPrompt('A marsh', { regionCount: 0, npcsPerRegion: 3 })
+    const prompt = buildGenerationPrompt('A marsh', { regionCount: 0, npcsPerRegion: 3 }, buildAvailableRaceOptions([]))
     expect(prompt).toContain('no starting regions')
   })
 })
 
 describe('buildAdditionalRegionPrompt', () => {
-  it('includes the requested NPC count', () => {
+  it('includes the requested NPC count and available races', () => {
     const prompt = buildAdditionalRegionPrompt('Premise', ['Oakhollow'], {
       seedPrompt: 'A foggy marsh',
       npcCount: 0
-    })
+    }, buildAvailableRaceOptions([]))
     expect(prompt).toContain('no NPCs')
+    expect(prompt).toContain('Available races')
   })
 })
 
@@ -283,7 +289,8 @@ describe('generateSingleNpc', () => {
         regionName: 'Oakhollow',
         temperament: 'cautious',
         canSpeak: true,
-        alignment: 'true_neutral'
+        alignment: 'true_neutral',
+        race: 'human'
       }
     })
     const provider = createScriptedProvider([payload])
@@ -292,17 +299,27 @@ describe('generateSingleNpc', () => {
       regionName: 'Oakhollow',
       regionDescription: 'A quiet logging village.',
       existingNpcNames: ['Mira'],
-      seedPrompt: 'A hermit in the woods'
+      seedPrompt: 'A hermit in the woods',
+      availableRaces: buildAvailableRaceOptions([])
     })
     expect(result.npc.name).toBe('Rook Vale')
     expect(result.npc.regionName).toBe('Oakhollow')
+    expect(result.npc.raceKey).toBe('human')
+  })
+})
+
+describe('hasValidNpcRace', () => {
+  it('requires race for speaking NPCs and omits it for non-speaking NPCs', () => {
+    expect(hasValidNpcRace({ canSpeak: true, race: 'human' })).toBe(true)
+    expect(hasValidNpcRace({ canSpeak: true })).toBe(false)
+    expect(hasValidNpcRace({ canSpeak: false })).toBe(true)
   })
 })
 
 describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 npcs/threads)', () => {
   it('writes regions (with history and quest hooks), NPCs, and the story thread', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION, ...npcReviewResponses(6)])
+    const provider = createScriptedProvider([VALID_GENERATION, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
 
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 
@@ -328,14 +345,14 @@ describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 
 describe('persistRegionWithNpcs', () => {
   it('appends a region with history, quests, and three NPCs', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION, ...npcReviewResponses(6)])
+    const provider = createScriptedProvider([VALID_GENERATION, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
     const additional = JSON.parse(ADDITIONAL_REGION) as {
       region: GeneratedRegion
       npcs: GeneratedNpc[]
     }
     const reviewProvider = createScriptedProvider(
-      additional.npcs.map(() => '{"upgrade":false}')
+      [RACE_LORE_RESPONSE, ...additional.npcs.map(() => '{"upgrade":false}')]
     )
     await persistRegionWithNpcs({
       db,
@@ -357,7 +374,7 @@ describe('persistRegionWithNpcs', () => {
 describe('generateAndPersistCampaign atomicity (007.4, persistence half)', () => {
   it('leaves no partial rows from a malformed attempt — exactly one complete campaign after malformed-then-valid', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider(['not json', VALID_GENERATION, ...npcReviewResponses(6)])
+    const provider = createScriptedProvider(['not json', VALID_GENERATION, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
 
     await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 

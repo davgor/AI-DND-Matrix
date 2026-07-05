@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses } from '../agents/campaignGeneration/fixtures'
+import { npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
 import {
   generateCampaignFromPrompt,
   getCampaignDetail,
@@ -27,7 +27,8 @@ const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: stri
       regionName: name,
       temperament: 'neutral',
       canSpeak: true,
-      alignment: 'true_neutral'
+      alignment: 'true_neutral',
+      race: 'human'
     },
     {
       name: `${prefix} Two`,
@@ -37,7 +38,8 @@ const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: stri
       regionName: name,
       temperament: 'curious',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      race: 'human'
     },
     {
       name: npcName,
@@ -47,7 +49,8 @@ const VALID_GENERATION = (regionName: string, npcName: string, threadTitle: stri
       regionName: name,
       temperament: 'cautious',
       canSpeak: true,
-      alignment: 'lawful_good'
+      alignment: 'lawful_good',
+      race: 'human'
     }
   ]
   return JSON.stringify({
@@ -62,6 +65,7 @@ describe('generateCampaignFromPrompt + selectCampaign + listCampaignsForSidebar'
     const db = createTestDb()
     const provider = createScriptedProvider([
       VALID_GENERATION('Oakhollow', 'Mira', 'Main Arc'),
+      RACE_LORE_RESPONSE,
       ...npcReviewResponses(6)
     ])
 
@@ -82,6 +86,7 @@ describe('generateCampaignFromPrompt + selectCampaign + listCampaignsForSidebar'
     const db = createTestDb()
     const provider = createScriptedProvider([
       VALID_GENERATION('Oakhollow', 'Mira', 'Main Arc'),
+      RACE_LORE_RESPONSE,
       ...npcReviewResponses(6)
     ])
     const generated = await generateCampaignFromPrompt(db, provider, 'A flooded kingdom')
@@ -96,10 +101,12 @@ describe('multi-campaign isolation (008.5)', () => {
     const db = createTestDb()
     const providerA = createScriptedProvider([
       VALID_GENERATION('Oakhollow', 'Mira', 'The Sunken Crown'),
+      RACE_LORE_RESPONSE,
       ...npcReviewResponses(6)
     ])
     const providerB = createScriptedProvider([
       VALID_GENERATION('Frosthaven', 'Borin', 'The Frozen Pact'),
+      RACE_LORE_RESPONSE,
       ...npcReviewResponses(6)
     ])
 

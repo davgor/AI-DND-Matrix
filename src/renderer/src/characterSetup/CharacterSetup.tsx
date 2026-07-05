@@ -1,6 +1,7 @@
 import type { Archetype } from '../../../engine/hp'
 import { AbilityScoreAssignment } from './AbilityScoreAssignment'
 import { CharacterSetupCoreFields } from './CharacterSetupFields'
+import { PartyMemberSetup } from './PartyMemberSetup'
 import type { CharacterSetupDraft } from './characterSetupDraft'
 import { useCharacterSetup } from './useCharacterSetup'
 import { ProceedButton } from '../onboarding/ProceedButton'
@@ -32,6 +33,12 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
         onMethodChange={setup.setAbilityScoreMethod}
       />
 
+      <PartyMemberSetup
+        campaignId={props.campaignId}
+        members={setup.partyMembers}
+        onChange={setup.setPartyMembers}
+      />
+
       <div className="portrait-upload">
         <button type="button" onClick={() => void setup.selectPortrait()}>
           Select Portrait
@@ -46,7 +53,7 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
       )}
 
       <ProceedButton disabled={setup.submitting} onClick={() => void setup.handleSubmit()}>
-        {setup.submitting ? 'Creating...' : 'Choose your gear'}
+        {setup.submitting ? 'Creating...' : 'Choose your race'}
       </ProceedButton>
     </div>
   )

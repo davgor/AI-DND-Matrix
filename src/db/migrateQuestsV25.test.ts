@@ -8,11 +8,13 @@ import { createRegion } from './repositories/regions'
 import { createStoryThread } from './repositories/storyThreads'
 import { createWorldFact } from './repositories/worldFacts'
 import { getMainQuestByCampaign, listCharacterQuests } from './repositories/quests'
+import { ensureLegacyRaceKeyColumns } from './testUtils'
 
 function openLegacyDbAtVersion23(): Database.Database {
   const db = new Database(':memory:')
   const legacy = migrations.filter((migration) => migration.version <= 23)
   runMigrations(db, legacy)
+  ensureLegacyRaceKeyColumns(db)
   return db
 }
 

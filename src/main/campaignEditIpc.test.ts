@@ -4,7 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses } from '../agents/campaignGeneration/fixtures'
+import { npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
 import { editNpcDisposition, editNpcTraits, editRegionDescription, generateNpcForCampaign, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
 
 function makeRegion(name: string) {
@@ -27,7 +27,8 @@ function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'neutral',
       canSpeak: true,
-      alignment: 'true_neutral'
+      alignment: 'true_neutral',
+      race: 'human'
     },
     {
       name: `${prefix} Two`,
@@ -37,7 +38,8 @@ function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'curious',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      race: 'human'
     },
     {
       name: `${prefix} Three`,
@@ -47,7 +49,8 @@ function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'disciplined',
       canSpeak: true,
-      alignment: 'lawful_neutral'
+      alignment: 'lawful_neutral',
+      race: 'human'
     }
   ]
 }
@@ -121,6 +124,7 @@ describe('editNpcTraits', () => {
       disposition: 'guarded but fair',
       temperament: 'cautious',
       alignment: 'lawful_neutral',
+      race: 'human',
       canSpeak: false
     })
 
@@ -135,7 +139,7 @@ describe('editNpcTraits', () => {
 describe('generateRegionForCampaign', () => {
   it('adds a generated region with extras and three NPCs by default', async () => {
     const { db, campaign } = seedCampaignWithRegionAndNpc()
-    const provider = createScriptedProvider([ADDITIONAL_REGION, ...npcReviewResponses(3)])
+    const provider = createScriptedProvider([ADDITIONAL_REGION, RACE_LORE_RESPONSE, ...npcReviewResponses(3)])
 
     const detail = await generateRegionForCampaign(db, provider, {
       campaignId: campaign.id,
@@ -183,10 +187,11 @@ describe('generateNpcForCampaign', () => {
         regionName: region.name,
         temperament: 'cautious',
         canSpeak: true,
-        alignment: 'true_neutral'
+        alignment: 'true_neutral',
+        race: 'human'
       }
     })
-    const provider = createScriptedProvider([payload, '{"upgrade":false}'])
+    const provider = createScriptedProvider([payload, RACE_LORE_RESPONSE, '{"upgrade":false}'])
 
     const detail = await generateNpcForCampaign(db, provider, {
       campaignId: campaign.id,

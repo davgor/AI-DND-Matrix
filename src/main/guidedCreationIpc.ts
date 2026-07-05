@@ -24,7 +24,7 @@ import type {
 } from '../shared/guidedCreation/types'
 import { buildAgentProvider } from './campaignIpc'
 import { getDb } from './db'
-import { kickoffIdentityInterviewIfNeeded, persistIdentityInterviewTurn } from './guidedCreationIdentity'
+import { kickoffIdentityInterviewIfNeeded, persistIdentityInterviewTurn, resolveCharacterRaceContext } from './guidedCreationIdentity'
 import { buildOpeningSceneIdentity, persistOpeningSceneTurn } from './guidedCreationOpeningScene'
 
 function failure(reason: GuidedCreationFailureReason): GuidedCreationSendMessageResult {
@@ -81,6 +81,7 @@ async function handleIdentityMessage(
     role: row.role,
     content: row.content
   }))
+  const raceContext = resolveCharacterRaceContext(db, input.campaignId, character.raceKey)
 
   let agentResult
   try {
@@ -92,6 +93,8 @@ async function handleIdentityMessage(
         characterClass: character.characterClass,
         abilityScores: abilityScoresFromCharacter(character.stats),
         alignment: character.alignment,
+        raceName: raceContext.raceName,
+        raceLore: raceContext.raceLore,
         transcript,
         currentFoundations
       },
@@ -146,7 +149,7 @@ async function handleOpeningSceneMessage(
       provider,
       {
         campaignPremise: campaign.premisePrompt,
-        identity: buildOpeningSceneIdentity(fields),
+        identity: buildOpeningSceneIdentity(fields, resolveCharacterRaceContext(db, input.campaignId, character.raceKey)),
         regions: regions.map((region) => ({ name: region.name, description: region.description })),
         npcs: npcs.map((npc) => ({ name: npc.name, role: npc.role, disposition: npc.disposition })),
         storyThread: storyThread

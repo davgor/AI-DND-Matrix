@@ -7,12 +7,15 @@ import type { AbilityScoreMethod } from '../shared/characterSetup/abilityScoreMe
 import { computeAC } from '../engine/armorClass'
 import { computeMaxHpFromHitDice, hashStringSeed, rollInitialMaxHp, type Archetype } from '../engine/hp'
 import { inferArchetypeFromClassOrRole } from '../engine/archetypeInference'
+import { resolveOrRealizeCampaignRace } from '../agents/raceLore'
+import type { Provider } from '../agents/providers/types'
 import {
   createCharacter,
   getCharacterById,
   listCharactersByCampaign,
   type Character
 } from '../db/repositories/characters'
+import { buildAgentProvider } from './campaignIpc'
 import { getDb } from './db'
 
 const STARTING_CURRENCY = 100
@@ -61,6 +64,7 @@ export interface AiPartyMemberInput {
   name: string
   characterClass: string
   personality: string
+  raceKey: string
 }
 
 export interface CreatePartyMembersInput {
@@ -73,36 +77,67 @@ export interface CreatePartyMembersInput {
   ownerPlayerCharacterId?: string | null
 }
 
-export function createPartyMembers(
+function createOnePartyMember(
   db: Database.Database,
+  input: CreatePartyMembersInput,
+  member: AiPartyMemberInput,
+  owner: string | null
+): Character {
+  const rng = createSeededRandom(hashStringSeed(`${input.campaignId}:${member.name}`))
+  const abilityScores = rollForStats(rng)
+  const archetype = inferArchetypeFromClassOrRole(member.characterClass)
+  const { maxHp, hitDieRolls } = rollInitialMaxHp(archetype, abilityScores.body, rng)
+  const ac = computeAC(abilityScores.agility, 'none')
+
+  return createCharacter(db, {
+    campaignId: input.campaignId,
+    name: member.name,
+    characterClass: member.characterClass,
+    kind: 'ai_party_member',
+    ownerPlayerCharacterId: owner,
+    level: STARTING_LEVEL,
+    hp: maxHp,
+    raceKey: member.raceKey,
+    stats: {
+      personality: member.personality,
+      abilityScores,
+      ac,
+      maxHp,
+      hitDieRolls
+    }
+  })
+}
+
+async function realizeDistinctRaceKeys(
+  db: Database.Database,
+  provider: Provider,
+  campaignId: string,
+  raceKeys: string[]
+): Promise<void> {
+  const seen = new Set<string>()
+  for (const raceKey of raceKeys) {
+    if (seen.has(raceKey)) {
+      continue
+    }
+    await resolveOrRealizeCampaignRace(db, provider, { campaignId, raceKey })
+    seen.add(raceKey)
+  }
+}
+
+export async function createPartyMembers(
+  db: Database.Database,
+  provider: Provider,
   input: CreatePartyMembersInput
-): Character[] {
+): Promise<Character[]> {
   const owner =
     input.ownerPlayerCharacterId === undefined ? null : input.ownerPlayerCharacterId
-  return input.members.map((member) => {
-    const rng = createSeededRandom(hashStringSeed(`${input.campaignId}:${member.name}`))
-    const abilityScores = rollForStats(rng)
-    const archetype = inferArchetypeFromClassOrRole(member.characterClass)
-    const { maxHp, hitDieRolls } = rollInitialMaxHp(archetype, abilityScores.body, rng)
-    const ac = computeAC(abilityScores.agility, 'none')
-
-    return createCharacter(db, {
-      campaignId: input.campaignId,
-      name: member.name,
-      characterClass: member.characterClass,
-      kind: 'ai_party_member',
-      ownerPlayerCharacterId: owner,
-      level: STARTING_LEVEL,
-      hp: maxHp,
-      stats: {
-        personality: member.personality,
-        abilityScores,
-        ac,
-        maxHp,
-        hitDieRolls
-      }
-    })
-  })
+  await realizeDistinctRaceKeys(
+    db,
+    provider,
+    input.campaignId,
+    input.members.map((member) => member.raceKey)
+  )
+  return input.members.map((member) => createOnePartyMember(db, input, member, owner))
 }
 
 export interface UpdatePlayerCharacterSetupInput {
@@ -121,7 +156,7 @@ export function updatePlayerCharacterSetup(
   input: UpdatePlayerCharacterSetupInput
 ): Character {
   const character = getCharacterById(db, input.characterId)
-  if (!character || character.kind !== 'player' || character.guidedCreationPhase !== 'equipment') {
+  if (!character || character.kind !== 'player' || !['race', 'equipment'].includes(character.guidedCreationPhase)) {
     throw new Error('invalid_setup_update')
   }
 
@@ -185,22 +220,30 @@ function resolveSetupPartyOwner(existingMembers: Character[], playerCharacterId:
   return null
 }
 
-export function replaceSetupPartyMembers(
+export async function replaceSetupPartyMembers(
   db: Database.Database,
+  provider: Provider,
   input: ReplaceSetupPartyMembersInput
-): Character[] {
+): Promise<Character[]> {
   const existing = listSetupPartyMembers(db, input.campaignId, input.playerCharacterId)
   const owner = resolveSetupPartyOwner(existing, input.playerCharacterId)
+  await realizeDistinctRaceKeys(
+    db,
+    provider,
+    input.campaignId,
+    input.members.map((member) => member.raceKey)
+  )
 
   return db.transaction(() => {
     for (const member of existing) {
       db.prepare('DELETE FROM characters WHERE id = ?').run(member.id)
     }
-    return createPartyMembers(db, {
+    const createInput: CreatePartyMembersInput = {
       campaignId: input.campaignId,
       ownerPlayerCharacterId: owner,
       members: input.members
-    })
+    }
+    return input.members.map((member) => createOnePartyMember(db, createInput, member, owner))
   })()
 }
 
@@ -208,14 +251,14 @@ export function registerCharacterCreationHandlers(): void {
   ipcMain.handle('characters:createPlayer', (_event, input: CreatePlayerCharacterInput) =>
     createPlayerCharacter(getDb(), input)
   )
-  ipcMain.handle('characters:createPartyMembers', (_event, input: CreatePartyMembersInput) =>
-    createPartyMembers(getDb(), input)
+  ipcMain.handle('characters:createPartyMembers', async (_event, input: CreatePartyMembersInput) =>
+    createPartyMembers(getDb(), buildAgentProvider(), input)
   )
   ipcMain.handle('characters:updatePlayerSetup', (_event, input: UpdatePlayerCharacterSetupInput) =>
     updatePlayerCharacterSetup(getDb(), input)
   )
-  ipcMain.handle('characters:replaceSetupPartyMembers', (_event, input: ReplaceSetupPartyMembersInput) =>
-    replaceSetupPartyMembers(getDb(), input)
+  ipcMain.handle('characters:replaceSetupPartyMembers', async (_event, input: ReplaceSetupPartyMembersInput) =>
+    replaceSetupPartyMembers(getDb(), buildAgentProvider(), input)
   )
   ipcMain.handle('characters:listByCampaign', (_event, campaignId: string) =>
     listCharactersByCampaign(getDb(), campaignId)

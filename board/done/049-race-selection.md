@@ -171,11 +171,11 @@ Depends on: none
 Author `src/engine/raceSelection/SPEC.md` and shared/typed data modules mapping each roster key to its label, category, and fixed "normally" **seed prompt**, plus the `custom` sentinel. No lore text, no mechanics — only the authoring roster and seeds that ground later AI generation.
 
 #### Acceptance Criteria
-- [ ] `src/shared/raceSelection/types.ts` defines `RaceCategory = 'common_folk' | 'outsider_bloodlines' | 'monstrous_feral' | 'uncanny_otherworldly'` and `RaceRosterEntry { key: string; label: string; category: RaceCategory; seedPrompt: string }`
-- [ ] `src/engine/raceSelection/SPEC.md` documents the roster, the four categories, the fixed per-race seed-prompt authoring rule, and that race is narrative-only (no mechanics)
-- [ ] `src/engine/raceSelection/roster.ts` exports `RACE_ROSTER: RaceRosterEntry[]` with all 20 predefined entries per the roster table above, grouped into their categories, plus a separately-exported `CUSTOM_RACE_KEY = 'custom'` sentinel (not itself a `RaceRosterEntry`, since custom has no fixed seed)
-- [ ] Keys are stable, lower_snake_case identifiers matching the table's `Key` column; labels are display strings
-- [ ] Unit test asserts roster completeness (every entry has a non-empty label/category/seed prompt), that all four categories are represented, and that `custom`/`CUSTOM_RACE_KEY` is not present inside `RACE_ROSTER`
+- [x] `src/shared/raceSelection/types.ts` defines `RaceCategory = 'common_folk' | 'outsider_bloodlines' | 'monstrous_feral' | 'uncanny_otherworldly'` and `RaceRosterEntry { key: string; label: string; category: RaceCategory; seedPrompt: string }`
+- [x] `src/engine/raceSelection/SPEC.md` documents the roster, the four categories, the fixed per-race seed-prompt authoring rule, and that race is narrative-only (no mechanics)
+- [x] `src/engine/raceSelection/roster.ts` exports `RACE_ROSTER: RaceRosterEntry[]` with all 20 predefined entries per the roster table above, grouped into their categories, plus a separately-exported `CUSTOM_RACE_KEY = 'custom'` sentinel (not itself a `RaceRosterEntry`, since custom has no fixed seed)
+- [x] Keys are stable, lower_snake_case identifiers matching the table's `Key` column; labels are display strings
+- [x] Unit test asserts roster completeness (every entry has a non-empty label/category/seed prompt), that all four categories are represented, and that `custom`/`CUSTOM_RACE_KEY` is not present inside `RACE_ROSTER`
 
 ### 049.2 Schema: `race` guided-creation phase + `campaign_races` catalog + `race_key` columns
 
@@ -190,13 +190,13 @@ Two kinds of schema change, following two different existing precedents in `src/
 `campaign_races` columns: `id TEXT PRIMARY KEY`, `campaign_id TEXT NOT NULL REFERENCES campaigns(id)`, `race_key TEXT NOT NULL`, `kind TEXT NOT NULL CHECK (kind IN ('preset','custom'))`, `label TEXT NOT NULL`, `seed_prompt TEXT NOT NULL`, `lore TEXT NOT NULL` (JSON-serialized `RaceLore`), `created_by_character_id TEXT REFERENCES characters(id)`, `created_at TEXT NOT NULL`, `UNIQUE(campaign_id, race_key)`.
 
 #### Acceptance Criteria
-- [ ] `race` is a valid `GuidedCreationPhase` in `src/shared/guidedCreation/types.ts`, ordered `['none', 'race', 'equipment', 'identity', 'opening_scene', 'complete']`
-- [ ] New migration rebuilds `characters` following the `migrateGuidedCreationEquipmentPhaseV26` pattern: updated `guided_creation_phase` CHECK including `'race'`, plus a new nullable `race_key TEXT` column, via new `migrateRaceSelectionCharactersV29Sql.ts` / `migrateRaceSelectionCharactersV29.ts` files registered in `src/db/schema.ts`
-- [ ] A second new migration version creates `campaign_races` (columns as specified above) and adds `race_key TEXT` to `npcs` via `addColumnIfMissing`, both inline in `schema.ts`
-- [ ] `createCharacter` for `kind: 'player'` defaults `guided_creation_phase` to `race`
-- [ ] `Character`/`CreateCharacterInput`/`CharacterRow` (`src/db/repositories/characters.ts`) and `Npc`/`CreateNpcInput`/`NpcRow` (`src/db/repositories/npcs.ts`) all include `raceKey: string | null`, mapped to/from `race_key`
-- [ ] No formal SQL foreign key from `characters.race_key` / `npcs.race_key` to `campaign_races` — referential integrity is enforced in the repository layer by always looking up `(campaignId, raceKey)` together; note this explicitly in a code comment on `getCampaignRaceByKey` (049.4)
-- [ ] Migration + repository tests cover: the new phase value, the new default, `campaign_races` round-trip, and `race_key` round-trip on both `characters` and `npcs`
+- [x] `race` is a valid `GuidedCreationPhase` in `src/shared/guidedCreation/types.ts`, ordered `['none', 'race', 'equipment', 'identity', 'opening_scene', 'complete']`
+- [x] New migration rebuilds `characters` following the `migrateGuidedCreationEquipmentPhaseV26` pattern: updated `guided_creation_phase` CHECK including `'race'`, plus a new nullable `race_key TEXT` column, via new `migrateRaceSelectionCharactersV29Sql.ts` / `migrateRaceSelectionCharactersV29.ts` files registered in `src/db/schema.ts`
+- [x] A second new migration version creates `campaign_races` (columns as specified above) and adds `race_key TEXT` to `npcs` via `addColumnIfMissing`, both inline in `schema.ts`
+- [x] `createCharacter` for `kind: 'player'` defaults `guided_creation_phase` to `race`
+- [x] `Character`/`CreateCharacterInput`/`CharacterRow` (`src/db/repositories/characters.ts`) and `Npc`/`CreateNpcInput`/`NpcRow` (`src/db/repositories/npcs.ts`) all include `raceKey: string | null`, mapped to/from `race_key`
+- [x] No formal SQL foreign key from `characters.race_key` / `npcs.race_key` to `campaign_races` — referential integrity is enforced in the repository layer by always looking up `(campaignId, raceKey)` together; note this explicitly in a code comment on `getCampaignRaceByKey` (049.4)
+- [x] Migration + repository tests cover: the new phase value, the new default, `campaign_races` round-trip, and `race_key` round-trip on both `characters` and `npcs`
 
 ### 049.3 Race lore agent (seed + premise mixing, locked shape)
 
@@ -206,12 +206,12 @@ Depends on: 049.1
 Add `src/agents/raceLore.ts`: a prompt builder that mixes a race seed (fixed preset seed, or a player's custom seed) with `campaign.premisePrompt` and `campaign.currentStateSummary`, returning structured campaign-fitting lore in a shape locked now (not "e.g.") because the catalog, IPC, UI, and NPC/party generation all build against it. Also add the `buildAvailableRaceOptions` helper that every race-picking prompt (player UI preview, NPC generation, party-member generation) will reuse to describe "what races already exist in this world."
 
 #### Acceptance Criteria
-- [ ] `src/shared/raceSelection/types.ts` locks `RaceLore { summary: string; appearance: string; culture: string; roleInThisLand: string; hooks: string[] }` and `RaceLoreInput = { kind: 'preset'; raceKey: string; label: string; seedPrompt: string } | { kind: 'custom'; label: string; seedPrompt: string }`
-- [ ] `buildRaceLorePrompt(campaignPremise: string, worldSummary: string, input: RaceLoreInput): string` in `src/agents/raceLore.ts` marks campaign premise, world summary, and custom seed as untrusted narrative content (matching `campaignGeneration/prompts.ts` guardrail language)
-- [ ] `generateRaceLore(provider, campaignPremise, worldSummary, input): Promise<RaceLore>` parses the response via `tryParseJson` (matching `src/agents/npc.ts` / `partyMember.ts`), validates all 5 `RaceLore` fields are present, and retries on malformed output (matching `campaignGeneration`'s `MAX_GENERATION_ATTEMPTS` pattern)
-- [ ] Prompt instructs lore to be flavor-only and to fit the campaign; no mechanics, items, spells, or numbers
-- [ ] `buildAvailableRaceOptions(campaignRaces: CampaignRace[]): AvailableRaceOption[]` (`AvailableRaceOption { key: string; label: string; blurb: string }`) combines the full static `RACE_ROSTER` (`blurb` = `seedPrompt`) with any `kind: 'custom'` entries from `campaignRaces` (`blurb` = locked `lore.summary`), overriding a preset's `blurb` with its locked `lore.summary` when it's already realized in `campaignRaces`
-- [ ] Unit tests cover preset vs custom prompt assembly, malformed-output parsing/retry, and `buildAvailableRaceOptions` composition (unrealized preset, realized-preset override, custom inclusion)
+- [x] `src/shared/raceSelection/types.ts` locks `RaceLore { summary: string; appearance: string; culture: string; roleInThisLand: string; hooks: string[] }` and `RaceLoreInput = { kind: 'preset'; raceKey: string; label: string; seedPrompt: string } | { kind: 'custom'; label: string; seedPrompt: string }`
+- [x] `buildRaceLorePrompt(campaignPremise: string, worldSummary: string, input: RaceLoreInput): string` in `src/agents/raceLore.ts` marks campaign premise, world summary, and custom seed as untrusted narrative content (matching `campaignGeneration/prompts.ts` guardrail language)
+- [x] `generateRaceLore(provider, campaignPremise, worldSummary, input): Promise<RaceLore>` parses the response via `tryParseJson` (matching `src/agents/npc.ts` / `partyMember.ts`), validates all 5 `RaceLore` fields are present, and retries on malformed output (matching `campaignGeneration`'s `MAX_GENERATION_ATTEMPTS` pattern)
+- [x] Prompt instructs lore to be flavor-only and to fit the campaign; no mechanics, items, spells, or numbers
+- [x] `buildAvailableRaceOptions(campaignRaces: CampaignRace[]): AvailableRaceOption[]` (`AvailableRaceOption { key: string; label: string; blurb: string }`) combines the full static `RACE_ROSTER` (`blurb` = `seedPrompt`) with any `kind: 'custom'` entries from `campaignRaces` (`blurb` = locked `lore.summary`), overriding a preset's `blurb` with its locked `lore.summary` when it's already realized in `campaignRaces`
+- [x] Unit tests cover preset vs custom prompt assembly, malformed-output parsing/retry, and `buildAvailableRaceOptions` composition (unrealized preset, realized-preset override, custom inclusion)
 
 ### 049.4 Campaign race catalog repository + resolve-or-realize + player-facing IPC
 
@@ -221,14 +221,14 @@ Depends on: 049.2, 049.3
 `src/db/repositories/campaignRaces.ts` for catalog CRUD, the shared `resolveOrRealizeCampaignRace` orchestrator in `src/agents/raceLore.ts` (the realize-once/reuse-after mechanism described in "Core concept" above), and the player-facing IPC surface: `race:getRoster`, `race:getCampaignRaces`, `race:previewLore`, `race:apply`.
 
 #### Acceptance Criteria
-- [ ] `src/db/repositories/campaignRaces.ts` exports `CampaignRace`, `CreateCampaignRaceInput`, `createCampaignRace(db, input)`, `getCampaignRaceByKey(db, campaignId, raceKey)`, `listCampaignRaces(db, campaignId)`, parsing the `lore` JSON column on read
-- [ ] `resolveOrRealizeCampaignRace(db, provider, params)` in `src/agents/raceLore.ts` returns the existing `CampaignRace` unchanged if `(campaignId, raceKey)` is already in the catalog (no LLM call); otherwise calls `generateRaceLore` then `createCampaignRace` and returns the new locked row
-- [ ] `race:getRoster` returns `RACE_ROSTER` (grouped by category), sourced from `src/engine/raceSelection/roster.ts`, not hardcoded in the renderer
-- [ ] `race:getCampaignRaces` returns `listCampaignRaces` for a given campaign
-- [ ] `race:previewLore` accepts `{ campaignId, kind: 'preset', raceKey } | { campaignId, kind: 'custom', label, seedPrompt }`. For an already-realized preset: returns `{ locked: true, lore }` straight from the catalog, **no LLM call**. For a not-yet-realized preset, or any custom: calls `generateRaceLore` fresh and returns `{ locked: false, lore }`. Never writes to the DB.
-- [ ] `race:apply` accepts `{ campaignId, characterId, kind, raceKey?, label, seedPrompt, finalLore }` and, in one transaction: if not yet realized, persists `finalLore` via `createCampaignRace` (custom races get a fresh key `` `custom_${randomUUID()}` `` generated here); if the race became locked by something else between preview and confirm, discards `finalLore` and uses the existing locked entry instead; either way sets `characters.race_key` and advances `guided_creation_phase` from `race` to `equipment`
-- [ ] `race:apply` rejects with a clear error if the character is not currently in `race` phase, or if a preset `raceKey` isn't in `RACE_ROSTER`
-- [ ] Preload exposes `window.race.*`; renderer `window.d.ts` typed; unit tests cover preview (fresh generation + already-locked reuse) and apply (first realization, reused-lock race condition, wrong-phase rejection)
+- [x] `src/db/repositories/campaignRaces.ts` exports `CampaignRace`, `CreateCampaignRaceInput`, `createCampaignRace(db, input)`, `getCampaignRaceByKey(db, campaignId, raceKey)`, `listCampaignRaces(db, campaignId)`, parsing the `lore` JSON column on read
+- [x] `resolveOrRealizeCampaignRace(db, provider, params)` in `src/agents/raceLore.ts` returns the existing `CampaignRace` unchanged if `(campaignId, raceKey)` is already in the catalog (no LLM call); otherwise calls `generateRaceLore` then `createCampaignRace` and returns the new locked row
+- [x] `race:getRoster` returns `RACE_ROSTER` (grouped by category), sourced from `src/engine/raceSelection/roster.ts`, not hardcoded in the renderer
+- [x] `race:getCampaignRaces` returns `listCampaignRaces` for a given campaign
+- [x] `race:previewLore` accepts `{ campaignId, kind: 'preset', raceKey } | { campaignId, kind: 'custom', label, seedPrompt }`. For an already-realized preset: returns `{ locked: true, lore }` straight from the catalog, **no LLM call**. For a not-yet-realized preset, or any custom: calls `generateRaceLore` fresh and returns `{ locked: false, lore }`. Never writes to the DB.
+- [x] `race:apply` accepts `{ campaignId, characterId, kind, raceKey?, label, seedPrompt, finalLore }` and, in one transaction: if not yet realized, persists `finalLore` via `createCampaignRace` (custom races get a fresh key `` `custom_${randomUUID()}` `` generated here); if the race became locked by something else between preview and confirm, discards `finalLore` and uses the existing locked entry instead; either way sets `characters.race_key` and advances `guided_creation_phase` from `race` to `equipment`
+- [x] `race:apply` rejects with a clear error if the character is not currently in `race` phase, or if a preset `raceKey` isn't in `RACE_ROSTER`
+- [x] Preload exposes `window.race.*`; renderer `window.d.ts` typed; unit tests cover preview (fresh generation + already-locked reuse) and apply (first realization, reused-lock race condition, wrong-phase rejection)
 
 ### 049.5 Onboarding stage routing + resume
 
@@ -238,11 +238,11 @@ Depends on: 049.2
 Add `raceSelection` to `OnboardingStage`, update `stageForGuidedPhase`, `stageAfterCampaignSelect`, incomplete-player detection, and `App.tsx` handoffs so a reload mid-race returns to the race page and character setup routes into race.
 
 #### Acceptance Criteria
-- [ ] `OnboardingStage` includes `raceSelection` between `characterSetup` and `equipmentSelection`
-- [ ] `stageForGuidedPhase('race')` returns `raceSelection`
-- [ ] Incomplete-player detection treats `race` as incomplete guided creation
-- [ ] Reload/campaign-select while a player is in `race` phase resumes on the race page
-- [ ] Unit tests in `stageRouting.test.ts` cover the new stage and resume from `race` phase
+- [x] `OnboardingStage` includes `raceSelection` between `characterSetup` and `equipmentSelection`
+- [x] `stageForGuidedPhase('race')` returns `raceSelection`
+- [x] Incomplete-player detection treats `race` as incomplete guided creation
+- [x] Reload/campaign-select while a player is in `race` phase resumes on the race page
+- [x] Unit tests in `stageRouting.test.ts` cover the new stage and resume from `race` phase
 
 ### 049.6 Race selection UI (categorized roster + custom + locked-lore reuse)
 
@@ -252,13 +252,13 @@ Depends on: 049.4, 049.5
 Build the race selection onboarding view (`src/renderer/src/raceSelection/`, mirroring `equipmentSelection/`): a roster grid grouped under the four category headers plus a Custom option. Selecting an **already-realized** predefined race shows its locked lore **read-only** (Confirm only). Selecting a **not-yet-realized** predefined race calls `race:previewLore` and shows editable lore with Regenerate. Selecting Custom shows a seed textarea (with a 🎲 random-fill affordance) and a Generate action before revealing editable lore. Confirm is blocked until a race is chosen and lore exists. Styled consistent with `CharacterSetup`.
 
 #### Acceptance Criteria
-- [ ] Roster grid renders from `race:getRoster`, grouped under the 4 category headers (Common Folk, Outsider Bloodlines, Monstrous & Feral, Uncanny & Otherworldly) plus Custom; exactly one race selectable at a time
-- [ ] On mount, cross-references `race:getCampaignRaces` so already-realized predefined races are visually indicated (e.g. an "established in this world" badge) before the player even clicks one
-- [ ] Picking an already-realized predefined race calls `race:previewLore`, then shows the returned lore **read-only** — no Regenerate, no edit fields — with just a Confirm action
-- [ ] Picking a not-yet-realized predefined race calls `race:previewLore`, shows a loading state, then editable lore + Regenerate (re-calls `previewLore`, replacing the draft)
-- [ ] Picking Custom requires a seed (with random-fill dice) before Generate; result is editable + Regenerate, same as an unrealized preset
-- [ ] Player edits to unlocked lore are preserved and are what gets submitted; Confirm disabled until a race + non-empty lore exist; Confirm calls `race:apply`
-- [ ] Renderer tests cover: categorized roster render, unrealized-preset generate-then-edit flow, already-realized preset read-only flow, custom seed-then-generate flow, and confirm gating
+- [x] Roster grid renders from `race:getRoster`, grouped under the 4 category headers (Common Folk, Outsider Bloodlines, Monstrous & Feral, Uncanny & Otherworldly) plus Custom; exactly one race selectable at a time
+- [x] On mount, cross-references `race:getCampaignRaces` so already-realized predefined races are visually indicated (e.g. an "established in this world" badge) before the player even clicks one
+- [x] Picking an already-realized predefined race calls `race:previewLore`, then shows the returned lore **read-only** — no Regenerate, no edit fields — with just a Confirm action
+- [x] Picking a not-yet-realized predefined race calls `race:previewLore`, shows a loading state, then editable lore + Regenerate (re-calls `previewLore`, replacing the draft)
+- [x] Picking Custom requires a seed (with random-fill dice) before Generate; result is editable + Regenerate, same as an unrealized preset
+- [x] Player edits to unlocked lore are preserved and are what gets submitted; Confirm disabled until a race + non-empty lore exist; Confirm calls `race:apply`
+- [x] Renderer tests cover: categorized roster render, unrealized-preset generate-then-edit flow, already-realized preset read-only flow, custom seed-then-generate flow, and confirm gating
 
 ### 049.7 Wire CharacterSetup → race → equipment handoff
 
@@ -268,11 +268,11 @@ Depends on: 049.6
 Change the `CharacterSetup` primary CTA to lead into race selection, and on race confirm call `race:apply`, refresh campaign detail, and transition to `equipmentSelection`. Update the campaign hub second-character path to use the same sequence (race before equipment).
 
 #### Acceptance Criteria
-- [ ] `CharacterSetup` primary CTA leads to race selection (e.g. **Choose your race**), not equipment
-- [ ] `handleCharacterSetupComplete` transitions to `raceSelection`
-- [ ] Successful race confirm applies via IPC, refreshes detail, and sets stage to `equipmentSelection`
-- [ ] Equipment step is not reachable until race is applied (phase advanced to `equipment`)
-- [ ] Campaign hub "create character" flow reaches race selection before equipment
+- [x] `CharacterSetup` primary CTA leads to race selection (e.g. **Choose your race**), not equipment
+- [x] `handleCharacterSetupComplete` transitions to `raceSelection`
+- [x] Successful race confirm applies via IPC, refreshes detail, and sets stage to `equipmentSelection`
+- [x] Equipment step is not reachable until race is applied (phase advanced to `equipment`)
+- [x] Campaign hub "create character" flow reaches race selection before equipment
 
 ### 049.8 AI party member race selection
 
@@ -284,11 +284,11 @@ The player can already add AI party members (name/class/personality) during Char
 `AiPartyMemberInput` gains `raceKey: string`. `createPartyMembers` / `replaceSetupPartyMembers` call `resolveOrRealizeCampaignRace` (using the campaign's `premisePrompt` / `currentStateSummary`) for each member's chosen key before persisting `race_key` on the new `characters` row.
 
 #### Acceptance Criteria
-- [ ] `AiPartyMemberInput` (`src/main/characterCreationIpc.ts`) requires `raceKey: string`
-- [ ] The renderer form for adding AI party members includes a race `<select>` populated from predefined roster labels + `race:getCampaignRaces` custom labels for the current campaign; no new-custom-race minting or lore editing here
-- [ ] `createPartyMembers` and `replaceSetupPartyMembers` resolve-or-realize each member's `raceKey` via `resolveOrRealizeCampaignRace` and persist the result on `characters.race_key`
-- [ ] If two companions in the same submission pick the same not-yet-realized race, it is realized once and reused for both (no duplicate `campaign_races` rows, no duplicate LLM calls)
-- [ ] Unit tests cover: new-realization path, reuse-of-already-locked path, and two-companions-same-new-race de-duplication
+- [x] `AiPartyMemberInput` (`src/main/characterCreationIpc.ts`) requires `raceKey: string`
+- [x] The renderer form for adding AI party members includes a race `<select>` populated from predefined roster labels + `race:getCampaignRaces` custom labels for the current campaign; no new-custom-race minting or lore editing here
+- [x] `createPartyMembers` and `replaceSetupPartyMembers` resolve-or-realize each member's `raceKey` via `resolveOrRealizeCampaignRace` and persist the result on `characters.race_key`
+- [x] If two companions in the same submission pick the same not-yet-realized race, it is realized once and reused for both (no duplicate `campaign_races` rows, no duplicate LLM calls)
+- [x] Unit tests cover: new-realization path, reuse-of-already-locked path, and two-companions-same-new-race de-duplication
 
 ### 049.9 NPC generation selects a race
 
@@ -304,11 +304,11 @@ Every speaking NPC generated by the campaign-generation pipeline (`src/agents/ca
 - `src/main/campaignEditIpc.ts` (`generateNpcForCampaign`) and `src/agents/campaignGeneration/index.ts` (`generateSingleNpc`): thread the same `availableRaces` (built via `buildAvailableRaceOptions(listCampaignRaces(db, campaignId))`) into `buildSingleNpcPrompt`, and apply the same resolve-or-realize + passthrough before calling `createNpcWithCombatReview`
 
 #### Acceptance Criteria
-- [ ] All three prompt builders (`buildGenerationPrompt`, `buildAdditionalRegionPrompt`, `buildSingleNpcPrompt`) receive and render an available-races list (predefined roster labels always included, plus any campaign customs minted so far) and instruct the model to pick a `race` key from it for every speaking NPC
-- [ ] `GeneratedNpc.raceKey` is required when `canSpeak` is true and omitted when false, exactly mirroring today's `alignment`/`backstory` gating (`hasValidNpcRace`, `isGeneratedNpc`)
-- [ ] All persistence call sites (`persistRegionWithNpcs`, `persistCampaignNpcsFromGeneration`, `generateNpcForCampaign`) resolve-or-realize the chosen race before creating the NPC row, so a persisted NPC never references an un-realized key
-- [ ] `Npc.raceKey` is null for non-speaking NPCs and always set for speaking ones going forward
-- [ ] Unit tests cover: prompt includes available races, normalize accepts/rejects race per `canSpeak`, and persistence realizes-or-reuses correctly (including reusing a race a player already locked in)
+- [x] All three prompt builders (`buildGenerationPrompt`, `buildAdditionalRegionPrompt`, `buildSingleNpcPrompt`) receive and render an available-races list (predefined roster labels always included, plus any campaign customs minted so far) and instruct the model to pick a `race` key from it for every speaking NPC
+- [x] `GeneratedNpc.raceKey` is required when `canSpeak` is true and omitted when false, exactly mirroring today's `alignment`/`backstory` gating (`hasValidNpcRace`, `isGeneratedNpc`)
+- [x] All persistence call sites (`persistRegionWithNpcs`, `persistCampaignNpcsFromGeneration`, `generateNpcForCampaign`) resolve-or-realize the chosen race before creating the NPC row, so a persisted NPC never references an un-realized key
+- [x] `Npc.raceKey` is null for non-speaking NPCs and always set for speaking ones going forward
+- [x] Unit tests cover: prompt includes available races, normalize accepts/rejects race per `canSpeak`, and persistence realizes-or-reuses correctly (including reusing a race a player already locked in)
 
 ### 049.10 NPC promotion carries race forward
 
@@ -318,9 +318,9 @@ Depends on: 049.9
 `confirmNpcPromotion` (`src/main/promotionIpc.ts`) already copies `alignment`, `temperament`, and `disposition` from the source NPC onto the new `ai_party_member` character. Add `race_key` to that same copy — no regeneration, no lore step.
 
 #### Acceptance Criteria
-- [ ] `confirmNpcPromotion` sets the new character's `race_key` to the source NPC's `raceKey` unchanged
-- [ ] A pre-epic NPC with no race (`raceKey: null`) promotes cleanly to a race-less party member (no error)
-- [ ] Unit test covers race carrying forward through promotion
+- [x] `confirmNpcPromotion` sets the new character's `race_key` to the source NPC's `raceKey` unchanged
+- [x] A pre-epic NPC with no race (`raceKey: null`) promotes cleanly to a race-less party member (no error)
+- [x] Unit test covers race carrying forward through promotion
 
 ### 049.11 Feed full character context (name, race, alignment) into identity/opening-scene
 
@@ -330,11 +330,11 @@ Depends on: 049.4
 On the final "talking with the DM" screens, the DM must have the **complete** character identity. Today `IdentityInterviewContext` and both `buildIdentityKickoffPrompt()` and `buildIdentityInterviewPrompt()` already carry `name`, `class`, `abilityScores`, and `alignment`; this ticket adds the locked **race name + finalized lore** (resolved via `getCampaignRaceByKey(db, campaignId, character.raceKey)`) to that same "Mechanical character" identity block so the DM sees name + race + alignment (plus archetype/abilities) as established fact — and does the same for the opening-scene agent. The interview should build on the established race rather than re-eliciting lineage from scratch.
 
 #### Acceptance Criteria
-- [ ] `IdentityInterviewContext` includes race name + lore, resolved via `getCampaignRaceByKey` and wired from the persisted character in `guidedCreationIpc.ts`
-- [ ] Both `buildIdentityKickoffPrompt` and `buildIdentityInterviewPrompt` include the full identity block — name, race, alignment, archetype, ability scores — and reference race/lore as established fact (like alignment), not something to re-ask or overwrite
-- [ ] Opening-scene agent context also receives the full identity including race name/lore
-- [ ] Race/lore (and premise/world summary) are passed as untrusted narrative content, not instructions
-- [ ] Unit tests assert name, race, and alignment all appear in the assembled kickoff, interview-turn, and opening-scene prompts
+- [x] `IdentityInterviewContext` includes race name + lore, resolved via `getCampaignRaceByKey` and wired from the persisted character in `guidedCreationIpc.ts`
+- [x] Both `buildIdentityKickoffPrompt` and `buildIdentityInterviewPrompt` include the full identity block — name, race, alignment, archetype, ability scores — and reference race/lore as established fact (like alignment), not something to re-ask or overwrite
+- [x] Opening-scene agent context also receives the full identity including race name/lore
+- [x] Race/lore (and premise/world summary) are passed as untrusted narrative content, not instructions
+- [x] Unit tests assert name, race, and alignment all appear in the assembled kickoff, interview-turn, and opening-scene prompts
 
 ### 049.12 Character sheet shows race
 
@@ -344,10 +344,10 @@ Depends on: 049.4
 Surface the chosen race on the character sheet (and any character summary/cast rail where archetype/name already appear), reading from the persisted race field.
 
 #### Acceptance Criteria
-- [ ] Character sheet displays the chosen race name near name/archetype
-- [ ] Value reads from persisted `race_key`, resolved to a label via the campaign's catalog (falling back to the predefined roster label if not yet in the catalog); custom races show their catalog `label`
-- [ ] Characters created before this epic (no race) render gracefully without errors
-- [ ] Renderer test covers race display and the no-race fallback
+- [x] Character sheet displays the chosen race name near name/archetype
+- [x] Value reads from persisted `race_key`, resolved to a label via the campaign's catalog (falling back to the predefined roster label if not yet in the catalog); custom races show their catalog `label`
+- [x] Characters created before this epic (no race) render gracefully without errors
+- [x] Renderer test covers race display and the no-race fallback
 
 ### 049.13 Race selection back navigation
 
@@ -357,10 +357,10 @@ Depends on: 049.6
 Add a **Back** control on the race selection page that returns the player to character setup without persisting a race or advancing guided-creation phase, reusing the equipment-selection back pattern (047.11 / 047.12) so setup details are preserved.
 
 #### Acceptance Criteria
-- [ ] Back button visible on race selection (loading, generating, locked-reuse, error, and main form states)
-- [ ] Back navigates onboarding stage to `characterSetup` and preserves entered setup details
-- [ ] Back does not persist a race or advance phase (safe because `race:apply` is the only persistence point and Back never calls it)
-- [ ] Renderer test verifies Back invokes `onBack`
+- [x] Back button visible on race selection (loading, generating, locked-reuse, error, and main form states)
+- [x] Back navigates onboarding stage to `characterSetup` and preserves entered setup details
+- [x] Back does not persist a race or advance phase (safe because `race:apply` is the only persistence point and Back never calls it)
+- [x] Renderer test verifies Back invokes `onBack`
 
 ### 049.14 Smoke test + runbook update
 
@@ -370,9 +370,9 @@ Depends on: 049.1–049.13
 Add `docs/runbooks/race-selection-smoke-test.md` and focused DB/agent integration tests covering the full catalog lifecycle: first realization, locked reuse, custom minting, and NPC generation picking a player-minted custom race.
 
 #### Acceptance Criteria
-- [ ] Integration test: a first character in a campaign picks "Elf" (realizes + locks lore); a second character later picks "Elf" and receives the identical locked lore read-only (no second LLM call)
-- [ ] Integration test: a player mints a custom race, then a subsequent NPC-generation call is able to select that custom race by key
-- [ ] Integration test: an AI party member's race realizes a predefined race that the protagonist later also selects (read-only reuse)
-- [ ] Runbook (`docs/runbooks/race-selection-smoke-test.md`) steps: character setup (including a party member race) → race (predefined, editable lore) → equipment → identity → verify race on sheet
-- [ ] Runbook documents the custom-race seed → generate → edit flow, the locked/reused-on-second-pick behavior, and mid-race app restart resuming on the race page
-- [ ] `npm test`, `npm run lint`, and `npm run build` pass
+- [x] Integration test: a first character in a campaign picks "Elf" (realizes + locks lore); a second character later picks "Elf" and receives the identical locked lore read-only (no second LLM call)
+- [x] Integration test: a player mints a custom race, then a subsequent NPC-generation call is able to select that custom race by key
+- [x] Integration test: an AI party member's race realizes a predefined race that the protagonist later also selects (read-only reuse)
+- [x] Runbook (`docs/runbooks/race-selection-smoke-test.md`) steps: character setup (including a party member race) → race (predefined, editable lore) → equipment → identity → verify race on sheet
+- [x] Runbook documents the custom-race seed → generate → edit flow, the locked/reused-on-second-pick behavior, and mid-race app restart resuming on the race page
+- [x] `npm test`, `npm run lint`, and `npm run build` pass

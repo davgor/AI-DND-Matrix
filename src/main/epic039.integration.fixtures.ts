@@ -18,7 +18,8 @@ export function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'neutral',
       canSpeak: true,
-      alignment: 'true_neutral'
+      alignment: 'true_neutral',
+      race: 'human'
     }
   ]
 }
@@ -32,6 +33,7 @@ export const SINGLE_NPC_PAYLOAD = JSON.stringify({
     regionName: 'Mistfen',
     temperament: 'cautious',
     canSpeak: true,
-    alignment: 'true_neutral'
+    alignment: 'true_neutral',
+    race: 'human'
   }
 })

@@ -9,6 +9,8 @@ export interface OnboardingStageContentProps {
   onDetailChange: (detail: CampaignDetail) => void
   onReviewContinue: () => void
   onCharacterSetupComplete: () => void
+  onRaceSelectionComplete: () => void
+  onRaceSelectionBack: () => void
   onEquipmentSelectionComplete: () => void
   onEquipmentSelectionBack: () => void
   onGuidedIdentityAdvance: () => void

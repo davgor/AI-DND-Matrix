@@ -18,7 +18,8 @@ export function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'neutral',
       canSpeak: true,
-      alignment: 'true_neutral'
+      alignment: 'true_neutral',
+      raceKey: 'human'
     },
     {
       name: `${prefix} Two`,
@@ -28,7 +29,8 @@ export function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'curious',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      raceKey: 'human'
     },
     {
       name: `${prefix} Three`,
@@ -38,7 +40,8 @@ export function makeNpcs(regionName: string, prefix: string) {
       regionName,
       temperament: 'disciplined',
       canSpeak: true,
-      alignment: 'lawful_neutral'
+      alignment: 'lawful_neutral',
+      raceKey: 'human'
     }
   ]
 }
@@ -61,6 +64,14 @@ export function npcReviewResponses(count: number): string[] {
   return Array.from({ length: count }, () => '{"upgrade":false}')
 }
 
+export const RACE_LORE_RESPONSE = JSON.stringify({
+  summary: 'Humans are widespread.',
+  appearance: 'Varied.',
+  culture: 'Ambitious.',
+  roleInThisLand: 'Settlers.',
+  hooks: ['A frontier town grows.']
+})
+
 export const LEGACY_NORMALIZE_PAYLOAD = {
   regions: [
     { name: 'Azure Expanse', description: 'Open ocean.', historyBackstory: 'Uncharted until now.' },
@@ -75,7 +86,8 @@ export const LEGACY_NORMALIZE_PAYLOAD = {
       regionName: 'Azure Expanse',
       temperament: 'cunning',
       canSpeak: true,
-      alignment: 'chaotic_good'
+      alignment: 'chaotic_good',
+      race: 'human'
     },
     {
       name: 'Mara',
@@ -85,7 +97,8 @@ export const LEGACY_NORMALIZE_PAYLOAD = {
       regionName: 'azure expanse',
       temperament: 'curious',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      race: 'human'
     },
     {
       name: 'Jon',
@@ -95,7 +108,8 @@ export const LEGACY_NORMALIZE_PAYLOAD = {
       regionName: 'Azure Expanse',
       temperament: 'cautious',
       canSpeak: true,
-      alignment: 'true_neutral'
+      alignment: 'true_neutral',
+      raceKey: 'human'
     },
     {
       name: 'Pell',
@@ -105,7 +119,8 @@ export const LEGACY_NORMALIZE_PAYLOAD = {
       regionName: 'Tidemark Reach',
       temperament: 'disciplined',
       canSpeak: true,
-      alignment: 'lawful_neutral'
+      alignment: 'lawful_neutral',
+      race: 'human'
     },
     {
       name: 'Sera',
@@ -115,7 +130,8 @@ export const LEGACY_NORMALIZE_PAYLOAD = {
       regionName: 'Tidemark Reach',
       temperament: 'neutral',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      race: 'human'
     },
     {
       name: 'Vik',
@@ -125,7 +141,8 @@ export const LEGACY_NORMALIZE_PAYLOAD = {
       regionName: 'Tidemark Reach',
       temperament: 'aggressive',
       canSpeak: true,
-      alignment: 'lawful_evil'
+      alignment: 'lawful_evil',
+      race: 'human'
     }
   ],
   storyThread: { title: 'The New Ocean', state: 'starting', summary: 'Explorers push outward.' }
@@ -137,15 +154,15 @@ export const TRIM_NPCS_PAYLOAD = {
     { name: 'Tidemark Reach', description: 'A harbor.', historyBackstory: 'Old trade port.' }
   ],
   npcs: [
-    { name: 'A', role: 'a', disposition: 'a', backstory: 'A local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'B', role: 'b', disposition: 'b', backstory: 'B local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'C', role: 'c', disposition: 'c', backstory: 'C local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'D', role: 'd', disposition: 'd', backstory: 'D local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'E', role: 'e', disposition: 'e', backstory: 'E local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'F', role: 'f', disposition: 'f', backstory: 'F local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'G', role: 'g', disposition: 'g', backstory: 'G local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'H', role: 'h', disposition: 'h', backstory: 'H local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' },
-    { name: 'Stray', role: 'x', disposition: 'x', backstory: 'Stray local history.', regionName: 'Nowhere', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral' }
+    { name: 'A', role: 'a', disposition: 'a', backstory: 'A local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'B', role: 'b', disposition: 'b', backstory: 'B local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'C', role: 'c', disposition: 'c', backstory: 'C local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'D', role: 'd', disposition: 'd', backstory: 'D local history.', regionName: 'Azure Expanse', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'E', role: 'e', disposition: 'e', backstory: 'E local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'F', role: 'f', disposition: 'f', backstory: 'F local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'G', role: 'g', disposition: 'g', backstory: 'G local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'H', role: 'h', disposition: 'h', backstory: 'H local history.', regionName: 'Tidemark Reach', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' },
+    { name: 'Stray', role: 'x', disposition: 'x', backstory: 'Stray local history.', regionName: 'Nowhere', temperament: 'neutral', canSpeak: true, alignment: 'true_neutral', race: 'human' }
   ],
   storyThread: { title: 'T', state: 'starting', summary: 'S' }
 }
@@ -164,7 +181,8 @@ export const PRE_EXPANSION_CAMPAIGN_PAYLOAD = {
       regionName: 'The Azure Deep',
       temperament: 'cunning',
       canSpeak: true,
-      alignment: 'chaotic_good'
+      alignment: 'chaotic_good',
+      race: 'human'
     },
     {
       name: 'Sister Mael',
@@ -174,7 +192,8 @@ export const PRE_EXPANSION_CAMPAIGN_PAYLOAD = {
       regionName: 'Harbor of First Light',
       temperament: 'curious',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      race: 'human'
     }
   ],
   story_thread: {
@@ -198,7 +217,8 @@ export const LEGACY_CAMPAIGN_SEED_PAYLOAD = {
       regionName: 'The Azure Deep',
       temperament: 'cunning',
       canSpeak: true,
-      alignment: 'chaotic_good'
+      alignment: 'chaotic_good',
+      race: 'human'
     },
     {
       name: 'Sister Mael',
@@ -208,7 +228,8 @@ export const LEGACY_CAMPAIGN_SEED_PAYLOAD = {
       regionName: 'Harbor of First Light',
       temperament: 'curious',
       canSpeak: true,
-      alignment: 'neutral_good'
+      alignment: 'neutral_good',
+      race: 'human'
     }
   ],
   story_thread: {

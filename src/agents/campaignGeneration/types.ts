@@ -5,6 +5,7 @@ import {
   DEFAULT_NPCS_PER_REGION,
   DEFAULT_REGION_COUNT
 } from '../../shared/campaignCreate/types'
+import type { AvailableRaceOption } from '../../shared/raceSelection/types'
 import type { DeathMode, RespawnRules } from '../../db/repositories/campaigns'
 import type { Provider } from '../providers/types'
 
@@ -48,6 +49,7 @@ export interface GeneratedNpc {
   canSpeak: boolean
   alignment?: Alignment
   backstory?: string
+  raceKey?: string
 }
 
 export interface GeneratedStoryThread {
@@ -82,6 +84,7 @@ export interface AdditionalRegionRequest {
   seedPrompt: string
   npcCount?: number
   history?: CampaignHistoryContext
+  availableRaces?: AvailableRaceOption[]
 }
 
 export interface PersistRegionWithNpcsInput {

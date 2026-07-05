@@ -9,6 +9,7 @@ import {
   persistRegionWithNpcs,
   resolveAdditionalRegionNpcCount
 } from '../agents/campaignGeneration'
+import { buildAvailableRaceOptions, resolveOrRealizeCampaignRace } from '../agents/raceLore'
 import { createNpcWithCombatReview } from '../db/repositories/npcCombatHydration'
 import {
   getCampaignById,
@@ -17,6 +18,7 @@ import {
   type RespawnRules
 } from '../db/repositories/campaigns'
 import { listNpcsByRegion, updateNpcDisposition, updateNpcTraits } from '../db/repositories/npcs'
+import { listCampaignRaces } from '../db/repositories/campaignRaces'
 import { getRegionById, listRegionsByCampaign, updateRegionDescription } from '../db/repositories/regions'
 import {
   MAX_ADDITIONAL_REGION_NPC_COUNT,
@@ -128,7 +130,12 @@ export async function generateRegionForCampaign(
     provider,
     campaign.premisePrompt,
     existingNames,
-    { seedPrompt: seed, npcCount, history }
+    {
+      seedPrompt: seed,
+      npcCount,
+      history,
+      availableRaces: buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId))
+    }
   )
 
   await persistRegionWithNpcs({
@@ -167,13 +174,22 @@ export async function generateNpcForCampaign(
   }
 
   const existingNpcNames = listNpcsByRegion(db, region.id).map((npc) => npc.name)
+  const availableRaces = buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId))
   const generation = await generateSingleNpc(provider, {
     campaignPremise: campaign.premisePrompt,
     regionName: region.name,
     regionDescription: region.description,
     existingNpcNames,
-    seedPrompt: seed
+    seedPrompt: seed,
+    availableRaces
   })
+
+  if (generation.npc.canSpeak && generation.npc.raceKey) {
+    await resolveOrRealizeCampaignRace(db, provider, {
+      campaignId: input.campaignId,
+      raceKey: generation.npc.raceKey
+    })
+  }
 
   await createNpcWithCombatReview(db, provider, {
     campaignId: input.campaignId,
@@ -184,7 +200,8 @@ export async function generateNpcForCampaign(
     alignment: generation.npc.alignment ?? null,
     temperament: generation.npc.temperament,
     canSpeak: generation.npc.canSpeak,
-    backstory: generation.npc.backstory ?? ''
+    backstory: generation.npc.backstory ?? '',
+    raceKey: generation.npc.raceKey ?? null
   })
 
   return getCampaignDetail(db, input.campaignId)

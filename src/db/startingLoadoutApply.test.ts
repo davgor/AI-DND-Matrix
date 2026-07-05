@@ -21,6 +21,7 @@ function seedFighter(db: ReturnType<typeof createTestDb>) {
     name: 'Kael',
     characterClass: 'fighter',
     kind: 'player',
+    guidedCreationPhase: 'equipment',
     stats: { abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 }, ac: 11, maxHp: 12 }
   })
   return { player }
@@ -79,6 +80,7 @@ describe('applyStartingLoadout mage', () => {
       name: 'Lyra',
       characterClass: 'mage',
       kind: 'player',
+      guidedCreationPhase: 'equipment',
       stats: { abilityScores: { body: 8, agility: 12, mind: 16, presence: 10 }, ac: 11, maxHp: 6 }
     })
     const result = applyStartingLoadout(db, mage.id, {
