@@ -17,6 +17,7 @@ import {
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
+  generateCampaignWorld,
   generateSingleNpc,
   hasValidNpcRace,
   hasValidNpcBackground,
@@ -45,7 +46,11 @@ import {
 } from './fixtures'
 import type { GeneratedNpc, GeneratedRegion } from '.'
 import type { CreateCampaignStage } from '../../shared/campaignCreate/types'
-import { countParagraphs, countSentences, coerceNpcTemperament, isValidGeneratedWorld, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster, splitParagraphs } from './normalize'
+import { countParagraphs, coerceNpcTemperament, hasRepeatedSentences, isValidGeneratedWorld, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster } from './normalize'
+import { findProseJargonViolations } from './proseJargonGuard'
+
+const VORATH_STACKED_SUMMARY =
+  'Vorath endures as a land of towering evergreens, fog-veiled vales, and shattered ziggurats where the wind carries howls from forgotten barrows. Sorcerer-kings once ruled from obsidian thrones, their spells binding elementals to forge eternal citadels. Now wilds reclaim those halls, and lanterns flicker in ward-posts manned by rune-scribed watchmen. Dwarven forge-clans hammer blades in mountain delves while elven wardens weave illusions over sacred groves.\n\nHarbor towns tax moorings twice while salvage cults argue over wreck rights. Farmers watch refugee columns pass each autumn.\n\nPower is fragmented today — harbor councils, company charters, and free captains all claim legitimacy. The weather still decides who eats when the squall season arrives.'
 
 describe('normalizeGeneratedWorld', () => {
   it('counts single-newline paragraph breaks from live models', () => {
@@ -54,7 +59,7 @@ describe('normalizeGeneratedWorld', () => {
     expect(isValidGeneratedWorld(REALISTIC_LLM_WORLD)).toBe(true)
   })
 
-  it('pads short world prose instead of rejecting it', () => {
+  it('rejects short world prose instead of padding it with filler', () => {
     const shortWorld = {
       worldName: 'Venn Calder',
       worldSummary: 'A mountain pass holds the last harvest stores.',
@@ -62,11 +67,10 @@ describe('normalizeGeneratedWorld', () => {
     }
     const normalized = normalizeGeneratedWorld(shortWorld)
     expect(normalized?.worldSummary).toContain('mountain pass')
-    expect(countParagraphs(normalized!.worldSummary)).toBeGreaterThanOrEqual(3)
-    expect(countParagraphs(normalized!.worldHistory)).toBeGreaterThanOrEqual(5)
+    expect(isValidGeneratedWorld(shortWorld)).toBe(false)
   })
 
-  it('expands single-sentence history paragraphs into multi-sentence blocks', () => {
+  it('rejects history that only meets length after boilerplate padding', () => {
     const thinHistory = [
       'In the Dawnveil the Elder Titans shaped the land and slept.',
       'The Age of Forges ended in the Godwrought War.',
@@ -74,16 +78,26 @@ describe('normalizeGeneratedWorld', () => {
       'The Veiled Restoration quelled incursions but whispers grew.',
       'Now the present teeters as rivers shift and seers dream of ruin.'
     ].join('\n\n')
-    const normalized = normalizeGeneratedWorld({
+    const candidate = {
       worldName: 'Elyndor',
       worldSummary: 'Hook one.\n\nHook two.\n\nHook three.',
       worldHistory: thinHistory
-    })
-    expect(normalized).toBeDefined()
-    for (const paragraph of splitParagraphs(normalized!.worldHistory)) {
-      expect(countSentences(paragraph)).toBeGreaterThanOrEqual(3)
     }
-    expect(isValidGeneratedWorld(normalized)).toBe(true)
+    expect(isValidGeneratedWorld(candidate)).toBe(false)
+  })
+
+  it('rejects prose with repeated sentences', () => {
+    const repeated =
+      'Travelers still tell the tale around hearths when trade routes grow dangerous. ' +
+      'Iron guilds feud with marsh wardens. ' +
+      'Travelers still tell the tale around hearths when trade routes grow dangerous.'
+    const candidate = {
+      worldName: 'Eryndor',
+      worldSummary: `${repeated}\n\nSecond hook names a river port and its toll wars. Merchants hire guards before harvest season.\n\nThird hook warns that border forts are understaffed after the last raid.`,
+      worldHistory: VALID_WORLD.worldHistory
+    }
+    expect(hasRepeatedSentences(candidate.worldSummary)).toBe(true)
+    expect(isValidGeneratedWorld(candidate)).toBe(false)
   })
 })
 
@@ -291,6 +305,36 @@ describe('buildWorldGenerationPrompt', () => {
     expect(prompt).toContain('five paragraphs')
     expect(prompt).toContain('three full sentences')
     expect(prompt).not.toContain('"regions"')
+  })
+
+  it('discourages default kraken and ziggurat tropes', () => {
+    const prompt = buildWorldGenerationPrompt('A marsh kingdom')
+    expect(prompt).toContain('krakens')
+    expect(prompt).toContain('ziggurats')
+    expect(prompt).toContain('border wars')
+    expect(prompt).toContain('one hyphenated compound per sentence')
+  })
+})
+
+describe('generateCampaignWorld prose guard', () => {
+  it('retries when the model injects kraken without premise support', async () => {
+    const badWorld = {
+      ...VALID_WORLD,
+      worldSummary: `${VALID_WORLD.worldSummary}\n\nA kraken rules the deeps beneath every harbor.`
+    }
+    const provider = createScriptedProvider([JSON.stringify(badWorld), JSON.stringify(VALID_WORLD)])
+    const world = await generateCampaignWorld(provider, 'A quiet farming valley')
+    expect(world.worldSummary).not.toMatch(/kraken/i)
+  })
+
+  it('retries when the model stacks hyphen compounds in one paragraph', async () => {
+    const badWorld = {
+      ...VALID_WORLD,
+      worldSummary: VORATH_STACKED_SUMMARY
+    }
+    const provider = createScriptedProvider([JSON.stringify(badWorld), JSON.stringify(VALID_WORLD)])
+    const world = await generateCampaignWorld(provider, 'A quiet farming valley')
+    expect(findProseJargonViolations(world.worldSummary)).toHaveLength(0)
   })
 })
 

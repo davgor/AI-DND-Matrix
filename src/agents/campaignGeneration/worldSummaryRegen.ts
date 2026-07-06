@@ -1,10 +1,9 @@
 import { tryParseJson } from '../jsonResponse'
 import type { Provider } from '../providers/types'
-import { WORLD_FANTASY_TONE_RULES } from './prompts'
-import { countParagraphs, padWorldProse } from './normalize'
+import { FANTASY_TROPE_DIVERSITY_RULES, PROSE_CLARITY_RULES, WORLD_FANTASY_TONE_RULES } from './prompts'
+import { meetsWorldSummaryProseStandards } from './normalize'
+import { meetsPremiseTropeDiversity } from './tropeGuard'
 import { CampaignGenerationSchemaError, MAX_GENERATION_ATTEMPTS } from './types'
-
-const MIN_SUMMARY_PARAGRAPHS = 3
 
 export function buildWorldSummaryFromHistoryPrompt(input: {
   premisePrompt: string
@@ -18,6 +17,8 @@ export function buildWorldSummaryFromHistoryPrompt(input: {
     'World history one-pager (established fact):',
     input.worldHistory,
     WORLD_FANTASY_TONE_RULES,
+    PROSE_CLARITY_RULES,
+    FANTASY_TROPE_DIVERSITY_RULES,
     'Write a fresh worldSummary hook for players: exactly three paragraphs separated by blank lines, each with at least two full sentences.',
     'Distill present-day tensions and wonder from the history — vivid hook prose, not a timeline recap.',
     'Respond ONLY with JSON:',
@@ -34,11 +35,25 @@ function normalizeSummaryPayload(value: unknown): string | undefined {
   if (typeof raw !== 'string' || raw.trim().length === 0) {
     return undefined
   }
-  const padded = padWorldProse(raw.trim(), MIN_SUMMARY_PARAGRAPHS, 2)
-  if (countParagraphs(padded) < MIN_SUMMARY_PARAGRAPHS) {
+  const trimmed = raw.trim()
+  if (!meetsWorldSummaryProseStandards(trimmed)) {
     return undefined
   }
-  return padded
+  return trimmed
+}
+
+function normalizeSummaryPayloadWithPremise(
+  value: unknown,
+  premisePrompt: string
+): string | undefined {
+  const trimmed = normalizeSummaryPayload(value)
+  if (!trimmed) {
+    return undefined
+  }
+  if (!meetsPremiseTropeDiversity(trimmed, premisePrompt)) {
+    return undefined
+  }
+  return trimmed
 }
 
 export async function generateWorldSummaryFromHistory(
@@ -48,7 +63,7 @@ export async function generateWorldSummaryFromHistory(
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(buildWorldSummaryFromHistoryPrompt(input), { maxTokens: 2048 })
     const parsed = tryParseJson(raw)
-    const summary = normalizeSummaryPayload(parsed)
+    const summary = normalizeSummaryPayloadWithPremise(parsed, input.premisePrompt)
     if (summary) {
       return summary
     }

@@ -23,9 +23,9 @@ import type {
 const WORLD_JSON_EXAMPLE = JSON.stringify({
   worldName: 'Tyria',
   worldSummary:
-    'Tyria is a storm-wracked world of fractured isles and drowned coasts where old empires left only ruins and stubborn freeholds.\n\nTrade still crosses the inner seas, but every captain carries charts marked with vanished ports and reef-spirits that drag hulls under.\n\nPower is fragmented — harbor councils, salvage cults, and company charters all claim legitimacy while the weather decides who eats.',
+    'Tyria is a storm-wracked world of fractured isles and drowned coasts where old empires left only ruins and stubborn freeholds. Trade still crosses the inner seas, but every captain carries charts marked with vanished ports.\n\nHarbor towns tax the same moorings twice while storm-priests and salvage cults argue over wreck rights. Farmers watch refugee columns pass on the coastal roads each autumn.\n\nPower is fragmented today — harbor councils, company charters, and free captains all claim legitimacy. The weather still decides who eats when the squall season arrives.',
   worldHistory:
-    'Three ages ago the continental shelf cracked during the Sundering, swallowing coastal kingdoms and leaving archipelagos where farmland once stretched to the horizon. Temples rang warning bells for weeks, but the sea still climbed through harbor streets faster than any evacuation plan.\n\nSalvagers still dredge barnacled crowns and drowned libraries from the inner bays. Scholars argue whether the flood was natural, divine punishment, or sabotage between rival archmages, and every court commissions a different answer.\n\nFor two centuries the Charting Compact mapped safe passages and taxed moorings until guild wars broke the tithe system and beacon-fires fell dark. Captains who remembered the old routes became kings of smuggling lanes overnight.\n\nIn the last generation explorer crews have pushed past the outer shoals again, returning with cursed ore, missing manifests, and rumors of living reefs that remember every ship that wronged them. Few crews return with the same crew count they left with.\n\nToday the inner sea routes are contested again — not by emperors alone, but by storm-priests, smuggler princes, and captains who swear the drowned still vote on every treaty. Festival markets flourish beside famine roads, and everyone knows the next squall may rewrite the map.'
+    'Three ages ago the continental shelf cracked during the Sundering, swallowing coastal kingdoms and leaving archipelagos where farmland once stretched to the horizon. Temples rang warning bells for weeks, but the sea still climbed through harbor streets faster than any evacuation plan. Survivors who reached high ground rebuilt as cliff clans who still measure wealth in rope and fresh water.\n\nSalvagers still dredge barnacled crowns and drowned libraries from the inner bays. Scholars argue whether the flood was natural, divine punishment, or sabotage between rival archmages, and every court commissions a different answer. Dredging licenses have become the fastest path to a noble title in port cities.\n\nFor two centuries the Charting Compact mapped safe passages and taxed moorings until guild wars broke the tithe system and beacon-fires fell dark. Captains who remembered the old routes became kings of smuggling lanes overnight. The Compact’s seal houses are ruins now, but their ledgers still surface in wreck sales.\n\nIn the last generation explorer crews have pushed past the outer shoals again, returning with cursed ore, missing manifests, and rumors of living reefs that remember every ship that wronged them. Few crews return with the same crew count they left with. Insurance brokers on the inner quay have doubled their rates twice in five years.\n\nToday the inner sea routes are contested again — not by emperors alone, but by storm-priests, smuggler princes, and captains who swear the drowned still vote on every treaty. Festival markets flourish beside famine roads, and everyone knows the next squall may rewrite the map. Beacon chains are relit one tower at a time, always too late for someone.'
 })
 
 const WORLD_PARAGRAPH_SHAPE_RULES = [
@@ -39,9 +39,25 @@ export const WORLD_FANTASY_TONE_RULES = [
   'Do NOT write science fiction unless the premise explicitly demands it: no outer space, void, galaxies, planetoids, colonies, domes, habs, starships, isotopes, AI, or futuristic technology.'
 ].join('\n')
 
+export const PROSE_CLARITY_RULES = [
+  'Write clear, readable fantasy prose. Prefer concrete facts — who lives where, what they do, what threatens them — over stacks of adjectives and invented compound words.',
+  'Use at most one hyphenated compound per sentence (e.g. "storm-priests" OR "fog-veiled", not both in the same line). Spread them sparingly across a paragraph — two per paragraph is plenty.',
+  'Hyphenated fantasy terms are fine in moderation. The problem is stacking three to five into every sentence.',
+  'Never repeat the same sentence or distinctive phrase anywhere in your response.',
+  'Each sentence must add new information. No generic filler about travelers, hearths, trade routes, or "tales told around fires" unless it names this specific world.'
+].join('\n')
+
+export const FANTASY_TROPE_DIVERSITY_RULES = [
+  'Do not default to krakens, ziggurats, "ancient evil awakens", or sunken elder empires unless the premise or seed explicitly calls for them.',
+  'Vary threats and landmarks across campaigns: border wars, famine, guild politics, plague, bandits, feudal succession, mine disputes, religious schisms, strange weather, beast migrations, haunted battlefields, etc.',
+  'Sea monsters and stepped pyramid temples are fine when the story needs them — otherwise pick a different hook that fits the premise.'
+].join('\n')
+
 const WORLD_PROSE_RULES = [
   'worldName: name the fantasy world at campaign scale — the whole setting players treat as "the world", like Tyria, Azeroth, Toril, or Eldermere. Do NOT use kingdom, empire, duchy, realm, basin, reach, or crown titles here; those belong in region generation.',
   WORLD_FANTASY_TONE_RULES,
+  PROSE_CLARITY_RULES,
+  FANTASY_TROPE_DIVERSITY_RULES,
   'worldSummary: exactly three paragraphs separated by blank lines — each paragraph at least two full sentences. Player-facing hook for what the world is, how people live, and what tensions define it today.',
   `worldHistory: a one-pager hook of exactly five paragraphs separated by blank lines — deep past, founding myths, old conflicts, recent epochs, and why the present feels unstable. ${WORLD_PARAGRAPH_SHAPE_RULES}`
 ].join('\n')
@@ -86,6 +102,8 @@ export const NPC_NAMING_RULES = [
 
 const REGION_PROSE_RULES = [
   'Region name: kingdoms, duchies, provinces, city-states, marches, and geographic realms belong here — not at the world layer.',
+  PROSE_CLARITY_RULES,
+  FANTASY_TROPE_DIVERSITY_RULES,
   'Region description: two short paragraphs (present-day atmosphere, geography, what visitors notice).',
   'Region historyBackstory: two short paragraphs (deeper past, founding, old conflicts or legends).',
   'Region recentHistory: one paragraph on what changed lately.',
@@ -201,6 +219,7 @@ export function buildStoryThreadGenerationPrompt(
     ...formatWorldContextLines(world),
     regionSummaries,
     'Generate one main story thread that fits the world and starting regions.',
+    FANTASY_TROPE_DIVERSITY_RULES,
     'Respond ONLY with a single JSON object:',
     '{"storyThread":{"title":string,"state":string,"summary":string}}'
   ].join('\n')

@@ -2,6 +2,11 @@ import type Database from 'better-sqlite3'
 import { tryParseJson } from '../jsonResponse'
 import type { Provider } from '../providers/types'
 import {
+  meetsRegionTropeDiversity,
+  meetsPremiseTropeDiversity,
+  meetsWorldTropeDiversity
+} from './tropeGuard'
+import {
   isValidAdditionalRegionResult,
   isValidGeneratedSingleNpcResult,
   isValidGeneratedWorld,
@@ -88,7 +93,7 @@ export async function generateCampaignWorld(
     buildPrompt: () => buildWorldGenerationPrompt(premisePrompt),
     maxTokens: WORLD_MAX_TOKENS,
     normalize: normalizeGeneratedWorld,
-    isValid: isValidGeneratedWorld,
+    isValid: (world) => isValidGeneratedWorld(world) && meetsWorldTropeDiversity(world, premisePrompt),
     errorMessage: 'DM agent did not return a valid world schema after retries'
   })
 }
@@ -107,7 +112,9 @@ export async function generateCampaignRegions(
     buildPrompt: () => buildRegionsGenerationPrompt(premisePrompt, world, counts),
     maxTokens: REGIONS_MAX_TOKENS,
     normalize: (parsed) => normalizeRegionsGeneration(parsed, counts),
-    isValid: (regions) => regions.length === counts.regionCount,
+    isValid: (regions) =>
+      regions.length === counts.regionCount &&
+      regions.every((region) => meetsRegionTropeDiversity(region, premisePrompt)),
     errorMessage: 'DM agent did not return a valid regions schema after retries'
   })
 }
@@ -126,7 +133,8 @@ export async function generateCampaignStoryThread(
     isValid: (thread) =>
       typeof thread.title === 'string' &&
       typeof thread.state === 'string' &&
-      typeof thread.summary === 'string',
+      typeof thread.summary === 'string' &&
+      meetsPremiseTropeDiversity(`${thread.title}\n${thread.state}\n${thread.summary}`, premisePrompt),
     errorMessage: 'DM agent did not return a valid story thread schema after retries'
   })
   return storyThread
@@ -418,7 +426,11 @@ export async function generateAdditionalRegion(
     if (
       normalized &&
       !regionNameCollides(normalized.region.name, existingRegionNames) &&
-      isValidAdditionalRegionResult(normalized, npcCount)
+      isValidAdditionalRegionResult(normalized, npcCount) &&
+      meetsRegionTropeDiversity(
+        normalized.region,
+        [campaignPremise, seedPrompt].filter(Boolean).join('\n')
+      )
     ) {
       return normalized
     }

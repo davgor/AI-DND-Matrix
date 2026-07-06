@@ -59,41 +59,49 @@ export function countSentences(text: string): number {
   return sentences?.filter((part) => part.trim().length > 0).length ?? 0
 }
 
-const WORLD_PAD_SENTENCE =
-  'The realm still carries scars and stories that locals trade over firelight when the roads grow quiet.'
+const MIN_DUPLICATE_SENTENCE_LENGTH = 24
 
-const WORLD_PARAGRAPH_EXPANSION_SENTENCES = [
-  'Travelers still tell the tale around hearths when trade routes grow dangerous.',
-  'Older chronicles disagree on names, but every version ends in the same uneasy truce.',
-  'That uneasy truce still shapes what merchants, priests, and free companies dare to attempt today.'
-]
-
-function expandParagraphToMinSentences(paragraph: string, minSentences: number): string {
-  let result = paragraph.trim()
-  let expansionIndex = 0
-  while (countSentences(result) < minSentences) {
-    const extra = WORLD_PARAGRAPH_EXPANSION_SENTENCES[expansionIndex % WORLD_PARAGRAPH_EXPANSION_SENTENCES.length]!
-    result = `${result} ${extra}`
-    expansionIndex += 1
+export function extractSentences(text: string): string[] {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    return []
   }
-  return result
+  const matches = trimmed.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g)
+  return (matches ?? [trimmed])
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
 }
 
-export function padWorldProse(
-  text: string,
-  minParagraphs: number,
-  minSentencesPerParagraph = 1
-): string {
-  let paragraphs = splitParagraphs(text.trim())
-  while (paragraphs.length < minParagraphs) {
-    paragraphs.push(WORLD_PAD_SENTENCE)
+function normalizeSentenceForCompare(sentence: string): string {
+  return sentence.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+export function hasRepeatedSentences(text: string): boolean {
+  const seen = new Set<string>()
+  for (const sentence of extractSentences(text)) {
+    const normalized = normalizeSentenceForCompare(sentence)
+    if (normalized.length < MIN_DUPLICATE_SENTENCE_LENGTH) {
+      continue
+    }
+    if (seen.has(normalized)) {
+      return true
+    }
+    seen.add(normalized)
   }
-  if (minSentencesPerParagraph > 1) {
-    paragraphs = paragraphs.map((paragraph) =>
-      expandParagraphToMinSentences(paragraph, minSentencesPerParagraph)
-    )
+  return false
+}
+
+export function meetsWorldSummaryProseStandards(worldSummary: string): boolean {
+  const paragraphs = splitParagraphs(worldSummary)
+  if (paragraphs.length < MIN_WORLD_SUMMARY_PARAGRAPHS) {
+    return false
   }
-  return paragraphs.join('\n\n')
+  if (hasRepeatedSentences(worldSummary)) {
+    return false
+  }
+  return paragraphs.every(
+    (paragraph) => countSentences(paragraph) >= MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH
+  )
 }
 
 export function normalizeRaceKeyForRoster(raw: string): string {
@@ -120,22 +128,19 @@ export function normalizeGeneratedWorld(value: unknown): GeneratedWorld | undefi
   if (!worldName || !worldSummary || !worldHistory) {
     return undefined
   }
-  const paddedSummary = padWorldProse(
-    worldSummary,
-    MIN_WORLD_SUMMARY_PARAGRAPHS,
-    MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH
-  )
-  const paddedHistory = padWorldProse(
-    worldHistory,
-    MIN_WORLD_HISTORY_PARAGRAPHS,
-    MIN_WORLD_HISTORY_SENTENCES_PER_PARAGRAPH
-  )
-  return { worldName, worldSummary: paddedSummary, worldHistory: paddedHistory }
+  return {
+    worldName,
+    worldSummary: worldSummary.trim(),
+    worldHistory: worldHistory.trim()
+  }
 }
 
 export function meetsWorldHistoryProseStandards(worldHistory: string): boolean {
   const paragraphs = splitParagraphs(worldHistory)
   if (paragraphs.length < MIN_WORLD_HISTORY_PARAGRAPHS) {
+    return false
+  }
+  if (hasRepeatedSentences(worldHistory)) {
     return false
   }
   return paragraphs.every(
@@ -145,7 +150,11 @@ export function meetsWorldHistoryProseStandards(worldHistory: string): boolean {
 
 export function isValidGeneratedWorld(value: unknown): value is GeneratedWorld {
   const normalized = normalizeGeneratedWorld(value)
-  return normalized !== undefined && meetsWorldHistoryProseStandards(normalized.worldHistory)
+  return (
+    normalized !== undefined &&
+    meetsWorldSummaryProseStandards(normalized.worldSummary) &&
+    meetsWorldHistoryProseStandards(normalized.worldHistory)
+  )
 }
 
 export function normalizeRegionsGeneration(
@@ -172,9 +181,9 @@ function defaultLegacyWorld(): GeneratedWorld {
   return {
     worldName: 'Unnamed World',
     worldSummary:
-      'Summary paragraph one.\n\nSummary paragraph two.\n\nSummary paragraph three.',
+      'The frontier still holds scattered freeholds where river trade and old oaths overlap. Farmers bargain with ferry crews while ruin-scouts sell maps that may be lies.\n\nGuild charters and temple courts both claim the same toll roads, so every caravan pays twice or learns to travel by night. No single banner rules the heartland, and that vacuum keeps mercenary companies employed.\n\nStorm seasons and border feuds have sharpened lately, and rumor says something woke under the oldest barrows. Locals watch strangers closely until they prove which side of the toll ledger they stand on.',
     worldHistory:
-      'History paragraph one.\n\nHistory paragraph two.\n\nHistory paragraph three.\n\nHistory paragraph four.\n\nHistory paragraph five.'
+      'In the first age the lowlands flooded when the river gods quarreled, drowning crown cities and leaving only hill forts above the mud. Survivors rebuilt as river clans who still swear oaths on the same cracked stones.\n\nA league of mason-kings later raised the high roads and taxed every bridge until revolt burned their seal-houses. The roads remain, but each province now posts its own toll and its own story about who betrayed whom.\n\nWar between temple orders and mining companies scarred the northern passes for two generations. Both sides hired the same mercenary companies, and veterans settled the border towns they once looted.\n\nTwenty years ago a red drought withered the central grain belt and sent refugee columns into coastal cities. Harbor councils opened granaries late, and the riots that followed reshaped who may vote in port law.\n\nToday the heartland looks stable only from a distance. River levels shift without season, old barrows glow on foggy nights, and every faction hires adventurers before it admits it is afraid.'
   }
 }
 
