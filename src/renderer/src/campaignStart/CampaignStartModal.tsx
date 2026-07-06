@@ -1,5 +1,6 @@
 import type { CampaignDetail } from '../../../main/campaignIpc'
 import type { CampaignStartFlow } from './useCampaignStartFlow'
+import { mapCreateStageTraceLabel } from '../../../shared/campaignCreate/stageMessages'
 import { CampaignStartFormActions, CampaignStartFormFields } from './CampaignStartFormFields'
 import './campaignStart.css'
 
@@ -39,10 +40,17 @@ export function CampaignStartModal(props: CampaignStartModalProps): JSX.Element 
 }
 
 function CampaignStartLoading(props: { flow: CampaignStartFlow }): JSX.Element {
+  const { flow } = props
+  const traceLabel =
+    flow.progressStage && flow.progressStageTotal > 0
+      ? `${mapCreateStageTraceLabel(flow.progressStage)} · step ${flow.progressStageIndex + 1} of ${flow.progressStageTotal}`
+      : null
+
   return (
     <div className="campaign-start-loading" role="status" aria-live="polite">
       <h2 id="campaign-start-title">Forging your campaign</h2>
-      <p>{props.flow.progressLabel || 'Creating your campaign'}</p>
+      {traceLabel ? <p className="campaign-start-progress-step">{traceLabel}</p> : null}
+      <p className="campaign-start-progress-goofy">{flow.progressLabel || 'Rolling dice for the universe…'}</p>
       <div className="campaign-start-progress-track" aria-hidden="true">
         <div className="campaign-start-progress-fill campaign-start-progress-indeterminate" />
       </div>

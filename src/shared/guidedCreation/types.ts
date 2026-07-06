@@ -1,4 +1,4 @@
-export const GUIDED_CREATION_PHASES = ['none', 'equipment', 'identity', 'opening_scene', 'complete'] as const
+export const GUIDED_CREATION_PHASES = ['none', 'race', 'background', 'equipment', 'identity', 'opening_scene', 'complete'] as const
 export type GuidedCreationPhase = (typeof GUIDED_CREATION_PHASES)[number]
 
 export const GUIDED_MESSAGE_PHASES = ['identity', 'opening_scene'] as const
@@ -59,6 +59,17 @@ export interface GuidedCreationKickoffInput {
   campaignId: string
   characterId: string
 }
+
+import type { RevertibleOnboardingPhase } from './revertPhase'
+
+export type GuidedCreationRevertPhaseInput = {
+  characterId: string
+  targetPhase: RevertibleOnboardingPhase
+}
+
+export type GuidedCreationRevertPhaseResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_found' | 'invalid_revert' }
 
 export interface GuidedCreationKickoffSuccess {
   ok: true

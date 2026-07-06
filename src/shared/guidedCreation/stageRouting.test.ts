@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Character } from '../../db/repositories/characters'
-import { canEnterPlay, findGuidedCreationPlayer, stageAfterCampaignSelect } from './stageRouting'
+import {
+  canEnterPlay,
+  findGuidedCreationPlayer,
+  findSetupPhasePlayer,
+  stageAfterCampaignSelect,
+  stageForGuidedPhase
+} from './stageRouting'
 
 function player(phase: Character['guidedCreationPhase']): Character {
   return {
@@ -30,7 +36,10 @@ function player(phase: Character['guidedCreationPhase']): Character {
     diedAt: null,
     deathCause: null,
     obituary: null,
-    ownerPlayerCharacterId: null
+    ownerPlayerCharacterId: null,
+    raceKey: null,
+    backgroundKey: null,
+    backgroundStory: null
   }
 }
 
@@ -42,16 +51,42 @@ describe('guided creation stage routing', () => {
     expect(canEnterPlay(player('complete'))).toBe(true)
   })
 
+  it('maps guided creation phases to onboarding stages', () => {
+    expect(stageForGuidedPhase('race')).toBe('raceSelection')
+    expect(stageForGuidedPhase('background')).toBe('backgroundSelection')
+    expect(stageForGuidedPhase('equipment')).toBe('equipmentSelection')
+  })
+
   it('resumes the correct onboarding stage after campaign select', () => {
     expect(stageAfterCampaignSelect([])).toBe('review')
+    expect(stageAfterCampaignSelect([player('race')])).toBe('raceSelection')
+    expect(stageAfterCampaignSelect([player('background')])).toBe('backgroundSelection')
     expect(stageAfterCampaignSelect([player('equipment')])).toBe('equipmentSelection')
     expect(stageAfterCampaignSelect([player('identity')])).toBe('guidedIdentity')
     expect(stageAfterCampaignSelect([player('opening_scene')])).toBe('guidedOpeningScene')
     expect(stageAfterCampaignSelect([player('complete')])).toBe('campaignHub')
   })
 
-  it('prefers the equipment-phase player when multiple players exist', () => {
+  it('prefers the race-phase player when multiple players exist', () => {
+    const characters = [player('complete'), player('race')]
+    expect(findGuidedCreationPlayer(characters)?.guidedCreationPhase).toBe('race')
+  })
+
+  it('prefers the background-phase player when no race-phase player exists', () => {
+    const characters = [player('complete'), player('background')]
+    expect(findGuidedCreationPlayer(characters)?.guidedCreationPhase).toBe('background')
+  })
+
+  it('prefers the equipment-phase player when no race- or background-phase player exists', () => {
     const characters = [player('complete'), player('equipment')]
     expect(findGuidedCreationPlayer(characters)?.guidedCreationPhase).toBe('equipment')
+  })
+
+  it('finds setup-phase players across race, background, and equipment', () => {
+    expect(findSetupPhasePlayer([player('complete'), player('background')])?.guidedCreationPhase).toBe(
+      'background'
+    )
+    expect(findSetupPhasePlayer([player('race')])?.guidedCreationPhase).toBe('race')
+    expect(findSetupPhasePlayer([player('identity')])?.guidedCreationPhase).toBeUndefined()
   })
 })

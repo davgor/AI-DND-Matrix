@@ -16,6 +16,17 @@ const IDENTITY_INTERVIEW_CONTEXT = {
   characterClass: 'fighter',
   abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
   alignment: 'lawful_good' as const,
+  raceName: 'Elf',
+  raceLore: {
+    summary: 'Reclusive forest folk.',
+    appearance: 'Slender.',
+    culture: 'Old groves.',
+    roleInThisLand: 'Keepers.',
+    hooks: ['A dying grove.']
+  },
+  backgroundLabel: null,
+  backgroundDescription: null,
+  backgroundStory: null,
   transcript: [] as Array<{ role: 'player' | 'dm'; content: string }>,
   currentFoundations: defaultIdentityFoundations()
 }
@@ -32,15 +43,49 @@ describe('runIdentityInterviewKickoff', () => {
       characterName: IDENTITY_INTERVIEW_CONTEXT.characterName,
       characterClass: IDENTITY_INTERVIEW_CONTEXT.characterClass,
       abilityScores: IDENTITY_INTERVIEW_CONTEXT.abilityScores,
-      alignment: IDENTITY_INTERVIEW_CONTEXT.alignment
+      alignment: IDENTITY_INTERVIEW_CONTEXT.alignment,
+      raceName: IDENTITY_INTERVIEW_CONTEXT.raceName,
+      raceLore: IDENTITY_INTERVIEW_CONTEXT.raceLore,
+      backgroundLabel: IDENTITY_INTERVIEW_CONTEXT.backgroundLabel,
+      backgroundDescription: IDENTITY_INTERVIEW_CONTEXT.backgroundDescription,
+      backgroundStory: IDENTITY_INTERVIEW_CONTEXT.backgroundStory
     })
     expect(result.dmReply.toLowerCase()).toContain('who')
+    expect(provider.calls[0]?.prompt).toContain('Kael')
+    expect(provider.calls[0]?.prompt).toContain('Elf')
+    expect(provider.calls[0]?.prompt).toContain('lawful_good')
   })
 })
 
 describe('identityWhoKickoffFallback', () => {
   it('names the character in the fallback opener', () => {
     expect(identityWhoKickoffFallback('Kael')).toContain('Kael')
+  })
+})
+
+describe('runIdentityInterviewKickoff background context', () => {
+  it('includes background label, description, and untrusted story in the prompt', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Tell me more about your time in the ranks.'
+      })
+    ])
+    await runIdentityInterviewKickoff(provider, {
+      campaignPremise: IDENTITY_INTERVIEW_CONTEXT.campaignPremise,
+      characterName: IDENTITY_INTERVIEW_CONTEXT.characterName,
+      characterClass: IDENTITY_INTERVIEW_CONTEXT.characterClass,
+      abilityScores: IDENTITY_INTERVIEW_CONTEXT.abilityScores,
+      alignment: IDENTITY_INTERVIEW_CONTEXT.alignment,
+      raceName: IDENTITY_INTERVIEW_CONTEXT.raceName,
+      raceLore: IDENTITY_INTERVIEW_CONTEXT.raceLore,
+      backgroundLabel: 'Soldier',
+      backgroundDescription: 'You served in an army.',
+      backgroundStory: 'I marched on the northern border.'
+    })
+    expect(provider.calls[0]?.prompt).toContain('Soldier')
+    expect(provider.calls[0]?.prompt).toContain('You served in an army.')
+    expect(provider.calls[0]?.prompt).toContain('I marched on the northern border.')
+    expect(provider.calls[0]?.prompt).toContain('untrusted narrative content')
   })
 })
 
@@ -61,9 +106,12 @@ describe('runIdentityInterviewTurn', () => {
     const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'I am Kael.')
     expect(result.foundations.who.complete).toBe(true)
     expect(result.allFoundationsComplete).toBe(false)
+    expect(provider.calls[0]?.prompt).toContain('Kael')
+    expect(provider.calls[0]?.prompt).toContain('Elf')
+    expect(provider.calls[0]?.prompt).toContain('lawful_good')
   })
 
-  it('retries malformed JSON until a valid schema arrives', async () => {
+  it('includes race and alignment in interview-turn prompts', async () => {
     const provider = createScriptedProvider([
       'not json',
       JSON.stringify({

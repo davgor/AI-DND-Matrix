@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CampaignHubCastCard, CampaignHubCastRail } from './CampaignHubCastRail'
 import { CampaignHubLayout } from './CampaignHubLayout'
+import { CampaignHubModals } from './CampaignHubLayoutParts'
 import { CampaignHubObituaryModal } from './CampaignHubObituaryModal'
 import { makeTestCastMember, makeTestHubSnapshot } from './hubTestFixtures'
 
@@ -50,6 +51,9 @@ describe('CampaignHub obituary blocking', () => {
       lastPlayed: 'Jun 1, 2026',
       actionsDisabled: true,
       obituaryCharacterId: 'dead-1',
+      worldHistoryOpen: false,
+      onViewWorldHistory: () => {},
+      onCloseWorldHistory: () => {},
       onResumeCharacter: () => {},
       onCreateCharacter: () => {},
       onViewObituary: () => {},
@@ -61,7 +65,9 @@ describe('CampaignHub obituary blocking', () => {
     expect(resumeButton(railProps).props.disabled).toBe(true)
     expect(createButton(railProps).props.disabled).toBe(true)
 
-    const modalComponent = normalizeChildren(node.props.children).find(
+    const modalsNode = normalizeChildren(node.props.children).find((child) => child.type === CampaignHubModals)!
+    const modals = CampaignHubModals(modalsNode.props)
+    const modalComponent = normalizeChildren(modals.props.children).find(
       (child) => child.type === CampaignHubObituaryModal
     )
     expect(modalComponent).toBeDefined()

@@ -1,6 +1,9 @@
 import type { CampaignGenerationResult } from '../agents/campaignGeneration/types'
 
+import { VALID_WORLD } from '../agents/campaignGeneration/fixtures'
+
 export const QUEST_SMOKE_GENERATION: CampaignGenerationResult = {
+  world: VALID_WORLD,
   regions: [
     {
       name: 'Millbrook',

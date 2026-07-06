@@ -4,23 +4,27 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses } from '../agents/campaignGeneration/fixtures'
+import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 import { generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 import { canContinueCampaignReview, getCampaignReviewContinueBlockers } from '../shared/campaignReview/campaignReviewValidation'
 import { canEnterCampaignPlay, getCampaignPlayBlockers } from '../shared/campaignPlay/campaignPlayReady'
-import { makeNpcs, makeRegion, SINGLE_NPC_PAYLOAD } from './epic039.integration.fixtures'
+import { makeNpcs, makeRegion, SINGLE_NPC_CORE_BUNDLE, SINGLE_NPC_FINAL } from './epic039.integration.fixtures'
 
 describe('epic 039 create handoff', () => {
   it('honors custom initial counts through create → review', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
-    const payload = JSON.stringify({
-      regions: [makeRegion('Lonely Reach')],
-      npcs: makeNpcs('Lonely Reach', 'Lone'),
-      storyThread: { title: 'Solo Arc', state: 'starting', summary: 'A small start.' }
-    })
-    const provider = createScriptedProvider([payload, ...npcReviewResponses(1)])
+    const provider = createScriptedProvider([
+      ...buildCascadingSeedResponses({
+        regionCount: 1,
+        npcsPerRegion: 1,
+        regions: [makeRegion('Lonely Reach')],
+        storyThread: { title: 'Solo Arc', state: 'starting', summary: 'A small start.' }
+      }),
+      RACE_LORE_RESPONSE,
+      ...npcReviewResponses(1)
+    ])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'epic-039-create',
       premisePrompt: 'A sparse frontier',
@@ -64,7 +68,7 @@ describe('epic 039 review gates', () => {
       region: makeRegion('Mistfen Crossing'),
       npcs: makeNpcs('Mistfen Crossing', 'Mist')
     })
-    const regionProvider = createScriptedProvider([regionPayload, ...npcReviewResponses(1)])
+    const regionProvider = createScriptedProvider([regionPayload, RACE_LORE_RESPONSE, ...npcReviewResponses(1)])
     const afterRegion = await generateRegionForCampaign(db, regionProvider, {
       campaignId: campaign.id,
       seedPrompt: 'A foggy crossing',
@@ -110,7 +114,12 @@ describe('epic 039 play gate', () => {
     expect(getCampaignPlayBlockers(blocked)).toHaveLength(1)
     expect(canEnterCampaignPlay(blocked)).toBe(false)
 
-    const provider = createScriptedProvider([SINGLE_NPC_PAYLOAD, '{"upgrade":false}'])
+    const provider = createScriptedProvider([
+      SINGLE_NPC_CORE_BUNDLE,
+      RACE_LORE_RESPONSE,
+      SINGLE_NPC_FINAL,
+      '{"upgrade":false}'
+    ])
     const afterNpc = await generateNpcForCampaign(db, provider, {
       campaignId: campaign.id,
       regionId: regionB.id,

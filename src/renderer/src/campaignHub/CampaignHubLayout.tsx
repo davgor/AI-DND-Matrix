@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react'
 import type { PlayAwareHubSnapshot } from '../../../shared/campaignHub/types'
 import { CampaignHubCastRail } from './CampaignHubCastRail'
-import { CampaignHubObituaryModal } from './CampaignHubObituaryModal'
+import { CampaignHubHeader, CampaignHubModals } from './CampaignHubLayoutParts'
 import { CampaignHubWorldPreview } from './CampaignHubWorldPreview'
-import { hubPremiseSnippet } from './hubUtils'
 import './campaignHub.css'
 
 export interface CampaignHubLayoutProps {
@@ -12,6 +11,9 @@ export interface CampaignHubLayoutProps {
   sidebar?: ReactNode
   actionsDisabled: boolean
   obituaryCharacterId: string | null
+  worldHistoryOpen: boolean
+  onViewWorldHistory: () => void
+  onCloseWorldHistory: () => void
   onResumeCharacter: (characterId: string) => void
   onCreateCharacter: () => void
   onViewObituary: (characterId: string) => void
@@ -29,16 +31,11 @@ export function CampaignHubLayout(props: CampaignHubLayoutProps): JSX.Element {
       {props.sidebar ? <div className="campaign-hub-sidebar">{props.sidebar}</div> : null}
       <div className="campaign-hub-body">
         <main className="campaign-hub-center">
-          <header className="campaign-hub-header">
-            <h1>{campaign?.name ?? 'Campaign'}</h1>
-            {campaign?.premisePrompt ? (
-              <p className="campaign-hub-premise">{hubPremiseSnippet(campaign.premisePrompt)}</p>
-            ) : null}
-            {props.lastPlayed ? (
-              <p className="campaign-hub-last-played">Last played: {props.lastPlayed}</p>
-            ) : null}
-          </header>
-          <CampaignHubWorldPreview snapshot={props.snapshot} />
+          <CampaignHubHeader campaign={campaign} lastPlayed={props.lastPlayed} />
+          <CampaignHubWorldPreview
+            snapshot={props.snapshot}
+            onViewWorldHistory={props.onViewWorldHistory}
+          />
         </main>
         <CampaignHubCastRail
           cast={props.snapshot.cast}
@@ -48,9 +45,14 @@ export function CampaignHubLayout(props: CampaignHubLayoutProps): JSX.Element {
           onViewObituary={props.onViewObituary}
         />
       </div>
-      {props.obituaryCharacterId ? (
-        <CampaignHubObituaryModal member={obituaryMember} onClose={props.onCloseObituary} />
-      ) : null}
+      <CampaignHubModals
+        worldHistoryOpen={props.worldHistoryOpen}
+        worldHistory={campaign?.worldHistory}
+        onCloseWorldHistory={props.onCloseWorldHistory}
+        obituaryCharacterId={props.obituaryCharacterId}
+        obituaryMember={obituaryMember}
+        onCloseObituary={props.onCloseObituary}
+      />
     </div>
   )
 }

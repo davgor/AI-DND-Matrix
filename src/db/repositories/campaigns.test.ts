@@ -8,7 +8,9 @@ import {
   listCampaigns,
   listCampaignsByLastPlayed,
   updateCampaignDeathMode,
-  updateCampaignStateSummary
+  updateCampaignStateSummary,
+  updateCampaignWorldHistory,
+  updateCampaignWorldSummary
 } from './campaigns'
 
 describe('campaigns repository: create + getById round-trip', () => {
@@ -29,6 +31,9 @@ describe('campaigns repository: create + getById round-trip', () => {
     expect(fetched?.respawnRules).toBeNull()
     expect(fetched?.inGameDate).toBe(0)
     expect(fetched?.currentStateSummary).toBe('')
+    expect(fetched?.worldName).toBe('')
+    expect(fetched?.worldSummary).toBe('')
+    expect(fetched?.worldHistory).toBe('')
   })
 
   it('round-trips a non-null respawn_rules object', () => {
@@ -112,6 +117,40 @@ describe('campaigns repository: listCampaignsByLastPlayed', () => {
     expect(result.find((c) => c.id === playedRecently.id)?.lastPlayedAt).toBe(
       '2026-06-01T00:00:00.000Z'
     )
+  })
+})
+
+describe('campaigns repository: world fields at create', () => {
+  it('round-trips world fields when provided at create', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Velmora',
+      premisePrompt: 'A storm-wracked archipelago.',
+      deathMode: 'standard',
+      worldName: 'The Shattered Expanse',
+      worldSummary: 'Para one.\n\nPara two.\n\nPara three.',
+      worldHistory: 'Epoch one.\n\nEpoch two.\n\nEpoch three.\n\nEpoch four.'
+    })
+
+    expect(getCampaignById(db, created.id)).toEqual(created)
+  })
+})
+
+describe('campaigns repository: world field updates', () => {
+  it('updates world_summary and world_history independently', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Test',
+      premisePrompt: '...',
+      deathMode: 'standard'
+    })
+
+    updateCampaignWorldSummary(db, created.id, 'New summary.\n\nSecond.\n\nThird.')
+    updateCampaignWorldHistory(db, created.id, 'Deep past.\n\nMore past.\n\nLegends.\n\nRecent epochs.')
+
+    const fetched = getCampaignById(db, created.id)
+    expect(fetched?.worldSummary).toContain('New summary')
+    expect(fetched?.worldHistory).toContain('Deep past')
   })
 })
 

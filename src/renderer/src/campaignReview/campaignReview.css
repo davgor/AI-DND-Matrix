@@ -30,7 +30,7 @@
 }
 
 .campaign-review-region-card {
-  margin-bottom: 24px;
+  margin-bottom: 0;
   padding: 20px;
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
   border-radius: 10px;
@@ -38,7 +38,36 @@
 }
 
 .campaign-review-region-card h3 {
-  margin: 0 0 12px;
+  margin: 0;
+}
+
+.campaign-review-region-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.campaign-review-region-header h3 {
+  flex: 1;
+}
+
+.campaign-review-npcs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.campaign-review-npcs-header h4 {
+  margin: 0;
+}
+
+.campaign-review-generate-npc {
+  flex-shrink: 0;
+  padding: 6px 12px;
 }
 
 .campaign-review-region-destroyed {
@@ -88,6 +117,14 @@
   margin-bottom: 12px;
 }
 
+.campaign-review-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
 .campaign-review-item textarea {
   width: 100%;
   min-height: 48px;
@@ -108,6 +145,77 @@
   padding: 10px 16px;
 }
 
+.campaign-review-world {
+  margin-bottom: 28px;
+}
+
+.campaign-review-world h2 {
+  margin: 0 0 12px;
+}
+
+.campaign-review-view-world-history {
+  padding: 8px 12px;
+}
+
+.campaign-review-world-divider {
+  margin: 0 0 4px;
+  border: none;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.campaign-review-world-history-modal {
+  max-height: min(90vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-review-world-history-body {
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 4px;
+}
+
+.campaign-review-world-history-modal .campaign-review-world-history-body textarea,
+.campaign-review-world-history-modal .campaign-review-seed-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: min(440px, 58vh);
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.campaign-review-world-history-readonly {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: min(440px, 58vh);
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-md, 8px);
+  background: var(--surface-inset, rgba(0, 0, 0, 0.2));
+  white-space: pre-wrap;
+  line-height: 1.55;
+  max-height: min(440px, 58vh);
+  overflow-y: auto;
+}
+
+.campaign-review-world-history-modal .campaign-review-generate-actions {
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  flex-shrink: 0;
+}
+
+.campaign-review-world-history-notice {
+  margin: 12px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
 .campaign-review-overlay {
   position: fixed;
   inset: 0;
@@ -116,6 +224,19 @@
   justify-content: center;
   background: rgba(0, 0, 0, 0.55);
   z-index: 100;
+}
+
+.campaign-review-overlay--content-width {
+  align-items: center;
+  justify-content: stretch;
+  box-sizing: border-box;
+  padding: 24px 16px 24px calc(var(--app-sidebar-width, 220px) + 12px);
+}
+
+.campaign-review-overlay--content-width .campaign-review-world-history-modal {
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .campaign-review-generate-modal {
@@ -161,15 +282,77 @@
 }
 
 .campaign-review-npc-card {
-  margin-bottom: 16px;
+  margin-bottom: 0;
+}
+
+.campaign-review-npc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.campaign-review-npc-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.campaign-review-npc-heading strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.campaign-review-readonly-value {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.campaign-review-icon-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.2));
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary, #9ca3af);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.campaign-review-icon-delete-symbol {
+  display: block;
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+
+.campaign-review-icon-delete:hover {
+  color: var(--color-error, #e57373);
+  border-color: rgba(229, 115, 115, 0.45);
+}
+
+.campaign-review-npc-break {
+  margin: 20px 0;
+  border: none;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.campaign-review-region-break {
+  margin: 28px 0;
+  border: none;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
 }
 
 .campaign-review-npc-backstory {
-  margin: 8px 0 10px;
+  margin: 0;
 }
 
 .campaign-review-npc-backstory p {
-  margin: 4px 0 0;
+  margin: 0;
   line-height: 1.5;
   font-size: 0.9rem;
 }
@@ -183,15 +366,43 @@
 }
 
 .campaign-review-npc-tier {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-size: 0.85rem;
   color: var(--text-secondary, #9ca3af);
 }
 
+.campaign-review-panel {
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  margin: 10px 0 0;
+  padding: 8px 12px 12px;
+  min-width: 0;
+}
+
+.campaign-review-panel legend {
+  padding: 0 8px;
+  margin-left: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-panel-body p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.campaign-review-panel-body ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
 .campaign-review-npc-traits {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 6px 20px;
   margin: 0;
   padding: 0;
   font-size: 0.85rem;
@@ -200,8 +411,11 @@
 
 .campaign-review-npc-trait-row {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .campaign-review-npc-trait-row dt {
@@ -209,6 +423,11 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.campaign-review-npc-trait-row dt::after {
+  content: ':';
 }
 
 .campaign-review-npc-trait-row dd {

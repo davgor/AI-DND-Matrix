@@ -3,9 +3,9 @@ import type Database from 'better-sqlite3'
 import { CampaignGenerationSchemaError, generateCampaignSeed, persistGeneratedCampaign } from '../agents/campaignGeneration'
 import type { CampaignSetupInput } from '../agents/campaignGeneration'
 import type { Provider } from '../agents/providers/types'
+import { buildAvailableRaceOptions } from '../agents/raceLore'
+import { buildCreateProgress } from '../shared/campaignCreate/stageMessages'
 import {
-  CREATE_CAMPAIGN_STAGE_ORDER,
-  CREATE_CAMPAIGN_STAGE_TOTAL,
   type CreateCampaignFailureCategory,
   type CreateCampaignProgress,
   type CreateCampaignRequest
@@ -37,15 +37,6 @@ function emitProgress(payload: CreateCampaignProgress): void {
   mainWindow?.webContents.send('campaignCreate:progress', payload)
 }
 
-function progressForStage(stageIndex: number, statusText: string): CreateCampaignProgress {
-  return {
-    stage: CREATE_CAMPAIGN_STAGE_ORDER[stageIndex] as CreateCampaignProgress['stage'],
-    stageIndex,
-    stageTotal: CREATE_CAMPAIGN_STAGE_TOTAL,
-    statusText
-  }
-}
-
 function toSetupInput(request: CreateCampaignRequest): CampaignSetupInput {
   return {
     name: request.name ?? request.premisePrompt.slice(0, 40),
@@ -71,13 +62,13 @@ export async function createCampaignFromRequest(
 ): Promise<CreateCampaignResult> {
   const input = toSetupInput(request)
   try {
-    emitProgress(progressForStage(0, 'Sending your campaign premise to the narrative engine'))
     const generation = await generateCampaignSeed(provider, input.premisePrompt, {
       regionCount: input.regionCount,
-      npcsPerRegion: input.npcsPerRegion
+      npcsPerRegion: input.npcsPerRegion,
+      availableRaces: buildAvailableRaceOptions([]),
+      onProgress: (stage) => emitProgress(buildCreateProgress(stage))
     })
-    emitProgress(progressForStage(1, 'Interpreting generated world details'))
-    emitProgress(progressForStage(2, 'Writing regions, NPCs, and story to your save'))
+    emitProgress(buildCreateProgress('persist'))
     const campaign = await persistGeneratedCampaign(db, provider, input, generation)
     touchLastPlayed(db, campaign.id)
     return { ok: true, detail: getCampaignDetail(db, campaign.id) }

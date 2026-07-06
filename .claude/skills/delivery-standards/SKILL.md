@@ -75,6 +75,8 @@ Also run `npm run typecheck` when types/TS config changed or build errors are am
 
 **Native modules / Electron** (`better-sqlite3`, new `main`/`preload` wiring): see complete-ticket §4 — `npm test` alone is not enough; exercise the path in the real app after `npm run rebuild:electron`.
 
+**Campaign create pipeline changes** (generation stages, world/regions/NPC/story schema, `campaignCreateIpc`, `normalize.ts`, `persist.ts`, create progress stages): follow **[campaign-create-change-checklist](../../docs/runbooks/campaign-create-change-checklist.md)** in addition to this gate — contract tests + realistic LLM fixtures + one manual create with a real provider are required before done.
+
 **If `better-sqlite3` rebuild fails** because the dev app holds the `.node` file: note it, ask user to close the app, retry `npm test`, or run targeted vitest skipping DB if impossible.
 
 ## 4. Close out

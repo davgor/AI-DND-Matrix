@@ -1,6 +1,7 @@
 import type { Archetype } from '../../../engine/hp'
 import { AbilityScoreAssignment } from './AbilityScoreAssignment'
 import { CharacterSetupCoreFields } from './CharacterSetupFields'
+import { PartyMemberSetup } from './PartyMemberSetup'
 import type { CharacterSetupDraft } from './characterSetupDraft'
 import { useCharacterSetup } from './useCharacterSetup'
 import { ProceedButton } from '../onboarding/ProceedButton'
@@ -16,7 +17,7 @@ export interface CharacterSetupProps {
 
 export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
   const setup = useCharacterSetup(props.campaignId, props.onComplete, props.draft)
-  const formKey = setup.resumeCharacterId ?? 'new'
+  const formKey = `${setup.resumeCharacterId ?? 'new'}-${setup.initialAbilityScoreMethod}`
 
   return (
     <div className="character-setup">
@@ -30,6 +31,12 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
         initialMethod={setup.initialAbilityScoreMethod}
         onAssigned={setup.setAbilityScores}
         onMethodChange={setup.setAbilityScoreMethod}
+      />
+
+      <PartyMemberSetup
+        campaignId={props.campaignId}
+        members={setup.partyMembers}
+        onChange={setup.setPartyMembers}
       />
 
       <div className="portrait-upload">
@@ -46,7 +53,7 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
       )}
 
       <ProceedButton disabled={setup.submitting} onClick={() => void setup.handleSubmit()}>
-        {setup.submitting ? 'Creating...' : 'Choose your gear'}
+        {setup.submitting ? 'Creating...' : 'Choose your race'}
       </ProceedButton>
     </div>
   )

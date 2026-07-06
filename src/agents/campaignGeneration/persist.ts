@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import { resolveOrRealizeCampaignRace } from '../raceLore'
 import { createCampaign, type Campaign } from '../../db/repositories/campaigns'
 import { createNpcWithCombatReview } from '../../db/repositories/npcCombatHydration'
 import { createRegion } from '../../db/repositories/regions'
@@ -18,6 +19,21 @@ import type {
   PersistRegionWithNpcsInput
 } from './types'
 import { CampaignGenerationSchemaError } from './types'
+import { resolveGeneratedRegionName } from './normalize'
+
+async function resolveNpcRaceIfSpeaking(
+  db: Database.Database,
+  provider: Provider,
+  campaignId: string,
+  generatedNpc: GeneratedNpc
+): Promise<void> {
+  if (generatedNpc.canSpeak && generatedNpc.raceKey) {
+    await resolveOrRealizeCampaignRace(db, provider, {
+      campaignId,
+      raceKey: generatedNpc.raceKey
+    })
+  }
+}
 
 export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): Promise<void> {
   const { db, provider, campaignId, generatedRegion, generatedNpcs } = input
@@ -53,6 +69,7 @@ export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): 
         `Generated NPC "${generatedNpc.name}" references wrong region "${generatedNpc.regionName}"`
       )
     }
+    await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
     await createNpcWithCombatReview(db, provider, {
       campaignId,
       regionId: region.id,
@@ -62,7 +79,11 @@ export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): 
       alignment: generatedNpc.alignment ?? null,
       temperament: generatedNpc.temperament,
       canSpeak: generatedNpc.canSpeak,
-      backstory: generatedNpc.backstory ?? ''
+      backstory: generatedNpc.backstory ?? '',
+      raceKey: generatedNpc.raceKey ?? null,
+      backgroundKey: generatedNpc.backgroundKey ?? null,
+      genderKey: generatedNpc.genderKey ?? null,
+      classKey: generatedNpc.classKey ?? null
     })
   }
 }
@@ -108,17 +129,21 @@ interface PersistCampaignNpcsInput {
   campaignId: string
   npcs: GeneratedNpc[]
   regionIdsByName: Map<string, string>
+  regionNames: string[]
 }
 
 async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput): Promise<void> {
-  const { db, provider, campaignId, npcs, regionIdsByName } = input
+  const { db, provider, campaignId, npcs, regionIdsByName, regionNames } = input
   for (const generatedNpc of npcs) {
-    const regionId = regionIdsByName.get(generatedNpc.regionName)
+    const resolvedRegionName =
+      resolveGeneratedRegionName(generatedNpc.regionName, regionNames) ?? generatedNpc.regionName
+    const regionId = regionIdsByName.get(resolvedRegionName)
     if (!regionId) {
       throw new CampaignGenerationSchemaError(
         `Generated NPC "${generatedNpc.name}" references unknown region "${generatedNpc.regionName}"`
       )
     }
+    await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
     await createNpcWithCombatReview(db, provider, {
       campaignId,
       regionId,
@@ -128,7 +153,11 @@ async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput
       alignment: generatedNpc.alignment ?? null,
       temperament: generatedNpc.temperament,
       canSpeak: generatedNpc.canSpeak,
-      backstory: generatedNpc.backstory ?? ''
+      backstory: generatedNpc.backstory ?? '',
+      raceKey: generatedNpc.raceKey ?? null,
+      backgroundKey: generatedNpc.backgroundKey ?? null,
+      genderKey: generatedNpc.genderKey ?? null,
+      classKey: generatedNpc.classKey ?? null
     })
   }
 }
@@ -143,7 +172,10 @@ export async function persistGeneratedCampaign(
     name: input.name,
     premisePrompt: input.premisePrompt,
     deathMode: input.deathMode,
-    respawnRules: input.respawnRules ?? null
+    respawnRules: input.respawnRules ?? null,
+    worldName: generation.world.worldName,
+    worldSummary: generation.world.worldSummary,
+    worldHistory: generation.world.worldHistory
   })
 
   const regionIdsByName = persistGeneratedRegionsWithQuests(db, campaign.id, generation.regions)
@@ -152,7 +184,8 @@ export async function persistGeneratedCampaign(
     provider,
     campaignId: campaign.id,
     npcs: generation.npcs,
-    regionIdsByName
+    regionIdsByName,
+    regionNames: generation.regions.map((region) => region.name)
   })
 
   createStoryThread(db, {

@@ -1,0 +1,91 @@
+import { describe, expect, it } from 'vitest'
+import type { Npc } from '../../../db/repositories/npcs'
+import { CampaignReviewNpcTraits } from './CampaignReviewNpcTraits'
+
+function isJsxElement(node: unknown): node is JSX.Element {
+  return typeof node === 'object' && node !== null && 'props' in node
+}
+
+function collectText(node: unknown): string[] {
+  if (typeof node === 'string') {
+    return [node]
+  }
+  if (!isJsxElement(node)) {
+    return []
+  }
+  const children = node.props.children
+  if (children === undefined) {
+    return []
+  }
+  if (Array.isArray(children)) {
+    return children.flatMap((child) => collectText(child))
+  }
+  return collectText(children)
+}
+
+function baseNpc(overrides: Partial<Npc> = {}): Npc {
+  return {
+    id: 'npc-1',
+    campaignId: 'camp-1',
+    regionId: 'region-1',
+    name: 'Veteran',
+    role: 'innkeeper',
+    disposition: 'gruff',
+    alignment: 'lawful_neutral',
+    temperament: 'cautious',
+    canSpeak: true,
+    status: { alive: true },
+    isPartyMember: false,
+    backstory: 'Served in the border wars.',
+    combatTier: 'villager',
+    retiredAdventurerProfile: null,
+    hp: 8,
+    maxHp: 8,
+    ac: 10,
+    attackBonus: 0,
+    damageRoll: null,
+    conditions: [],
+    catalogCreatureKey: null,
+    encounterOutcome: null,
+    raceKey: 'human',
+    backgroundKey: null,
+    genderKey: null,
+    classKey: null,
+    ...overrides
+  }
+}
+
+describe('CampaignReviewNpcTraits background row (051.6)', () => {
+  it('shows Background when the NPC has a backgroundKey', () => {
+    const tree = CampaignReviewNpcTraits({ npc: baseNpc({ backgroundKey: 'soldier' }) })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Background')
+    expect(text).toContain('Soldier')
+  })
+
+  it('hides Background when backgroundKey is null', () => {
+    const tree = CampaignReviewNpcTraits({ npc: baseNpc({ backgroundKey: null }) })
+    const text = collectText(tree).join(' ')
+    expect(text).not.toContain('Background')
+  })
+})
+
+describe('CampaignReviewNpcTraits gender/class rows (052.8)', () => {
+  it('shows Gender and Class when set', () => {
+    const tree = CampaignReviewNpcTraits({
+      npc: baseNpc({ genderKey: 'woman', classKey: 'fighter' })
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Gender')
+    expect(text).toContain('Woman')
+    expect(text).toContain('Class')
+    expect(text).toContain('Fighter')
+  })
+
+  it('hides Gender and Class for legacy NPCs with null keys', () => {
+    const tree = CampaignReviewNpcTraits({ npc: baseNpc({ genderKey: null, classKey: null }) })
+    const text = collectText(tree).join(' ')
+    expect(text).not.toContain('Gender')
+    expect(text).not.toContain('Class')
+  })
+})

@@ -1,4 +1,8 @@
-import { parseAlignment, parseTemperament } from '../../shared/alignment/types'
+import { parseAlignment, parseTemperament, type Temperament } from '../../shared/alignment/types'
+import { parseBackgroundKey } from '../../shared/characterBackground/types'
+import { parseGenderKey } from '../../shared/npcGender/types'
+import { parseNpcClassKey } from '../../shared/npcClass/types'
+import { isPresetRaceKey, RACE_ROSTER } from '../../engine/raceSelection/roster'
 import { DEFAULT_ADDITIONAL_REGION_NPC_COUNT } from '../../shared/campaignCreate/types'
 import type {
   AdditionalRegionResult,
@@ -7,6 +11,7 @@ import type {
   GeneratedRegion,
   GeneratedSingleNpcResult,
   GeneratedStoryThread,
+  GeneratedWorld,
   GenerationCounts
 } from './types'
 import { resolveInitialGenerationCounts } from './types'
@@ -14,9 +19,174 @@ import { resolveInitialGenerationCounts } from './types'
 const MIN_NPCS_PER_REGION_WHEN_NONZERO = 1
 const MIN_QUEST_HOOKS = 1
 const MAX_QUEST_HOOKS = 4
+const MIN_WORLD_SUMMARY_PARAGRAPHS = 3
+const MIN_WORLD_HISTORY_PARAGRAPHS = 5
+const MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH = 2
+const MIN_WORLD_HISTORY_SENTENCES_PER_PARAGRAPH = 3
 
 // ---------------------------------------------------------------------------
-// Primitive readers
+// World normalization
+// ---------------------------------------------------------------------------
+
+export function splitParagraphs(text: string): string[] {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    return []
+  }
+  const byBlankLine = trimmed
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+  if (byBlankLine.length > 1) {
+    return byBlankLine
+  }
+  return trimmed
+    .split(/\n/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+}
+
+export function countParagraphs(text: string): number {
+  return splitParagraphs(text).length
+}
+
+export function countSentences(text: string): number {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    return 0
+  }
+  const sentences = trimmed.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g)
+  return sentences?.filter((part) => part.trim().length > 0).length ?? 0
+}
+
+const MIN_DUPLICATE_SENTENCE_LENGTH = 24
+
+export function extractSentences(text: string): string[] {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    return []
+  }
+  const matches = trimmed.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g)
+  return (matches ?? [trimmed])
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+}
+
+function normalizeSentenceForCompare(sentence: string): string {
+  return sentence.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+export function hasRepeatedSentences(text: string): boolean {
+  const seen = new Set<string>()
+  for (const sentence of extractSentences(text)) {
+    const normalized = normalizeSentenceForCompare(sentence)
+    if (normalized.length < MIN_DUPLICATE_SENTENCE_LENGTH) {
+      continue
+    }
+    if (seen.has(normalized)) {
+      return true
+    }
+    seen.add(normalized)
+  }
+  return false
+}
+
+export function meetsWorldSummaryProseStandards(worldSummary: string): boolean {
+  const paragraphs = splitParagraphs(worldSummary)
+  if (paragraphs.length < MIN_WORLD_SUMMARY_PARAGRAPHS) {
+    return false
+  }
+  if (hasRepeatedSentences(worldSummary)) {
+    return false
+  }
+  return paragraphs.every(
+    (paragraph) => countSentences(paragraph) >= MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH
+  )
+}
+
+export function normalizeRaceKeyForRoster(raw: string): string {
+  const key = raw.trim().toLowerCase().replace(/\s+/g, '_')
+  if (isPresetRaceKey(key)) {
+    return key
+  }
+  const byLabel = RACE_ROSTER.find((entry) => entry.label.toLowerCase() === raw.trim().toLowerCase())
+  return byLabel?.key ?? 'human'
+}
+
+export function coerceNpcTemperament(value: unknown): Temperament {
+  return parseTemperament(value) ?? 'neutral'
+}
+
+export function normalizeGeneratedWorld(value: unknown): GeneratedWorld | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const worldName = readString(record, 'worldName', 'world_name', 'name')
+  const worldSummary = readString(record, 'worldSummary', 'world_summary', 'summary')
+  const worldHistory = readString(record, 'worldHistory', 'world_history', 'history')
+  if (!worldName || !worldSummary || !worldHistory) {
+    return undefined
+  }
+  return {
+    worldName,
+    worldSummary: worldSummary.trim(),
+    worldHistory: worldHistory.trim()
+  }
+}
+
+export function meetsWorldHistoryProseStandards(worldHistory: string): boolean {
+  const paragraphs = splitParagraphs(worldHistory)
+  if (paragraphs.length < MIN_WORLD_HISTORY_PARAGRAPHS) {
+    return false
+  }
+  if (hasRepeatedSentences(worldHistory)) {
+    return false
+  }
+  return paragraphs.every(
+    (paragraph) => countSentences(paragraph) >= MIN_WORLD_HISTORY_SENTENCES_PER_PARAGRAPH
+  )
+}
+
+export function isValidGeneratedWorld(value: unknown): value is GeneratedWorld {
+  const normalized = normalizeGeneratedWorld(value)
+  return (
+    normalized !== undefined &&
+    meetsWorldSummaryProseStandards(normalized.worldSummary) &&
+    meetsWorldHistoryProseStandards(normalized.worldHistory)
+  )
+}
+
+export function normalizeRegionsGeneration(
+  value: unknown,
+  counts: GenerationCounts = resolveInitialGenerationCounts()
+): GeneratedRegion[] | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  return resolveRegions(value as Record<string, unknown>, counts)
+}
+
+export function normalizeStoryThreadGeneration(value: unknown): GeneratedStoryThread | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  return normalizeGeneratedStoryThread(
+    record['storyThread'] ?? record['story_thread'] ?? record['mainStoryThread'] ?? record
+  )
+}
+
+function defaultLegacyWorld(): GeneratedWorld {
+  return {
+    worldName: 'Unnamed World',
+    worldSummary:
+      'The frontier still holds scattered freeholds where river trade and old oaths overlap. Farmers bargain with ferry crews while ruin-scouts sell maps that may be lies.\n\nGuild charters and temple courts both claim the same toll roads, so every caravan pays twice or learns to travel by night. No single banner rules the heartland, and that vacuum keeps mercenary companies employed.\n\nStorm seasons and border feuds have sharpened lately, and rumor says something woke under the oldest barrows. Locals watch strangers closely until they prove which side of the toll ledger they stand on.',
+    worldHistory:
+      'In the first age the lowlands flooded when the river gods quarreled, drowning crown cities and leaving only hill forts above the mud. Survivors rebuilt as river clans who still swear oaths on the same cracked stones.\n\nA league of mason-kings later raised the high roads and taxed every bridge until revolt burned their seal-houses. The roads remain, but each province now posts its own toll and its own story about who betrayed whom.\n\nWar between temple orders and mining companies scarred the northern passes for two generations. Both sides hired the same mercenary companies, and veterans settled the border towns they once looted.\n\nTwenty years ago a red drought withered the central grain belt and sent refugee columns into coastal cities. Harbor councils opened granaries late, and the riots that followed reshaped who may vote in port law.\n\nToday the heartland looks stable only from a distance. River levels shift without season, old barrows glow on foggy nights, and every faction hires adventurers before it admits it is afraid.'
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 function readString(record: Record<string, unknown>, ...keys: string[]): string | undefined {
@@ -74,6 +244,11 @@ function resolveRegionName(candidate: string, regionNames: string[]): string | u
   }
   const normalizedCandidate = normalizeRegionName(candidate)
   return regionNames.find((name) => normalizeRegionName(name) === normalizedCandidate)
+}
+
+/** @internal shared with persistence */
+export function resolveGeneratedRegionName(candidate: string, regionNames: string[]): string | undefined {
+  return resolveRegionName(candidate, regionNames)
 }
 
 // ---------------------------------------------------------------------------
@@ -135,23 +310,67 @@ function normalizeGeneratedRegion(value: unknown): GeneratedRegion | undefined {
 // NPC normalization
 // ---------------------------------------------------------------------------
 
-function readNpcBehaviorFields(
-  record: Record<string, unknown>
-): Pick<GeneratedNpc, 'temperament' | 'canSpeak' | 'alignment' | 'backstory'> | undefined {
-  const temperament = parseTemperament(record['temperament'])
-  const canSpeak = readCanSpeak(record['canSpeak'] ?? record['can_speak'])
-  if (!temperament || canSpeak === undefined) {
-    return undefined
-  }
-  if (canSpeak) {
-    const alignment = parseAlignment(record['alignment'])
-    const backstory = readString(record, 'backstory')
-    return alignment && backstory ? { temperament, canSpeak, alignment, backstory } : undefined
-  }
-  return { temperament, canSpeak }
+function readNpcGenderKey(record: Record<string, unknown>): string | undefined {
+  const raw = readString(record, 'gender', 'genderKey', 'gender_key')
+  return raw ? parseGenderKey(raw) : undefined
 }
 
-function normalizeGeneratedNpc(value: unknown): GeneratedNpc | undefined {
+function readNpcClassKey(record: Record<string, unknown>): string | undefined {
+  const raw = readString(record, 'class', 'classKey', 'class_key')
+  return raw ? parseNpcClassKey(raw) : undefined
+}
+
+function readNpcBackgroundKey(record: Record<string, unknown>): string | undefined {
+  const raw = readString(record, 'background', 'backgroundKey', 'background_key')
+  return raw ? parseBackgroundKey(raw) : undefined
+}
+
+function readSpeakingNpcBehaviorFields(
+  record: Record<string, unknown>
+): Pick<
+  GeneratedNpc,
+  'alignment' | 'backstory' | 'raceKey' | 'backgroundKey' | 'genderKey' | 'classKey'
+> | undefined {
+  const alignment = parseAlignment(record['alignment'])
+  const backstory = readString(record, 'backstory')
+  const rawRace = readString(record, 'race', 'raceKey', 'race_key')
+  const backgroundKey = readNpcBackgroundKey(record)
+  const genderKey = readNpcGenderKey(record)
+  const classKey = readNpcClassKey(record)
+  const raceKey = rawRace ? normalizeRaceKeyForRoster(rawRace) : undefined
+  if (!alignment || !backstory || !raceKey || !backgroundKey || !genderKey || !classKey) {
+    return undefined
+  }
+  return { alignment, backstory, raceKey, backgroundKey, genderKey, classKey }
+}
+
+function readNpcBehaviorFields(
+  record: Record<string, unknown>
+): Pick<
+  GeneratedNpc,
+  | 'temperament'
+  | 'canSpeak'
+  | 'alignment'
+  | 'backstory'
+  | 'raceKey'
+  | 'backgroundKey'
+  | 'genderKey'
+  | 'classKey'
+> | undefined {
+  const temperament = coerceNpcTemperament(record['temperament'])
+  const canSpeak = readCanSpeak(record['canSpeak'] ?? record['can_speak'])
+  if (canSpeak === undefined) {
+    return undefined
+  }
+  if (!canSpeak) {
+    return { temperament, canSpeak }
+  }
+  const speaking = readSpeakingNpcBehaviorFields(record)
+  return speaking ? { temperament, canSpeak, ...speaking } : undefined
+}
+
+/** @internal test hook */
+export function normalizeGeneratedNpc(value: unknown): GeneratedNpc | undefined {
   if (typeof value !== 'object' || value === null) {
     return undefined
   }
@@ -308,7 +527,9 @@ export function normalizeCampaignGeneration(
     return undefined
   }
 
-  return { regions, npcs, storyThread }
+  const world = normalizeGeneratedWorld(candidate['world']) ?? defaultLegacyWorld()
+
+  return { world, regions, npcs, storyThread }
 }
 
 /** @internal test hook */
@@ -396,8 +617,28 @@ function hasValidNpcAlignment(n: Record<string, unknown>): boolean {
   return canSpeak === false || parseAlignment(n['alignment']) !== undefined
 }
 
+export function hasValidNpcRace(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readString(n, 'race', 'raceKey', 'race_key') !== undefined
+}
+
+export function hasValidNpcBackground(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readNpcBackgroundKey(n) !== undefined
+}
+
+export function hasValidNpcGender(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readNpcGenderKey(n) !== undefined
+}
+
+export function hasValidNpcClass(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readNpcClassKey(n) !== undefined
+}
+
 function hasValidNpcTemperament(n: Record<string, unknown>): boolean {
-  return parseTemperament(n['temperament']) !== undefined
+  return coerceNpcTemperament(n['temperament']) !== undefined
 }
 
 function hasValidNpcStringFields(n: Record<string, unknown>): boolean {
@@ -406,6 +647,15 @@ function hasValidNpcStringFields(n: Record<string, unknown>): boolean {
     typeof n['role'] === 'string' &&
     typeof n['disposition'] === 'string' &&
     typeof n['regionName'] === 'string'
+  )
+}
+
+function hasValidSpeakingNpcBundle(n: Record<string, unknown>): boolean {
+  return (
+    hasValidNpcRace(n) &&
+    hasValidNpcBackground(n) &&
+    hasValidNpcGender(n) &&
+    hasValidNpcClass(n)
   )
 }
 
@@ -419,7 +669,8 @@ function isGeneratedNpc(value: unknown): value is GeneratedNpc {
     hasValidNpcTemperament(n) &&
     readCanSpeak(n['canSpeak'] ?? n['can_speak']) !== undefined &&
     hasValidNpcBackstory(n) &&
-    hasValidNpcAlignment(n)
+    hasValidNpcAlignment(n) &&
+    hasValidSpeakingNpcBundle(n)
   )
 }
 
@@ -497,6 +748,9 @@ export function isValidGenerationResult(
     !isValidNpcList(npcs, regionNames) ||
     !hasEnoughNpcsPerRegion(regions, npcs, counts.npcsPerRegion)
   ) {
+    return false
+  }
+  if (!isValidGeneratedWorld(candidate['world'])) {
     return false
   }
   return isGeneratedStoryThread(candidate['storyThread'])

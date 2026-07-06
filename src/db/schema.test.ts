@@ -11,6 +11,7 @@ function tableNames(db: Database.Database): string[] {
 }
 
 const ALL_TABLE_NAMES = [
+  'campaign_races',
   'campaigns',
   'catalog_bucket_tags',
   'catalog_creatures',

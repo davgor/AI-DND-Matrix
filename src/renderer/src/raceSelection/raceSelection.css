@@ -1,0 +1,213 @@
+.race-selection {
+  flex: 1;
+  padding: 24px 28px;
+  overflow-y: auto;
+  color: var(--text-primary);
+}
+
+.race-selection h1 {
+  margin-bottom: 0.35rem;
+}
+
+.race-selection-subtitle {
+  margin: 0 0 1.25rem;
+  color: var(--text-secondary);
+}
+
+.race-selection-group {
+  margin-bottom: 1.5rem;
+}
+
+.race-selection-group h2 {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.race-selection-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.race-selection-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: 7.5rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: inherit;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.race-selection-option:hover:not(:disabled):not(.is-selected) {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.race-selection-option.is-selected {
+  border-color: var(--accent-gold);
+  background: var(--surface-active);
+  box-shadow:
+    0 0 0 1px var(--accent-gold),
+    0 0 14px rgba(201, 166, 107, 0.22);
+}
+
+.race-selection-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.race-selection-option-label {
+  font-weight: 600;
+}
+
+.race-selection-option.is-selected .race-selection-option-label {
+  color: var(--text-accent);
+}
+
+.race-selection-established-badge {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.race-selection-custom-panel {
+  margin: 1rem 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.race-selection-custom-panel label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.race-selection-custom-panel textarea,
+.race-selection-lore-field textarea,
+.race-selection-lore-field input {
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: inherit;
+  resize: vertical;
+}
+
+.race-selection-lore-field input {
+  min-height: auto;
+}
+
+.race-selection-lore-field textarea:disabled,
+.race-selection-lore-field input:disabled {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.race-selection-lore {
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle, var(--border-medium));
+}
+
+.race-selection-lore-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.race-selection-lore-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-primary);
+}
+
+.race-selection-regenerate,
+.race-selection-generate {
+  flex-shrink: 0;
+}
+
+.race-selection-lore-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.race-selection-lore-field label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.race-selection-error {
+  color: var(--accent-danger, #c44);
+  margin-bottom: 0.75rem;
+}
+
+.race-selection-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.race-selection-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.race-selection-back-arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
+.race-selection-back:hover:not(:disabled) .race-selection-back-arrow {
+  transform: translateX(-2px);
+}
+
+.race-selection-loading,
+.race-selection-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.race-selection-loading {
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.race-selection-preview-loading {
+  margin: 0.75rem 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}

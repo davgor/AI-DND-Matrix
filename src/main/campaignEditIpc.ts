@@ -5,19 +5,27 @@ import {
   CampaignGenerationSchemaError,
   assembleCampaignHistoryContext,
   generateAdditionalRegion,
-  generateSingleNpc,
+  generateWorldSummaryFromHistory,
   persistRegionWithNpcs,
   resolveAdditionalRegionNpcCount
 } from '../agents/campaignGeneration'
+import type { Provider } from '../agents/providers/types'
+import { generateFlaggedNpc } from '../agents/campaignGeneration/flaggedNpc'
+import { buildAvailableRaceOptions } from '../agents/raceLore'
 import { createNpcWithCombatReview } from '../db/repositories/npcCombatHydration'
 import {
   getCampaignById,
   updateCampaignDeathMode,
+  updateCampaignWorldHistory,
+  updateCampaignWorldSummary,
   type DeathMode,
   type RespawnRules
 } from '../db/repositories/campaigns'
-import { listNpcsByRegion, updateNpcDisposition, updateNpcTraits } from '../db/repositories/npcs'
+import { deleteNpcCascade } from '../db/repositories/deleteNpc'
+import { deleteRegionCascade } from '../db/repositories/deleteRegion'
+import { getNpcById, listNpcsByRegion, updateNpcDisposition, updateNpcTraits } from '../db/repositories/npcs'
 import { getRegionById, listRegionsByCampaign, updateRegionDescription } from '../db/repositories/regions'
+import { listCampaignRaces } from '../db/repositories/campaignRaces'
 import {
   MAX_ADDITIONAL_REGION_NPC_COUNT,
   MIN_ADDITIONAL_REGION_NPC_COUNT
@@ -50,6 +58,80 @@ export function editRegionDescription(
   input: EditRegionDescriptionInput
 ): CampaignDetail {
   updateRegionDescription(db, input.regionId, input.description)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface DeleteRegionInput {
+  campaignId: string
+  regionId: string
+}
+
+export function deleteRegionForCampaign(
+  db: Database.Database,
+  input: DeleteRegionInput
+): CampaignDetail {
+  const region = getRegionById(db, input.regionId)
+  if (!region || region.campaignId !== input.campaignId) {
+    throw new Error(`Region "${input.regionId}" not found for campaign "${input.campaignId}"`)
+  }
+  deleteRegionCascade(db, input.regionId)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface DeleteNpcInput {
+  campaignId: string
+  npcId: string
+}
+
+export function deleteNpcForCampaign(
+  db: Database.Database,
+  input: DeleteNpcInput
+): CampaignDetail {
+  const npc = getNpcById(db, input.npcId)
+  if (!npc || npc.campaignId !== input.campaignId) {
+    throw new Error(`NPC "${input.npcId}" not found for campaign "${input.campaignId}"`)
+  }
+  deleteNpcCascade(db, input.npcId)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface EditWorldSummaryInput {
+  campaignId: string
+  worldSummary: string
+}
+
+export function editWorldSummary(
+  db: Database.Database,
+  input: EditWorldSummaryInput
+): CampaignDetail {
+  updateCampaignWorldSummary(db, input.campaignId, input.worldSummary)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface EditWorldHistoryInput {
+  campaignId: string
+  worldHistory: string
+}
+
+export async function editWorldHistory(
+  db: Database.Database,
+  provider: Provider,
+  input: EditWorldHistoryInput
+): Promise<CampaignDetail> {
+  const campaign = getCampaignById(db, input.campaignId)
+  if (!campaign) {
+    throw new Error('Campaign not found')
+  }
+  const worldSummary = await generateWorldSummaryFromHistory(provider, {
+    premisePrompt: campaign.premisePrompt,
+    worldName: campaign.worldName,
+    worldHistory: input.worldHistory
+  })
+  const apply = db.transaction(() => {
+    updateCampaignWorldHistory(db, input.campaignId, input.worldHistory)
+    updateCampaignWorldSummary(db, input.campaignId, worldSummary)
+  })
+  apply()
   return getCampaignDetail(db, input.campaignId)
 }
 
@@ -128,7 +210,12 @@ export async function generateRegionForCampaign(
     provider,
     campaign.premisePrompt,
     existingNames,
-    { seedPrompt: seed, npcCount, history }
+    {
+      seedPrompt: seed,
+      npcCount,
+      history,
+      availableRaces: buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId))
+    }
   )
 
   await persistRegionWithNpcs({
@@ -146,6 +233,31 @@ export interface GenerateNpcInput {
   campaignId: string
   regionId: string
   seedPrompt: string
+}
+
+async function persistGeneratedNpcForCampaign(input: {
+  db: Database.Database
+  provider: ReturnType<typeof buildAgentProvider>
+  campaignId: string
+  regionId: string
+  generatedNpc: Awaited<ReturnType<typeof generateFlaggedNpc>>['npc']
+}): Promise<void> {
+  const { db, provider, campaignId, regionId, generatedNpc } = input
+  await createNpcWithCombatReview(db, provider, {
+    campaignId,
+    regionId,
+    name: generatedNpc.name,
+    role: generatedNpc.role,
+    disposition: generatedNpc.disposition,
+    alignment: generatedNpc.alignment ?? null,
+    temperament: generatedNpc.temperament,
+    canSpeak: generatedNpc.canSpeak,
+    backstory: generatedNpc.backstory ?? '',
+    raceKey: generatedNpc.raceKey ?? null,
+    backgroundKey: generatedNpc.backgroundKey ?? null,
+    genderKey: generatedNpc.genderKey ?? null,
+    classKey: generatedNpc.classKey ?? null
+  })
 }
 
 export async function generateNpcForCampaign(
@@ -167,24 +279,21 @@ export async function generateNpcForCampaign(
   }
 
   const existingNpcNames = listNpcsByRegion(db, region.id).map((npc) => npc.name)
-  const generation = await generateSingleNpc(provider, {
-    campaignPremise: campaign.premisePrompt,
-    regionName: region.name,
-    regionDescription: region.description,
-    existingNpcNames,
-    seedPrompt: seed
-  })
-
-  await createNpcWithCombatReview(db, provider, {
+  const generation = await generateFlaggedNpc(db, provider, {
     campaignId: input.campaignId,
     regionId: region.id,
-    name: generation.npc.name,
-    role: generation.npc.role,
-    disposition: generation.npc.disposition,
-    alignment: generation.npc.alignment ?? null,
-    temperament: generation.npc.temperament,
-    canSpeak: generation.npc.canSpeak,
-    backstory: generation.npc.backstory ?? ''
+    regionName: region.name,
+    regionDescription: region.description,
+    seedPrompt: seed,
+    existingNpcNames
+  })
+
+  await persistGeneratedNpcForCampaign({
+    db,
+    provider,
+    campaignId: input.campaignId,
+    regionId: region.id,
+    generatedNpc: generation.npc
   })
 
   return getCampaignDetail(db, input.campaignId)
@@ -195,12 +304,28 @@ export function registerCampaignEditHandlers(): void {
     editRegionDescription(getDb(), input)
   )
 
+  ipcMain.handle('campaigns:deleteRegion', (_event, input: DeleteRegionInput) =>
+    deleteRegionForCampaign(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:editWorldSummary', (_event, input: EditWorldSummaryInput) =>
+    editWorldSummary(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:editWorldHistory', async (_event, input: EditWorldHistoryInput) =>
+    editWorldHistory(getDb(), buildAgentProvider(), input)
+  )
+
   ipcMain.handle('campaigns:editNpcDisposition', (_event, input: EditNpcDispositionInput) =>
     editNpcDisposition(getDb(), input)
   )
 
   ipcMain.handle('campaigns:editNpcTraits', (_event, input: EditNpcTraitsInput) =>
     editNpcTraits(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:deleteNpc', (_event, input: DeleteNpcInput) =>
+    deleteNpcForCampaign(getDb(), input)
   )
 
   ipcMain.handle('campaigns:generateRegion', async (_event, input: GenerateRegionInput) => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildAdditionalRegionPrompt } from '.'
+import { buildAvailableRaceOptions } from '../raceLore'
 
 describe('history-aware additional region prompt (038.16)', () => {
   it('includes campaign history fields when context is provided', () => {
@@ -7,14 +8,17 @@ describe('history-aware additional region prompt (038.16)', () => {
       seedPrompt: 'Northern pass',
       npcCount: 3,
       history: {
-      currentStateSummary: 'The king is dead.',
+        worldName: 'Eryndor',
+        worldSummary: 'A war-torn realm of fractured keeps.',
+        worldHistory: 'Three ages of succession wars scarred the borderlands.',
+        currentStateSummary: 'The king is dead.',
       regionSummaries: [
         { name: 'Oakhollow', description: 'A village', recentHistory: 'Raided last week.' }
       ],
       storyThreadSummaries: [{ title: 'Crown', state: 'active', summary: 'Succession crisis' }],
       recentEvents: ['The village burned.']
       }
-    })
+    }, buildAvailableRaceOptions([]))
     expect(prompt).toContain('The king is dead.')
     expect(prompt).toContain('Raided last week.')
     expect(prompt).toContain('Succession crisis')

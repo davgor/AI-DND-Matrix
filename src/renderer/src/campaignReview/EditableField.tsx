@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { EditableFieldEditView, EditableFieldReadView } from './editableFieldViews'
 
 export interface EditableFieldProps {
   label: string
   initialValue: string
   onSave: (value: string) => Promise<void>
+  companionActions?: ReactNode
 }
 
 export function EditableField(props: EditableFieldProps): JSX.Element {
@@ -43,9 +44,12 @@ export function EditableField(props: EditableFieldProps): JSX.Element {
       ) : (
         <>
           <EditableFieldReadView value={value} />
-          <button type="button" onClick={() => setEditing(true)}>
-            Edit
-          </button>
+          <div className="campaign-review-item-actions">
+            <button type="button" onClick={() => setEditing(true)}>
+              Edit
+            </button>
+            {props.companionActions}
+          </div>
         </>
       )}
     </div>

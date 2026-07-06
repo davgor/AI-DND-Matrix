@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
+import { createCampaignRace } from '../db/repositories/campaignRaces'
+import { listCampaignRaces } from '../db/repositories/campaignRaces'
 import { abilityModifier } from '../engine/abilities'
 import { HIT_DIE_SIZE } from '../engine/hp'
+import { createScriptedProvider } from '../agents/providers/mockHarness'
+import type { RaceLore } from '../shared/raceSelection/types'
 
-import { createPartyMembers, createPlayerCharacter, replaceSetupPartyMembers, updatePlayerCharacterSetup } from './characterCreationIpc'
+import {
+  createPartyMembers,
+  createPlayerCharacter,
+  replaceSetupPartyMembers,
+  updatePlayerCharacterSetup
+} from './characterCreationIpc'
 import { listCharactersByCampaign } from '../db/repositories/characters'
+
+const SAMPLE_LORE: RaceLore = {
+  summary: 'Elves in this land are reclusive.',
+  appearance: 'Slender and pale.',
+  culture: 'Forest-bound.',
+  roleInThisLand: 'Keepers of old groves.',
+  hooks: ['A grove is dying.']
+}
 
 function seedCampaign() {
   const db = createTestDb()
@@ -15,6 +32,14 @@ function seedCampaign() {
     deathMode: 'legendary'
   })
   return { db, campaign }
+}
+
+function loreProvider() {
+  return createScriptedProvider([
+    JSON.stringify(SAMPLE_LORE),
+    JSON.stringify(SAMPLE_LORE),
+    JSON.stringify(SAMPLE_LORE)
+  ])
 }
 
 describe('createPlayerCharacter (009.3)', () => {
@@ -40,7 +65,7 @@ describe('createPlayerCharacter (009.3)', () => {
     expect(stats.hitDieRolls).toHaveLength(1)
     expect(stats.ac).toBe(10 + abilityModifier(abilityScores.agility))
     expect(character.currency).toBeGreaterThan(0)
-    expect(character.guidedCreationPhase).toBe('equipment')
+    expect(character.guidedCreationPhase).toBe('race')
   })
 
   it('persists the ability score assignment method in stats', () => {
@@ -74,15 +99,16 @@ describe('createPlayerCharacter (009.3)', () => {
   })
 })
 
-describe('createPartyMembers (009.4)', () => {
-  it('creates ai_party_member rows with rolled HP and ability scores (fixes 0/0 bug)', () => {
+describe('createPartyMembers (009.4, 049.8)', () => {
+  it('creates ai_party_member rows with rolled HP and ability scores (fixes 0/0 bug)', async () => {
     const { db, campaign } = seedCampaign()
+    const provider = loreProvider()
 
-    const members = createPartyMembers(db, {
+    const members = await createPartyMembers(db, provider, {
       campaignId: campaign.id,
       members: [
-        { name: 'Brom', characterClass: 'ranger', personality: 'gruff but loyal' },
-        { name: 'Lyra', characterClass: 'cleric', personality: 'cheerful optimist' }
+        { name: 'Brom', characterClass: 'ranger', personality: 'gruff but loyal', raceKey: 'human' },
+        { name: 'Lyra', characterClass: 'cleric', personality: 'cheerful optimist', raceKey: 'elf' }
       ]
     })
 
@@ -100,19 +126,76 @@ describe('createPartyMembers (009.4)', () => {
       expect(member.hp).toBeGreaterThan(0)
       expect(stats.hitDieRolls).toHaveLength(1)
       expect(stats.abilityScores.body).toBeGreaterThanOrEqual(3)
+      expect(member.raceKey).toBeTruthy()
     }
     expect((members[0]!.stats as { personality: string }).personality).toBe('gruff but loyal')
   })
 
-  it('creates zero rows when no party members are added', () => {
+  it('creates zero rows when no party members are added', async () => {
     const { db, campaign } = seedCampaign()
-    const members = createPartyMembers(db, { campaignId: campaign.id, members: [] })
+    const provider = loreProvider()
+    const members = await createPartyMembers(db, provider, { campaignId: campaign.id, members: [] })
     expect(members).toHaveLength(0)
   })
 })
 
+describe('createPartyMembers race realization (049.8)', () => {
+  it('realizes a new preset race and persists race_key on the member', async () => {
+    const { db, campaign } = seedCampaign()
+    const provider = loreProvider()
+
+    const [member] = await createPartyMembers(db, provider, {
+      campaignId: campaign.id,
+      members: [{ name: 'Brom', characterClass: 'ranger', personality: 'gruff', raceKey: 'dwarf' }]
+    })
+
+    expect(member?.raceKey).toBe('dwarf')
+    expect(listCampaignRaces(db, campaign.id)).toHaveLength(1)
+    expect(listCampaignRaces(db, campaign.id)[0]?.raceKey).toBe('dwarf')
+    expect(provider.calls).toHaveLength(1)
+  })
+
+  it('reuses an already-locked race without a second LLM call', async () => {
+    const { db, campaign } = seedCampaign()
+    createCampaignRace(db, {
+      campaignId: campaign.id,
+      raceKey: 'elf',
+      kind: 'preset',
+      label: 'Elf',
+      seedPrompt: 'Long-lived.',
+      lore: SAMPLE_LORE
+    })
+    const provider = loreProvider()
+
+    const [member] = await createPartyMembers(db, provider, {
+      campaignId: campaign.id,
+      members: [{ name: 'Lyra', characterClass: 'cleric', personality: 'kind', raceKey: 'elf' }]
+    })
+
+    expect(member?.raceKey).toBe('elf')
+    expect(provider.calls).toHaveLength(0)
+  })
+
+  it('realizes the same new race once when two companions pick it', async () => {
+    const { db, campaign } = seedCampaign()
+    const provider = loreProvider()
+
+    const members = await createPartyMembers(db, provider, {
+      campaignId: campaign.id,
+      members: [
+        { name: 'Brom', characterClass: 'ranger', personality: 'gruff', raceKey: 'halfling' },
+        { name: 'Lyra', characterClass: 'cleric', personality: 'kind', raceKey: 'halfling' }
+      ]
+    })
+
+    expect(members.every((m) => m.raceKey === 'halfling')).toBe(true)
+    expect(listCampaignRaces(db, campaign.id)).toHaveLength(1)
+    expect(provider.calls).toHaveLength(1)
+  })
+})
+
 describe('updatePlayerCharacterSetup', () => {
-  it('updates an equipment-phase player without creating a duplicate', () => {
+  it('updates a race-phase player without creating a duplicate', () => {
     const { db, campaign } = seedCampaign()
     const player = createPlayerCharacter(db, {
       campaignId: campaign.id,
@@ -142,8 +225,9 @@ describe('updatePlayerCharacterSetup', () => {
 })
 
 describe('replaceSetupPartyMembers', () => {
-  it('replaces shared setup party members for an equipment-phase player', () => {
+  it('replaces shared setup party members for a race-phase player', async () => {
     const { db, campaign } = seedCampaign()
+    const provider = loreProvider()
     const player = createPlayerCharacter(db, {
       campaignId: campaign.id,
       name: 'Kael',
@@ -151,19 +235,20 @@ describe('replaceSetupPartyMembers', () => {
       abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
       alignment: 'lawful_good'
     })
-    createPartyMembers(db, {
+    await createPartyMembers(db, provider, {
       campaignId: campaign.id,
-      members: [{ name: 'Brom', characterClass: 'ranger', personality: 'gruff' }]
+      members: [{ name: 'Brom', characterClass: 'ranger', personality: 'gruff', raceKey: 'human' }]
     })
 
-    const replaced = replaceSetupPartyMembers(db, {
+    const replaced = await replaceSetupPartyMembers(db, provider, {
       campaignId: campaign.id,
       playerCharacterId: player.id,
-      members: [{ name: 'Lyra', characterClass: 'cleric', personality: 'kind' }]
+      members: [{ name: 'Lyra', characterClass: 'cleric', personality: 'kind', raceKey: 'elf' }]
     })
 
     expect(replaced).toHaveLength(1)
     expect(replaced[0]?.name).toBe('Lyra')
+    expect(replaced[0]?.raceKey).toBe('elf')
     const party = listCharactersByCampaign(db, campaign.id).filter((row) => row.kind === 'ai_party_member')
     expect(party).toHaveLength(1)
     expect(party[0]?.name).toBe('Lyra')

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Character } from '../../../db/repositories/characters'
+import { resolveRaceDisplayLabel } from '../../../shared/raceSelection/resolveLabel'
+import { resolveBackgroundDisplayLabel } from '../../../shared/characterBackground/resolveLabel'
 import { CharacterSheetBody } from './CharacterSheetBody'
 import './characterSheet.css'
 
@@ -11,17 +13,25 @@ export interface CharacterSheetProps {
 
 export function CharacterSheet(props: CharacterSheetProps): JSX.Element {
   const [character, setCharacter] = useState<Character | null>(null)
+  const [raceLabel, setRaceLabel] = useState<string | null>(null)
+  const [backgroundLabel, setBackgroundLabel] = useState<string | null>(null)
 
   useEffect(() => {
     if (!props.isOpen) {
       return undefined
     }
     let cancelled = false
-    window.characters.listByCampaign(props.campaignId).then((characters) => {
+    void Promise.all([
+      window.characters.listByCampaign(props.campaignId),
+      window.race.getCampaignRaces(props.campaignId)
+    ]).then(([characters, campaignRaces]) => {
       if (cancelled) {
         return
       }
-      setCharacter(characters.find((entry) => entry.kind === 'player') ?? null)
+      const player = characters.find((entry) => entry.kind === 'player') ?? null
+      setCharacter(player)
+      setRaceLabel(resolveRaceDisplayLabel(player?.raceKey, campaignRaces))
+      setBackgroundLabel(resolveBackgroundDisplayLabel(player?.backgroundKey))
     })
     return () => {
       cancelled = true
@@ -43,7 +53,7 @@ export function CharacterSheet(props: CharacterSheetProps): JSX.Element {
         ×
       </button>
       {character ? (
-        <CharacterSheetBody character={character} compact={false} />
+        <CharacterSheetBody character={character} compact={false} raceLabel={raceLabel} backgroundLabel={backgroundLabel} />
       ) : (
         <p className="character-sheet-empty">No character created yet.</p>
       )}

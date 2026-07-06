@@ -70,6 +70,8 @@ export function confirmNpcPromotion(db: Database.Database, input: PromoteNpcInpu
     hp: maxHp,
     alignment: npc.alignment,
     ownerPlayerCharacterId: input.recruitingPlayerCharacterId ?? null,
+    raceKey: npc.raceKey,
+    backgroundKey: npc.backgroundKey,
     stats: {
       abilityScores,
       ac,

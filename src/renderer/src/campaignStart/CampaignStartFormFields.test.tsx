@@ -56,6 +56,8 @@ function makeFlow(updateForm: CampaignStartFlow['updateForm']): CampaignStartFlo
     flowError: null,
     submitting: false,
     progressStage: null,
+    progressStageIndex: 0,
+    progressStageTotal: 0,
     progressLabel: '',
     open: () => {},
     close: () => {},

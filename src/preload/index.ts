@@ -5,6 +5,10 @@ import type {
   EditNpcDispositionInput,
   EditNpcTraitsInput,
   EditRegionDescriptionInput,
+  DeleteRegionInput,
+  DeleteNpcInput,
+  EditWorldHistoryInput,
+  EditWorldSummaryInput,
   GenerateRegionInput,
   GenerateNpcInput
 } from '../main/campaignEditIpc'
@@ -46,6 +50,14 @@ import type {
 } from '../shared/settings/types'
 import type { SettingsIntroState } from '../shared/settingsIntro/types'
 import type { AutoUpdateState } from '../shared/autoUpdate/types'
+import type { CampaignRace, RaceApplyInput, RaceApplyResult, RacePreviewLoreResult } from '../shared/raceSelection/types'
+import type { RaceRosterGroup, PreviewLoreInput } from '../main/raceIpc'
+import type {
+  BackgroundApplyInput,
+  BackgroundApplyResult,
+  BackgroundGenerateStoryInput,
+  BackgroundRosterEntry
+} from '../shared/characterBackground/types'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -72,10 +84,18 @@ const campaigns = {
   },
   editRegionDescription: (input: EditRegionDescriptionInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editRegionDescription', input),
+  deleteRegion: (input: DeleteRegionInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:deleteRegion', input),
+  editWorldSummary: (input: EditWorldSummaryInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editWorldSummary', input),
+  editWorldHistory: (input: EditWorldHistoryInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editWorldHistory', input),
   editNpcDisposition: (input: EditNpcDispositionInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editNpcDisposition', input),
   editNpcTraits: (input: EditNpcTraitsInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editNpcTraits', input),
+  deleteNpc: (input: DeleteNpcInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:deleteNpc', input),
   generateRegion: (
     input: GenerateRegionInput
   ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
@@ -252,13 +272,33 @@ const startingLoadout = {
     ipcRenderer.invoke('startingLoadout:apply', input)
 }
 
+const race = {
+  getRoster: (): Promise<RaceRosterGroup[]> => ipcRenderer.invoke('race:getRoster'),
+  getCampaignRaces: (campaignId: string): Promise<CampaignRace[]> =>
+    ipcRenderer.invoke('race:getCampaignRaces', campaignId),
+  previewLore: (input: PreviewLoreInput): Promise<RacePreviewLoreResult> =>
+    ipcRenderer.invoke('race:previewLore', input),
+  apply: (input: RaceApplyInput): Promise<RaceApplyResult> => ipcRenderer.invoke('race:apply', input)
+}
+
+const background = {
+  getRoster: (): Promise<BackgroundRosterEntry[]> => ipcRenderer.invoke('background:getRoster'),
+  generateStory: (input: BackgroundGenerateStoryInput): Promise<string> =>
+    ipcRenderer.invoke('background:generateStory', input),
+  apply: (input: BackgroundApplyInput): Promise<BackgroundApplyResult> =>
+    ipcRenderer.invoke('background:apply', input)
+}
+
 const guidedCreation = {
   getState: (characterId: string): Promise<GuidedCreationState | undefined> =>
     ipcRenderer.invoke('guidedCreation:getState', characterId),
   sendMessage: (input: GuidedCreationSendMessageInput): Promise<GuidedCreationSendMessageResult> =>
     ipcRenderer.invoke('guidedCreation:sendMessage', input),
   kickoffIdentity: (input: GuidedCreationKickoffInput): Promise<GuidedCreationKickoffResult> =>
-    ipcRenderer.invoke('guidedCreation:kickoffIdentity', input)
+    ipcRenderer.invoke('guidedCreation:kickoffIdentity', input),
+  revertPhase: (input: import('../shared/guidedCreation/types').GuidedCreationRevertPhaseInput): Promise<
+    import('../shared/guidedCreation/types').GuidedCreationRevertPhaseResult
+  > => ipcRenderer.invoke('guidedCreation:revertPhase', input)
 }
 
 const settings = {
@@ -302,6 +342,8 @@ contextBridge.exposeInMainWorld('progression', progression)
 contextBridge.exposeInMainWorld('startup', startup)
 contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
 contextBridge.exposeInMainWorld('startingLoadout', startingLoadout)
+contextBridge.exposeInMainWorld('race', race)
+contextBridge.exposeInMainWorld('background', background)
 contextBridge.exposeInMainWorld('settings', settings)
 contextBridge.exposeInMainWorld('settingsIntro', settingsIntro)
 contextBridge.exposeInMainWorld('autoUpdate', autoUpdate)
@@ -319,6 +361,8 @@ export type ProgressionApi = typeof progression
 export type StartupApi = typeof startup
 export type GuidedCreationApi = typeof guidedCreation
 export type StartingLoadoutApi = typeof startingLoadout
+export type RaceApi = typeof race
+export type BackgroundApi = typeof background
 export type SettingsApi = typeof settings
 export type SettingsIntroApi = typeof settingsIntro
 export type AutoUpdateApi = typeof autoUpdate

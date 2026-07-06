@@ -1,13 +1,29 @@
 import { describe, expect, it } from 'vitest'
 import { EditableField } from '../campaignReview/EditableField'
+import { CampaignReviewWorldContent } from '../campaignReview/CampaignReviewWorldContent'
 import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { CampaignHubWorldPreview } from './CampaignHubWorldPreview'
 import { makeTestHubSnapshot } from './hubTestFixtures'
 
-function sectionByClass(node: JSX.Element, className: string): JSX.Element | undefined {
-  const children = normalizeChildren(node.props.children)
-  return children.find((child) => child.props?.className?.includes(className))
+function sectionByClass(node: JSX.Element | undefined, className: string): JSX.Element | undefined {
+  if (!node?.props) {
+    return undefined
+  }
+  if (node.props.className?.includes(className)) {
+    return node
+  }
+  if (typeof node.type === 'function') {
+    const rendered = (node.type as (props: Record<string, unknown>) => JSX.Element)(node.props)
+    return sectionByClass(rendered, className)
+  }
+  for (const child of normalizeChildren(node.props.children)) {
+    const found = sectionByClass(child, className)
+    if (found) {
+      return found
+    }
+  }
+  return undefined
 }
 
 function normalizeChildren(children: unknown): JSX.Element[] {
@@ -47,6 +63,9 @@ describe('CampaignHubWorldPreview', () => {
     const node = CampaignHubWorldPreview({ snapshot })
 
     expect(node.props.className).toBe('campaign-hub-world-preview')
+    expect(
+      normalizeChildren(node.props.children).some((child) => child.type === CampaignReviewWorldContent)
+    ).toBe(true)
     expect(sectionByClass(node, 'campaign-hub-current-state')).toBeDefined()
     expect(sectionByClass(node, 'campaign-hub-recent-events')).toBeDefined()
 

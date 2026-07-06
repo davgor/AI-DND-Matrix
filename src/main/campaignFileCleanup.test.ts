@@ -29,7 +29,10 @@ const CHARACTER: Character = {
   diedAt: null,
   deathCause: null,
   obituary: null,
-  ownerPlayerCharacterId: null
+  ownerPlayerCharacterId: null,
+  raceKey: null,
+  backgroundKey: null,
+  backgroundStory: null
 }
 
 describe('campaign file cleanup', () => {

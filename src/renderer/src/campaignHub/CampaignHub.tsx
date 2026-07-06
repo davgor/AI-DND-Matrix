@@ -12,6 +12,7 @@ export interface CampaignHubProps {
 
 export function CampaignHub(props: CampaignHubProps): JSX.Element {
   const [obituaryCharacterId, setObituaryCharacterId] = useState<string | null>(null)
+  const [worldHistoryOpen, setWorldHistoryOpen] = useState(false)
 
   return (
     <CampaignHubLayout
@@ -19,6 +20,9 @@ export function CampaignHub(props: CampaignHubProps): JSX.Element {
       lastPlayed={props.lastPlayed}
       actionsDisabled={obituaryCharacterId !== null}
       obituaryCharacterId={obituaryCharacterId}
+      worldHistoryOpen={worldHistoryOpen}
+      onViewWorldHistory={() => setWorldHistoryOpen(true)}
+      onCloseWorldHistory={() => setWorldHistoryOpen(false)}
       onResumeCharacter={props.onResumeCharacter}
       onCreateCharacter={props.onCreateCharacter}
       onViewObituary={setObituaryCharacterId}

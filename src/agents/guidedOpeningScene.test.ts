@@ -9,7 +9,18 @@ const context = {
     identityWho: 'Kael, a wandering knight.',
     identityWhy: 'To find the sunken crown.',
     identityWhere: 'Oakhollow village.',
-    identityWhat: 'A steadfast fighter.'
+    identityWhat: 'A steadfast fighter.',
+    raceName: 'Elf',
+    raceLore: {
+      summary: 'Reclusive forest folk.',
+      appearance: 'Slender.',
+      culture: 'Old groves.',
+      roleInThisLand: 'Keepers.',
+      hooks: ['A dying grove.']
+    },
+    backgroundLabel: 'Soldier',
+    backgroundDescription: 'You served in an army.',
+    backgroundStory: 'Years on the march.'
   },
   regions: [{ name: 'Oakhollow', description: 'A logging village.' }],
   npcs: [{ name: 'Mira', role: 'shopkeeper', disposition: 'friendly' }],
@@ -30,6 +41,10 @@ describe('runOpeningSceneTurn', () => {
     const result = await runOpeningSceneTurn(provider, context, 'Something cozy.')
     expect(result.sceneReady).toBe(false)
     expect(result.proposedOpeningScene).toContain('tavern')
+    expect(provider.calls[0]?.prompt).toContain('Kael')
+    expect(provider.calls[0]?.prompt).toContain('Elf')
+    expect(provider.calls[0]?.prompt).toContain('Soldier')
+    expect(provider.calls[0]?.prompt).toContain('Years on the march.')
   })
 
   it('returns scene-ready when converged', async () => {

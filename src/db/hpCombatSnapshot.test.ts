@@ -7,11 +7,12 @@ import { createNpc } from './repositories/npcs'
 import { createActiveEncounter } from './repositories/combatEncounters'
 import { buildCombatStateSnapshot } from '../main/combatSnapshot'
 import { createPartyMembers, createPlayerCharacter } from '../main/characterCreationIpc'
+import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { hydrateNpcFromCatalog } from './repositories/npcCombatHydration'
 import { getCreatureByKey } from './catalog/creatures'
 
 describe('combat snapshot max HP for party', () => {
-  it('shows stats.maxHp for player and AI party members', () => {
+  it('shows stats.maxHp for player and AI party members', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'HP', premisePrompt: 'hp', deathMode: 'legendary' })
     createRegion(db, { campaignId: campaign.id, name: 'R', description: 'R' })
@@ -22,9 +23,11 @@ describe('combat snapshot max HP for party', () => {
       abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
       alignment: 'neutral_good'
     })
-    const [ally] = createPartyMembers(db, {
+    const [ally] = await createPartyMembers(db, createScriptedProvider([
+      '{"summary":"s","appearance":"a","culture":"c","roleInThisLand":"r","hooks":["h"]}'
+    ]), {
       campaignId: campaign.id,
-      members: [{ name: 'Brom', characterClass: 'cleric', personality: 'calm' }],
+      members: [{ name: 'Brom', characterClass: 'cleric', personality: 'calm', raceKey: 'human' }],
       ownerPlayerCharacterId: player.id
     })
     const encounter = createActiveEncounter(db, {

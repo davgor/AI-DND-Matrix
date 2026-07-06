@@ -17,6 +17,10 @@ export function ReadyAppOnboardingView(props: {
   onDetailChange: (detail: CampaignDetail) => void
   onReviewContinue: () => void
   onCharacterSetupComplete: () => void
+  onRaceSelectionComplete: () => void
+  onRaceSelectionBack: () => void
+  onBackgroundSelectionComplete: () => void
+  onBackgroundSelectionBack: () => void
   onEquipmentSelectionComplete: () => void
   onEquipmentSelectionBack: () => void
   onGuidedIdentityAdvance: () => void
@@ -37,8 +41,12 @@ export function ReadyAppOnboardingView(props: {
         onDetailChange={props.onDetailChange}
         onReviewContinue={props.onReviewContinue}
         onCharacterSetupComplete={props.onCharacterSetupComplete}
-      onEquipmentSelectionComplete={props.onEquipmentSelectionComplete}
-      onEquipmentSelectionBack={props.onEquipmentSelectionBack}
+        onRaceSelectionComplete={props.onRaceSelectionComplete}
+        onRaceSelectionBack={props.onRaceSelectionBack}
+        onBackgroundSelectionComplete={props.onBackgroundSelectionComplete}
+        onBackgroundSelectionBack={props.onBackgroundSelectionBack}
+        onEquipmentSelectionComplete={props.onEquipmentSelectionComplete}
+        onEquipmentSelectionBack={props.onEquipmentSelectionBack}
         onGuidedIdentityAdvance={props.onGuidedIdentityAdvance}
         onEnterPlay={props.onEnterPlay}
         enterPlayBlockerMessage={props.enterPlayBlockerMessage}

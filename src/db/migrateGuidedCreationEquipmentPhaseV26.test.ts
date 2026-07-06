@@ -18,6 +18,6 @@ describe('guided creation equipment phase migration', () => {
       characterClass: 'fighter',
       kind: 'player'
     })
-    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('equipment')
+    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('race')
   })
 })

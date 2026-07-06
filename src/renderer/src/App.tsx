@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from 'react'
 import type { CampaignDetail } from '../../main/campaignIpc'
-import type { OnboardingStage } from '../../shared/guidedCreation/stageRouting'
+import { findGuidedCreationPlayer, type OnboardingStage } from '../../shared/guidedCreation/stageRouting'
 import './app.css'
 import { CampaignDeleteModal } from './campaignDelete/CampaignDeleteModal'
 import { useCampaignDeleteFlow } from './campaignDelete/useCampaignDeleteFlow'
@@ -36,11 +36,53 @@ async function handleEquipmentSelectionComplete(props: ReadyAppShellProps): Prom
   props.setStage('guidedIdentity')
 }
 
+async function revertOnboardingPhase(
+  characters: CampaignDetail['characters'],
+  targetPhase: 'race' | 'background'
+): Promise<void> {
+  const player = findGuidedCreationPlayer(characters)
+  if (player?.id && window.guidedCreation?.revertPhase) {
+    await window.guidedCreation.revertPhase({ characterId: player.id, targetPhase })
+  }
+}
+
 async function handleEquipmentSelectionBack(props: ReadyAppShellProps): Promise<void> {
+  if (props.detail?.characters) {
+    await revertOnboardingPhase(props.detail.characters, 'background')
+  }
   if (props.detail?.campaign) {
     props.setDetail(await window.campaigns.select(props.detail.campaign.id))
   }
-  props.setStage('characterSetup')
+  props.setStage('backgroundSelection')
+}
+
+function renderOnboarding(props: ReadyAppShellProps, body: ReturnType<typeof useReadyAppBodyState>): JSX.Element {
+  const campaignCallbacks = {
+    onCampaignSelected: body.onCampaignSelected,
+    onOpenNewCampaign: props.campaignStart.open,
+    onRequestDelete: props.campaignDelete.open
+  }
+  return (
+    <ReadyAppOnboardingView
+      sidebarRef={props.sidebarRef}
+      stage={props.stage}
+      detail={props.detail}
+      campaignCallbacks={campaignCallbacks}
+      onDetailChange={props.setDetail}
+      onReviewContinue={() => props.setStage('characterSetup')}
+      onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
+      onRaceSelectionComplete={() => void handleRaceSelectionComplete(props)}
+      onRaceSelectionBack={() => void handleRaceSelectionBack(props)}
+      onBackgroundSelectionComplete={() => void handleBackgroundSelectionComplete(props)}
+      onBackgroundSelectionBack={() => void handleBackgroundSelectionBack(props)}
+      onEquipmentSelectionComplete={() => void handleEquipmentSelectionComplete(props)}
+      onEquipmentSelectionBack={() => void handleEquipmentSelectionBack(props)}
+      onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
+      onEnterPlay={body.handleEnterPlay}
+      enterPlayBlockerMessage={body.enterPlayBlockerMessage}
+      onRefreshDetail={body.refreshDetail}
+    />
+  )
 }
 
 function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
@@ -77,30 +119,45 @@ function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
     )
   }
 
-  return (
-    <ReadyAppOnboardingView
-      sidebarRef={props.sidebarRef}
-      stage={props.stage}
-      detail={props.detail}
-      campaignCallbacks={campaignCallbacks}
-      onDetailChange={props.setDetail}
-      onReviewContinue={() => props.setStage('characterSetup')}
-      onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
-      onEquipmentSelectionComplete={() => void handleEquipmentSelectionComplete(props)}
-      onEquipmentSelectionBack={() => void handleEquipmentSelectionBack(props)}
-      onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
-      onEnterPlay={body.handleEnterPlay}
-      enterPlayBlockerMessage={body.enterPlayBlockerMessage}
-      onRefreshDetail={body.refreshDetail}
-    />
-  )
+  return renderOnboarding(props, body)
 }
 
 async function handleCharacterSetupComplete(props: ReadyAppShellProps): Promise<void> {
   if (props.detail?.campaign) {
     props.setDetail(await window.campaigns.select(props.detail.campaign.id))
   }
+  props.setStage('raceSelection')
+}
+
+async function handleRaceSelectionComplete(props: ReadyAppShellProps): Promise<void> {
+  if (props.detail?.campaign) {
+    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
+  }
+  props.setStage('backgroundSelection')
+}
+
+async function handleBackgroundSelectionComplete(props: ReadyAppShellProps): Promise<void> {
+  if (props.detail?.campaign) {
+    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
+  }
   props.setStage('equipmentSelection')
+}
+
+async function handleBackgroundSelectionBack(props: ReadyAppShellProps): Promise<void> {
+  if (props.detail?.characters) {
+    await revertOnboardingPhase(props.detail.characters, 'race')
+  }
+  if (props.detail?.campaign) {
+    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
+  }
+  props.setStage('raceSelection')
+}
+
+async function handleRaceSelectionBack(props: ReadyAppShellProps): Promise<void> {
+  if (props.detail?.campaign) {
+    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
+  }
+  props.setStage('characterSetup')
 }
 
 function ReadyAppShell(props: ReadyAppShellProps): JSX.Element {

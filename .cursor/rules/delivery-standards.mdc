@@ -21,6 +21,7 @@ Any implementation work in this repo must follow `.cursor/skills/delivery-standa
 - Read `README.md` for architecture boundaries.
 - Check off acceptance criteria only after verification; move tickets to `done/` when complete.
 - Do not commit unless the user explicitly asks.
+- **Campaign create pipeline changes:** follow `docs/runbooks/campaign-create-change-checklist.md`.
 
 ## Exceptions
 

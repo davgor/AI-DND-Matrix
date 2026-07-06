@@ -1,27 +1,25 @@
 import type { RegionExtras } from '../../../main/campaignIpc'
 import { FormattedText } from '../shared/FormattedText'
+import { CampaignReviewPanel } from './CampaignReviewPanel'
 
 export function CampaignReviewRegionExtras(props: { extras: RegionExtras }): JSX.Element {
   const { extras } = props
   return (
     <>
       {extras.backstory ? (
-        <div className="campaign-review-readonly">
-          <strong>History</strong>
+        <CampaignReviewPanel legend="History">
           {FormattedText({ as: 'p', text: extras.backstory })}
-        </div>
+        </CampaignReviewPanel>
       ) : null}
 
       {extras.recentHistory ? (
-        <div className="campaign-review-readonly">
-          <strong>Recent events</strong>
+        <CampaignReviewPanel legend="Recent events">
           {FormattedText({ as: 'p', text: extras.recentHistory })}
-        </div>
+        </CampaignReviewPanel>
       ) : null}
 
       {extras.questHooks.length > 0 ? (
-        <div className="campaign-review-readonly">
-          <strong>Potential quests</strong>
+        <CampaignReviewPanel legend="Potential quests">
           <ul>
             {extras.questHooks.map((hook) => (
               <li key={hook}>
@@ -29,7 +27,7 @@ export function CampaignReviewRegionExtras(props: { extras: RegionExtras }): JSX
               </li>
             ))}
           </ul>
-        </div>
+        </CampaignReviewPanel>
       ) : null}
     </>
   )

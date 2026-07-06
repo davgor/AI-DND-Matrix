@@ -16,9 +16,9 @@ describe('CampaignReviewRegionExtras emphasis rendering', () => {
     const node = CampaignReviewRegionExtras({ extras })
     const sections = node.props.children as JSX.Element[]
 
-    expect(hasEmphasisTypes(sections[0].props.children[1], ['em'])).toBe(true)
-    expect(hasEmphasisTypes(sections[1].props.children[1], ['strong'])).toBe(true)
-    expect(hasEmphasisTypes(sections[2].props.children[1].props.children[0], ['em'])).toBe(true)
+    expect(hasEmphasisTypes(sections[0], ['em'])).toBe(true)
+    expect(hasEmphasisTypes(sections[1], ['strong'])).toBe(true)
+    expect(hasEmphasisTypes(sections[2], ['em'])).toBe(true)
   })
 })
 
