@@ -4,6 +4,8 @@ import { resolveBackgroundDisplayLabel } from '../../../shared/characterBackgrou
 import { findGenderRosterEntry } from '../../../shared/npcGender/types'
 import { findNpcClassRosterEntry } from '../../../shared/npcClass/types'
 
+import { CampaignReviewPanel } from './CampaignReviewPanel'
+
 function formatTemperament(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
@@ -14,8 +16,7 @@ export function CampaignReviewNpcTraits(props: { npc: Npc }): JSX.Element {
   const genderLabel = npc.genderKey ? findGenderRosterEntry(npc.genderKey)?.label : null
   const classLabel = npc.classKey ? findNpcClassRosterEntry(npc.classKey)?.label : null
   return (
-    <fieldset className="campaign-review-npc-panel">
-      <legend>Traits</legend>
+    <CampaignReviewPanel legend="Traits">
       <dl className="campaign-review-npc-traits">
         <div className="campaign-review-npc-trait-row">
           <dt>Temperament</dt>
@@ -52,6 +53,6 @@ export function CampaignReviewNpcTraits(props: { npc: Npc }): JSX.Element {
           </div>
         ) : null}
       </dl>
-    </fieldset>
+    </CampaignReviewPanel>
   )
 }

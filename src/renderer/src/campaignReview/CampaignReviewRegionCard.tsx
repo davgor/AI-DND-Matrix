@@ -4,6 +4,7 @@ import type { Npc } from '../../../db/repositories/npcs'
 import type { Region } from '../../../db/repositories/regions'
 import { FormattedText } from '../shared/FormattedText'
 import { CampaignReviewNpcCard } from './CampaignReviewNpcCard'
+import { CampaignReviewPanel } from './CampaignReviewPanel'
 import { CampaignReviewRegionExtras } from './CampaignReviewRegionExtras'
 
 const DELETE_REGION_TOOLTIP = 'Delete this region and all of its NPCs permanently'
@@ -43,10 +44,9 @@ export function CampaignReviewRegionCard(props: {
   return (
     <article className="campaign-review-region-card">
       <CampaignReviewRegionHeader name={region.name} onDeleteRegion={props.onDeleteRegion} />
-      <div className="campaign-review-readonly">
-        <strong>Overview</strong>
+      <CampaignReviewPanel legend="Overview">
         {FormattedText({ as: 'p', text: region.description })}
-      </div>
+      </CampaignReviewPanel>
       {extras ? <CampaignReviewRegionExtras extras={extras} /> : null}
       <div className="campaign-review-npcs">
         <div className="campaign-review-npcs-header">

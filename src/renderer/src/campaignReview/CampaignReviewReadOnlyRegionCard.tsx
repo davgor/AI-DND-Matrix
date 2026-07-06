@@ -2,6 +2,7 @@ import type { RegionExtras } from '../../../main/campaignIpc'
 import type { Npc } from '../../../db/repositories/npcs'
 import type { Region } from '../../../db/repositories/regions'
 import { FormattedText } from '../shared/FormattedText'
+import { CampaignReviewPanel } from './CampaignReviewPanel'
 import { CampaignReviewReadOnlyNpcCard } from './CampaignReviewReadOnlyNpcCard'
 import { CampaignReviewRegionExtras } from './CampaignReviewRegionExtras'
 
@@ -27,10 +28,9 @@ export function CampaignReviewReadOnlyRegionCard(props: {
           {region.status.cause ? `: ${region.status.cause}` : ''}.
         </p>
       ) : null}
-      <div className="campaign-review-readonly">
-        <strong>Overview</strong>
+      <CampaignReviewPanel legend="Overview">
         {FormattedText({ as: 'p', className: 'campaign-review-readonly-value', text: region.description })}
-      </div>
+      </CampaignReviewPanel>
       {extras ? <CampaignReviewRegionExtras extras={extras} /> : null}
       <div className="campaign-review-npcs">
         <h4>NPCs</h4>

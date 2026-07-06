@@ -371,7 +371,7 @@
   color: var(--text-secondary, #9ca3af);
 }
 
-.campaign-review-npc-panel {
+.campaign-review-panel {
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
   border-radius: 8px;
   margin: 10px 0 0;
@@ -379,13 +379,24 @@
   min-width: 0;
 }
 
-.campaign-review-npc-panel legend {
+.campaign-review-panel legend {
   padding: 0 8px;
   margin-left: 4px;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-panel-body p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.campaign-review-panel-body ul {
+  margin: 0;
+  padding-left: 1.25rem;
 }
 
 .campaign-review-npc-traits {

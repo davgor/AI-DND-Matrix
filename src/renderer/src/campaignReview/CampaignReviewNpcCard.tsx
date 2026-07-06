@@ -1,4 +1,5 @@
 import type { Npc } from '../../../db/repositories/npcs'
+import { CampaignReviewPanel } from './CampaignReviewPanel'
 import { CampaignReviewNpcTraits } from './CampaignReviewNpcTraits'
 import { FormattedText } from '../shared/FormattedText'
 
@@ -42,13 +43,12 @@ export function CampaignReviewNpcCard(props: {
         </button>
       </div>
       {npc.backstory ? (
-        <fieldset className="campaign-review-npc-panel">
-          <legend>Backstory</legend>
+        <CampaignReviewPanel legend="Backstory">
           <div className="campaign-review-npc-backstory">
             {FormattedText({ as: 'p', text: npc.backstory })}
             {tierLabel ? <p className="campaign-review-npc-tier">{tierLabel}</p> : null}
           </div>
-        </fieldset>
+        </CampaignReviewPanel>
       ) : null}
       <CampaignReviewNpcTraits npc={npc} />
     </div>
