@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Character } from '../../../db/repositories/characters'
 import { resolveRaceDisplayLabel } from '../../../shared/raceSelection/resolveLabel'
+import { resolveBackgroundDisplayLabel } from '../../../shared/characterBackground/resolveLabel'
 import { CharacterSheetBody } from './CharacterSheetBody'
 import {
   getPlayerSheetCollapsed,
@@ -19,6 +20,7 @@ export interface PlayerSheetRailProps {
 export function PlayerSheetRail(props: PlayerSheetRailProps): JSX.Element {
   const [character, setCharacter] = useState<Character | null>(null)
   const [raceLabel, setRaceLabel] = useState<string | null>(null)
+  const [backgroundLabel, setBackgroundLabel] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -32,6 +34,7 @@ export function PlayerSheetRail(props: PlayerSheetRailProps): JSX.Element {
       const match = characters.find((entry) => entry.id === props.characterId) ?? null
       setCharacter(match)
       setRaceLabel(resolveRaceDisplayLabel(match?.raceKey, campaignRaces))
+      setBackgroundLabel(resolveBackgroundDisplayLabel(match?.backgroundKey))
     })
     return () => {
       cancelled = true
@@ -54,7 +57,7 @@ export function PlayerSheetRail(props: PlayerSheetRailProps): JSX.Element {
       </button>
       {!props.collapsed ? (
         character ? (
-          <CharacterSheetBody character={character} compact={false} raceLabel={raceLabel} />
+          <CharacterSheetBody character={character} compact={false} raceLabel={raceLabel} backgroundLabel={backgroundLabel} />
         ) : (
           <p className="character-sheet-empty">No character created yet.</p>
         )

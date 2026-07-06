@@ -28,7 +28,10 @@ function makeNpcs(regionName: string, prefix: string) {
       temperament: 'neutral',
       canSpeak: true,
       alignment: 'true_neutral',
-      race: 'human'
+      race: 'human',
+      background: 'folk_hero',
+      gender: 'unspecified',
+      class: 'commoner'
     },
     {
       name: `${prefix} Two`,
@@ -39,7 +42,10 @@ function makeNpcs(regionName: string, prefix: string) {
       temperament: 'curious',
       canSpeak: true,
       alignment: 'neutral_good',
-      race: 'human'
+      race: 'human',
+      background: 'folk_hero',
+      gender: 'unspecified',
+      class: 'commoner'
     },
     {
       name: `${prefix} Three`,
@@ -50,7 +56,10 @@ function makeNpcs(regionName: string, prefix: string) {
       temperament: 'disciplined',
       canSpeak: true,
       alignment: 'lawful_neutral',
-      race: 'human'
+      race: 'human',
+      background: 'folk_hero',
+      gender: 'unspecified',
+      class: 'commoner'
     }
   ]
 }
@@ -125,6 +134,9 @@ describe('editNpcTraits', () => {
       temperament: 'cautious',
       alignment: 'lawful_neutral',
       race: 'human',
+      background: 'folk_hero',
+      gender: 'unspecified',
+      class: 'commoner',
       canSpeak: false
     })
 
@@ -178,20 +190,22 @@ describe('generateRegionForCampaign', () => {
 describe('generateNpcForCampaign', () => {
   it('appends one NPC to the target region', async () => {
     const { db, campaign, region } = seedCampaignWithRegionAndNpc()
-    const payload = JSON.stringify({
-      npc: {
-        name: 'Rook Vale',
-        role: 'hermit',
-        backstory: 'Rook keeps to the fog.',
-        disposition: 'gruff',
-        regionName: region.name,
-        temperament: 'cautious',
-        canSpeak: true,
-        alignment: 'true_neutral',
-        race: 'human'
-      }
+    const coreBundle = JSON.stringify({
+      canSpeak: true,
+      temperament: 'cautious',
+      race: 'human',
+      gender: 'unspecified',
+      alignment: 'true_neutral',
+      class: 'commoner',
+      background: 'hermit'
     })
-    const provider = createScriptedProvider([payload, RACE_LORE_RESPONSE, '{"upgrade":false}'])
+    const finalNpc = JSON.stringify({
+      name: 'Rook Vale',
+      role: 'hermit',
+      backstory: 'Rook keeps to the fog.',
+      disposition: 'gruff'
+    })
+    const provider = createScriptedProvider([coreBundle, RACE_LORE_RESPONSE, finalNpc, '{"upgrade":false}'])
 
     const detail = await generateNpcForCampaign(db, provider, {
       campaignId: campaign.id,

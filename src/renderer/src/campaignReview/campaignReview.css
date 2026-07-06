@@ -108,6 +108,31 @@
   padding: 10px 16px;
 }
 
+.campaign-review-world {
+  margin-bottom: 28px;
+}
+
+.campaign-review-world h2 {
+  margin: 0 0 12px;
+}
+
+.campaign-review-view-world-history {
+  margin-top: 8px;
+  padding: 8px 12px;
+}
+
+.campaign-review-world-history-modal .campaign-review-seed-input,
+.campaign-review-world-history-modal textarea {
+  min-height: 280px;
+}
+
+.campaign-review-world-history-readonly {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
 .campaign-review-overlay {
   position: fixed;
   inset: 0;

@@ -11,6 +11,8 @@ export interface OnboardingStageContentProps {
   onCharacterSetupComplete: () => void
   onRaceSelectionComplete: () => void
   onRaceSelectionBack: () => void
+  onBackgroundSelectionComplete: () => void
+  onBackgroundSelectionBack: () => void
   onEquipmentSelectionComplete: () => void
   onEquipmentSelectionBack: () => void
   onGuidedIdentityAdvance: () => void

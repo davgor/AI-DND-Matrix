@@ -7,6 +7,7 @@ import { migrateEquipSlotsV24 } from './migrateEquipSlotsV24'
 import { migrateQuestsV25 } from './migrateQuestsV25'
 import { migrateGuidedCreationEquipmentPhaseV26 } from './migrateGuidedCreationEquipmentPhaseV26'
 import { migrateRaceSelectionCharactersV29 } from './migrateRaceSelectionCharactersV29'
+import { migrateCharacterBackgroundCharactersV31 } from './migrateCharacterBackgroundCharactersV31'
 import { seedStarterItemCatalog } from './seedStarterItems'
 
 function addColumnIfMissing(
@@ -518,6 +519,34 @@ export const migrations: Migration[] = [
         CREATE INDEX idx_campaign_races_campaign ON campaign_races(campaign_id);
       `)
       addColumnIfMissing(db, 'npcs', 'race_key', 'TEXT')
+    }
+  },
+  {
+    version: 31,
+    disableTransaction: true,
+    up: (db) => {
+      migrateCharacterBackgroundCharactersV31(db)
+    }
+  },
+  {
+    version: 32,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'background_key', 'TEXT')
+    }
+  },
+  {
+    version: 33,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'gender_key', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'class_key', 'TEXT')
+    }
+  },
+  {
+    version: 34,
+    up: (db) => {
+      addColumnIfMissing(db, 'campaigns', 'world_name', "TEXT NOT NULL DEFAULT ''")
+      addColumnIfMissing(db, 'campaigns', 'world_summary', "TEXT NOT NULL DEFAULT ''")
+      addColumnIfMissing(db, 'campaigns', 'world_history', "TEXT NOT NULL DEFAULT ''")
     }
   }
 ]

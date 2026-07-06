@@ -1,4 +1,4 @@
-import { CUSTOM_RACE_KEY } from '../../../engine/raceSelection/roster'
+import { CUSTOM_RACE_KEY, isPresetRaceKey } from '../../../engine/raceSelection/roster'
 import type { CampaignRace, RaceLore } from '../../../shared/raceSelection/types'
 
 export type RacePickKind = 'preset' | 'custom'
@@ -125,4 +125,43 @@ export function needsGenerateBeforeLore(state: RaceSelectionState): boolean {
 
 export function showRegenerateControl(state: RaceSelectionState): boolean {
   return Boolean(state.lore && !state.loreLocked)
+}
+
+export function hydrateRaceSelectionState(
+  raceKey: string | null | undefined,
+  campaignRaces: CampaignRace[]
+): RaceSelectionState | null {
+  if (!raceKey) {
+    return null
+  }
+
+  const catalog = campaignRaces.find((entry) => entry.raceKey === raceKey)
+  if (catalog) {
+    return {
+      kind: catalog.kind,
+      raceKey: catalog.raceKey,
+      customLabel: catalog.kind === 'custom' ? catalog.label : 'Custom race',
+      customSeedPrompt: catalog.kind === 'custom' ? catalog.seedPrompt : '',
+      lore: catalog.lore,
+      loreLocked: catalog.kind === 'preset'
+    }
+  }
+
+  if (isPresetRaceKey(raceKey)) {
+    return selectPresetRace(initialRaceSelectionState(), raceKey)
+  }
+
+  return null
+}
+
+export function resolveInitialRaceSelectionState(
+  savedRaceKey: string | null | undefined,
+  campaignRaces: CampaignRace[],
+  draft: RaceSelectionState | null
+): RaceSelectionState {
+  const hydrated = hydrateRaceSelectionState(savedRaceKey, campaignRaces)
+  if (hydrated) {
+    return hydrated
+  }
+  return draft ?? initialRaceSelectionState()
 }

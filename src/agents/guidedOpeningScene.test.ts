@@ -17,7 +17,10 @@ const context = {
       culture: 'Old groves.',
       roleInThisLand: 'Keepers.',
       hooks: ['A dying grove.']
-    }
+    },
+    backgroundLabel: 'Soldier',
+    backgroundDescription: 'You served in an army.',
+    backgroundStory: 'Years on the march.'
   },
   regions: [{ name: 'Oakhollow', description: 'A logging village.' }],
   npcs: [{ name: 'Mira', role: 'shopkeeper', disposition: 'friendly' }],
@@ -40,6 +43,8 @@ describe('runOpeningSceneTurn', () => {
     expect(result.proposedOpeningScene).toContain('tavern')
     expect(provider.calls[0]?.prompt).toContain('Kael')
     expect(provider.calls[0]?.prompt).toContain('Elf')
+    expect(provider.calls[0]?.prompt).toContain('Soldier')
+    expect(provider.calls[0]?.prompt).toContain('Years on the march.')
   })
 
   it('returns scene-ready when converged', async () => {

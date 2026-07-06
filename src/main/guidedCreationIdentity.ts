@@ -12,6 +12,7 @@ import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById } from '../db/repositories/characters'
 import { getCampaignRaceByKey } from '../db/repositories/campaignRaces'
 import { findRosterEntry } from '../engine/raceSelection/roster'
+import { findBackgroundRosterEntry } from '../engine/characterBackground/roster'
 import type { RaceLore } from '../shared/raceSelection/types'
 import type { GuidedCreationSendMessageInput, GuidedCreationSendMessageResult } from '../shared/guidedCreation/types'
 import {
@@ -29,6 +30,25 @@ import type { GuidedCreationKickoffInput, GuidedCreationKickoffResult } from '..
 function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
   const scores = stats.abilityScores as Record<string, number> | undefined
   return scores ?? { body: 10, agility: 10, mind: 10, presence: 10 }
+}
+
+export function resolveCharacterBackgroundContext(
+  backgroundKey: string | null,
+  backgroundStory: string | null
+): {
+  backgroundLabel: string | null
+  backgroundDescription: string | null
+  backgroundStory: string | null
+} {
+  if (!backgroundKey) {
+    return { backgroundLabel: null, backgroundDescription: null, backgroundStory: backgroundStory?.trim() || null }
+  }
+  const entry = findBackgroundRosterEntry(backgroundKey)
+  return {
+    backgroundLabel: entry?.label ?? null,
+    backgroundDescription: entry?.description ?? null,
+    backgroundStory: backgroundStory?.trim() || null
+  }
 }
 
 export function resolveCharacterRaceContext(
@@ -68,6 +88,7 @@ export async function kickoffIdentityInterviewIfNeeded(
   }
 
   const raceContext = resolveCharacterRaceContext(db, input.campaignId, character.raceKey)
+  const backgroundContext = resolveCharacterBackgroundContext(character.backgroundKey, character.backgroundStory)
   let dmReply: string
   try {
     const kickoff = await runIdentityInterviewKickoff(provider, {
@@ -77,7 +98,10 @@ export async function kickoffIdentityInterviewIfNeeded(
       abilityScores: abilityScoresFromCharacter(character.stats),
       alignment: character.alignment,
       raceName: raceContext.raceName,
-      raceLore: raceContext.raceLore
+      raceLore: raceContext.raceLore,
+      backgroundLabel: backgroundContext.backgroundLabel,
+      backgroundDescription: backgroundContext.backgroundDescription,
+      backgroundStory: backgroundContext.backgroundStory
     })
     dmReply = kickoff.dmReply
   } catch {

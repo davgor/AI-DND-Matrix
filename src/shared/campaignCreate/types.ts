@@ -21,9 +21,15 @@ export interface RespawnRules {
   limit: number | null
 }
 
-export type CreateCampaignStage = 'request' | 'parse' | 'persist'
+export type CreateCampaignStage = 'world' | 'regions' | 'npcs' | 'story' | 'persist'
 
-export const CREATE_CAMPAIGN_STAGE_ORDER: readonly CreateCampaignStage[] = ['request', 'parse', 'persist']
+export const CREATE_CAMPAIGN_STAGE_ORDER: readonly CreateCampaignStage[] = [
+  'world',
+  'regions',
+  'npcs',
+  'story',
+  'persist'
+]
 export const CREATE_CAMPAIGN_STAGE_TOTAL = CREATE_CAMPAIGN_STAGE_ORDER.length
 
 export type CreateCampaignFailureCategory = 'validation' | 'generation' | 'persistence' | 'busy' | 'unknown'

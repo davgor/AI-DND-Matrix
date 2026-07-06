@@ -17,7 +17,7 @@ export interface CharacterSetupProps {
 
 export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
   const setup = useCharacterSetup(props.campaignId, props.onComplete, props.draft)
-  const formKey = setup.resumeCharacterId ?? 'new'
+  const formKey = `${setup.resumeCharacterId ?? 'new'}-${setup.initialAbilityScoreMethod}`
 
   return (
     <div className="character-setup">

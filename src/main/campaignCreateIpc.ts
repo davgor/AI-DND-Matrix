@@ -71,13 +71,15 @@ export async function createCampaignFromRequest(
 ): Promise<CreateCampaignResult> {
   const input = toSetupInput(request)
   try {
-    emitProgress(progressForStage(0, 'Sending your campaign premise to the narrative engine'))
+    emitProgress(progressForStage(0, 'Imagining your world from your premise'))
     const generation = await generateCampaignSeed(provider, input.premisePrompt, {
       regionCount: input.regionCount,
       npcsPerRegion: input.npcsPerRegion
     })
-    emitProgress(progressForStage(1, 'Interpreting generated world details'))
-    emitProgress(progressForStage(2, 'Writing regions, NPCs, and story to your save'))
+    emitProgress(progressForStage(1, 'Regions shaped from your world'))
+    emitProgress(progressForStage(2, 'Local characters placed in each region'))
+    emitProgress(progressForStage(3, 'Main story thread woven'))
+    emitProgress(progressForStage(4, 'Writing world, regions, NPCs, and story to your save'))
     const campaign = await persistGeneratedCampaign(db, provider, input, generation)
     touchLastPlayed(db, campaign.id)
     return { ok: true, detail: getCampaignDetail(db, campaign.id) }

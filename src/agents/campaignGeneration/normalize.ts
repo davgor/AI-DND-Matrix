@@ -1,4 +1,7 @@
 import { parseAlignment, parseTemperament } from '../../shared/alignment/types'
+import { parseBackgroundKey } from '../../shared/characterBackground/types'
+import { parseGenderKey } from '../../shared/npcGender/types'
+import { parseNpcClassKey } from '../../shared/npcClass/types'
 import { DEFAULT_ADDITIONAL_REGION_NPC_COUNT } from '../../shared/campaignCreate/types'
 import type {
   AdditionalRegionResult,
@@ -7,6 +10,7 @@ import type {
   GeneratedRegion,
   GeneratedSingleNpcResult,
   GeneratedStoryThread,
+  GeneratedWorld,
   GenerationCounts
 } from './types'
 import { resolveInitialGenerationCounts } from './types'
@@ -14,9 +18,74 @@ import { resolveInitialGenerationCounts } from './types'
 const MIN_NPCS_PER_REGION_WHEN_NONZERO = 1
 const MIN_QUEST_HOOKS = 1
 const MAX_QUEST_HOOKS = 4
+const MIN_WORLD_SUMMARY_PARAGRAPHS = 3
+const MIN_WORLD_HISTORY_PARAGRAPHS = 4
 
 // ---------------------------------------------------------------------------
-// Primitive readers
+// World normalization
+// ---------------------------------------------------------------------------
+
+export function countParagraphs(text: string): number {
+  return text
+    .split(/\n\s*\n/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0).length
+}
+
+export function normalizeGeneratedWorld(value: unknown): GeneratedWorld | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const worldName = readString(record, 'worldName', 'world_name', 'name')
+  const worldSummary = readString(record, 'worldSummary', 'world_summary', 'summary')
+  const worldHistory = readString(record, 'worldHistory', 'world_history', 'history')
+  if (!worldName || !worldSummary || !worldHistory) {
+    return undefined
+  }
+  if (
+    countParagraphs(worldSummary) < MIN_WORLD_SUMMARY_PARAGRAPHS ||
+    countParagraphs(worldHistory) < MIN_WORLD_HISTORY_PARAGRAPHS
+  ) {
+    return undefined
+  }
+  return { worldName, worldSummary, worldHistory }
+}
+
+export function isValidGeneratedWorld(value: unknown): value is GeneratedWorld {
+  return normalizeGeneratedWorld(value) !== undefined
+}
+
+export function normalizeRegionsGeneration(
+  value: unknown,
+  counts: GenerationCounts = resolveInitialGenerationCounts()
+): GeneratedRegion[] | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  return resolveRegions(value as Record<string, unknown>, counts)
+}
+
+export function normalizeStoryThreadGeneration(value: unknown): GeneratedStoryThread | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  return normalizeGeneratedStoryThread(
+    record['storyThread'] ?? record['story_thread'] ?? record['mainStoryThread'] ?? record
+  )
+}
+
+function defaultLegacyWorld(): GeneratedWorld {
+  return {
+    worldName: 'Unnamed World',
+    worldSummary:
+      'Summary paragraph one.\n\nSummary paragraph two.\n\nSummary paragraph three.',
+    worldHistory:
+      'History paragraph one.\n\nHistory paragraph two.\n\nHistory paragraph three.\n\nHistory paragraph four.'
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 function readString(record: Record<string, unknown>, ...keys: string[]): string | undefined {
@@ -135,23 +204,62 @@ function normalizeGeneratedRegion(value: unknown): GeneratedRegion | undefined {
 // NPC normalization
 // ---------------------------------------------------------------------------
 
+function readNpcGenderKey(record: Record<string, unknown>): string | undefined {
+  const raw = readString(record, 'gender', 'genderKey', 'gender_key')
+  return raw ? parseGenderKey(raw) : undefined
+}
+
+function readNpcClassKey(record: Record<string, unknown>): string | undefined {
+  const raw = readString(record, 'class', 'classKey', 'class_key')
+  return raw ? parseNpcClassKey(raw) : undefined
+}
+
+function readNpcBackgroundKey(record: Record<string, unknown>): string | undefined {
+  const raw = readString(record, 'background', 'backgroundKey', 'background_key')
+  return raw ? parseBackgroundKey(raw) : undefined
+}
+
+function readSpeakingNpcBehaviorFields(
+  record: Record<string, unknown>
+): Pick<
+  GeneratedNpc,
+  'alignment' | 'backstory' | 'raceKey' | 'backgroundKey' | 'genderKey' | 'classKey'
+> | undefined {
+  const alignment = parseAlignment(record['alignment'])
+  const backstory = readString(record, 'backstory')
+  const raceKey = readString(record, 'race', 'raceKey', 'race_key')
+  const backgroundKey = readNpcBackgroundKey(record)
+  const genderKey = readNpcGenderKey(record)
+  const classKey = readNpcClassKey(record)
+  if (!alignment || !backstory || !raceKey || !backgroundKey || !genderKey || !classKey) {
+    return undefined
+  }
+  return { alignment, backstory, raceKey, backgroundKey, genderKey, classKey }
+}
+
 function readNpcBehaviorFields(
   record: Record<string, unknown>
-): Pick<GeneratedNpc, 'temperament' | 'canSpeak' | 'alignment' | 'backstory' | 'raceKey'> | undefined {
+): Pick<
+  GeneratedNpc,
+  | 'temperament'
+  | 'canSpeak'
+  | 'alignment'
+  | 'backstory'
+  | 'raceKey'
+  | 'backgroundKey'
+  | 'genderKey'
+  | 'classKey'
+> | undefined {
   const temperament = parseTemperament(record['temperament'])
   const canSpeak = readCanSpeak(record['canSpeak'] ?? record['can_speak'])
   if (!temperament || canSpeak === undefined) {
     return undefined
   }
-  if (canSpeak) {
-    const alignment = parseAlignment(record['alignment'])
-    const backstory = readString(record, 'backstory')
-    const raceKey = readString(record, 'race', 'raceKey', 'race_key')
-    return alignment && backstory && raceKey
-      ? { temperament, canSpeak, alignment, backstory, raceKey }
-      : undefined
+  if (!canSpeak) {
+    return { temperament, canSpeak }
   }
-  return { temperament, canSpeak }
+  const speaking = readSpeakingNpcBehaviorFields(record)
+  return speaking ? { temperament, canSpeak, ...speaking } : undefined
 }
 
 function normalizeGeneratedNpc(value: unknown): GeneratedNpc | undefined {
@@ -311,7 +419,9 @@ export function normalizeCampaignGeneration(
     return undefined
   }
 
-  return { regions, npcs, storyThread }
+  const world = normalizeGeneratedWorld(candidate['world']) ?? defaultLegacyWorld()
+
+  return { world, regions, npcs, storyThread }
 }
 
 /** @internal test hook */
@@ -404,6 +514,21 @@ export function hasValidNpcRace(n: Record<string, unknown>): boolean {
   return canSpeak === false || readString(n, 'race', 'raceKey', 'race_key') !== undefined
 }
 
+export function hasValidNpcBackground(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readNpcBackgroundKey(n) !== undefined
+}
+
+export function hasValidNpcGender(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readNpcGenderKey(n) !== undefined
+}
+
+export function hasValidNpcClass(n: Record<string, unknown>): boolean {
+  const canSpeak = readCanSpeak(n['canSpeak'] ?? n['can_speak'])
+  return canSpeak === false || readNpcClassKey(n) !== undefined
+}
+
 function hasValidNpcTemperament(n: Record<string, unknown>): boolean {
   return parseTemperament(n['temperament']) !== undefined
 }
@@ -414,6 +539,15 @@ function hasValidNpcStringFields(n: Record<string, unknown>): boolean {
     typeof n['role'] === 'string' &&
     typeof n['disposition'] === 'string' &&
     typeof n['regionName'] === 'string'
+  )
+}
+
+function hasValidSpeakingNpcBundle(n: Record<string, unknown>): boolean {
+  return (
+    hasValidNpcRace(n) &&
+    hasValidNpcBackground(n) &&
+    hasValidNpcGender(n) &&
+    hasValidNpcClass(n)
   )
 }
 
@@ -428,7 +562,7 @@ function isGeneratedNpc(value: unknown): value is GeneratedNpc {
     readCanSpeak(n['canSpeak'] ?? n['can_speak']) !== undefined &&
     hasValidNpcBackstory(n) &&
     hasValidNpcAlignment(n) &&
-    hasValidNpcRace(n)
+    hasValidSpeakingNpcBundle(n)
   )
 }
 
@@ -506,6 +640,9 @@ export function isValidGenerationResult(
     !isValidNpcList(npcs, regionNames) ||
     !hasEnoughNpcsPerRegion(regions, npcs, counts.npcsPerRegion)
   ) {
+    return false
+  }
+  if (!isValidGeneratedWorld(candidate['world'])) {
     return false
   }
   return isGeneratedStoryThread(candidate['storyThread'])

@@ -66,6 +66,35 @@ describe('confirmNpcPromotion race carry-forward (049.10)', () => {
   })
 })
 
+describe('confirmNpcPromotion background carry-forward (051.6)', () => {
+  it('copies NPC backgroundKey onto the promoted character when present', () => {
+    const { db, campaign, region } = seedNpc('innkeeper')
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Sergeant Vale',
+      role: 'innkeeper',
+      disposition: 'gruff',
+      alignment: 'lawful_neutral',
+      temperament: 'disciplined',
+      backgroundKey: 'soldier'
+    })
+
+    confirmNpcPromotion(db, { campaignId: campaign.id, npcId: npc.id })
+    const promoted = listCharactersByCampaign(db, campaign.id).find((c) => c.sourceNpcId === npc.id)
+
+    expect(promoted?.backgroundKey).toBe('soldier')
+    expect(promoted?.backgroundStory).toBeNull()
+  })
+
+  it('promotes cleanly when source NPC has no background', () => {
+    const { db, campaign, npc } = seedNpc('hermit')
+    confirmNpcPromotion(db, { campaignId: campaign.id, npcId: npc.id })
+    const promoted = listCharactersByCampaign(db, campaign.id).find((c) => c.sourceNpcId === npc.id)
+    expect(promoted?.backgroundKey).toBeNull()
+  })
+})
+
 describe('confirmNpcPromotion conversion (011.3)', () => {
   it('creates an ai_party_member with rolled maxHp and full current hp', () => {
     const { db, campaign, npc } = seedNpc('shopkeeper')

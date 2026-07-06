@@ -4,7 +4,9 @@ import type { Archetype } from '../../../engine/hp'
 import type { Alignment } from '../../../shared/alignment/types'
 import type { AbilityScoreMethod } from '../../../shared/characterSetup/abilityScoreMethod'
 import { resolveAbilityScoreMethod } from '../../../shared/characterSetup/abilityScoreMethod'
-import { findEquipmentPhasePlayer, findRacePhasePlayer } from '../../../shared/guidedCreation/stageRouting'
+import { findSetupPhasePlayer } from '../../../shared/guidedCreation/stageRouting'
+
+const SETUP_PHASES = new Set(['race', 'background', 'equipment'])
 
 export interface CharacterSetupDraft {
   playerCharacterId: string
@@ -38,10 +40,7 @@ export function buildCharacterSetupDraft(
   player: Character,
   _characters: Character[]
 ): CharacterSetupDraft | null {
-  if (
-    (player.guidedCreationPhase !== 'equipment' && player.guidedCreationPhase !== 'race') ||
-    !player.alignment
-  ) {
+  if (!SETUP_PHASES.has(player.guidedCreationPhase) || !player.alignment) {
     return null
   }
   const abilityScores = extractAbilityScores(player.stats)
@@ -62,7 +61,7 @@ export function buildCharacterSetupDraft(
 }
 
 export function resolveCharacterSetupDraft(characters: Character[]): CharacterSetupDraft | null {
-  const player = findRacePhasePlayer(characters) ?? findEquipmentPhasePlayer(characters)
+  const player = findSetupPhasePlayer(characters)
   if (!player) {
     return null
   }

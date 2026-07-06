@@ -3,6 +3,7 @@ import type { Character } from '../../../db/repositories/characters'
 import { CharacterInventorySection } from './CharacterInventorySection'
 import { CharacterIdentitySection } from './CharacterIdentitySection'
 import { CharacterSheetRaceLine } from './CharacterSheetRaceLine'
+import { CharacterSheetBackgroundLine } from './CharacterSheetBackgroundLine'
 import { CharacterJournalSection } from './CharacterJournalSection'
 import { CharacterLogBookModal } from './CharacterLogBookModal'
 import { CharacterPerksSection } from './CharacterPerksSection'
@@ -28,6 +29,7 @@ export interface CharacterSheetBodyProps {
   character: Character
   compact: boolean
   raceLabel?: string | null
+  backgroundLabel?: string | null
 }
 
 export function CharacterSheetBody(props: CharacterSheetBodyProps): JSX.Element {
@@ -43,6 +45,7 @@ export function CharacterSheetBody(props: CharacterSheetBodyProps): JSX.Element 
         {character.characterClass} — Level {character.level}
       </p>
       {props.raceLabel ? <CharacterSheetRaceLine raceLabel={props.raceLabel} /> : null}
+      {props.backgroundLabel ? <CharacterSheetBackgroundLine backgroundLabel={props.backgroundLabel} /> : null}
       <CharacterXpSection character={character} compact={props.compact} />
       <CharacterSheetVitals character={character} ac={stats.ac} />
       <AbilityScoresList abilityScores={stats.abilityScores} />

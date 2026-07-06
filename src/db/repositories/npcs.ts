@@ -42,6 +42,9 @@ export interface Npc {
   catalogCreatureKey: string | null
   encounterOutcome: NpcYieldOutcome | null
   raceKey: string | null
+  backgroundKey: string | null
+  genderKey: string | null
+  classKey: string | null
 }
 
 export interface CreateNpcInput {
@@ -58,6 +61,9 @@ export interface CreateNpcInput {
   catalogCreatureKey?: string | null
   skipCombatHydration?: boolean
   raceKey?: string | null
+  backgroundKey?: string | null
+  genderKey?: string | null
+  classKey?: string | null
 }
 
 interface NpcRow {
@@ -84,6 +90,9 @@ interface NpcRow {
   catalog_creature_key: string | null
   encounter_outcome: string | null
   race_key: string | null
+  background_key: string | null
+  gender_key: string | null
+  class_key: string | null
 }
 
 function parseNpcConditions(raw: string | null): Condition[] {
@@ -124,7 +133,10 @@ function rowToNpc(row: NpcRow): Npc {
     conditions: parseNpcConditions(row.conditions),
     catalogCreatureKey: row.catalog_creature_key,
     encounterOutcome: (row.encounter_outcome as NpcYieldOutcome | null) ?? null,
-    raceKey: row.race_key ?? null
+    raceKey: row.race_key ?? null,
+    backgroundKey: row.background_key ?? null,
+    genderKey: row.gender_key ?? null,
+    classKey: row.class_key ?? null
   }
 }
 
@@ -194,6 +206,15 @@ export function applyRetiredAdventurerUpgrade(
   applyTierStatsToRow(db, id, 'retired_adventurer', profile)
 }
 
+function resolveNpcKeyDefaults(input: CreateNpcInput) {
+  return {
+    raceKey: input.raceKey ?? null,
+    backgroundKey: input.backgroundKey ?? null,
+    genderKey: input.genderKey ?? null,
+    classKey: input.classKey ?? null
+  }
+}
+
 function resolveCreateNpcDefaults(input: CreateNpcInput) {
   return {
     status: input.status ?? DEFAULT_STATUS,
@@ -202,7 +223,7 @@ function resolveCreateNpcDefaults(input: CreateNpcInput) {
     backstory: input.backstory ?? '',
     alignment: input.alignment ?? null,
     catalogCreatureKey: input.catalogCreatureKey ?? null,
-    raceKey: input.raceKey ?? null
+    ...resolveNpcKeyDefaults(input)
   }
 }
 
@@ -213,10 +234,12 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
   db.prepare(
     `INSERT INTO npcs (
       id, campaign_id, region_id, name, role, disposition, alignment, temperament,
-      can_speak, status, is_party_member, backstory, catalog_creature_key, combat_tier, race_key
+      can_speak, status, is_party_member, backstory, catalog_creature_key, combat_tier,
+      race_key, background_key, gender_key, class_key
     ) VALUES (
       @id, @campaignId, @regionId, @name, @role, @disposition, @alignment, @temperament,
-      @canSpeak, @status, 0, @backstory, @catalogCreatureKey, 'villager', @raceKey
+      @canSpeak, @status, 0, @backstory, @catalogCreatureKey, 'villager',
+      @raceKey, @backgroundKey, @genderKey, @classKey
     )`
   ).run({
     id,
@@ -231,7 +254,10 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
     status: JSON.stringify(defaults.status),
     backstory: defaults.backstory,
     catalogCreatureKey: defaults.catalogCreatureKey,
-    raceKey: defaults.raceKey
+    raceKey: defaults.raceKey,
+    backgroundKey: defaults.backgroundKey,
+    genderKey: defaults.genderKey,
+    classKey: defaults.classKey
   })
 
   if (!input.skipCombatHydration && !input.catalogCreatureKey) {

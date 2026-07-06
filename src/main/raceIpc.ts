@@ -108,6 +108,9 @@ export async function applyRaceSelection(
     if (!raceKey || !isPresetRaceKey(raceKey)) {
       return { ok: false, reason: 'invalid_race_key' }
     }
+  } else if (character.raceKey) {
+    const existingCustom = getCampaignRaceByKey(db, input.campaignId, character.raceKey)
+    raceKey = existingCustom?.kind === 'custom' ? character.raceKey : generateCustomRaceKey()
   } else {
     raceKey = generateCustomRaceKey()
   }
@@ -129,7 +132,7 @@ export async function applyRaceSelection(
     }
 
     setCharacterRaceKey(db, input.characterId, resolvedKey)
-    setGuidedCreationPhase(db, input.characterId, 'equipment')
+    setGuidedCreationPhase(db, input.characterId, 'background')
     return { ok: true, raceKey: resolvedKey }
   })()
 }

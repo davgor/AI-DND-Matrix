@@ -29,6 +29,10 @@ export function createLegacyEquipDatabase(): Database.Database {
   runMigrations(db, migrations.filter((migration) => migration.version === 26))
   runMigrations(db, migrations.filter((migration) => migration.version === 29))
   runMigrations(db, migrations.filter((migration) => migration.version === 30))
+  runMigrations(db, migrations.filter((migration) => migration.version === 31))
+  runMigrations(db, migrations.filter((migration) => migration.version === 32))
+  runMigrations(db, migrations.filter((migration) => migration.version === 33))
+  runMigrations(db, migrations.filter((migration) => migration.version === 34))
   return db
 }
 

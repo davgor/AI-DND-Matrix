@@ -1,8 +1,20 @@
+import type Database from 'better-sqlite3'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createCharacter, markCharacterDead } from '../db/repositories/characters'
 import { createRegion } from '../db/repositories/regions'
 import { appendEvent } from '../db/repositories/events'
+
+function seedCampaignWorldFields(db: Database.Database, campaignId: string): void {
+  db.prepare(
+    `UPDATE campaigns SET world_name = ?, world_summary = ?, world_history = ? WHERE id = ?`
+  ).run(
+    'Test World',
+    'This is the test world.\n\nSecond paragraph.\n\nThird paragraph.',
+    'History one.\n\nHistory two.\n\nHistory three.\n\nHistory four.',
+    campaignId
+  )
+}
 
 export function seedHubSnapshotFixture() {
   const db = createTestDb()
@@ -15,6 +27,7 @@ export function seedHubSnapshotFixture() {
     'The war rages on.',
     campaign.id
   )
+  seedCampaignWorldFields(db, campaign.id)
   const region = createRegion(db, {
     campaignId: campaign.id,
     name: 'Oakhollow',

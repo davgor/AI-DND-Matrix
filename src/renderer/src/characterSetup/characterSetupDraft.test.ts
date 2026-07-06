@@ -62,6 +62,20 @@ describe('characterSetupDraft', () => {
     expect(draft?.name).toBe('Kael')
   })
 
+  it('rebuilds a draft from a background-phase player', () => {
+    const draft = resolveCharacterSetupDraft([player({ guidedCreationPhase: 'background', raceKey: 'elf' })])
+    expect(draft).toEqual({
+      playerCharacterId: 'p1',
+      name: 'Kael',
+      archetype: 'fighter',
+      alignment: 'lawful_good',
+      abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
+      abilityScoreMethod: 'pointBuy',
+      portraitPath: '/portrait.png',
+      sheetBackgroundPath: null
+    })
+  })
+
   it('returns null when no race- or equipment-phase player exists', () => {
     expect(resolveCharacterSetupDraft([player({ guidedCreationPhase: 'identity' })])).toBeNull()
   })

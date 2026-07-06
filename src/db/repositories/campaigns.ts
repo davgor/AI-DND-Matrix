@@ -15,6 +15,9 @@ export interface Campaign {
   premisePrompt: string
   createdAt: string
   currentStateSummary: string
+  worldName: string
+  worldSummary: string
+  worldHistory: string
   inGameDate: number
   deathMode: DeathMode
   respawnRules: RespawnRules | null
@@ -26,6 +29,9 @@ export interface CreateCampaignInput {
   deathMode: DeathMode
   respawnRules?: RespawnRules | null
   createdAt?: string
+  worldName?: string
+  worldSummary?: string
+  worldHistory?: string
 }
 
 interface CampaignRow {
@@ -34,6 +40,9 @@ interface CampaignRow {
   premise_prompt: string
   created_at: string
   current_state_summary: string
+  world_name: string
+  world_summary: string
+  world_history: string
   in_game_date: number
   death_mode: DeathMode
   respawn_rules: string | null
@@ -46,27 +55,89 @@ function rowToCampaign(row: CampaignRow): Campaign {
     premisePrompt: row.premise_prompt,
     createdAt: row.created_at,
     currentStateSummary: row.current_state_summary,
+    worldName: row.world_name ?? '',
+    worldSummary: row.world_summary ?? '',
+    worldHistory: row.world_history ?? '',
     inGameDate: row.in_game_date,
     deathMode: row.death_mode,
     respawnRules: row.respawn_rules ? (JSON.parse(row.respawn_rules) as RespawnRules) : null
   }
 }
 
-export function createCampaign(db: Database.Database, input: CreateCampaignInput): Campaign {
-  const id = randomUUID()
-  const createdAt = input.createdAt ?? new Date().toISOString()
-  const respawnRules = input.respawnRules ?? null
+function campaignHasWorldColumns(db: Database.Database): boolean {
+  const columns = db.prepare('PRAGMA table_info(campaigns)').all() as Array<{ name: string }>
+  return columns.some((column) => column.name === 'world_name')
+}
+
+function insertCampaignRow(
+  db: Database.Database,
+  row: {
+    id: string
+    name: string
+    premisePrompt: string
+    createdAt: string
+    deathMode: DeathMode
+    respawnRules: RespawnRules | null
+    worldName: string
+    worldSummary: string
+    worldHistory: string
+  }
+): void {
+  if (campaignHasWorldColumns(db)) {
+    db.prepare(
+      `INSERT INTO campaigns (
+         id, name, premise_prompt, created_at, death_mode, respawn_rules,
+         world_name, world_summary, world_history
+       )
+       VALUES (
+         @id, @name, @premisePrompt, @createdAt, @deathMode, @respawnRules,
+         @worldName, @worldSummary, @worldHistory
+       )`
+    ).run({
+      id: row.id,
+      name: row.name,
+      premisePrompt: row.premisePrompt,
+      createdAt: row.createdAt,
+      deathMode: row.deathMode,
+      respawnRules: row.respawnRules ? JSON.stringify(row.respawnRules) : null,
+      worldName: row.worldName,
+      worldSummary: row.worldSummary,
+      worldHistory: row.worldHistory
+    })
+    return
+  }
 
   db.prepare(
     `INSERT INTO campaigns (id, name, premise_prompt, created_at, death_mode, respawn_rules)
      VALUES (@id, @name, @premisePrompt, @createdAt, @deathMode, @respawnRules)`
   ).run({
+    id: row.id,
+    name: row.name,
+    premisePrompt: row.premisePrompt,
+    createdAt: row.createdAt,
+    deathMode: row.deathMode,
+    respawnRules: row.respawnRules ? JSON.stringify(row.respawnRules) : null
+  })
+}
+
+export function createCampaign(db: Database.Database, input: CreateCampaignInput): Campaign {
+  const id = randomUUID()
+  const createdAt = input.createdAt ?? new Date().toISOString()
+  const respawnRules = input.respawnRules ?? null
+  const worldName = input.worldName ?? ''
+  const worldSummary = input.worldSummary ?? ''
+  const worldHistory = input.worldHistory ?? ''
+
+  insertCampaignRow(db, {
     id,
     name: input.name,
     premisePrompt: input.premisePrompt,
     createdAt,
     deathMode: input.deathMode,
-    respawnRules: respawnRules ? JSON.stringify(respawnRules) : null
+    respawnRules,
+    worldName,
+    worldSummary,
+    worldHistory
   })
 
   return {
@@ -75,6 +146,9 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
     premisePrompt: input.premisePrompt,
     createdAt,
     currentStateSummary: '',
+    worldName,
+    worldSummary,
+    worldHistory,
     inGameDate: 0,
     deathMode: input.deathMode,
     respawnRules
@@ -125,6 +199,22 @@ export function updateCampaignStateSummary(
   summary: string
 ): void {
   db.prepare('UPDATE campaigns SET current_state_summary = ? WHERE id = ?').run(summary, id)
+}
+
+export function updateCampaignWorldSummary(
+  db: Database.Database,
+  id: string,
+  worldSummary: string
+): void {
+  db.prepare('UPDATE campaigns SET world_summary = ? WHERE id = ?').run(worldSummary, id)
+}
+
+export function updateCampaignWorldHistory(
+  db: Database.Database,
+  id: string,
+  worldHistory: string
+): void {
+  db.prepare('UPDATE campaigns SET world_history = ? WHERE id = ?').run(worldHistory, id)
 }
 
 export interface UpdateCampaignDeathModeInput {

@@ -2,12 +2,18 @@ import { useCallback, useEffect, useState } from 'react'
 import type { RaceRosterGroup } from '../../../main/raceIpc'
 import { CUSTOM_RACE_KEY } from '../../../engine/raceSelection/roster'
 import type { CampaignRace } from '../../../shared/raceSelection/types'
+import {
+  clearRaceSelectionDraft,
+  readRaceSelectionDraft,
+  writeRaceSelectionDraft
+} from '../onboarding/onboardingSelectionDrafts'
 import { buildRaceApplyInput } from './raceSelectionApply'
 import {
   applyLorePreview,
   canConfirmRaceSelection,
   canGenerateLore,
   initialRaceSelectionState,
+  resolveInitialRaceSelectionState,
   selectCustomRace,
   selectPresetRace,
   type RaceSelectionState
@@ -131,6 +137,7 @@ function useApplyRaceSelection(
         setError('Could not save your race choice. Try again.')
         return
       }
+      clearRaceSelectionDraft(characterId)
       onComplete()
     } catch {
       setError('Could not save your race choice. Try again.')
@@ -142,32 +149,75 @@ function useApplyRaceSelection(
   return { submitting, applySelection }
 }
 
-export function useRaceSelection(campaignId: string, characterId: string) {
-  const loaded = useRaceRosterData(campaignId)
+function useRaceSelectionInitialization(
+  characterId: string,
+  savedRaceKey: string | null | undefined,
+  campaignRaces: CampaignRace[],
+  loading: boolean
+) {
+  const [initialized, setInitialized] = useState(false)
   const [state, setState] = useState<RaceSelectionState>(initialRaceSelectionState())
-  const preview = useRacePreview(campaignId, state, setState, loaded.setError)
-  const submit = useApplyRaceSelection(campaignId, characterId, state, loaded.setError)
+
+  useEffect(() => {
+    if (loading) {
+      setInitialized(false)
+      return
+    }
+    setState(
+      resolveInitialRaceSelectionState(
+        savedRaceKey,
+        campaignRaces,
+        readRaceSelectionDraft(characterId)
+      )
+    )
+    setInitialized(true)
+  }, [characterId, campaignRaces, loading, savedRaceKey])
+
+  useEffect(() => {
+    if (!initialized) {
+      return
+    }
+    writeRaceSelectionDraft(characterId, state)
+  }, [characterId, initialized, state])
+
+  return { initialized, state, setState }
+}
+
+export function useRaceSelection(
+  campaignId: string,
+  characterId: string,
+  savedRaceKey: string | null | undefined
+) {
+  const loaded = useRaceRosterData(campaignId)
+  const selection = useRaceSelectionInitialization(
+    characterId,
+    savedRaceKey,
+    loaded.campaignRaces,
+    loaded.loading
+  )
+  const preview = useRacePreview(campaignId, selection.state, selection.setState, loaded.setError)
+  const submit = useApplyRaceSelection(campaignId, characterId, selection.state, loaded.setError)
 
   function pickPreset(raceKey: string): void {
-    setState(selectPresetRace(state, raceKey))
+    selection.setState((current) => selectPresetRace(current, raceKey))
   }
 
   function pickCustom(): void {
-    setState(selectCustomRace(state))
+    selection.setState((current) => selectCustomRace(current))
   }
 
   return {
     roster: loaded.roster,
     campaignRaces: loaded.campaignRaces,
-    state,
-    setState,
-    loading: loaded.loading,
+    state: selection.state,
+    setState: selection.setState,
+    loading: loaded.loading || !selection.initialized,
     previewLoading: preview.previewLoading,
     submitting: submit.submitting,
     error: loaded.error,
     pickPreset,
     pickCustom,
-    previewLore: () => void preview.previewLore(state),
+    previewLore: () => void preview.previewLore(selection.state),
     confirm: submit.applySelection
   }
 }

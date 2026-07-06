@@ -125,7 +125,7 @@ export async function resolveOrRealizeCampaignRace(
   const lore = await generateRaceLore(
     provider,
     campaign.premisePrompt,
-    campaign.currentStateSummary,
+    campaign.worldSummary || campaign.currentStateSummary,
     {
       kind: 'preset',
       raceKey: rosterEntry.key,

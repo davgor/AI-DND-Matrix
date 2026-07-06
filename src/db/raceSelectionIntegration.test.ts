@@ -115,20 +115,22 @@ describe('race selection integration — custom NPC pick', () => {
     const available = buildAvailableRaceOptions(listCampaignRaces(db, campaign.id))
     expect(available.some((option) => option.key === playerRaceKey)).toBe(true)
 
-    const npcPayload = JSON.stringify({
-      npc: {
-        name: 'Lira',
-        role: 'seer',
-        disposition: 'quiet',
-        backstory: 'Lira reads the sky.',
-        regionName: 'Skymark',
-        temperament: 'curious',
-        canSpeak: true,
-        alignment: 'neutral_good',
-        race: playerRaceKey
-      }
+    const coreBundle = JSON.stringify({
+      canSpeak: true,
+      temperament: 'curious',
+      race: playerRaceKey,
+      gender: 'woman',
+      alignment: 'neutral_good',
+      class: 'mage',
+      background: 'sage'
     })
-    const provider = createScriptedProvider([npcPayload, '{"upgrade":false}'])
+    const finalNpc = JSON.stringify({
+      name: 'Lira',
+      role: 'seer',
+      backstory: 'Lira reads the sky.',
+      disposition: 'quiet'
+    })
+    const provider = createScriptedProvider([coreBundle, finalNpc, '{"upgrade":false}'])
     await generateNpcForCampaign(db, provider, {
       campaignId: campaign.id,
       regionId: region.id,

@@ -7,7 +7,8 @@ import { createRegion } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listGuidedCreationMessagesByCharacter } from '../db/repositories/guidedCreationMessages'
 import { setGuidedCreationPhase } from '../db/repositories/guidedCreation'
-import { sendGuidedCreationMessage, kickoffGuidedCreationIdentity } from './guidedCreationIpc'
+import { sendGuidedCreationMessage, kickoffGuidedCreationIdentity, revertGuidedCreationPhase } from './guidedCreationIpc'
+import { readGuidedCreationFields } from '../db/repositories/guidedCreation'
 
 function seedGuidedCampaign(db: ReturnType<typeof createTestDb>) {
   const campaign = createCampaign(db, {
@@ -120,5 +121,51 @@ describe('sendGuidedCreationMessage identity phase', () => {
       message: 'Start in the tavern.'
     })
     expect(result).toEqual({ ok: false, reason: 'invalid_phase' })
+  })
+})
+
+describe('revertGuidedCreationPhase', () => {
+  it('reverts onboarding phase when navigating back', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Guided',
+      premisePrompt: 'A haunted marsh.',
+      deathMode: 'legendary'
+    })
+    const player = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      characterClass: 'fighter',
+      kind: 'player',
+      stats: { abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 } }
+    })
+    setGuidedCreationPhase(db, player.id, 'equipment')
+
+    expect(revertGuidedCreationPhase(db, { characterId: player.id, targetPhase: 'background' })).toEqual({
+      ok: true
+    })
+    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('background')
+  })
+
+  it('rejects invalid revert targets', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Guided',
+      premisePrompt: 'A haunted marsh.',
+      deathMode: 'legendary'
+    })
+    const player = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      characterClass: 'fighter',
+      kind: 'player',
+      stats: { abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 } }
+    })
+    setGuidedCreationPhase(db, player.id, 'race')
+
+    expect(revertGuidedCreationPhase(db, { characterId: player.id, targetPhase: 'background' })).toEqual({
+      ok: false,
+      reason: 'invalid_revert'
+    })
   })
 })

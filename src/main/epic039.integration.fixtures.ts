@@ -19,21 +19,27 @@ export function makeNpcs(regionName: string, prefix: string) {
       temperament: 'neutral',
       canSpeak: true,
       alignment: 'true_neutral',
-      race: 'human'
+      race: 'human',
+      background: 'folk_hero',
+      gender: 'unspecified',
+      class: 'commoner'
     }
   ]
 }
 
-export const SINGLE_NPC_PAYLOAD = JSON.stringify({
-  npc: {
-    name: 'Rook',
-    role: 'hermit',
-    backstory: 'Rook lives in the fog.',
-    disposition: 'gruff',
-    regionName: 'Mistfen',
-    temperament: 'cautious',
-    canSpeak: true,
-    alignment: 'true_neutral',
-    race: 'human'
-  }
+export const SINGLE_NPC_CORE_BUNDLE = JSON.stringify({
+  canSpeak: true,
+  temperament: 'cautious',
+  race: 'human',
+  gender: 'unspecified',
+  alignment: 'true_neutral',
+  class: 'commoner',
+  background: 'hermit'
+})
+
+export const SINGLE_NPC_FINAL = JSON.stringify({
+  name: 'Rook',
+  role: 'hermit',
+  backstory: 'Rook lives in the fog.',
+  disposition: 'gruff'
 })

@@ -1,0 +1,43 @@
+import type Database from 'better-sqlite3'
+import type { IdentityInterviewContext } from '../agents/guidedIdentity'
+import type { Character } from '../db/repositories/characters'
+import type { IdentityFoundationsStatus } from '../shared/guidedCreation/types'
+import { resolveCharacterBackgroundContext, resolveCharacterRaceContext } from './guidedCreationIdentity'
+
+export function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
+  const scores = stats.abilityScores as Record<string, number> | undefined
+  return scores ?? { body: 10, agility: 10, mind: 10, presence: 10 }
+}
+
+export interface BuildIdentityInterviewAgentContextInput {
+  db: Database.Database
+  campaignId: string
+  campaignPremise: string
+  character: Character
+  transcript: IdentityInterviewContext['transcript']
+  currentFoundations: IdentityFoundationsStatus
+}
+
+export function buildIdentityInterviewAgentContext(
+  input: BuildIdentityInterviewAgentContextInput
+): IdentityInterviewContext {
+  const raceContext = resolveCharacterRaceContext(input.db, input.campaignId, input.character.raceKey)
+  const backgroundContext = resolveCharacterBackgroundContext(
+    input.character.backgroundKey,
+    input.character.backgroundStory
+  )
+  return {
+    campaignPremise: input.campaignPremise,
+    characterName: input.character.name,
+    characterClass: input.character.characterClass,
+    abilityScores: abilityScoresFromCharacter(input.character.stats),
+    alignment: input.character.alignment,
+    raceName: raceContext.raceName,
+    raceLore: raceContext.raceLore,
+    backgroundLabel: backgroundContext.backgroundLabel,
+    backgroundDescription: backgroundContext.backgroundDescription,
+    backgroundStory: backgroundContext.backgroundStory,
+    transcript: input.transcript,
+    currentFoundations: input.currentFoundations
+  }
+}

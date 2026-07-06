@@ -5,6 +5,7 @@ import { CharacterSetup } from '../characterSetup/CharacterSetup'
 import { resolveCharacterSetupDraft } from '../characterSetup/characterSetupDraft'
 import { EquipmentSelection } from '../equipmentSelection/EquipmentSelection'
 import { RaceSelection } from '../raceSelection/RaceSelection'
+import { BackgroundSelection } from '../backgroundSelection/BackgroundSelection'
 import { GuidedIdentityStage, GuidedOpeningSceneStage } from '../guidedCreation/GuidedCreationStages'
 import { MainPanel } from '../mainPanel/MainPanel'
 import type { CampaignDetail } from '../../../main/campaignIpc'
@@ -66,8 +67,27 @@ function RaceSelectionStage(props: OnboardingStageContentProps): JSX.Element {
       campaignId={props.detail.campaign.id}
       characterId={player.id}
       characterName={player.name}
+      savedRaceKey={player.raceKey}
       onComplete={props.onRaceSelectionComplete}
       onBack={props.onRaceSelectionBack}
+    />
+  )
+}
+
+function BackgroundSelectionStage(props: OnboardingStageContentProps): JSX.Element {
+  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  if (!props.detail?.campaign || !player) {
+    return <MainPanel detail={props.detail} />
+  }
+  return (
+    <BackgroundSelection
+      campaignId={props.detail.campaign.id}
+      characterId={player.id}
+      characterName={player.name}
+      savedBackgroundKey={player.backgroundKey}
+      savedBackgroundStory={player.backgroundStory}
+      onComplete={props.onBackgroundSelectionComplete}
+      onBack={props.onBackgroundSelectionBack}
     />
   )
 }
@@ -126,6 +146,8 @@ export function renderOnboardingStage(stage: OnboardingStage, props: OnboardingS
       return <CharacterSetupStage {...props} />
     case 'raceSelection':
       return <RaceSelectionStage {...props} />
+    case 'backgroundSelection':
+      return <BackgroundSelectionStage {...props} />
     case 'equipmentSelection':
       return <EquipmentSelectionStage {...props} />
     case 'guidedIdentity':

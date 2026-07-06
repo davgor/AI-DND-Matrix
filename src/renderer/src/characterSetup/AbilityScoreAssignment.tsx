@@ -73,6 +73,13 @@ function usePointBuy(
   )
 
   useEffect(() => {
+    if (!initialScores) {
+      return
+    }
+    setScores(initialScores)
+  }, [initialScores])
+
+  useEffect(() => {
     if (!active || !initialScores) {
       return
     }
@@ -99,6 +106,13 @@ function useStandardArray(
       ? standardAssignmentFromScores(initialScores)
       : emptyStandardAssignment()
   )
+
+  useEffect(() => {
+    if (!initialScores || !resolveStandardArray(initialScores).valid) {
+      return
+    }
+    setAssignment(standardAssignmentFromScores(initialScores))
+  }, [initialScores])
 
   useEffect(() => {
     if (!active || !initialScores || !resolveStandardArray(initialScores).valid) {
@@ -152,6 +166,10 @@ export function AbilityScoreAssignment(props: AbilityScoreAssignmentProps): JSX.
   const pointBuy = usePointBuy(props.onAssigned, method === 'pointBuy', props.initialScores)
   const standardArray = useStandardArray(props.onAssigned, method === 'standardArray', props.initialScores)
   const roll = useRollAssignment(props.onAssigned, method === 'roll', props.initialScores)
+
+  useEffect(() => {
+    setMethod(resolveInitialMethod(props.initialMethod, props.initialScores))
+  }, [props.initialMethod, props.initialScores])
 
   function changeMethod(next: AbilityScoreMethod): void {
     setMethod(next)

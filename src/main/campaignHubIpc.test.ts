@@ -13,5 +13,7 @@ describe('campaign hub snapshot assembly (038.7)', () => {
     expect(deadCast?.lifeStatus).toBe('dead')
     expect(deadCast?.hasObituary).toBe(true)
     expect(deadCast?.obituary?.narrativeBody).toBe('Fallen.')
+    expect(snapshot.campaign?.worldName).toBe('Test World')
+    expect(snapshot.campaign?.worldSummary).toContain('test world')
   })
 })

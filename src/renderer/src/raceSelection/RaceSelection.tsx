@@ -6,12 +6,13 @@ export interface RaceSelectionProps {
   campaignId: string
   characterId: string
   characterName: string
+  savedRaceKey?: string | null
   onComplete: () => void
   onBack: () => void
 }
 
 export function RaceSelection(props: RaceSelectionProps): JSX.Element {
-  const selection = useRaceSelection(props.campaignId, props.characterId)
+  const selection = useRaceSelection(props.campaignId, props.characterId, props.savedRaceKey)
 
   if (selection.loading) {
     return (

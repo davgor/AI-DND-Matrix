@@ -19,6 +19,8 @@ export function ReadyAppOnboardingView(props: {
   onCharacterSetupComplete: () => void
   onRaceSelectionComplete: () => void
   onRaceSelectionBack: () => void
+  onBackgroundSelectionComplete: () => void
+  onBackgroundSelectionBack: () => void
   onEquipmentSelectionComplete: () => void
   onEquipmentSelectionBack: () => void
   onGuidedIdentityAdvance: () => void
@@ -41,8 +43,10 @@ export function ReadyAppOnboardingView(props: {
         onCharacterSetupComplete={props.onCharacterSetupComplete}
         onRaceSelectionComplete={props.onRaceSelectionComplete}
         onRaceSelectionBack={props.onRaceSelectionBack}
+        onBackgroundSelectionComplete={props.onBackgroundSelectionComplete}
+        onBackgroundSelectionBack={props.onBackgroundSelectionBack}
         onEquipmentSelectionComplete={props.onEquipmentSelectionComplete}
-      onEquipmentSelectionBack={props.onEquipmentSelectionBack}
+        onEquipmentSelectionBack={props.onEquipmentSelectionBack}
         onGuidedIdentityAdvance={props.onGuidedIdentityAdvance}
         onEnterPlay={props.onEnterPlay}
         enterPlayBlockerMessage={props.enterPlayBlockerMessage}

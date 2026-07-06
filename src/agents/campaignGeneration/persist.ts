@@ -79,7 +79,10 @@ export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): 
       temperament: generatedNpc.temperament,
       canSpeak: generatedNpc.canSpeak,
       backstory: generatedNpc.backstory ?? '',
-      raceKey: generatedNpc.raceKey ?? null
+      raceKey: generatedNpc.raceKey ?? null,
+      backgroundKey: generatedNpc.backgroundKey ?? null,
+      genderKey: generatedNpc.genderKey ?? null,
+      classKey: generatedNpc.classKey ?? null
     })
   }
 }
@@ -147,7 +150,10 @@ async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput
       temperament: generatedNpc.temperament,
       canSpeak: generatedNpc.canSpeak,
       backstory: generatedNpc.backstory ?? '',
-      raceKey: generatedNpc.raceKey ?? null
+      raceKey: generatedNpc.raceKey ?? null,
+      backgroundKey: generatedNpc.backgroundKey ?? null,
+      genderKey: generatedNpc.genderKey ?? null,
+      classKey: generatedNpc.classKey ?? null
     })
   }
 }
@@ -162,7 +168,10 @@ export async function persistGeneratedCampaign(
     name: input.name,
     premisePrompt: input.premisePrompt,
     deathMode: input.deathMode,
-    respawnRules: input.respawnRules ?? null
+    respawnRules: input.respawnRules ?? null,
+    worldName: generation.world.worldName,
+    worldSummary: generation.world.worldSummary,
+    worldHistory: generation.world.worldHistory
   })
 
   const regionIdsByName = persistGeneratedRegionsWithQuests(db, campaign.id, generation.regions)

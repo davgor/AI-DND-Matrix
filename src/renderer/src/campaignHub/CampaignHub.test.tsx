@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CampaignHubCastRail } from './CampaignHubCastRail'
+import { CampaignHubHeader } from './CampaignHubLayoutParts'
 import { CampaignHubLayout } from './CampaignHubLayout'
 import { makeTestHubSnapshot } from './hubTestFixtures'
 
@@ -18,20 +19,32 @@ function normalizeChildren(children: unknown): JSX.Element[] {
   return [children as JSX.Element]
 }
 
+function layoutProps(overrides: Partial<Parameters<typeof CampaignHubLayout>[0]> = {}) {
+  return {
+    snapshot: makeTestHubSnapshot(),
+    lastPlayed: 'Jun 1, 2026',
+    actionsDisabled: false,
+    obituaryCharacterId: null,
+    worldHistoryOpen: false,
+    onViewWorldHistory: () => {},
+    onCloseWorldHistory: () => {},
+    onResumeCharacter: () => {},
+    onCreateCharacter: () => {},
+    onViewObituary: () => {},
+    onCloseObituary: () => {},
+    ...overrides
+  }
+}
+
 describe('CampaignHub layout shell', () => {
   it('renders sidebar, center, and cast rail regions', () => {
     const snapshot = makeTestHubSnapshot()
-    const node = CampaignHubLayout({
-      snapshot,
-      lastPlayed: 'Jun 1, 2026',
-      sidebar: <nav className="test-sidebar">Sidebar</nav>,
-      actionsDisabled: false,
-      obituaryCharacterId: null,
-      onResumeCharacter: () => {},
-      onCreateCharacter: () => {},
-      onViewObituary: () => {},
-      onCloseObituary: () => {}
-    })
+    const node = CampaignHubLayout(
+      layoutProps({
+        snapshot,
+        sidebar: <nav className="test-sidebar">Sidebar</nav>
+      })
+    )
 
     expect(node.props.className).toBe('campaign-hub')
     expect(childByClass(node, 'campaign-hub-sidebar')).toBeDefined()
@@ -50,19 +63,11 @@ describe('CampaignHub layout shell', () => {
         premisePrompt: 'Mercenaries carve out a life on a war-torn frontier.'
       }
     })
-    const node = CampaignHubLayout({
-      snapshot,
-      lastPlayed: 'Jun 1, 2026',
-      actionsDisabled: false,
-      obituaryCharacterId: null,
-      onResumeCharacter: () => {},
-      onCreateCharacter: () => {},
-      onViewObituary: () => {},
-      onCloseObituary: () => {}
-    })
+    const node = CampaignHubLayout(layoutProps({ snapshot }))
 
     const center = childByClass(childByClass(node, 'campaign-hub-body')!, 'campaign-hub-center')!
-    const header = childByClass(center, 'campaign-hub-header')!
+    const headerNode = normalizeChildren(center.props.children).find((child) => child.type === CampaignHubHeader)!
+    const header = CampaignHubHeader(headerNode.props)
     const headerChildren = normalizeChildren(header.props.children)
     expect((headerChildren[0] as JSX.Element).props.children).toBe('Iron Marches')
     expect((headerChildren[1] as JSX.Element).props.className).toBe('campaign-hub-premise')

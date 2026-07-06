@@ -1,13 +1,52 @@
 import type { PlayAwareHubSnapshot } from '../../../shared/campaignHub/types'
 import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
+import { CampaignReviewWorldContent } from '../campaignReview/CampaignReviewWorldContent'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { FormattedText } from '../shared/FormattedText'
 import { buildHubRegionBlocks } from './hubUtils'
 import { HubQuestTeaser } from './HubQuestTeaser'
 
+function HubCurrentStateSection(props: { summary: string }): JSX.Element {
+  return (
+    <section className="campaign-hub-section campaign-hub-current-state">
+      <h2>Current state</h2>
+      {FormattedText({ as: 'p', text: props.summary })}
+    </section>
+  )
+}
+
+function HubRecentEventsSection(props: { events: PlayAwareHubSnapshot['recentEvents'] }): JSX.Element {
+  if (props.events.length === 0) {
+    return <></>
+  }
+  return (
+    <section className="campaign-hub-section campaign-hub-recent-events">
+      <h2>Recent events</h2>
+      <ul>
+        {props.events.map((event) => (
+          <li key={event.id}>
+            <time dateTime={event.createdAt}>{formatEventDate(event.createdAt)}</time>
+            {' — '}
+            {event.summary}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function formatEventDate(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return iso
+  }
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export interface CampaignHubWorldPreviewProps {
   snapshot: PlayAwareHubSnapshot
   focusCharacterId?: string | null
+  onViewWorldHistory?: () => void
 }
 
 export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JSX.Element {
@@ -24,15 +63,19 @@ export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JS
   return (
     <div className="campaign-hub-world-preview">
       <HubQuestTeaser summary={focusSummary} />
-      {snapshot.currentStateSummary ? (
-        <section className="campaign-hub-section campaign-hub-current-state">
-          <h2>Current state</h2>
-          {FormattedText({ as: 'p', text: snapshot.currentStateSummary })}
-        </section>
+      {snapshot.campaign ? (
+        <CampaignReviewWorldContent
+          worldName={snapshot.campaign.worldName}
+          worldSummary={snapshot.campaign.worldSummary}
+          onViewHistory={
+            snapshot.campaign.worldHistory && props.onViewWorldHistory
+              ? props.onViewWorldHistory
+              : undefined
+          }
+        />
       ) : null}
-
+      {snapshot.currentStateSummary ? <HubCurrentStateSection summary={snapshot.currentStateSummary} /> : null}
       <CampaignReviewStory storyThreads={snapshot.storyThreads} playAware />
-
       <section className="campaign-hub-section campaign-hub-regions">
         <h2>Regions</h2>
         {regionBlocks.map(({ region, extras, npcs }) => (
@@ -45,29 +88,7 @@ export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JS
           />
         ))}
       </section>
-
-      {snapshot.recentEvents.length > 0 ? (
-        <section className="campaign-hub-section campaign-hub-recent-events">
-          <h2>Recent events</h2>
-          <ul>
-            {snapshot.recentEvents.map((event) => (
-              <li key={event.id}>
-                <time dateTime={event.createdAt}>{formatEventDate(event.createdAt)}</time>
-                {' — '}
-                {event.summary}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <HubRecentEventsSection events={snapshot.recentEvents} />
     </div>
   )
-}
-
-function formatEventDate(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) {
-    return iso
-  }
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }

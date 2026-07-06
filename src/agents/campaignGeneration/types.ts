@@ -50,6 +50,19 @@ export interface GeneratedNpc {
   alignment?: Alignment
   backstory?: string
   raceKey?: string
+  backgroundKey?: string
+  genderKey?: string
+  classKey?: string
+}
+
+export interface NpcCoreBundle {
+  canSpeak: boolean
+  temperament: Temperament
+  raceKey?: string
+  genderKey?: string
+  alignment?: Alignment
+  classKey?: string
+  backgroundKey?: string
 }
 
 export interface GeneratedStoryThread {
@@ -58,7 +71,20 @@ export interface GeneratedStoryThread {
   summary: string
 }
 
+export interface GeneratedWorld {
+  worldName: string
+  worldSummary: string
+  worldHistory: string
+}
+
+export interface WorldContext {
+  worldName: string
+  worldSummary: string
+  worldHistory: string
+}
+
 export interface CampaignGenerationResult {
+  world: GeneratedWorld
   regions: GeneratedRegion[]
   npcs: GeneratedNpc[]
   storyThread: GeneratedStoryThread
@@ -74,6 +100,9 @@ export interface GeneratedSingleNpcResult {
 }
 
 export interface CampaignHistoryContext {
+  worldName: string
+  worldSummary: string
+  worldHistory: string
   currentStateSummary: string
   regionSummaries: Array<{ name: string; description: string; recentHistory: string }>
   storyThreadSummaries: Array<{ title: string; state: string; summary: string }>

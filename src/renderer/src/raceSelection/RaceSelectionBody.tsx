@@ -30,7 +30,7 @@ export function RaceSelectionActions(props: {
         }
         onClick={() => void props.onConfirm()}
       >
-        {props.submitting ? 'Saving...' : 'Choose your gear'}
+        {props.submitting ? 'Saving...' : 'Choose your background'}
       </ProceedButton>
     </div>
   )

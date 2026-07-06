@@ -53,7 +53,12 @@ import type { RaceLore } from '../shared/raceSelection/types'
 
 export function buildOpeningSceneIdentity(
   fields: CharacterGuidedCreationFields,
-  raceContext: { raceName: string | null; raceLore: RaceLore | null }
+  raceContext: { raceName: string | null; raceLore: RaceLore | null },
+  backgroundContext: {
+    backgroundLabel: string | null
+    backgroundDescription: string | null
+    backgroundStory: string | null
+  }
 ) {
   return {
     identityWho: fields.identityWho,
@@ -61,6 +66,9 @@ export function buildOpeningSceneIdentity(
     identityWhere: fields.identityWhere,
     identityWhat: fields.identityWhat,
     raceName: raceContext.raceName,
-    raceLore: raceContext.raceLore
+    raceLore: raceContext.raceLore,
+    backgroundLabel: backgroundContext.backgroundLabel,
+    backgroundDescription: backgroundContext.backgroundDescription,
+    backgroundStory: backgroundContext.backgroundStory
   }
 }

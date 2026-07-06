@@ -156,7 +156,7 @@ export function updatePlayerCharacterSetup(
   input: UpdatePlayerCharacterSetupInput
 ): Character {
   const character = getCharacterById(db, input.characterId)
-  if (!character || character.kind !== 'player' || !['race', 'equipment'].includes(character.guidedCreationPhase)) {
+  if (!character || character.kind !== 'player' || !['race', 'background', 'equipment'].includes(character.guidedCreationPhase)) {
     throw new Error('invalid_setup_update')
   }
 

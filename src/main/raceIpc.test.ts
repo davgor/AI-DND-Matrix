@@ -66,7 +66,7 @@ describe('previewRaceLore', () => {
 })
 
 describe('applyRaceSelection', () => {
-  it('persists race and advances phase to equipment', async () => {
+  it('persists race and advances phase to background', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'C', premisePrompt: 'p', deathMode: 'legendary' })
     const player = createCharacter(db, {
@@ -88,7 +88,7 @@ describe('applyRaceSelection', () => {
     if (result.ok) {
       expect(result.raceKey).toBe('human')
       expect(getCharacterById(db, player.id)?.raceKey).toBe('human')
-      expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('equipment')
+      expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('background')
     }
   })
 })

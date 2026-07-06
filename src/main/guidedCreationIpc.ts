@@ -5,7 +5,7 @@ import { runOpeningSceneTurn } from '../agents/guidedOpeningScene'
 import type { Provider } from '../agents/providers/types'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById } from '../db/repositories/characters'
-import { readGuidedCreationFields, readIdentityFoundationsStatus } from '../db/repositories/guidedCreation'
+import { readGuidedCreationFields, readIdentityFoundationsStatus, setGuidedCreationPhase } from '../db/repositories/guidedCreation'
 import {
   appendGuidedCreationMessage,
   listGuidedCreationMessagesByCharacter,
@@ -18,14 +18,19 @@ import type {
   GuidedCreationFailureReason,
   GuidedCreationKickoffInput,
   GuidedCreationKickoffResult,
+  GuidedCreationRevertPhaseInput,
+  GuidedCreationRevertPhaseResult,
   GuidedCreationSendMessageInput,
   GuidedCreationSendMessageResult,
   GuidedCreationState
 } from '../shared/guidedCreation/types'
+import { canRevertGuidedCreationPhase, type RevertibleOnboardingPhase } from '../shared/guidedCreation/revertPhase'
 import { buildAgentProvider } from './campaignIpc'
 import { getDb } from './db'
-import { kickoffIdentityInterviewIfNeeded, persistIdentityInterviewTurn, resolveCharacterRaceContext } from './guidedCreationIdentity'
+import { kickoffIdentityInterviewIfNeeded, persistIdentityInterviewTurn } from './guidedCreationIdentity'
+import { buildIdentityInterviewAgentContext } from './guidedCreationAgentContext'
 import { buildOpeningSceneIdentity, persistOpeningSceneTurn } from './guidedCreationOpeningScene'
+import { resolveCharacterBackgroundContext, resolveCharacterRaceContext } from './guidedCreationIdentity'
 
 function failure(reason: GuidedCreationFailureReason): GuidedCreationSendMessageResult {
   return { ok: false, reason }
@@ -52,9 +57,34 @@ function buildGuidedCreationState(db: Database.Database, characterId: string): G
   }
 }
 
-function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
-  const scores = stats.abilityScores as Record<string, number> | undefined
-  return scores ?? { body: 10, agility: 10, mind: 10, presence: 10 }
+function buildOpeningSceneAgentContext(
+  db: Database.Database,
+  input: GuidedCreationSendMessageInput,
+  character: NonNullable<ReturnType<typeof getCharacterById>>,
+  fields: NonNullable<ReturnType<typeof readGuidedCreationFields>>
+) {
+  const regions = listRegionsByCampaign(db, input.campaignId)
+  const npcs = regions.flatMap((region) => listNpcsByRegion(db, region.id))
+  const [storyThread] = listStoryThreadsByCampaign(db, input.campaignId)
+  const transcript = listGuidedCreationMessagesByPhase(db, character.id, 'opening_scene').map((row) => ({
+    role: row.role,
+    content: row.content
+  }))
+  return {
+    campaignPremise: getCampaignById(db, input.campaignId)!.premisePrompt,
+    identity: buildOpeningSceneIdentity(
+      fields,
+      resolveCharacterRaceContext(db, input.campaignId, character.raceKey),
+      resolveCharacterBackgroundContext(character.backgroundKey, character.backgroundStory)
+    ),
+    regions: regions.map((region) => ({ name: region.name, description: region.description })),
+    npcs: npcs.map((npc) => ({ name: npc.name, role: npc.role, disposition: npc.disposition })),
+    storyThread: storyThread
+      ? { title: storyThread.title, state: storyThread.state, summary: storyThread.summary }
+      : null,
+    transcript,
+    currentOpeningScene: fields.openingScene
+  }
 }
 
 async function handleIdentityMessage(
@@ -81,23 +111,19 @@ async function handleIdentityMessage(
     role: row.role,
     content: row.content
   }))
-  const raceContext = resolveCharacterRaceContext(db, input.campaignId, character.raceKey)
 
   let agentResult
   try {
     agentResult = await runIdentityInterviewTurn(
       provider,
-      {
+      buildIdentityInterviewAgentContext({
+        db,
+        campaignId: input.campaignId,
         campaignPremise: campaign.premisePrompt,
-        characterName: character.name,
-        characterClass: character.characterClass,
-        abilityScores: abilityScoresFromCharacter(character.stats),
-        alignment: character.alignment,
-        raceName: raceContext.raceName,
-        raceLore: raceContext.raceLore,
+        character,
         transcript,
         currentFoundations
-      },
+      }),
       input.message.trim()
     )
   } catch {
@@ -135,29 +161,11 @@ async function handleOpeningSceneMessage(
     content: input.message.trim()
   })
 
-  const regions = listRegionsByCampaign(db, input.campaignId)
-  const npcs = regions.flatMap((region) => listNpcsByRegion(db, region.id))
-  const [storyThread] = listStoryThreadsByCampaign(db, input.campaignId)
-  const transcript = listGuidedCreationMessagesByPhase(db, character.id, 'opening_scene').map((row) => ({
-    role: row.role,
-    content: row.content
-  }))
-
   let agentResult
   try {
     agentResult = await runOpeningSceneTurn(
       provider,
-      {
-        campaignPremise: campaign.premisePrompt,
-        identity: buildOpeningSceneIdentity(fields, resolveCharacterRaceContext(db, input.campaignId, character.raceKey)),
-        regions: regions.map((region) => ({ name: region.name, description: region.description })),
-        npcs: npcs.map((npc) => ({ name: npc.name, role: npc.role, disposition: npc.disposition })),
-        storyThread: storyThread
-          ? { title: storyThread.title, state: storyThread.state, summary: storyThread.summary }
-          : null,
-        transcript,
-        currentOpeningScene: fields.openingScene
-      },
+      buildOpeningSceneAgentContext(db, input, character, fields),
       input.message.trim()
     )
   } catch {
@@ -212,6 +220,22 @@ export async function kickoffGuidedCreationIdentity(
   }
 }
 
+export function revertGuidedCreationPhase(
+  db: Database.Database,
+  input: GuidedCreationRevertPhaseInput
+): GuidedCreationRevertPhaseResult {
+  const character = getCharacterById(db, input.characterId)
+  if (!character) {
+    return { ok: false, reason: 'not_found' }
+  }
+  const targetPhase = input.targetPhase as RevertibleOnboardingPhase
+  if (!canRevertGuidedCreationPhase(character.guidedCreationPhase, targetPhase)) {
+    return { ok: false, reason: 'invalid_revert' }
+  }
+  setGuidedCreationPhase(db, input.characterId, targetPhase)
+  return { ok: true }
+}
+
 export function registerGuidedCreationHandlers(): void {
   ipcMain.handle('guidedCreation:getState', (_event, characterId: string) =>
     getGuidedCreationState(getDb(), characterId)
@@ -225,5 +249,8 @@ export function registerGuidedCreationHandlers(): void {
   })
   ipcMain.handle('guidedCreation:kickoffIdentity', async (_event, input: GuidedCreationKickoffInput) =>
     kickoffGuidedCreationIdentity(getDb(), buildAgentProvider(), input)
+  )
+  ipcMain.handle('guidedCreation:revertPhase', (_event, input: GuidedCreationRevertPhaseInput) =>
+    revertGuidedCreationPhase(getDb(), input)
   )
 }

@@ -7,8 +7,8 @@ export function CampaignReviewHeader(props: { campaignName: string | undefined }
     <header className="campaign-review-header">
       <h1>{props.campaignName}</h1>
       <p className="campaign-review-lead">
-        Review your starting regions. Each includes local history, quest hooks, and NPCs to draw
-        players in.
+        Review your world, starting regions, local history, quest hooks, and NPCs before character
+        creation.
       </p>
     </header>
   )

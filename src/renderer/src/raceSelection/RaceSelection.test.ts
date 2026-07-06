@@ -5,9 +5,11 @@ import {
   applyLorePreview,
   canConfirmRaceSelection,
   canGenerateLore,
+  hydrateRaceSelectionState,
   initialRaceSelectionState,
   isEstablishedPresetRace,
   isLoreEditable,
+  resolveInitialRaceSelectionState,
   selectCustomRace,
   selectPresetRace,
   showRegenerateControl,
@@ -61,5 +63,77 @@ describe('raceSelectionLogic', () => {
   it('auto-generates preset picks once a race key is selected', () => {
     const preset = selectPresetRace(initialRaceSelectionState(), 'dwarf')
     expect(canGenerateLore(preset)).toBe(true)
+  })
+})
+
+describe('raceSelectionLogic hydration', () => {
+  it('hydrates saved preset races from the campaign catalog with locked lore', () => {
+    const campaignRaces = [
+      {
+        id: '1',
+        campaignId: 'c1',
+        raceKey: 'elf',
+        kind: 'preset' as const,
+        label: 'Elf',
+        seedPrompt: 'x',
+        lore: sampleLore,
+        createdByCharacterId: null,
+        createdAt: ''
+      }
+    ]
+    const hydrated = hydrateRaceSelectionState('elf', campaignRaces)
+    expect(hydrated?.kind).toBe('preset')
+    expect(hydrated?.raceKey).toBe('elf')
+    expect(hydrated?.lore).toEqual(sampleLore)
+    expect(hydrated?.loreLocked).toBe(true)
+    expect(canConfirmRaceSelection(hydrated!)).toBe(true)
+  })
+})
+
+describe('raceSelectionLogic custom hydration', () => {
+  it('hydrates saved custom races with editable lore', () => {
+    const campaignRaces = [
+      {
+        id: '1',
+        campaignId: 'c1',
+        raceKey: 'custom_fox',
+        kind: 'custom' as const,
+        label: 'Fox folk',
+        seedPrompt: 'Moon-touched fox folk.',
+        lore: sampleLore,
+        createdByCharacterId: 'p1',
+        createdAt: ''
+      }
+    ]
+    const hydrated = hydrateRaceSelectionState('custom_fox', campaignRaces)
+    expect(hydrated?.kind).toBe('custom')
+    expect(hydrated?.customLabel).toBe('Fox folk')
+    expect(hydrated?.customSeedPrompt).toBe('Moon-touched fox folk.')
+    expect(hydrated?.loreLocked).toBe(false)
+  })
+})
+
+describe('raceSelectionLogic draft resolution', () => {
+  it('prefers hydrated saved race over an in-progress draft', () => {
+    const draft = selectCustomRace(initialRaceSelectionState())
+    const resolved = resolveInitialRaceSelectionState(
+      'elf',
+      [
+        {
+          id: '1',
+          campaignId: 'c1',
+          raceKey: 'elf',
+          kind: 'preset',
+          label: 'Elf',
+          seedPrompt: 'x',
+          lore: sampleLore,
+          createdByCharacterId: null,
+          createdAt: ''
+        }
+      ],
+      draft
+    )
+    expect(resolved.raceKey).toBe('elf')
+    expect(resolved.kind).toBe('preset')
   })
 })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../../db/testUtils'
-import { listCampaigns } from '../../db/repositories/campaigns'
+import { listCampaigns, getCampaignById } from '../../db/repositories/campaigns'
 import { listNpcsByRegion } from '../../db/repositories/npcs'
 import { listRegionsByCampaign } from '../../db/repositories/regions'
 import { listRegionHistoryByRegion } from '../../db/repositories/regionHistory'
@@ -13,11 +13,15 @@ import {
   MAX_GENERATION_ATTEMPTS,
   buildAdditionalRegionPrompt,
   buildGenerationPrompt,
+  buildWorldGenerationPrompt,
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
   generateSingleNpc,
   hasValidNpcRace,
+  hasValidNpcBackground,
+  hasValidNpcGender,
+  hasValidNpcClass,
   normalizeAdditionalRegion,
   normalizeCampaignGeneration,
   persistRegionWithNpcs,
@@ -28,14 +32,15 @@ import {
   ADDITIONAL_REGION,
   LEGACY_NORMALIZE_PAYLOAD,
   LEGACY_CAMPAIGN_SEED_PAYLOAD,
+  VALID_WORLD,
+  buildCascadingSeedResponses,
   makeNpcs,
   makeRegion,
   npcReviewResponses,
   RACE_LORE_RESPONSE,
   PRE_EXPANSION_CAMPAIGN_PAYLOAD,
   SETUP_INPUT,
-  TRIM_NPCS_PAYLOAD,
-  VALID_GENERATION
+  TRIM_NPCS_PAYLOAD
 } from './fixtures'
 import type { GeneratedNpc, GeneratedRegion } from '.'
 
@@ -99,8 +104,15 @@ describe('normalizeCampaignGeneration', () => {
 })
 
 describe('generateCampaignSeed legacy compatibility', () => {
-  it('accepts older-shaped model output after normalization', async () => {
-    const provider = createScriptedProvider([JSON.stringify(LEGACY_CAMPAIGN_SEED_PAYLOAD)])
+  it('accepts older-shaped region payloads in the regions stage', async () => {
+    const regions = LEGACY_CAMPAIGN_SEED_PAYLOAD.regions.map((region) => makeRegion(region.name, 'legacy'))
+    const responses = buildCascadingSeedResponses({
+      regionCount: 2,
+      npcsPerRegion: 1,
+      regions,
+      storyThread: LEGACY_CAMPAIGN_SEED_PAYLOAD.story_thread
+    })
+    const provider = createScriptedProvider(responses)
     const result = await generateCampaignSeed(
       provider,
       'A new oceanic region has been discovered and explorers are venturing out',
@@ -108,15 +120,17 @@ describe('generateCampaignSeed legacy compatibility', () => {
     )
     expect(result.regions).toHaveLength(2)
     expect(result.storyThread.title).toBe('Ventures on the New Ocean')
+    expect(result.world.worldName).toBe(VALID_WORLD.worldName)
   })
 })
 
-describe('generateCampaignSeed (007.1, 039.4)', () => {
+describe('generateCampaignSeed counts (007.1, 039.4, 054.3)', () => {
   it('produces a structured response with exactly requested regions and NPCs per region', async () => {
-    const provider = createScriptedProvider([VALID_GENERATION])
+    const provider = createScriptedProvider(buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 }))
     const counts = resolveInitialGenerationCounts(2, 3)
     const result = await generateCampaignSeed(provider, 'A flooded kingdom.', counts)
 
+    expect(result.world.worldName).toBe(VALID_WORLD.worldName)
     expect(result.regions).toHaveLength(2)
     expect(result.regions[0]?.recentHistory).toBeTruthy()
     expect(result.regions[0]?.potentialQuests.length).toBeGreaterThanOrEqual(2)
@@ -125,44 +139,40 @@ describe('generateCampaignSeed (007.1, 039.4)', () => {
   })
 
   it('accepts zero regions with story thread only', async () => {
-    const payload = JSON.stringify({
-      regions: [],
-      npcs: [],
+    const responses = buildCascadingSeedResponses({
+      regionCount: 0,
+      npcsPerRegion: 3,
       storyThread: { title: 'Thread Alone', state: 'starting', summary: 'No regions yet.' }
     })
-    const provider = createScriptedProvider([payload])
+    const provider = createScriptedProvider(responses)
     const result = await generateCampaignSeed(provider, 'A premise.', { regionCount: 0, npcsPerRegion: 3 })
     expect(result.regions).toHaveLength(0)
     expect(result.npcs).toHaveLength(0)
     expect(result.storyThread.title).toBe('Thread Alone')
   })
+})
 
+describe('generateCampaignSeed edge counts (054.3)', () => {
   it('persists regions with zero NPCs when configured', async () => {
-    const payload = JSON.stringify({
+    const responses = buildCascadingSeedResponses({
+      regionCount: 1,
+      npcsPerRegion: 0,
       regions: [makeRegion('Empty Vale', 'quiet')],
-      npcs: [],
       storyThread: { title: 'Quiet Start', state: 'starting', summary: 'Sparse world.' }
     })
-    const provider = createScriptedProvider([payload])
+    const provider = createScriptedProvider(responses)
     const result = await generateCampaignSeed(provider, 'A quiet land.', { regionCount: 1, npcsPerRegion: 0 })
     expect(result.regions).toHaveLength(1)
     expect(result.npcs).toHaveLength(0)
   })
+})
 
-  it('accepts partial NPC counts from the model instead of failing validation', async () => {
-    const partialPayload = JSON.stringify({
-      regions: [makeRegion('Oakhollow', 'old'), makeRegion('The Sunken Crown', 'ruin')],
-      npcs: [
-        ...makeNpcs('Oakhollow', 'Oak').slice(0, 2),
-        ...makeNpcs('The Sunken Crown', 'Crown').slice(0, 2)
-      ],
-      storyThread: { title: 'Partial Cast', state: 'starting', summary: 'A start.' }
-    })
-    const provider = createScriptedProvider([partialPayload])
-    const result = await generateCampaignSeed(provider, 'Random fantasy.', { regionCount: 2, npcsPerRegion: 3 })
-
-    expect(result.regions).toHaveLength(2)
-    expect(result.npcs).toHaveLength(4)
+describe('buildWorldGenerationPrompt', () => {
+  it('asks for world name, summary, and history only', () => {
+    const prompt = buildWorldGenerationPrompt('A marsh kingdom')
+    expect(prompt).toContain('worldName')
+    expect(prompt).toContain('exactly three short paragraphs')
+    expect(prompt).not.toContain('"regions"')
   })
 })
 
@@ -190,14 +200,33 @@ describe('buildAdditionalRegionPrompt', () => {
     expect(prompt).toContain('no NPCs')
     expect(prompt).toContain('Available races')
   })
+
+  it('includes world context from campaign history when present', () => {
+    const prompt = buildAdditionalRegionPrompt('Premise', ['Oakhollow'], {
+      seedPrompt: 'A foggy marsh',
+      npcCount: 1,
+      history: {
+        worldName: 'Velmora',
+        worldSummary: 'Summary one.\n\nTwo.\n\nThree.',
+        worldHistory: 'Past one.\n\nTwo.\n\nThree.\n\nFour.',
+        currentStateSummary: '',
+        regionSummaries: [],
+        storyThreadSummaries: [],
+        recentEvents: []
+      }
+    }, buildAvailableRaceOptions([]))
+    expect(prompt).toContain('World name: Velmora')
+    expect(prompt).toContain('World summary')
+  })
 })
 
 describe('generateCampaignSeed schema rejection + retry (007.4, generation half)', () => {
   it('retries past a malformed response and succeeds on a later valid one', async () => {
-    const provider = createScriptedProvider(['not json', '{"regions":[]}', VALID_GENERATION])
+    const valid = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
+    const provider = createScriptedProvider(['not json', '{"regions":[]}', ...valid])
     const result = await generateCampaignSeed(provider, 'A flooded kingdom.')
     expect(result.storyThread.title).toBe('The Crown Beneath the Waves')
-    expect(provider.calls).toHaveLength(3)
+    expect(provider.calls.length).toBeGreaterThan(valid.length)
   })
 
   it('throws a typed schema error after exhausting retries on persistently malformed output', async () => {
@@ -205,7 +234,7 @@ describe('generateCampaignSeed schema rejection + retry (007.4, generation half)
     await expect(generateCampaignSeed(provider, 'x')).rejects.toBeInstanceOf(
       CampaignGenerationSchemaError
     )
-    expect(provider.calls).toHaveLength(MAX_GENERATION_ATTEMPTS)
+    expect(provider.calls.length).toBeGreaterThanOrEqual(MAX_GENERATION_ATTEMPTS)
   })
 })
 
@@ -290,7 +319,10 @@ describe('generateSingleNpc', () => {
         temperament: 'cautious',
         canSpeak: true,
         alignment: 'true_neutral',
-        race: 'human'
+        race: 'human',
+        background: 'hermit',
+        gender: 'unspecified',
+        class: 'commoner'
       }
     })
     const provider = createScriptedProvider([payload])
@@ -305,6 +337,50 @@ describe('generateSingleNpc', () => {
     expect(result.npc.name).toBe('Rook Vale')
     expect(result.npc.regionName).toBe('Oakhollow')
     expect(result.npc.raceKey).toBe('human')
+    expect(result.npc.backgroundKey).toBe('hermit')
+  })
+})
+
+describe('hasValidNpcBackground', () => {
+  it('requires a valid background for speaking NPCs and omits it for non-speaking NPCs', () => {
+    expect(hasValidNpcBackground({ canSpeak: true, background: 'soldier' })).toBe(true)
+    expect(hasValidNpcBackground({ canSpeak: true })).toBe(false)
+    expect(hasValidNpcBackground({ canSpeak: true, background: 'not_a_real_key' })).toBe(false)
+    expect(hasValidNpcBackground({ canSpeak: false })).toBe(true)
+  })
+})
+
+describe('buildGenerationPrompt background roster (051.2)', () => {
+  it('includes BACKGROUND_ROSTER keys in the generation prompt', () => {
+    const prompt = buildGenerationPrompt('A flooded kingdom.', { regionCount: 1, npcsPerRegion: 1 }, [])
+    expect(prompt).toContain('Available backgrounds')
+    expect(prompt).toContain('soldier: Soldier')
+    expect(prompt).toContain('folk_hero: Folk Hero')
+  })
+})
+
+describe('hasValidNpcGender', () => {
+  it('requires gender for speaking NPCs and omits it for non-speaking NPCs', () => {
+    expect(hasValidNpcGender({ canSpeak: true, gender: 'woman' })).toBe(true)
+    expect(hasValidNpcGender({ canSpeak: true })).toBe(false)
+    expect(hasValidNpcGender({ canSpeak: false })).toBe(true)
+  })
+})
+
+describe('hasValidNpcClass', () => {
+  it('requires class for speaking NPCs and omits it for non-speaking NPCs', () => {
+    expect(hasValidNpcClass({ canSpeak: true, class: 'commoner' })).toBe(true)
+    expect(hasValidNpcClass({ canSpeak: true })).toBe(false)
+    expect(hasValidNpcClass({ canSpeak: false })).toBe(true)
+  })
+})
+
+describe('buildGenerationPrompt gender/class rosters (052.3)', () => {
+  it('includes gender and class rosters in the generation prompt', () => {
+    const prompt = buildGenerationPrompt('A flooded kingdom.', { regionCount: 1, npcsPerRegion: 1 }, [])
+    expect(prompt).toContain('Available genders')
+    expect(prompt).toContain('woman: Woman')
+    expect(prompt).toContain('commoner: Commoner')
   })
 })
 
@@ -317,11 +393,17 @@ describe('hasValidNpcRace', () => {
 })
 
 describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 npcs/threads)', () => {
-  it('writes regions (with history and quest hooks), NPCs, and the story thread', async () => {
+  it('writes world fields, regions (with history and quest hooks), NPCs, and the story thread', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
+    const seedResponses = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
+    const provider = createScriptedProvider([...seedResponses, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
 
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
+
+    const fetched = getCampaignById(db, campaign.id)
+    expect(fetched?.worldName).toBe(VALID_WORLD.worldName)
+    expect(fetched?.worldSummary).toContain('Shattered Expanse')
+    expect(fetched?.worldHistory).toContain('Sundering')
 
     const regions = listRegionsByCampaign(db, campaign.id)
     expect(regions).toHaveLength(2)
@@ -335,6 +417,7 @@ describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 
     expect(oakhollow).toBeDefined()
     const npcsInOakhollow = listNpcsByRegion(db, oakhollow!.id)
     expect(npcsInOakhollow).toHaveLength(3)
+    expect(npcsInOakhollow.every((npc) => npc.backgroundKey !== null)).toBe(true)
 
     const threads = listStoryThreadsByCampaign(db, campaign.id)
     expect(threads).toHaveLength(1)
@@ -345,7 +428,8 @@ describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 
 describe('persistRegionWithNpcs', () => {
   it('appends a region with history, quests, and three NPCs', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([VALID_GENERATION, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
+    const seedResponses = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
+    const provider = createScriptedProvider([...seedResponses, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
     const additional = JSON.parse(ADDITIONAL_REGION) as {
       region: GeneratedRegion
@@ -374,7 +458,8 @@ describe('persistRegionWithNpcs', () => {
 describe('generateAndPersistCampaign atomicity (007.4, persistence half)', () => {
   it('leaves no partial rows from a malformed attempt — exactly one complete campaign after malformed-then-valid', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider(['not json', VALID_GENERATION, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
+    const valid = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
+    const provider = createScriptedProvider(['not json', ...valid, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
 
     await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 
