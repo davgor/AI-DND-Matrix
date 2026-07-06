@@ -30,12 +30,15 @@ jobs:
             echo "deploy=true" >> "$GITHUB_OUTPUT"
           fi
 
-  package:
+  prepare:
     needs: should_deploy
     if: ${{ needs.should_deploy.outputs.deploy == 'true' }}
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.release.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,22 +53,82 @@ jobs:
 
       - name: Bump minor version
         id: version
-        shell: bash
         run: echo "version=$(node scripts/bump-minor-version.mjs)" >> "$GITHUB_OUTPUT"
 
-      - run: npm run package
-
       - name: Commit version bump
-        shell: bash
+        id: release
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
           git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci]"
           git push
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  package-windows:
+    needs: prepare
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run package:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: release/*
+          if-no-files-found: error
+
+  package-mac:
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Package macOS app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+        run: npm run package:mac
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-release
+          path: release/*
+          if-no-files-found: error
+
+  release:
+    needs: [prepare, package-windows, package-mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-release'
+          merge-multiple: true
+          path: release
 
       - name: Create GitHub Release
-        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -75,6 +138,6 @@ jobs:
             exit 1
           fi
           printf 'Uploading:\n%s\n' "${assets[@]}"
-          gh release create "v${{ steps.version.outputs.version }}" "${assets[@]}" \
-            --title "AI TTRPG Matrix v${{ steps.version.outputs.version }}" \
+          gh release create "v${{ needs.prepare.outputs.version }}" "${assets[@]}" \
+            --title "AI TTRPG Matrix v${{ needs.prepare.outputs.version }}" \
             --generate-notes
