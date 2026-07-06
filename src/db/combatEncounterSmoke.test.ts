@@ -21,7 +21,7 @@ describe('combat encounter smoke', () => {
       NPC_REACTION,
       '{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"' + goblin.id + '"}',
       '{"outcome":"surrender","narrationText":"The goblin drops its weapon and raises its hands."}',
-      '{"narrationText":"You gain insight from the fight.","xpAmount":40}',
+      '{"difficulty":"easy"}',
       GOBLIN_LOOT_RESPONSE
     ])
     const turn = (input: string, rng: () => number = initiativeRng()) =>

@@ -8,15 +8,9 @@ import { createCharacterJournalEntry } from './repositories/characterJournalEntr
 import { createStoryThread } from './repositories/storyThreads'
 import type { CombatEncounter } from '../shared/combat/types'
 
-export const COMBAT_XP_RESPONSE = JSON.stringify({
-  narrationText: 'The bandit fight honed your instincts.',
-  xpAmount: 80
-})
+export const COMBAT_XP_RESPONSE = JSON.stringify({ difficulty: 'medium' })
 
-export const QUEST_XP_RESPONSE = JSON.stringify({
-  narrationText: 'Completing the errand brought insight.',
-  xpAmount: 80
-})
+export const QUEST_XP_RESPONSE = JSON.stringify({ difficulty: 'medium' })
 
 export const COMBAT_LOOT_RESPONSE = JSON.stringify({
   narrationText: 'You find a coin pouch.',

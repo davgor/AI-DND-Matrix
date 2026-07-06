@@ -1,6 +1,6 @@
 # XP awards and level-up perks
 
-Progression mirrors epic **035** loot: engine-authoritative budgets, agent narration within bounds, deterministic mechanical application for perks.
+Engine-authoritative progression: the agent makes exactly one judgment call (a difficulty rating), the engine owns all XP math and narration templates, and perks apply deterministically.
 
 ## XP sources
 
@@ -17,41 +17,26 @@ Progression mirrors epic **035** loot: engine-authoritative budgets, agent narra
 
 Assembled per source (shared foe summaries with loot):
 
-- **Encounter:** defeated foes (`slain`, `incapacitated`, `surrender` — not `flee`), combat tier, buckets, round count, region, player level
-- **Quest:** `questId` (preferred), legacy `questThreadId`, hook text, quest scale (`minor` | `major`), region, player level
+- **Encounter:** defeated foes (`slain`, `incapacitated`, `surrender` — not `flee`), combat tier, buckets, round count, region, player level, party comp (companion archetypes + levels)
+- **Quest:** `questId` (preferred), legacy `questThreadId`, hook text, quest scale (`minor` | `major`), region, player level, party comp
 
-Skip XP agent when `XPBudget.max === 0` (all fled / zero earners).
+Skip the XP agent (`shouldSkipXpPass`) when the source is `encounter_end` and no foe has an XP-earning outcome (all fled).
 
-## XPBudget (engine authoritative)
+## Difficulty-rated XP (engine authoritative)
 
-`resolveXPBudget(context)` returns `{ min, max, suggested }`. Agent proposes integer `xpAmount`; server clamps with `clampXPProposal(amount, budget)` before `awardXP`.
+The agent (`resolveXpAward`, `src/agents/xp.ts`) is asked to rate how difficult the accomplishment was **for this party** and returns only `{"difficulty": ...}` — no numbers, no prose. The call carries a small explicit `maxTokens` cap (`XP_DIFFICULTY_MAX_TOKENS`). Invalid ratings retry up to `MAX_SCHEMA_ATTEMPTS`; exhaustion falls back to `fallbackDifficulty` (`hard` for major quests, else `medium`) — the reward pass never fails.
 
-### Encounter base values (pre-level-scaling)
+The engine (`src/engine/difficultyXp.ts`) converts the rating into XP as a fixed fraction of the character's current level-up span (`LEVEL_XP_THRESHOLDS` gap), so pacing is level-independent:
 
-| Signal | Base XP per foe |
-|--------|-----------------|
-| `villager` tier | 20 |
-| `retired_adventurer` tier | 60 |
-| `catalog` tier | 40 (+10 per encounter round, capped +30) |
+| Difficulty | Fraction of level span |
+|------------|------------------------|
+| `easy` | 5% |
+| `medium` | 10% |
+| `hard` | 20% |
+| `extreme` | 35% |
+| `impossible` | 60% |
 
-Only foes with outcomes `slain`, `incapacitated`, or `surrender` count. `flee` yields nothing.
-
-### Quest base values (pre-level-scaling)
-
-| Scale | Base band |
-|-------|-----------|
-| `minor` | 80–120 |
-| `major` | 250–400 |
-
-### Level scaling
-
-Let `rawTotal` be the sum of encounter foe bases or quest midpoint. Then:
-
-- `min = max(0, floor(rawTotal * 0.6 / playerLevel))`
-- `max = max(min, floor(rawTotal * 1.2 / max(1, playerLevel - 1)))` when `playerLevel > 1`, else `floor(rawTotal * 1.2)`
-- `suggested = floor((min + max) / 2)`
-
-Level 10 characters earn proportionally less from trivial level-1 wolf packs; major quests still exceed routine bandit skirmishes at the same level.
+At max level the final threshold gap is used (XP still accrues). Awards are never below 1 XP. Narration is a deterministic template keyed by difficulty and source (`difficultyXpNarration`).
 
 ## Level-up ceremony
 
@@ -102,6 +87,6 @@ Agents supply **category + flavor only** — numeric stats are ignored if presen
 
 ## Events
 
-- `xp_awarded` — source, amount, clamped flag, new xp total
+- `xp_awarded` — source, amount, difficulty rating, new xp total
 - `level_up` — old level, new level
 - `perk_chosen` — perk id, category, level gained
