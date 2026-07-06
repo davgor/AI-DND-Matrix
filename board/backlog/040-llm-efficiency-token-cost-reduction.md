@@ -22,6 +22,38 @@ Combat turns skip routing but can still fire **up to `MAX_COMBAT_CATCHUP_TURNS` 
 
 Builds on **006** (DM agents), **007** (campaign generation), **029** (turn routing), **034** (yield), **035**/**036** (loot/XP), and now also **049–052** (race/background/NPC-identity generation, whose call-count impact 040.13 addresses).
 
+## Data-integrity review (pre-implementation hole-poking)
+
+A dedicated pass mapped every DB write on the affected paths against each proposed change, to find where "fewer/cheaper LLM calls" silently becomes "data never written" or "garbage written permanently". The architecture makes this worse than it looks: **every agent call is re-grounded from SQLite**, so a skipped write doesn't just lose one line of history — it degrades every future prompt that would have been grounded on it, compounding quietly. Findings below are binding on implementation; per-ticket acceptance criteria were amended to match.
+
+**Severity-ordered holes:**
+
+1. **(040.3, critical) The `dmNarration` beat is the *only* write path for nearly all world state.** World facts, quest proposals/updates/completions (and the XP/loot reward passes they trigger), log book entries, cross-character log entries, journal entries, item grants, commerce, spell grants, alignment shifts, story-driven death, and opening-scene updates all flow exclusively through `narrate` → `persistNarrationSideEffects` (`dm.ts`), which only runs when the routing plan includes a `dmNarration` beat. A heuristic that routes "converse: npcResponse only" or "act: playerActionExpression only" on a turn where LLM routing would have included `dmNarration` amputates all of those writes for that turn — no error, no fallback, no backfill. A keyword heuristic cannot see that "ask the innkeeper about the amulet" should tick a quest objective or write a log entry. Guardrails added to 040.3's AC.
+
+2. **(040.2, high) Merging intent + routing removes the engine check outcome from routing's inputs.** Today `reviewTurn` receives the *resolved* `checkOutcome` and its prompt marks it authoritative ("narration beat must reflect this"). A single merged call necessarily produces the routing plan *before* the d20 is rolled, so routing can no longer condition on success/failure. Mitigation (now in 040.2's AC): when the merged response says `checkNeeded: true`, deterministically force a `dmNarration` beat into the plan post-hoc (the outcome-bearing beat), or fall back to the two-call path for check turns.
+
+3. **(040.1, high) `maxTokens` truncation is invisible and two agents persist garbage on it.** `claude.ts` does not inspect `stop_reason`; a truncated response just returns partial text. Schema loops retry the *identical* prompt with the *identical* cap — a structurally-too-small cap fails deterministically all `MAX_SCHEMA_ATTEMPTS` times. Then per-agent fallbacks diverge: XP falls back to `budget.suggested` (benign); loot falls back to `nothingToFind: true` (**players silently receive no loot**); `narrate` has **no retry loop at all** — one truncated response persists the raw JSON fragment as `narrationText` into `events` permanently *and* drops every structured side-effect field; `generateNpcReaction` likewise persists raw text as dialogue **and as an NPC memory row**; a guided-identity `dmReply` truncated inside still-valid JSON is persisted verbatim into the transcript. Tightening caps without truncation detection converts a cost bug into a corruption bug. 040.1's AC now requires `stop_reason` handling first.
+
+4. **(040.4, high) The slim `logBookEntries` shape must keep `id`.** The proposed slim shape says "omit internal ids/dates if not needed for grounding" — but `logBookAmendments`/`logBookDeletions` work by the LLM echoing an `entryId` it read from the prompt, and `persistLogBookAmendments`/`persistLogBookDeletions` silently no-op unknown ids. Dropping `id` permanently disables log-book self-maintenance with zero errors. 040.4's table and AC corrected.
+
+5. **(040.8, high) Yield/defeat rules tables decide persisted life-and-death state, not flavor.** Yield `outcome` writes `npcs.encounter_outcome`, sets `alive = false` on `slain`, rewrites disposition on `surrender`, and gates XP *and* loot eligibility (`flee` earns neither). A rules table biased toward `flee` where the LLM chose `surrender` changes who is alive and what players earn. The prompt's safety rule ("non-lethal intent or mercy → never `slain`") must become a hard invariant of the table, not guidance. Defeat disposition additionally persists an LLM-only `locationTag` field (imprison/ransom continuity) that the proposed rules table never produces — template it per disposition or explicitly accept the loss. 040.8's AC amended.
+
+6. **(040.5 + 040.3 compounding, medium) Gating the inactive proxy erases inactive characters' only narrative record.** `inactive_player_action` events are both the only per-turn record of inactive characters and the only grounding for their *future* proxy calls (`buildNarrationSnippetsForCharacter`). There is no backfill. Worse, the two gates compound: `npcResponse` beats never append to `sceneContext`, so converse-only turns *already* skip the proxy today — add 040.3's converse fast path and 040.5's signal gate and inactive characters can go silent for entire sessions, while 040.3 simultaneously reduces the `crossCharacterLogBookEntries` writes that are their other continuity channel. The cap in part A must apply at prompt-build time, not to the accumulating state (the loop appends actions back into `sceneContext`).
+
+7. **(040.7, medium) Loot's "engine/catalog retrieval path" does not exist yet — the LLM currently *selects* items.** `resolveLootPolicy` produces only an envelope (allowed types, max rarity, max grant count); the LLM picks among pre-filtered catalog candidates and may `proposeNew` homebrew items that are **persisted into the catalog** (`upsertCatalogItemByName`, name-deduped). A deterministic selector must be designed (pick strategy, variety), and turning enrichment off also turns off organic homebrew catalog growth — accept and document that. XP: defaulting to `budget.suggested` changes persisted progression amounts (in-band, deliberate) and makes the `xp_awarded.clamped` flag permanently false — fine, but state it in the ticket so nobody "fixes" it later.
+
+8. **(040.10, medium) There is no final full-transcript summarization pass to fall back on.** Identity foundations are extracted incrementally per turn by the LLM reading the (currently full) transcript; the four `identity_*` columns are the only durable output — the transcript is never re-processed after the phase completes. Windowing to 4–5 exchanges means a foundation the player established in turn 3 but the model only locks at turn 10 gets summarized from evicted context: thin, wrong, or never locked. Two existing sharp edges get more dangerous under windowing: `mergeFoundationStatus` **overwrites** already-locked summaries when the model re-emits `complete: true`, and `allFoundationsComplete: true` can advance the phase with null identity columns. 040.10's AC amended.
+
+9. **(040.6, low — with one landmine) Combat flavor templating is genuinely safe, but only at the call sites.** Verified: combat catch-up writes no NPC memories, ignores the LLM `attack` flag (engine always rolls), and persists only engine-authored `combat_attack` payloads — templates lose only ephemeral `TurnResult.npcReactions` text and `party_member_action` event prose. **But** `generateNpcReaction` is the same function used on the non-combat path, where `reaction.text` is persisted as an NPC memory and `attack: true` triggers a real engine attack. The template path must be introduced in `resolveNpcCombatTurn`/`resolvePartyCombatTurn`, never inside the shared agent.
+
+10. **(040.11, low) The ticket's AC mischaracterizes today's failure behavior.** "Failed single NPC does not fail entire batch — same partial behavior as today" is wrong: today `fillCampaignNpcShortfall` returns `undefined` on *any* single failure, discarding the whole repair (caller falls back to the unrepaired result); only the *initial* generation skips failed slots. Pick and state the intended semantics. The fill itself is pre-persist and in-memory (no SQLite concurrency risk), but parallelism must **not** leak into the persist phase: `resolveOrRealizeCampaignRace` is check-then-insert against `UNIQUE(campaign_id, race_key)` and would throw under concurrent same-race NPCs.
+
+11. **(040.9, low)** Both adapters already handle `systemPrompt` correctly. The one hole: schema-retry loops currently pass *no* `GenerateContext` — when adopting, every retry attempt must pass the same context object, and a test should assert retries carry `systemPrompt` + `maxTokens`.
+
+12. **(040.13, informational)** Phase-2 failure after a phase-2-triggered race realize leaves an orphan `campaign_races` row. This is benign and desirable (idempotent — the next NPC of that race short-circuits the lore call); document as intended, don't "clean it up".
+
+**Useful test-design fact:** `TurnRoutingPlan.disposition` is validated but never read at runtime — only `beats` drives execution. 040.2/040.3 tests must assert on beats, not disposition.
+
 Broken down into sub-tickets **040.1–040.13**. This epic is done when all are complete, `npm run typecheck`, `npm test`, and `npm run build` pass, and **040.12** confirms call-count and prompt-size regressions are guarded.
 
 ## Definition of done
@@ -37,6 +69,7 @@ Broken down into sub-tickets **040.1–040.13**. This epic is done when all are 
 - campaign NPC shortfall fill is parallelised without breaking cross-NPC name-collision checks
 - the flagged single-NPC generation pipeline's call count (2–3 calls) is measured, tuned, and guarded against further regression
 - smoke/regression test documents per-turn LLM call budget, including the flagged-NPC scenario
+- **no silent data loss:** every hole in the "Data-integrity review" section above is covered by its amended per-ticket acceptance criteria before the corresponding sub-ticket is marked done
 
 040.1 maxTokens on all agents · 040.2 merge interpretIntent + reviewTurn · 040.3 heuristic routing fast path · 040.4 slim scene context serializers · 040.5 cap sceneContext + gate inactive-player proxy · 040.6 combat catch-up flavor without per-combatant LLM · 040.7 XP/loot template defaults · 040.8 rules-first yield + defeat disposition · 040.9 shared systemPrompt for schemas · 040.10 guided identity transcript windowing (+ static identity block hygiene) · 040.11 parallelise NPC shortfall fill · 040.12 efficiency smoke + call-count regression · 040.13 flagged-NPC generation call-count tracking (049–052 fallout)
 
@@ -81,6 +114,8 @@ Wire through `GenerateContext.maxTokens` at each call site; do not change provid
 - [ ] Unit test or snapshot asserts key agents pass expected `maxTokens` to mock provider
 - [ ] No agent regression: schema retry paths still succeed on valid model output
 - [ ] Comment or small table in `src/agents/providers/types.ts` (or adjacent README) documents band rationale
+- [ ] **Truncation guard (do this first):** `claude.ts` inspects `stop_reason` and surfaces `max_tokens` truncation as a failure (or retry-with-larger-cap) instead of returning partial text — without this, tight caps make `narrate` persist raw truncated JSON into `events` and `generateNpcReaction` persist it as dialogue + an NPC memory row (both are single-shot with raw-text fallbacks, no retry loop)
+- [ ] Caps on agents whose output is persisted verbatim (`narrate`, `generateNpcReaction`, guided identity/opening scene `dmReply`, `backgroundStory`, `obituary`) are validated against real recorded output sizes before landing, not just the band table
 
 ---
 
@@ -117,6 +152,8 @@ Depends on understanding **029** routing spec (`src/shared/turnRouting/SPEC.md`)
 - [ ] Combat intent validation and engine check resolution behave identically to pre-merge (existing `dm.test.ts`, `turnIpc` tests updated)
 - [ ] Invalid combined schema retries up to `MAX_SCHEMA_ATTEMPTS`; throws `DmSchemaError` on exhaustion
 - [ ] `reviewTurn` export retained as thin wrapper or deprecated with redirect for tests — no duplicate production call path
+- [ ] **Check-outcome hole closed:** today `reviewTurn` sees the resolved `checkOutcome` (authoritative in its prompt); the merged call routes *before* the roll. When the merged response has `checkNeeded: true`, a `dmNarration` beat is deterministically ensured in the plan post-parse (or the turn falls back to two calls) so check outcomes always reach a narration beat and its side-effect writes
+- [ ] Tests assert on `plan.beats` (executed), not `plan.disposition` (validated but never read at runtime)
 
 ---
 
@@ -146,6 +183,8 @@ Document precedence in `src/shared/turnRouting/SPEC.md`.
 - [ ] `resolveRoutedTurn` uses heuristic plan when non-null; otherwise merged/split LLM routing
 - [ ] No regression on composite turns (action + check + NPC) — those must fall through to LLM
 - [ ] Telemetry or debug log (dev-only) records `heuristic` vs `llm` routing source for smoke validation
+- [ ] **Side-effect starvation guard:** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, commerce, spells, alignment, and story-driven death — heuristic rows that omit it (`converse`-only, `act`-only) must return `null` (defer to LLM) whenever any signal suggests state could change: active quest whose objective text mentions a present NPC/region keyword, pending alignment shift, first interaction with an NPC this session, or player input containing transactional verbs (buy/sell/give/take/learn). The heuristic may only skip `dmNarration` on turns it can *prove* are inert
+- [ ] Integration test: a scripted quest-advancing dialogue turn routed by the heuristic still results in the quest objective ticking (i.e. it fell through to LLM routing) — the failure mode being guarded is silent, so it needs an explicit test
 
 ---
 
@@ -160,7 +199,7 @@ Introduce shared slim serializers used by `assembleNarrationContext`, `buildTurn
 | Field | Today | Slim shape |
 |-------|-------|------------|
 | `recentEvents` | full `Event` JSON (id, timestamp, type, entire payload) | `{ type, narrationText?: string, summary?: string }` — derive summary from known payload keys |
-| `logBookEntries` | full `LogEntry` | `{ category, title, content, relatedEntityId? }` — omit internal ids/dates if not needed for grounding |
+| `logBookEntries` | full `LogEntry` | `{ id, category, title, content, relatedEntityId? }` — **`id` must stay**: log-book amendments/deletions work by the LLM echoing an `entryId` read from the prompt, and the persist functions silently no-op unknown ids. Omit `campaignId`/`characterId`/dates only |
 | NPC `worldFacts` | all region facts, unbounded | `takeRecent` (e.g. 10) + content string only |
 | NPC `memories` | full memory rows | `{ content }` or content + timestamp |
 | party `relationshipEvents` | full events | same slim event shape as above |
@@ -173,6 +212,7 @@ Live in `src/agents/contextSlim.ts` (new file — confirmed nothing like it exis
 - [ ] Unit tests: serializer output size bounded; wolf-bandit-logbook regression fixtures unchanged in **meaning** for narration tests
 - [ ] NPC context assembly windows world facts (max N) and slim memories
 - [ ] Party member context uses slim events
+- [ ] **Log-book `id` preserved in slim shape**, and a regression test proves a `logBookAmendments`/`logBookDeletions` round-trip still works post-slimming (LLM echoes an id it saw in the prompt; persist functions silently skip unknown ids, so this failure mode is otherwise invisible)
 
 ---
 
@@ -199,6 +239,8 @@ When gated off, return empty `inactivePlayerActions` without LLM.
 - [ ] Inactive-player LLM skipped on simple converse-only turns with no cross-character signal
 - [ ] Inactive-player LLM still fires when cross-character log writes or shared-scene cues present (integration test)
 - [ ] No change to event append semantics or `TurnResult` shape
+- [ ] Cap applied at **prompt-build time only**, not to the accumulating `BeatExecutionState.sceneContext` (the inactive-player loop appends actions back into it; truncating the state itself would drop earlier beats from later same-turn prompts)
+- [ ] **Compounding-starvation check:** `inactive_player_action` events are both the inactive character's only per-turn record and the only grounding for their future proxy calls — there is no backfill. Since `npcResponse` beats never touch `sceneContext`, converse-only turns already skip the proxy today; with 040.3's converse fast path layered on, an integration test must show inactive characters still act within a bounded number of mixed turns (not silent for a whole scripted session)
 
 ---
 
@@ -228,6 +270,7 @@ Party member combat turns (`resolvePartyCombatTurn`) can use short templates sim
 - [ ] Template output uses correct `reactionKind` and emphasis conventions
 - [ ] Existing combat tests updated; player attack/yield/damage semantics unchanged
 - [ ] Optional `COMBAT_LLM_FLAVOR=true` env or setting restores LLM flavor for manual QA (document in runbook)
+- [ ] Template path lives in `resolveNpcCombatTurn` / `resolvePartyCombatTurn` (the combat call sites), **not** inside `generateNpcReaction` / `decidePartyMemberAction` — the same agents serve the non-combat path where `reaction.text` is persisted as an NPC memory and `attack: true` triggers a real engine attack; test asserts non-combat NPC reactions still write `npc_memories` and can still attack
 
 ---
 
@@ -250,6 +293,8 @@ Add optional `enrichRewardNarration` setting (default **false**) that calls LLM 
 - [ ] Template narration is grammatically acceptable one-liner per source type
 - [ ] Setting enables prior LLM flavor behavior without code path deletion
 - [ ] `encounterQuestLootSmoke.test.ts` and progression tests pass with enrichment off
+- [ ] **Deterministic loot selector designed and documented** — no engine item-picker exists today (`resolveLootPolicy` is only an envelope; the LLM currently *selects* items and can `proposeNew` catalog rows): define pick strategy (e.g. seeded random among policy-filtered candidates), respect `maxGrantCount`, and add a variety guard so repeated encounters don't grant identical items
+- [ ] Ticket documents two accepted behavior changes so they aren't later mistaken for bugs: persisted XP amounts become `budget.suggested` (midpoint, in-band; `xp_awarded.clamped` always false) and homebrew catalog growth via `proposeNew` stops while enrichment is off
 
 ---
 
@@ -274,6 +319,8 @@ Invert default:
 - [ ] Narration hints still produced from rules (template strings)
 - [ ] LLM fallback preserved when rules return `ambiguous`
 - [ ] Non-speaking-victor defeat skip (already working) is unaffected
+- [ ] **Hard invariants, not guidance:** yield table never returns `slain` when lethality is `non_lethal` or mercy is offered (today only a prompt guideline), always returns an outcome within `allowedOutcomes` ∪ `fight_on`, and never returns `surrender` for `canSpeak: false`. Property-style test over the input space — the outcome writes `encounter_outcome`, kills NPCs (`alive = false`), rewrites disposition, and gates XP *and* loot eligibility (`flee` earns neither), so a biased table changes persisted world state, not flavor
+- [ ] Defeat rules table produces `locationTag` (or explicitly documents dropping it) — today it's an LLM-only field persisted into `playerDefeatState` and the `player_defeated` event for imprison/ransom continuity
 
 ---
 
@@ -303,6 +350,7 @@ Pass via `provider.generate(prompt, { systemPrompt, maxTokens })`. User message 
 - [ ] Claude and Player2 adapters both receive system message correctly (existing `player2.test.ts` pattern)
 - [ ] Schema validation tests still pass
 - [ ] `NARRATIVE_EMPHASIS_GUIDANCE`/`NPC_EMPHASIS_GUIDANCE` move from user prompt to `systemPrompt` where the call site allows it
+- [ ] Schema-retry loops pass the same `GenerateContext` (systemPrompt + maxTokens) on **every** attempt — today the loops pass no context at all, so this is easy to get wrong on attempt 2+; a test asserts the mock provider received identical context across retries
 
 ---
 
@@ -322,6 +370,8 @@ Window the transcript to last **4–5** exchanges. Always include `currentFounda
 - [ ] Unit test: 10-turn fixture produces same-sized transcript section regardless of turns 1–5 content
 - [ ] The static mechanical/identity block (race lore + background + alignment + archetype + ability scores) is sent once via `systemPrompt`, not re-serialized into the user prompt on every turn
 - [ ] `guidedCreationSmoke.test.ts` still passes
+- [ ] **Delayed-lock-in protection:** foundations are extracted incrementally per turn and the transcript is never re-processed after phase completion — the four `identity_*` columns are the only durable output. Under windowing, `mergeFoundationStatus` must stop **overwriting** an already-locked summary when the model re-emits `complete: true` (a re-emit summarized from a window that no longer contains the original discussion would silently replace a good summary with a thin one); locked summaries become append/keep-first
+- [ ] Phase completion requires all four `identity_*` summaries to be non-null — the current `allFoundationsComplete: true` model-flag bypass (which can advance the phase with null identity columns) is closed or explicitly re-justified, since windowing raises the odds the model claims completion without having locked everything
 
 ---
 
@@ -338,7 +388,8 @@ Parallelise per region batch (respect rate limits with optional concurrency cap 
 - [ ] Shortfall fill issues parallel requests; test mocks confirm concurrent calls
 - [ ] Name collisions between concurrently-generated NPCs in the same batch are detected and resolved (regenerate or rename), not silently allowed through
 - [ ] Generation result has the same NPC count per region as serial ordering
-- [ ] Failed single NPC does not fail entire batch — same partial behavior as today
+- [ ] Failed single NPC does not fail entire batch — **note: this is a behavior change, not parity.** Today `fillCampaignNpcShortfall` returns `undefined` on any single failure, discarding the entire repair (only the *initial* generation skips failed slots). State the intended semantics explicitly in the implementation
+- [ ] Parallelism stays in the pre-persist, in-memory fill only — `persistCampaignNpcsFromGeneration` and `resolveOrRealizeCampaignRace` remain serial (the latter is check-then-insert against `UNIQUE(campaign_id, race_key)` and would throw under concurrent same-race NPCs)
 
 ---
 
@@ -402,3 +453,4 @@ This ticket's job is to make sure that deliberate cost is **measured, bounded, a
 - [ ] Call-count regression test (040.12) asserts exactly 2 calls when the chosen race is already realized in the campaign, and exactly 3 when it is not
 - [ ] Regression test confirms bulk campaign generation, additional-region generation, and shortfall top-up still issue exactly one LLM call per NPC (no accidental migration to the two-phase pipeline)
 - [ ] No change to `generateFlaggedNpc`'s output shape or the established-identity-before-flavor-text ordering — this ticket tunes cost, it does not change what gets generated or when
+- [ ] Documented as intended: a phase-2 failure after a phase-2-triggered race realize leaves the `campaign_races` row in place (benign and idempotent — the next NPC of that race short-circuits the lore call); do not add cleanup
