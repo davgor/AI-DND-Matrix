@@ -56,11 +56,108 @@ export function makeNpcs(regionName: string, prefix: string) {
 }
 
 export const VALID_WORLD = {
-  worldName: 'The Shattered Expanse',
+  worldName: 'Tyria',
   worldSummary:
-    'The Shattered Expanse is a chain of storm-wracked isles where old empires drowned.\n\nTrade routes still cross the inner sea, but every captain carries charts marked with vanished ports.\n\nPower here is fragmented — councils, cults, and company charters all claim legitimacy.',
+    'Tyria is a chain of storm-wracked isles where old empires drowned.\n\nTrade routes still cross the inner sea, but every captain carries charts marked with vanished ports.\n\nPower here is fragmented — councils, cults, and company charters all claim legitimacy.',
   worldHistory:
-    'Three ages ago the continent shelf cracked during the Sundering.\n\nSalvagers still dredge barnacled crowns from the inner bays.\n\nFor two centuries the Charting Compact mapped safe passages until company wars broke the tithe system.\n\nIn the last generation explorer crews have pushed past the outer shoals again.'
+    'Three ages ago the continental shelf cracked during the Sundering.\n\nSalvagers still dredge barnacled crowns from the inner bays.\n\nFor two centuries the Charting Compact mapped safe passages until company wars broke the tithe system.\n\nIn the last generation explorer crews have pushed past the outer shoals again.\n\nToday the inner sea routes are contested again by guilds, storm-priests, and captains who swear the drowned still vote on every treaty.'
+}
+
+/** Common live-model world shape: snake_case keys and single-newline paragraph breaks. */
+export const REALISTIC_LLM_WORLD = {
+  world_name: 'Eldermere',
+  world_summary:
+    'Winter steel closes on a desert caravan realm where salt and glass trade still matters.\nA missing envoy vanished into the uplands before the frost came.\nCaravan masters and temple wardens now argue over who owns the last water rights.',
+  world_history:
+    'Eldermere was a shallow inland sea until the Sundering lifted the desert basins and stranded the old ports.\nCaravans first bridged the glass flats when oasis law was written in ink on bone.\nThe envoy houses were founded to carry trade oaths between plateau clans.\nLast decade, winter storms arrived early and broke the old rain calendars.\nNow the Ashen Crown Kingdom and its rivals fight over the last caravan corridors before the frost seals every pass.'
+}
+
+function makeRealisticLlmNpc(regionName: string, index: number) {
+  const names = ['Sera Vashti', 'Dekkan Moor', 'Riven Koss', 'Mara Jhal', 'Tobin Fleck', 'Lysa Quor']
+  const name = names[index] ?? `Traveler ${index}`
+  return {
+    name,
+    role: 'caravan factor',
+    backstory: `${name} keeps ledgers for trading houses in ${regionName}.`,
+    disposition: 'cautious but helpful',
+    region_name: regionName,
+    temperament: 'Cautious',
+    can_speak: true,
+    alignment: 'Neutral Good',
+    race: 'human',
+    background: 'Merchant',
+    gender: 'woman',
+    class: 'commoner'
+  }
+}
+
+/** Crimson Reach scenario — short world prose + friendly temperament (common live-model drift). */
+export const CRIMSON_REACH_LLM_WORLD = {
+  world_name: 'Venn Calder',
+  world_summary:
+    'A failed harvest drove survivors into mountain kingdoms where bandits now wear the faces of the dead.\nWinter closes every escape route while the living argue over the last granaries.\nThe world remembers older wars and older oaths that no one living can quite name.',
+  world_history:
+    'The gods drowned the low roads in red ash when the old compact between mountain clans broke.\nThe Reach corridor was once a trade route before the uplands rose and choked the low roads.\nFace-thief bandits appeared after the first frost corpses were pulled from the snow.\nEnvoys from the low cities stopped coming when the pass avalanches began.\nSurvivors still light beacon fires that no longer summon help, and every kingdom blames the others for the hunger winter.'
+}
+
+export function buildCrimsonReachCascadingResponses(input: {
+  regionCount: number
+  npcsPerRegion: number
+}): string[] {
+  const regions = [
+    makeRegion('Kingdom of Granary Pass', 'frost'),
+    makeRegion('Deadface Marches', 'bandit')
+  ].slice(0, input.regionCount)
+  const responses: string[] = [JSON.stringify(CRIMSON_REACH_LLM_WORLD)]
+  responses.push(JSON.stringify({ regions }))
+  let npcIndex = 0
+  for (const region of regions) {
+    for (let slot = 0; slot < input.npcsPerRegion; slot += 1) {
+      const base = makeRealisticLlmNpc(region.name, npcIndex)
+      responses.push(JSON.stringify({ npc: { ...base, temperament: 'friendly', race: 'Human' } }))
+      npcIndex += 1
+    }
+  }
+  responses.push(
+    JSON.stringify({
+      storyThread: {
+        title: 'Faces in the Snow',
+        state: 'starting',
+        summary: 'Learn who leads the dead-faced bandits before the pass seals for winter.'
+      }
+    })
+  )
+  return responses
+}
+
+/** Scripted responses that mirror common live LLM casing and prose habits. */
+export function buildRealisticLlmCascadingSeedResponses(input: {
+  regionCount: number
+  npcsPerRegion: number
+}): string[] {
+  const regions = [
+    makeRegion('Ashen Crown Kingdom', 'desert'),
+    makeRegion('Windward Marches', 'frost')
+  ].slice(0, input.regionCount)
+  const responses: string[] = [`\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``]
+  responses.push(JSON.stringify({ regions }))
+  let npcIndex = 0
+  for (const region of regions) {
+    for (let slot = 0; slot < input.npcsPerRegion; slot += 1) {
+      responses.push(JSON.stringify({ npc: makeRealisticLlmNpc(region.name, npcIndex) }))
+      npcIndex += 1
+    }
+  }
+  responses.push(
+    JSON.stringify({
+      story_thread: {
+        title: 'The Missing Envoy',
+        state: 'starting',
+        summary: 'Find who stopped the upland envoy before winter closes every pass.'
+      }
+    })
+  )
+  return responses
 }
 
 export function makeSingleNpcPayload(regionName: string, npc: ReturnType<typeof makeNpcs>[number]): string {

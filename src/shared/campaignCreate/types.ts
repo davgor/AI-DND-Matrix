@@ -41,6 +41,8 @@ export interface CreateCampaignProgress {
   statusText: string
 }
 
+export type CreateCampaignProgressCallback = (stage: CreateCampaignStage) => void
+
 export interface CreateCampaignRequest {
   sessionId: string
   premisePrompt: string

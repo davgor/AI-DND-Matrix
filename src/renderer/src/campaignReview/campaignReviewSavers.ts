@@ -1,17 +1,16 @@
 import type { CampaignDetail } from '../../../main/campaignIpc'
-import type { EditNpcTraitsInput } from '../../../main/campaignEditIpc'
 
 export function createCampaignReviewSavers(
   campaignId: string,
   onDetailChange: (detail: CampaignDetail) => void
 ) {
   return {
-    saveRegionDescription: async (regionId: string, description: string): Promise<void> => {
-      const next = await window.campaigns.editRegionDescription({ campaignId, regionId, description })
+    deleteRegion: async (regionId: string): Promise<void> => {
+      const next = await window.campaigns.deleteRegion({ campaignId, regionId })
       onDetailChange(next)
     },
-    saveNpcTraits: async (input: EditNpcTraitsInput): Promise<void> => {
-      const next = await window.campaigns.editNpcTraits(input)
+    deleteNpc: async (npcId: string): Promise<void> => {
+      const next = await window.campaigns.deleteNpc({ campaignId, npcId })
       onDetailChange(next)
     },
     saveWorldSummary: async (worldSummary: string): Promise<void> => {

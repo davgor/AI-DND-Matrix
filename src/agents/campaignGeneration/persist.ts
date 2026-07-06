@@ -19,6 +19,7 @@ import type {
   PersistRegionWithNpcsInput
 } from './types'
 import { CampaignGenerationSchemaError } from './types'
+import { resolveGeneratedRegionName } from './normalize'
 
 async function resolveNpcRaceIfSpeaking(
   db: Database.Database,
@@ -128,12 +129,15 @@ interface PersistCampaignNpcsInput {
   campaignId: string
   npcs: GeneratedNpc[]
   regionIdsByName: Map<string, string>
+  regionNames: string[]
 }
 
 async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput): Promise<void> {
-  const { db, provider, campaignId, npcs, regionIdsByName } = input
+  const { db, provider, campaignId, npcs, regionIdsByName, regionNames } = input
   for (const generatedNpc of npcs) {
-    const regionId = regionIdsByName.get(generatedNpc.regionName)
+    const resolvedRegionName =
+      resolveGeneratedRegionName(generatedNpc.regionName, regionNames) ?? generatedNpc.regionName
+    const regionId = regionIdsByName.get(resolvedRegionName)
     if (!regionId) {
       throw new CampaignGenerationSchemaError(
         `Generated NPC "${generatedNpc.name}" references unknown region "${generatedNpc.regionName}"`
@@ -180,7 +184,8 @@ export async function persistGeneratedCampaign(
     provider,
     campaignId: campaign.id,
     npcs: generation.npcs,
-    regionIdsByName
+    regionIdsByName,
+    regionNames: generation.regions.map((region) => region.name)
   })
 
   createStoryThread(db, {

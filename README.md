@@ -15,7 +15,7 @@ Each campaign supports **multiple player characters** in one shared world. After
 
 **Exploratory** (`board/backlog/moonshots/`): image generation (m001), host-driven multiplayer (m002), mod-driven homebrew catalog (m003). Not committed delivery scope until promoted to the main backlog.
 
-Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-progress`, `done`). Smoke runbooks are in `/docs/runbooks`.
+Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-progress`, `done`). Smoke runbooks are in `/docs/runbooks`. **Changing campaign creation?** See `docs/runbooks/campaign-create-change-checklist.md` before marking work done.
 
 ## Setup
 

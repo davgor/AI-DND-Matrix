@@ -8,6 +8,7 @@ body,
 }
 
 .app-root {
+  --app-sidebar-width: 220px;
   display: flex;
   flex-direction: column;
   height: 100%;

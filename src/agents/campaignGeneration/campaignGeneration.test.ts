@@ -32,6 +32,7 @@ import {
   ADDITIONAL_REGION,
   LEGACY_NORMALIZE_PAYLOAD,
   LEGACY_CAMPAIGN_SEED_PAYLOAD,
+  REALISTIC_LLM_WORLD,
   VALID_WORLD,
   buildCascadingSeedResponses,
   makeNpcs,
@@ -43,6 +44,120 @@ import {
   TRIM_NPCS_PAYLOAD
 } from './fixtures'
 import type { GeneratedNpc, GeneratedRegion } from '.'
+import type { CreateCampaignStage } from '../../shared/campaignCreate/types'
+import { countParagraphs, countSentences, coerceNpcTemperament, isValidGeneratedWorld, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster, splitParagraphs } from './normalize'
+
+describe('normalizeGeneratedWorld', () => {
+  it('counts single-newline paragraph breaks from live models', () => {
+    expect(countParagraphs(REALISTIC_LLM_WORLD.world_summary as string)).toBeGreaterThanOrEqual(3)
+    expect(countParagraphs(REALISTIC_LLM_WORLD.world_history as string)).toBeGreaterThanOrEqual(5)
+    expect(isValidGeneratedWorld(REALISTIC_LLM_WORLD)).toBe(true)
+  })
+
+  it('pads short world prose instead of rejecting it', () => {
+    const shortWorld = {
+      worldName: 'Venn Calder',
+      worldSummary: 'A mountain pass holds the last harvest stores.',
+      worldHistory: 'Bandits wear the faces of the dead.'
+    }
+    const normalized = normalizeGeneratedWorld(shortWorld)
+    expect(normalized?.worldSummary).toContain('mountain pass')
+    expect(countParagraphs(normalized!.worldSummary)).toBeGreaterThanOrEqual(3)
+    expect(countParagraphs(normalized!.worldHistory)).toBeGreaterThanOrEqual(5)
+  })
+
+  it('expands single-sentence history paragraphs into multi-sentence blocks', () => {
+    const thinHistory = [
+      'In the Dawnveil the Elder Titans shaped the land and slept.',
+      'The Age of Forges ended in the Godwrought War.',
+      'The Shattered Epoch saw sword-lords carve kingdoms from wreckage.',
+      'The Veiled Restoration quelled incursions but whispers grew.',
+      'Now the present teeters as rivers shift and seers dream of ruin.'
+    ].join('\n\n')
+    const normalized = normalizeGeneratedWorld({
+      worldName: 'Elyndor',
+      worldSummary: 'Hook one.\n\nHook two.\n\nHook three.',
+      worldHistory: thinHistory
+    })
+    expect(normalized).toBeDefined()
+    for (const paragraph of splitParagraphs(normalized!.worldHistory)) {
+      expect(countSentences(paragraph)).toBeGreaterThanOrEqual(3)
+    }
+    expect(isValidGeneratedWorld(normalized)).toBe(true)
+  })
+})
+
+describe('normalizeGeneratedNpc live-model coercions', () => {
+  it('coerces unknown temperament labels to neutral', () => {
+    expect(coerceNpcTemperament('friendly')).toBe('neutral')
+  })
+
+  it('maps unknown race labels to a roster preset', () => {
+    expect(normalizeRaceKeyForRoster('Ashborn')).toBe('human')
+    const npc = normalizeGeneratedNpc({
+      name: 'Mara',
+      role: 'scout',
+      disposition: 'wary',
+      regionName: 'Pass',
+      temperament: 'friendly',
+      canSpeak: true,
+      alignment: 'neutral_good',
+      race: 'Ashborn',
+      background: 'folk_hero',
+      gender: 'woman',
+      class: 'commoner',
+      backstory: 'Mara grew up in the pass.'
+    })
+    expect(npc?.temperament).toBe('neutral')
+    expect(npc?.raceKey).toBe('human')
+  })
+})
+
+describe('generateCampaignSeed NPC slot retries', () => {
+  it('retries NPC slot generation when the model reuses an existing name', async () => {
+    const regions = [makeRegion('Ashen Crown Bazaar', 'desert')]
+    const firstNpc = { ...makeNpcs('Ashen Crown Bazaar', 'One')[0]!, name: 'Alice' }
+    const duplicateNpc = { ...firstNpc }
+    const uniqueNpc = { ...firstNpc, name: 'Bob' }
+    const provider = createScriptedProvider([
+      JSON.stringify(VALID_WORLD),
+      JSON.stringify({ regions }),
+      JSON.stringify({ npc: firstNpc }),
+      JSON.stringify({ npc: duplicateNpc }),
+      JSON.stringify({ npc: uniqueNpc }),
+      JSON.stringify({ storyThread: { title: 'Arc', state: 'starting', summary: 'S' } })
+    ])
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 2 })
+    expect(result.npcs).toHaveLength(2)
+    expect(result.npcs.map((npc) => npc.name).toSorted()).toEqual(['Alice', 'Bob'].toSorted())
+  })
+})
+
+describe('generateCampaignSeed progress', () => {
+  it('reports progress through each generation stage', async () => {
+    const counts = { regionCount: 2, npcsPerRegion: 1 }
+    const provider = createScriptedProvider(
+      buildCascadingSeedResponses({
+        regionCount: counts.regionCount,
+        npcsPerRegion: counts.npcsPerRegion,
+        regions: [makeRegion('North Vale'), makeRegion('South Fen')]
+      })
+    )
+    const stages: CreateCampaignStage[] = []
+    await generateCampaignSeed(provider, 'premise', {
+      ...counts,
+      availableRaces: buildAvailableRaceOptions([]),
+      onProgress: (stage) => {
+        stages.push(stage)
+      }
+    })
+    expect(stages[0]).toBe('world')
+    expect(stages).toContain('regions')
+    expect(stages.filter((stage) => stage === 'npcs').length).toBeGreaterThanOrEqual(2)
+    expect(stages).toContain('story')
+    expect(stages.indexOf('story')).toBeGreaterThan(stages.lastIndexOf('npcs'))
+  })
+})
 
 describe('normalizeCampaignGeneration', () => {
   it('accepts legacy region fields and fills recent history plus quest hooks', () => {
@@ -171,7 +286,10 @@ describe('buildWorldGenerationPrompt', () => {
   it('asks for world name, summary, and history only', () => {
     const prompt = buildWorldGenerationPrompt('A marsh kingdom')
     expect(prompt).toContain('worldName')
-    expect(prompt).toContain('exactly three short paragraphs')
+    expect(prompt).toContain('Tyria')
+    expect(prompt).toContain('science fiction')
+    expect(prompt).toContain('five paragraphs')
+    expect(prompt).toContain('three full sentences')
     expect(prompt).not.toContain('"regions"')
   })
 })
@@ -208,7 +326,7 @@ describe('buildAdditionalRegionPrompt', () => {
       history: {
         worldName: 'Velmora',
         worldSummary: 'Summary one.\n\nTwo.\n\nThree.',
-        worldHistory: 'Past one.\n\nTwo.\n\nThree.\n\nFour.',
+        worldHistory: 'Past one.\n\nTwo.\n\nThree.\n\nFour.\n\nFive.',
         currentStateSummary: '',
         regionSummaries: [],
         storyThreadSummaries: [],
@@ -402,7 +520,7 @@ describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 
 
     const fetched = getCampaignById(db, campaign.id)
     expect(fetched?.worldName).toBe(VALID_WORLD.worldName)
-    expect(fetched?.worldSummary).toContain('Shattered Expanse')
+    expect(fetched?.worldSummary).toContain('Tyria')
     expect(fetched?.worldHistory).toContain('Sundering')
 
     const regions = listRegionsByCampaign(db, campaign.id)

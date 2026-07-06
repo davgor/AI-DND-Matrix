@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import { EditableFieldEditView } from './editableFieldViews'
 import { WorldHistoryModalActions } from './WorldHistoryModalActions'
+import { useWorldHistoryModalState } from './useWorldHistoryModalState'
 
 function WorldHistoryModalBody(props: {
   readOnly: boolean | undefined
@@ -19,44 +19,31 @@ export function CampaignReviewWorldHistoryModal(props: {
   onClose: () => void
   readOnly?: boolean
 }): JSX.Element {
-  const [value, setValue] = useState(props.initialValue)
-  const [saving, setSaving] = useState(false)
-
-  async function handleSave(): Promise<void> {
-    setSaving(true)
-    try {
-      await props.onSave(value)
-      props.onClose()
-    } finally {
-      setSaving(false)
-    }
-  }
+  const modal = useWorldHistoryModalState(props.initialValue)
 
   return (
-    <div
-      className="campaign-review-overlay"
-      role="presentation"
-      onClick={() => {
-        if (!saving) {
-          props.onClose()
-        }
-      }}
-    >
+    <div className="campaign-review-overlay campaign-review-overlay--content-width">
       <div
         className="campaign-review-generate-modal campaign-review-world-history-modal"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="campaign-review-world-history-title"
-        onClick={(event) => event.stopPropagation()}
       >
         <h2 id="campaign-review-world-history-title">World history</h2>
-        <p>The full one-pager for your setting — deeper past, legends, and recent epochs.</p>
-        <WorldHistoryModalBody readOnly={props.readOnly} value={value} onChange={setValue} />
+        <p>
+          The full one-pager hook for your setting — five rich paragraphs of past, legend, and recent epochs.
+          Saving refreshes the summary on the review screen.
+        </p>
+        <div className="campaign-review-world-history-body">
+          <WorldHistoryModalBody readOnly={props.readOnly} value={modal.value} onChange={modal.setValue} />
+        </div>
+        {modal.saveNotice ? <p className="campaign-review-world-history-notice">{modal.saveNotice}</p> : null}
         <WorldHistoryModalActions
           readOnly={props.readOnly}
-          saving={saving}
-          canSave={value !== props.initialValue}
+          saving={modal.saving}
+          canSave={modal.canSave}
           onClose={props.onClose}
-          onSave={() => void handleSave()}
+          onSave={() => void modal.save(props.onSave)}
         />
       </div>
     </div>

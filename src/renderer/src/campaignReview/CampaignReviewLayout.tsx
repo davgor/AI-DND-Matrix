@@ -1,5 +1,5 @@
+import { Fragment } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
-import type { EditNpcTraitsInput } from '../../../main/campaignEditIpc'
 import { CampaignReviewRegionCard } from './CampaignReviewRegionCard'
 
 export function CampaignReviewHeader(props: { campaignName: string | undefined }): JSX.Element {
@@ -24,26 +24,28 @@ export function buildRegionBlocks(detail: CampaignDetail) {
 }
 
 export function CampaignReviewRegions(props: {
-  campaignId: string
   regionBlocks: ReturnType<typeof buildRegionBlocks>
-  onSaveRegionDescription: (regionId: string, description: string) => Promise<void>
-  onSaveNpcTraits: (input: EditNpcTraitsInput) => Promise<void>
+  onDeleteNpc: (npcId: string) => void
+  onDeleteRegion: (regionId: string) => void
   onGenerateNpc: (regionId: string) => void
 }): JSX.Element {
   return (
     <section className="campaign-review-regions">
       <h2>Regions</h2>
-      {props.regionBlocks.map(({ region, extras, npcs }) => (
-        <CampaignReviewRegionCard
-          key={region.id}
-          region={region}
-          extras={extras}
-          npcs={npcs}
-          campaignId={props.campaignId}
-          onSaveRegionDescription={props.onSaveRegionDescription}
-          onSaveNpcTraits={props.onSaveNpcTraits}
-          onGenerateNpc={() => props.onGenerateNpc(region.id)}
-        />
+      {props.regionBlocks.map(({ region, extras, npcs }, index) => (
+        <Fragment key={region.id}>
+          <CampaignReviewRegionCard
+            region={region}
+            extras={extras}
+            npcs={npcs}
+            onDeleteNpc={props.onDeleteNpc}
+            onDeleteRegion={() => props.onDeleteRegion(region.id)}
+            onGenerateNpc={() => props.onGenerateNpc(region.id)}
+          />
+          {index < props.regionBlocks.length - 1 ? (
+            <hr className="campaign-review-region-break" aria-hidden="true" />
+          ) : null}
+        </Fragment>
       ))}
     </section>
   )

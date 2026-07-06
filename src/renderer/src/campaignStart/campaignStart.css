@@ -111,6 +111,19 @@
   text-align: center;
 }
 
+.campaign-start-progress-step {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.campaign-start-progress-goofy {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
 .campaign-start-progress-track {
   height: 8px;
   border-radius: var(--radius-pill);

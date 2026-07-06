@@ -5,6 +5,8 @@ import type {
   EditNpcDispositionInput,
   EditNpcTraitsInput,
   EditRegionDescriptionInput,
+  DeleteRegionInput,
+  DeleteNpcInput,
   EditWorldHistoryInput,
   EditWorldSummaryInput,
   GenerateRegionInput,
@@ -82,6 +84,8 @@ const campaigns = {
   },
   editRegionDescription: (input: EditRegionDescriptionInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editRegionDescription', input),
+  deleteRegion: (input: DeleteRegionInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:deleteRegion', input),
   editWorldSummary: (input: EditWorldSummaryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldSummary', input),
   editWorldHistory: (input: EditWorldHistoryInput): Promise<CampaignDetail> =>
@@ -90,6 +94,8 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:editNpcDisposition', input),
   editNpcTraits: (input: EditNpcTraitsInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editNpcTraits', input),
+  deleteNpc: (input: DeleteNpcInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:deleteNpc', input),
   generateRegion: (
     input: GenerateRegionInput
   ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>

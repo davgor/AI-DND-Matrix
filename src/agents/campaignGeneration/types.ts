@@ -6,16 +6,25 @@ import {
   DEFAULT_REGION_COUNT
 } from '../../shared/campaignCreate/types'
 import type { AvailableRaceOption } from '../../shared/raceSelection/types'
+import type { CreateCampaignProgressCallback } from '../../shared/campaignCreate/types'
 import type { DeathMode, RespawnRules } from '../../db/repositories/campaigns'
 import type { Provider } from '../providers/types'
 
 export class CampaignGenerationSchemaError extends Error {}
 
 export const MAX_GENERATION_ATTEMPTS = 3
+export const MAX_CAMPAIGN_SEED_ATTEMPTS = 5
 
 export interface GenerationCounts {
   regionCount: number
   npcsPerRegion: number
+}
+
+export interface GenerateCampaignSeedOptions {
+  regionCount?: number
+  npcsPerRegion?: number
+  availableRaces?: AvailableRaceOption[]
+  onProgress?: CreateCampaignProgressCallback
 }
 
 export function resolveInitialGenerationCounts(

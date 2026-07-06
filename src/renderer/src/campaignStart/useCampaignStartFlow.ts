@@ -12,6 +12,8 @@ export interface CampaignStartFlow {
   flowError: string | null
   submitting: boolean
   progressStage: ReturnType<typeof useCampaignCreateProgress>['progressStage']
+  progressStageIndex: number
+  progressStageTotal: number
   progressLabel: string
   open: () => void
   close: () => void
@@ -64,6 +66,8 @@ export function useCampaignStartFlow(): CampaignStartFlow {
     flowError: modal.flowError,
     submitting: modal.submitting,
     progressStage: progress.progressStage,
+    progressStageIndex: progress.progressStageIndex,
+    progressStageTotal: progress.progressStageTotal,
     progressLabel: progress.progressLabel,
     open: modal.open,
     close,

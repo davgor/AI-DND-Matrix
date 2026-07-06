@@ -2,6 +2,8 @@
 
 Validates epic **054**: cascading world → regions → NPCs → story generation, persisted `world_*` columns, onboarding review world section, and hub read-only preview.
 
+**Changing create/generation logic?** Also follow `docs/runbooks/campaign-create-change-checklist.md`.
+
 ## Prerequisites
 
 - `npm install`
@@ -10,7 +12,7 @@ Validates epic **054**: cascading world → regions → NPCs → story generatio
 ## Automated smoke
 
 ```bash
-npx vitest run src/db/migrateCampaignWorldV34.test.ts src/db/repositories/campaigns.test.ts src/agents/campaignGeneration/campaignGeneration.test.ts src/main/campaignCreateIpc.test.ts src/main/campaignHubIpc.test.ts src/renderer/src/campaignReview/CampaignReviewWorldSection.test.tsx
+npx vitest run src/main/campaignCreateIpc.contract.test.ts src/db/migrateCampaignWorldV34.test.ts src/db/repositories/campaigns.test.ts src/agents/campaignGeneration/campaignGeneration.test.ts src/main/campaignCreateIpc.test.ts src/main/campaignHubIpc.test.ts src/renderer/src/campaignReview/CampaignReviewWorldContent.test.tsx
 ```
 
 ## Manual smoke (Campaign Review)

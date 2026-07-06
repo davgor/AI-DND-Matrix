@@ -5,9 +5,11 @@ import {
   CampaignGenerationSchemaError,
   assembleCampaignHistoryContext,
   generateAdditionalRegion,
+  generateWorldSummaryFromHistory,
   persistRegionWithNpcs,
   resolveAdditionalRegionNpcCount
 } from '../agents/campaignGeneration'
+import type { Provider } from '../agents/providers/types'
 import { generateFlaggedNpc } from '../agents/campaignGeneration/flaggedNpc'
 import { buildAvailableRaceOptions } from '../agents/raceLore'
 import { createNpcWithCombatReview } from '../db/repositories/npcCombatHydration'
@@ -19,9 +21,11 @@ import {
   type DeathMode,
   type RespawnRules
 } from '../db/repositories/campaigns'
-import { listNpcsByRegion, updateNpcDisposition, updateNpcTraits } from '../db/repositories/npcs'
-import { listCampaignRaces } from '../db/repositories/campaignRaces'
+import { deleteNpcCascade } from '../db/repositories/deleteNpc'
+import { deleteRegionCascade } from '../db/repositories/deleteRegion'
+import { getNpcById, listNpcsByRegion, updateNpcDisposition, updateNpcTraits } from '../db/repositories/npcs'
 import { getRegionById, listRegionsByCampaign, updateRegionDescription } from '../db/repositories/regions'
+import { listCampaignRaces } from '../db/repositories/campaignRaces'
 import {
   MAX_ADDITIONAL_REGION_NPC_COUNT,
   MIN_ADDITIONAL_REGION_NPC_COUNT
@@ -57,6 +61,40 @@ export function editRegionDescription(
   return getCampaignDetail(db, input.campaignId)
 }
 
+export interface DeleteRegionInput {
+  campaignId: string
+  regionId: string
+}
+
+export function deleteRegionForCampaign(
+  db: Database.Database,
+  input: DeleteRegionInput
+): CampaignDetail {
+  const region = getRegionById(db, input.regionId)
+  if (!region || region.campaignId !== input.campaignId) {
+    throw new Error(`Region "${input.regionId}" not found for campaign "${input.campaignId}"`)
+  }
+  deleteRegionCascade(db, input.regionId)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface DeleteNpcInput {
+  campaignId: string
+  npcId: string
+}
+
+export function deleteNpcForCampaign(
+  db: Database.Database,
+  input: DeleteNpcInput
+): CampaignDetail {
+  const npc = getNpcById(db, input.npcId)
+  if (!npc || npc.campaignId !== input.campaignId) {
+    throw new Error(`NPC "${input.npcId}" not found for campaign "${input.campaignId}"`)
+  }
+  deleteNpcCascade(db, input.npcId)
+  return getCampaignDetail(db, input.campaignId)
+}
+
 export interface EditWorldSummaryInput {
   campaignId: string
   worldSummary: string
@@ -75,11 +113,25 @@ export interface EditWorldHistoryInput {
   worldHistory: string
 }
 
-export function editWorldHistory(
+export async function editWorldHistory(
   db: Database.Database,
+  provider: Provider,
   input: EditWorldHistoryInput
-): CampaignDetail {
-  updateCampaignWorldHistory(db, input.campaignId, input.worldHistory)
+): Promise<CampaignDetail> {
+  const campaign = getCampaignById(db, input.campaignId)
+  if (!campaign) {
+    throw new Error('Campaign not found')
+  }
+  const worldSummary = await generateWorldSummaryFromHistory(provider, {
+    premisePrompt: campaign.premisePrompt,
+    worldName: campaign.worldName,
+    worldHistory: input.worldHistory
+  })
+  const apply = db.transaction(() => {
+    updateCampaignWorldHistory(db, input.campaignId, input.worldHistory)
+    updateCampaignWorldSummary(db, input.campaignId, worldSummary)
+  })
+  apply()
   return getCampaignDetail(db, input.campaignId)
 }
 
@@ -252,12 +304,16 @@ export function registerCampaignEditHandlers(): void {
     editRegionDescription(getDb(), input)
   )
 
+  ipcMain.handle('campaigns:deleteRegion', (_event, input: DeleteRegionInput) =>
+    deleteRegionForCampaign(getDb(), input)
+  )
+
   ipcMain.handle('campaigns:editWorldSummary', (_event, input: EditWorldSummaryInput) =>
     editWorldSummary(getDb(), input)
   )
 
-  ipcMain.handle('campaigns:editWorldHistory', (_event, input: EditWorldHistoryInput) =>
-    editWorldHistory(getDb(), input)
+  ipcMain.handle('campaigns:editWorldHistory', async (_event, input: EditWorldHistoryInput) =>
+    editWorldHistory(getDb(), buildAgentProvider(), input)
   )
 
   ipcMain.handle('campaigns:editNpcDisposition', (_event, input: EditNpcDispositionInput) =>
@@ -266,6 +322,10 @@ export function registerCampaignEditHandlers(): void {
 
   ipcMain.handle('campaigns:editNpcTraits', (_event, input: EditNpcTraitsInput) =>
     editNpcTraits(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:deleteNpc', (_event, input: DeleteNpcInput) =>
+    deleteNpcForCampaign(getDb(), input)
   )
 
   ipcMain.handle('campaigns:generateRegion', async (_event, input: GenerateRegionInput) => {

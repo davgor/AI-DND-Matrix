@@ -24,8 +24,10 @@ import {
 import { persistGeneratedCampaign } from './persist'
 import { buildAvailableRaceOptions } from '../raceLore'
 import type { AvailableRaceOption } from '../../shared/raceSelection/types'
+import type { CreateCampaignProgressCallback } from '../../shared/campaignCreate/types'
 import {
   CampaignGenerationSchemaError,
+  MAX_CAMPAIGN_SEED_ATTEMPTS,
   MAX_GENERATION_ATTEMPTS,
   resolveAdditionalRegionNpcCount,
   resolveInitialGenerationCounts
@@ -41,6 +43,7 @@ import type {
   GeneratedStoryThread,
   GeneratedWorld,
   GenerationCounts,
+  GenerateCampaignSeedOptions,
   WorldContext
 } from './types'
 
@@ -49,8 +52,9 @@ export * from './normalize'
 export * from './prompts'
 export * from './persist'
 export * from './flaggedNpc'
+export * from './worldSummaryRegen'
 
-const WORLD_MAX_TOKENS = 4096
+const WORLD_MAX_TOKENS = 8192
 const REGIONS_MAX_TOKENS = 8192
 const STORY_THREAD_MAX_TOKENS = 2048
 const ADDITIONAL_REGION_MAX_TOKENS = 10240
@@ -166,6 +170,28 @@ async function fillCampaignNpcShortfall(input: {
   return { ...partial, npcs }
 }
 
+async function repairNpcShortfall(input: {
+  provider: Provider
+  premisePrompt: string
+  normalized: CampaignGenerationResult
+  counts: GenerationCounts
+  availableRaces: AvailableRaceOption[]
+}): Promise<CampaignGenerationResult> {
+  const { provider, premisePrompt, normalized, counts, availableRaces } = input
+  if (counts.regionCount === 0 || counts.npcsPerRegion === 0 || !needsNpcTopUp(normalized, counts)) {
+    return normalized
+  }
+  const repaired = await fillCampaignNpcShortfall({
+    provider,
+    premisePrompt,
+    world: normalized.world,
+    partial: normalized,
+    counts,
+    availableRaces
+  })
+  return repaired ?? normalized
+}
+
 async function finalizeGenerationResult(args: {
   provider: Provider
   premisePrompt: string
@@ -199,20 +225,25 @@ async function generateNpcSlotForRegion(input: {
   existingNpcNames: string[]
   availableRaces: AvailableRaceOption[]
 }): Promise<GeneratedSingleNpcResult['npc'] | undefined> {
-  try {
-    const generated = await attemptGenerateSingleNpc(input.provider, {
-      campaignPremise: input.premisePrompt,
-      regionName: input.region.name,
-      regionDescription: input.region.description,
-      existingNpcNames: input.existingNpcNames,
-      seedPrompt: `Create a distinct local character who belongs in ${input.region.name}.`,
-      availableRaces: input.availableRaces,
-      worldContext: input.world
-    })
-    return generated?.npc
-  } catch {
-    return undefined
+  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+    try {
+      const generated = await attemptGenerateSingleNpc(input.provider, {
+        campaignPremise: input.premisePrompt,
+        regionName: input.region.name,
+        regionDescription: input.region.description,
+        existingNpcNames: input.existingNpcNames,
+        seedPrompt: `Create a distinct local character who belongs in ${input.region.name}.`,
+        availableRaces: input.availableRaces,
+        worldContext: input.world
+      })
+      if (generated) {
+        return generated.npc
+      }
+    } catch {
+      continue
+    }
   }
+  return undefined
 }
 
 async function generateNpcsForRegions(input: {
@@ -222,10 +253,12 @@ async function generateNpcsForRegions(input: {
   regions: GeneratedRegion[]
   npcsPerRegion: number
   availableRaces: AvailableRaceOption[]
+  onNpcRegionStart?: () => void
 }): Promise<GeneratedSingleNpcResult['npc'][]> {
   const npcs: GeneratedSingleNpcResult['npc'][] = []
 
   for (const region of input.regions) {
+    input.onNpcRegionStart?.()
     for (let slot = 0; slot < input.npcsPerRegion; slot += 1) {
       const generated = await generateNpcSlotForRegion({
         provider: input.provider,
@@ -244,49 +277,117 @@ async function generateNpcsForRegions(input: {
   return npcs
 }
 
+async function runCampaignSeedAttempt(input: {
+  provider: Provider
+  premisePrompt: string
+  counts: GenerationCounts
+  availableRaces: AvailableRaceOption[]
+  onProgress?: CreateCampaignProgressCallback
+}): Promise<CampaignGenerationResult> {
+  input.onProgress?.('world')
+  const world = await generateCampaignWorld(input.provider, input.premisePrompt)
+  input.onProgress?.('regions')
+  const regions = await generateCampaignRegions(input.provider, input.premisePrompt, world, input.counts)
+  input.onProgress?.('npcs')
+  const npcs =
+    input.counts.regionCount === 0 || input.counts.npcsPerRegion === 0
+      ? []
+      : await generateNpcsForRegions({
+          provider: input.provider,
+          premisePrompt: input.premisePrompt,
+          world,
+          regions,
+          npcsPerRegion: input.counts.npcsPerRegion,
+          availableRaces: input.availableRaces,
+          onNpcRegionStart: () => input.onProgress?.('npcs')
+        })
+  input.onProgress?.('story')
+  const storyThread = await generateCampaignStoryThread(
+    input.provider,
+    input.premisePrompt,
+    world,
+    regions
+  )
+  return repairNpcShortfall({
+    provider: input.provider,
+    premisePrompt: input.premisePrompt,
+    normalized: { world, regions, npcs, storyThread },
+    counts: input.counts,
+    availableRaces: input.availableRaces
+  })
+}
+
 export async function generateCampaignSeed(
   provider: Provider,
   premisePrompt: string,
-  countsInput?: Partial<GenerationCounts>,
-  availableRaces: AvailableRaceOption[] = buildAvailableRaceOptions([])
+  options?: GenerateCampaignSeedOptions
 ): Promise<CampaignGenerationResult> {
-  const counts = resolveInitialGenerationCounts(countsInput?.regionCount, countsInput?.npcsPerRegion)
+  return runCampaignSeedWithRetries({
+    provider,
+    premisePrompt,
+    counts: resolveInitialGenerationCounts(options?.regionCount, options?.npcsPerRegion),
+    availableRaces: options?.availableRaces ?? buildAvailableRaceOptions([]),
+    onProgress: options?.onProgress
+  })
+}
+
+async function runCampaignSeedWithRetries(input: {
+  provider: Provider
+  premisePrompt: string
+  counts: GenerationCounts
+  availableRaces: AvailableRaceOption[]
+  onProgress?: CreateCampaignProgressCallback
+}): Promise<CampaignGenerationResult> {
   let lastLenient: CampaignGenerationResult | undefined
 
-  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    try {
-      const world = await generateCampaignWorld(provider, premisePrompt)
-      const regions = await generateCampaignRegions(provider, premisePrompt, world, counts)
-      const npcs =
-        counts.regionCount === 0 || counts.npcsPerRegion === 0
-          ? []
-          : await generateNpcsForRegions({
-              provider,
-              premisePrompt,
-              world,
-              regions,
-              npcsPerRegion: counts.npcsPerRegion,
-              availableRaces
-            })
-      const storyThread = await generateCampaignStoryThread(provider, premisePrompt, world, regions)
-      const normalized: CampaignGenerationResult = { world, regions, npcs, storyThread }
-
-      if (!isValidGenerationResult(normalized, counts)) {
-        continue
-      }
-      lastLenient = normalized
-      return finalizeGenerationResult({ provider, premisePrompt, normalized, counts, availableRaces })
-    } catch {
+  for (let attempt = 1; attempt <= MAX_CAMPAIGN_SEED_ATTEMPTS; attempt += 1) {
+    const normalized = await tryCampaignSeedAttempt(input)
+    if (!normalized) {
       continue
     }
+    lastLenient = normalized
+    if (!isValidGenerationResult(normalized, input.counts)) {
+      continue
+    }
+    return finalizeGenerationResult({
+      provider: input.provider,
+      premisePrompt: input.premisePrompt,
+      normalized,
+      counts: input.counts,
+      availableRaces: input.availableRaces
+    })
   }
 
   if (lastLenient) {
-    return lastLenient
+    const repaired = await repairNpcShortfall({
+      provider: input.provider,
+      premisePrompt: input.premisePrompt,
+      normalized: lastLenient,
+      counts: input.counts,
+      availableRaces: input.availableRaces
+    })
+    if (isValidGenerationResult(repaired, input.counts)) {
+      return repaired
+    }
   }
+
   throw new CampaignGenerationSchemaError(
     'DM agent did not return a valid campaign generation schema after retries'
   )
+}
+
+async function tryCampaignSeedAttempt(input: {
+  provider: Provider
+  premisePrompt: string
+  counts: GenerationCounts
+  availableRaces: AvailableRaceOption[]
+  onProgress?: CreateCampaignProgressCallback
+}): Promise<CampaignGenerationResult | undefined> {
+  try {
+    return await runCampaignSeedAttempt(input)
+  } catch {
+    return undefined
+  }
 }
 
 function regionNameCollides(name: string, existingRegionNames: string[]): boolean {

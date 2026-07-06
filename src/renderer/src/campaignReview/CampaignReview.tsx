@@ -41,10 +41,9 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
       ) : null}
       <CampaignReviewStory storyThreads={detail.storyThreads} />
       <CampaignReviewRegions
-        campaignId={campaignId}
         regionBlocks={regionBlocks}
-        onSaveRegionDescription={savers.saveRegionDescription}
-        onSaveNpcTraits={savers.saveNpcTraits}
+        onDeleteNpc={savers.deleteNpc}
+        onDeleteRegion={savers.deleteRegion}
         onGenerateNpc={setGenerateNpcRegionId}
       />
       <CampaignReviewFooter

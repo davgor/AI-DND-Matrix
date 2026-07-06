@@ -14,6 +14,12 @@ Validates epic 019: confirmation UI, full DB/file cleanup, sidebar update, and s
 node scripts/delete-campaign-smoke.mjs --skip-package
 ```
 
+**Contract test (run after changing delete cascade or campaign create persistence):**
+
+```bash
+npx vitest run src/main/campaignDeleteIpc.contract.test.ts
+```
+
 Flow:
 
 1. Boot app with stub provider
