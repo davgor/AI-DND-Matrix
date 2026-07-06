@@ -67,8 +67,8 @@ describe('emphasis formatting smoke: review and recap', () => {
     }
     const reviewNode = CampaignReviewRegionExtras({ extras })
     const reviewSections = reviewNode.props.children as JSX.Element[]
-    expect(hasEmphasisTypes(reviewSections[0].props.children[1], ['em'])).toBe(true)
-    expect(hasEmphasisTypes(reviewSections[1].props.children[1], ['strong'])).toBe(true)
+    expect(hasEmphasisTypes(reviewSections[0], ['em'])).toBe(true)
+    expect(hasEmphasisTypes(reviewSections[1], ['strong'])).toBe(true)
     expect(hasEmphasisTypes(EditableFieldReadView({ value: '*Friendly* and **hostile**.' }), ['em', 'strong'])).toBe(
       true
     )

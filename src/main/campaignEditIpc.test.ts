@@ -158,7 +158,7 @@ describe('editWorldHistory', () => {
     const provider = createScriptedProvider([
       JSON.stringify({
         worldSummary:
-          'Fresh hook one.\n\nFresh hook two.\n\nFresh hook three.'
+          'River towns still pay twin tolls to guild barges and temple courts. Ferry crews know which captains smuggle refugees after harvest failures.\n\nMercenary companies winter in the hill forts they once besieged, selling escorts to caravans that cannot trust the high roads. Every contract names a different villain, but the same muddy passes.\n\nStorm priests claim the barrow lights are warnings, not invitations. Locals hire outsiders anyway because the granaries are half empty.'
       })
     ])
     const updatedHistory =
@@ -170,7 +170,7 @@ describe('editWorldHistory', () => {
     })
 
     expect(detail.campaign?.worldHistory).toBe(updatedHistory)
-    expect(detail.campaign?.worldSummary).toContain('Fresh hook one')
+    expect(detail.campaign?.worldSummary).toContain('River towns')
   })
 })
 

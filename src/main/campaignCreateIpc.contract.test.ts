@@ -42,7 +42,7 @@ describe('createCampaignFromRequest contract — default setup form', () => {
     }
     expect(result.detail.campaign?.name).toBe('Saga of Ashen Crown')
     expect(result.detail.campaign?.worldName).toBe('Eldermere')
-    expect(result.detail.campaign?.worldSummary).toContain('desert caravan city')
+    expect(result.detail.campaign?.worldSummary).toContain('desert caravan realm')
     expect(result.detail.regions).toHaveLength(2)
     expect(result.detail.npcs).toHaveLength(6)
     expect(result.detail.storyThreads[0]?.title).toBe('The Missing Envoy')

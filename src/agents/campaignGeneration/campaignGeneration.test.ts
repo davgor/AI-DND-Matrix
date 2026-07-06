@@ -143,7 +143,7 @@ describe('generateCampaignSeed NPC slot retries', () => {
     ])
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 2 })
     expect(result.npcs).toHaveLength(2)
-    expect([...result.npcs.map((npc) => npc.name)].sort()).toEqual([...['Alice', 'Bob']].sort())
+    expect(result.npcs.map((npc) => npc.name).sort()).toEqual(['Alice', 'Bob'].sort())
   })
 })
 

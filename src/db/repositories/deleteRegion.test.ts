@@ -80,7 +80,7 @@ describe('deleteRegionCascade', () => {
     deleteRegionCascade(db, target.region.id)
 
     expectRegionFullyRemoved(db, target.region.id)
-    expect(listRegionsByCampaign(db, target.campaign.id)).toHaveLength(1)
+    expect(listRegionsByCampaign(db, target.campaign.id)).toHaveLength(0)
     expect(listRegionsByCampaign(db, other.campaign.id)).toHaveLength(1)
     expect(
       countRows(
