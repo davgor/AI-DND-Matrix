@@ -95,22 +95,12 @@ describe('multi-campaign isolation (008.5)', () => {
     expect(detailA.regions.map((r) => r.name)).toEqual(['Oakhollow', 'The Sunken Crown'])
     expect(detailB.regions.map((r) => r.name)).toEqual(['Frosthaven', 'Iron Marches'])
 
-    expect(detailA.npcs.map((n) => n.name).toSorted()).toEqual([
-      'Oakh One',
-      'Oakh Two',
-      'Oakh Three',
-      'The  One',
-      'The  Two',
-      'The  Three'
-    ].toSorted())
-    expect(detailB.npcs.map((n) => n.name).toSorted()).toEqual([
-      'Fros One',
-      'Fros Two',
-      'Fros Three',
-      'Iron One',
-      'Iron Two',
-      'Iron Three'
-    ].toSorted())
+    expect([...detailA.npcs.map((n) => n.name)].sort()).toEqual(
+      [...['Oakh One', 'Oakh Two', 'Oakh Three', 'The  One', 'The  Two', 'The  Three']].sort()
+    )
+    expect([...detailB.npcs.map((n) => n.name)].sort()).toEqual(
+      [...['Fros One', 'Fros Two', 'Fros Three', 'Iron One', 'Iron Two', 'Iron Three']].sort()
+    )
 
     expect(detailA.storyThreads[0]?.title).toBe('The Sunken Crown')
     expect(detailB.storyThreads[0]?.title).toBe('The Frozen Pact')

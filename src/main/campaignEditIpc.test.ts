@@ -133,10 +133,6 @@ describe('editNpcTraits', () => {
       disposition: 'guarded but fair',
       temperament: 'cautious',
       alignment: 'lawful_neutral',
-      race: 'human',
-      background: 'folk_hero',
-      gender: 'unspecified',
-      class: 'commoner',
       canSpeak: false
     })
 

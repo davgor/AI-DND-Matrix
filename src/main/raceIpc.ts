@@ -133,7 +133,7 @@ export async function applyRaceSelection(
 
     setCharacterRaceKey(db, input.characterId, resolvedKey)
     setGuidedCreationPhase(db, input.characterId, 'background')
-    return { ok: true, raceKey: resolvedKey }
+    return { ok: true as const, raceKey: resolvedKey }
   })()
 }
 

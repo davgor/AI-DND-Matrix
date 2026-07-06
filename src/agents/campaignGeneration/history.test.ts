@@ -8,7 +8,10 @@ describe('history-aware additional region prompt (038.16)', () => {
       seedPrompt: 'Northern pass',
       npcCount: 3,
       history: {
-      currentStateSummary: 'The king is dead.',
+        worldName: 'Eryndor',
+        worldSummary: 'A war-torn realm of fractured keeps.',
+        worldHistory: 'Three ages of succession wars scarred the borderlands.',
+        currentStateSummary: 'The king is dead.',
       regionSummaries: [
         { name: 'Oakhollow', description: 'A village', recentHistory: 'Raided last week.' }
       ],

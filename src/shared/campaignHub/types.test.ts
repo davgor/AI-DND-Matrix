@@ -31,6 +31,9 @@ function player(overrides: Partial<Character> = {}): Character {
     deathCause: null,
     obituary: null,
     ownerPlayerCharacterId: null,
+    raceKey: null,
+    backgroundKey: null,
+    backgroundStory: null,
     ...overrides
   }
 }

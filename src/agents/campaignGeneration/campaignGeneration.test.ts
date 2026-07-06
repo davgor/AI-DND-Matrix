@@ -143,7 +143,7 @@ describe('generateCampaignSeed NPC slot retries', () => {
     ])
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 2 })
     expect(result.npcs).toHaveLength(2)
-    expect(result.npcs.map((npc) => npc.name).toSorted()).toEqual(['Alice', 'Bob'].toSorted())
+    expect([...result.npcs.map((npc) => npc.name)].sort()).toEqual([...['Alice', 'Bob']].sort())
   })
 })
 
@@ -154,7 +154,7 @@ describe('generateCampaignSeed progress', () => {
       buildCascadingSeedResponses({
         regionCount: counts.regionCount,
         npcsPerRegion: counts.npcsPerRegion,
-        regions: [makeRegion('North Vale'), makeRegion('South Fen')]
+        regions: [makeRegion('North Vale', 'north'), makeRegion('South Fen', 'fen')]
       })
     )
     const stages: CreateCampaignStage[] = []

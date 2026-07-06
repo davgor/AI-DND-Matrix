@@ -7,11 +7,11 @@ import { findRosterEntry, RACE_ROSTER } from '../engine/raceSelection/roster'
 import { getCampaignById } from '../db/repositories/campaigns'
 import {
   createCampaignRace,
-  getCampaignRaceByKey,
-  type CampaignRace
+  getCampaignRaceByKey
 } from '../db/repositories/campaignRaces'
 import type {
   AvailableRaceOption,
+  CampaignRace,
   RaceLore,
   RaceLoreInput
 } from '../shared/raceSelection/types'

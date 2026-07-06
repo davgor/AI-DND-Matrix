@@ -160,7 +160,7 @@ export function buildRealisticLlmCascadingSeedResponses(input: {
   return responses
 }
 
-export function makeSingleNpcPayload(regionName: string, npc: ReturnType<typeof makeNpcs>[number]): string {
+export function makeSingleNpcPayload(_regionName: string, npc: ReturnType<typeof makeNpcs>[number]): string {
   return JSON.stringify({ npc })
 }
 
