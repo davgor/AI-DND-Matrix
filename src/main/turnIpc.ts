@@ -13,6 +13,7 @@ import { generateNpcReaction, assembleNpcContext } from '../agents/npc'
 import {
   assembleNarrationContext,
   buildCombatIntentContext,
+  interpretIntent,
   narrate,
   persistNarrationSideEffects,
   type IntentInterpretation,
@@ -20,6 +21,11 @@ import {
   type NarrationResult
 } from '../agents/dm'
 import { interpretIntentAndRoute } from '../agents/intentAndRoute'
+import {
+  canSkipRoutingLlm,
+  heuristicRoutingPlan,
+  type TurnRoutingSignals
+} from '../agents/turnRoutingHeuristic'
 import type { TurnBeat, TurnRoutingPlan } from '../shared/turnRouting/types'
 import type { Provider } from '../agents/providers/types'
 import { getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
@@ -43,9 +49,10 @@ import {
 } from '../db/repositories/characters'
 import { setOpeningScene } from '../db/repositories/guidedCreation'
 import { appendEvent } from '../db/repositories/events'
-import { appendNpcMemory } from '../db/repositories/npcMemories'
+import { appendNpcMemory, listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
 import { getNpcById } from '../db/repositories/npcs'
-import { listRegionsByCampaign } from '../db/repositories/regions'
+import { getRegionById, listRegionsByCampaign } from '../db/repositories/regions'
+import { logger } from './logger'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { applyNarrationQuestRewards } from './narrationQuestRewards'
 import { assertNoPendingLevelUp } from './progressionPipeline'
@@ -984,8 +991,49 @@ async function resolveIntentRoutedTurn(input: IntentRoutedTurnInput): Promise<Tu
   })
 }
 
+// 040.3: pure heuristic signals assembled from DB state — the heuristic module
+// itself never touches the database.
+function buildTurnRoutingSignals(
+  db: Database.Database,
+  character: Character,
+  regionId: string,
+  narrationContext: NarrationContext
+): TurnRoutingSignals {
+  return {
+    playerInput: narrationContext.playerInput,
+    characterName: character.name,
+    regionName: getRegionById(db, regionId)?.name ?? '',
+    presentNpcs: narrationContext.presentNpcs.map((npc) => ({
+      ...npc,
+      interactedBefore: listNpcMemoriesByNpc(db, npc.id, 1).length > 0,
+      isHostile: getNpcById(db, npc.id)?.disposition.toLowerCase().startsWith('hostile') ?? false
+    })),
+    activeQuestTexts: narrationContext.activeQuests.flatMap((quest) => [
+      quest.title,
+      quest.summary,
+      ...quest.objectives.map((objective) => objective.text)
+    ]),
+    hasPendingAlignmentShift: narrationContext.pendingAlignmentShift !== null,
+    hasPartyMembers: listPartyMembersForPlayer(db, character.id).length > 0,
+    hasInactivePlayersInRegion: (narrationContext.inactiveLivingPlayersInRegion?.length ?? 0) > 0
+  }
+}
+
+// 040.3: dev-only visibility into which path routed each turn.
+function logTurnRoutingSource(campaignId: string, source: 'heuristic' | 'llm'): void {
+  if (import.meta.env.DEV) {
+    logger.debug('turn routing source', { campaignId, source })
+  }
+}
+
+// Substituted when the heuristic routed an intent that bypasses beat execution
+// (rest/travel/modifyItem/combat) — same inert plan the merged call returns.
+const INERT_ROUTING_PLAN: TurnRoutingPlan = { disposition: 'narrate', beats: [] }
+
 // 040.2: one merged LLM call produces intent + routing plan. Combat and
 // rest/travel/modifyItem turns simply never execute the plan half.
+// 040.3: when pre-LLM signals already prove the routing plan, the turn drops
+// to the slimmer intent-only prompt and a deterministic heuristic plan.
 async function interpretTurnIntentAndPlan(
   db: Database.Database,
   provider: Provider,
@@ -1005,11 +1053,23 @@ async function interpretTurnIntentAndPlan(
     characterId: character.id,
     playerInput: turnInput.playerInput
   })
+  const combat = buildCombatIntentContext(db, turnInput.campaignId, character.id, regionId)
+  const signals = buildTurnRoutingSignals(db, character, regionId, narrationContext)
+  // Active encounters bypass beat routing entirely — never fast-path them.
+  const heuristicEligible = !combat.encounterActive
+  if (heuristicEligible && canSkipRoutingLlm(signals)) {
+    const intent = await interpretIntent(provider, turnInput.playerInput, combat)
+    logTurnRoutingSource(turnInput.campaignId, 'heuristic')
+    const routingPlan = heuristicRoutingPlan(intent, signals) ?? INERT_ROUTING_PLAN
+    return { intent, routingPlan, regionId, narrationContext }
+  }
   const { intent, routingPlan } = await interpretIntentAndRoute(provider, {
     ...narrationContext,
-    combat: buildCombatIntentContext(db, turnInput.campaignId, character.id, regionId)
+    combat
   })
-  return { intent, routingPlan, regionId, narrationContext }
+  const heuristicPlan = heuristicEligible ? heuristicRoutingPlan(intent, signals) : null
+  logTurnRoutingSource(turnInput.campaignId, heuristicPlan ? 'heuristic' : 'llm')
+  return { intent, routingPlan: heuristicPlan ?? routingPlan, regionId, narrationContext }
 }
 
 export async function resolvePlayerTurn(

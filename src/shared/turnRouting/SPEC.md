@@ -20,10 +20,34 @@ Intent interpretation and turn routing arrive from a **single** LLM call — `in
 
 **Routing happens before the d20 is rolled.** The old two-call flow fed the resolved check outcome into the routing prompt; the merged call cannot. Instead, when the response has `checkNeeded: true`, `ensureDmNarrationBeat` deterministically guarantees a `dmNarration` beat in the plan post-parse (inserted before the first `npcResponse` beat, else appended), so engine check outcomes always reach narration and its side-effect writes.
 
-Routing-source precedence (updated by epic 040.3 when the heuristic fast path lands):
+Routing-source precedence:
 
-1. Merged LLM call (`interpretIntentAndRoute`) — current default for all routed turns.
-2. _(Reserved for 040.3)_ deterministic heuristic plans for provably simple turns, with the merged call as fallback.
+1. Merged LLM call (`interpretIntentAndRoute`) — default for every routed turn the heuristic cannot prove simple.
+2. Deterministic heuristic plans (epic 040.3, `src/agents/turnRoutingHeuristic.ts`) — evaluated **before** the merged call from raw player input + turn context. When a heuristic row fires, the turn skips the routing half entirely: the merged call is downgraded to the smaller intent-only prompt (`interpretIntent` in `dm.ts` — no routing schema, no scene grounding payloads) and the routing plan is deterministic. Whenever the heuristic returns `null`, the merged call remains the routing source. A dev-only debug log records `heuristic` vs `llm` per turn.
+
+## Heuristic fast path (epic 040.3)
+
+The heuristic (`src/agents/turnRoutingHeuristic.ts`, pure functions over caller-assembled signals) fires only for provably simple turns:
+
+| Condition | Deterministic plan |
+|-----------|--------------------|
+| `checkNeeded: true` (only when the converse/act conditions below already held pre-LLM) | `composite`: optional `playerActionExpression` (if input matched a physical verb) + `dmNarration`; for a dialogue-cued check turn, `dmNarration` + `npcResponse` |
+| `actionType` rest/travel/modifyItem | already bypass routing — no change |
+| `combatIntent` ≠ `none`, or an encounter is active | combat path — no routing, heuristic never fires |
+| Single NPC present + no check + dialogue cue (question mark, NPC name match, ask/tell/say) + prior interaction | `converse`: `npcResponse` only |
+| Pure physical verb phrase (whitelisted gesture verbs), no check, no NPC address | `act`: `playerActionExpression` only |
+
+**Side-effect starvation guard.** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, commerce, spells, alignment, and story-driven death. The converse-only and act-only rows omit it, so they return `null` (defer to LLM routing) whenever any signal suggests state could change:
+
+- an active quest whose title/summary/objective text mentions a present NPC name or region keyword,
+- a pending alignment shift,
+- first interaction with the present NPC this session (no NPC memories yet),
+- any present NPC is hostile (combat or consequence narration may follow on any turn),
+- player input containing transactional verbs (buy/sell/give/take/learn/purchase/trade/steal/hand/pay/teach/join/…),
+- the player has AI party members (heuristic plans omit `partyMember` beats),
+- inactive living player characters share the region (cross-character log writes flow through `dmNarration`).
+
+The heuristic is deliberately biased toward `null`: check turns that were not already provable pre-LLM keep the (richer) merged-call plan, which `ensureDmNarrationBeat` already guarantees carries narration. Composite turns (action + check + NPC) always fall through to LLM routing.
 
 ## Three routing outcomes
 

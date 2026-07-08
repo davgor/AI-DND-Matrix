@@ -4,6 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createCharacter, getCharacterById } from '../db/repositories/characters'
 import { listEventsByCampaign } from '../db/repositories/events'
 import { createNpc, getNpcById } from '../db/repositories/npcs'
+import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from './turnIpc'
@@ -151,15 +152,11 @@ describe('resolvePlayerTurn: converse-only routing', () => {
   })
 })
 
-describe('resolvePlayerTurn: player action expression', () => {
-  it('expresses a player physical action as bold prose when the plan includes playerActionExpression', async () => {
+describe('resolvePlayerTurn: player action expression (040.3 heuristic fast path)', () => {
+  it('expresses an obvious physical action deterministically via the intent-only prompt', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
-    const provider = createScriptedProvider([
-      mergedTurn(
-        { checkNeeded: false },
-        { kind: 'playerActionExpression', actionDescription: 'Kael draws his sword.' }
-      )
-    ])
+    // The heuristic routes this turn, so only a bare intent response is needed.
+    const provider = createScriptedProvider(['{"checkNeeded":false}'])
 
     const result = await resolvePlayerTurn(
       db,
@@ -168,11 +165,129 @@ describe('resolvePlayerTurn: player action expression', () => {
       fixedRng(0.5)
     )
 
-    expect(result.playerActionText).toBe('Kael draws his sword.')
-    // the entire routed turn cost a single LLM call
+    expect(result.playerActionText).toBe('Kael draws their sword.')
+    // the entire routed turn cost a single, intent-only LLM call
     expect(provider.calls).toHaveLength(1)
+    expect(provider.calls[0]?.prompt).not.toContain('routingPlan')
     const expressionEvents = listEventsByCampaign(db, campaign.id, { type: 'player_action_expression' })
     expect(expressionEvents[0]?.payload['playerInput']).toBe('I draw my sword')
+  })
+
+  it('still narrates a check outcome when the heuristic-routed intent needs a roll', async () => {
+    const { db, campaign, player } = seedCampaignWithPlayer()
+    const provider = createScriptedProvider([
+      '{"checkNeeded":true,"ability":"agility","dc":10,"proficient":false}',
+      '{"narrationText":"You steady yourself on the ledge."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I brace myself' },
+      fixedRng(0.5)
+    )
+
+    expect(result.check).toBeDefined()
+    expect(result.playerActionText).toBe('Kael braces themselves.')
+    expect(result.narrationText).toBe('You steady yourself on the ledge.')
+    expect(provider.calls[0]?.prompt).not.toContain('routingPlan')
+  })
+})
+
+describe('resolvePlayerTurn: heuristic converse fast path (040.3)', () => {
+  it('routes a repeat dialogue turn to the single present NPC without the routing LLM', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    // Prior memory: not a first interaction, so the starvation guard allows the fast path.
+    appendNpcMemory(db, { npcId: npc.id, content: 'Kael greeted me yesterday.', tags: [] })
+    const provider = createScriptedProvider([
+      '{"checkNeeded":false}',
+      '{"dialogue":"Back again so soon?"}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
+      fixedRng(0.5)
+    )
+
+    expect(result.narrationText).toBe('')
+    expect(result.npcReactions[0]?.text).toBe('Back again so soon?')
+    expect(provider.calls).toHaveLength(2)
+    expect(provider.calls[0]?.prompt).not.toContain('routingPlan')
+  })
+
+  it('defers a first interaction with an NPC to LLM routing (starvation guard)', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [npc.id] }),
+      '{"dialogue":"Welcome, stranger."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
+      fixedRng(0.5)
+    )
+
+    expect(result.npcReactions[0]?.text).toBe('Welcome, stranger.')
+    expect(provider.calls[0]?.prompt).toContain('routingPlan')
+  })
+})
+
+describe('resolvePlayerTurn: composite turns fall through to LLM routing (040.3)', () => {
+  it('keeps merged LLM routing for an action + check + NPC turn', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Bandit',
+      role: 'enemy',
+      disposition: 'hostile'
+    })
+    appendNpcMemory(db, { npcId: npc.id, content: 'Saw Kael on the road.', tags: [] })
+    const provider = createScriptedProvider([
+      mergedTurn(
+        { checkNeeded: true, ability: 'body', dc: 10, proficient: false },
+        { kind: 'playerActionExpression', actionDescription: 'Kael draws his sword and squares up.' },
+        { kind: 'dmNarration' },
+        { kind: 'npcResponse', npcIds: [npc.id] }
+      ),
+      '{"narrationText":"Steel rings out; the bandit hesitates."}',
+      '{"dialogue":"Easy now, no need for blood."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      {
+        campaignId: campaign.id,
+        characterId: player.id,
+        playerInput: 'I draw my sword and warn the bandit to stand down'
+      },
+      fixedRng(0.5)
+    )
+
+    // Fell through to the merged LLM call — its plan (including the NPC beat) executed.
+    expect(provider.calls[0]?.prompt).toContain('routingPlan')
+    expect(result.playerActionText).toBe('Kael draws his sword and squares up.')
+    expect(result.check).toBeDefined()
+    expect(result.npcReactions[0]?.text).toBe('Easy now, no need for blood.')
   })
 })
 
