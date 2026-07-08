@@ -56,8 +56,9 @@ describe('character background integration onboarding handoff', () => {
       campaignId: campaign.id,
       characterId: player.id
     })
-    expect(provider.calls[0]?.prompt).toContain('Soldier')
-    expect(provider.calls[0]?.prompt).toContain('You served in an army')
-    expect(provider.calls[0]?.prompt).toContain('Years on the northern border.')
+    // Static identity/background context moved to systemPrompt (ticket 040.10)
+    expect(provider.calls[0]?.context?.systemPrompt).toContain('Soldier')
+    expect(provider.calls[0]?.context?.systemPrompt).toContain('You served in an army')
+    expect(provider.calls[0]?.context?.systemPrompt).toContain('Years on the northern border.')
   })
 })

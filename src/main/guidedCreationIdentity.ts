@@ -132,7 +132,10 @@ export function persistIdentityInterviewTurn(
 ): GuidedCreationSendMessageResult {
   const { input, characterId, currentFoundations, agentResult } = turn
   const merged = mergeFoundationStatus(currentFoundations, agentResult.foundations)
-  const foundationsComplete = allFoundationsComplete(merged) || agentResult.allFoundationsComplete
+  // The model's allFoundationsComplete flag is advisory only: the phase never
+  // advances unless all four foundations are locked with non-empty summaries,
+  // so the identity_* columns cannot end up null after phase completion.
+  const foundationsComplete = allFoundationsComplete(merged)
 
   db.transaction(() => {
     updateIdentityFoundationSummaries(db, characterId, summariesFromStatus(merged))

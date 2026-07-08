@@ -6,7 +6,6 @@ import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from '../main/turnIpc'
 import {
   GOBLIN_LOOT_RESPONSE,
-  NPC_REACTION,
   attackRng,
   initiativeRng,
   seedCombatSmokeCampaign
@@ -15,10 +14,11 @@ import {
 describe('combat encounter smoke', () => {
   it('resolves a full encounter with initiative, hit, miss, and end', async () => {
     const { db, campaign, player, goblin } = seedCombatSmokeCampaign()
+    // The goblin's catch-up turn uses deterministic template flavor (040.6),
+    // so no NPC reaction response is scripted between the two attack intents.
     const provider = createScriptedProvider([
       '{"checkNeeded":false,"combatIntent":"startEncounter"}',
       '{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"' + goblin.id + '"}',
-      NPC_REACTION,
       '{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"' + goblin.id + '"}',
       '{"outcome":"surrender","narrationText":"The goblin drops its weapon and raises its hands."}',
       '{"narrationText":"You gain insight from the fight.","xpAmount":40}',
@@ -35,6 +35,8 @@ describe('combat encounter smoke', () => {
     const events = listEventsByCampaign(db, campaign.id)
     expect(events.some((event) => event.type === 'combat_started')).toBe(true)
     expect(events.some((event) => event.type === 'combat_attack')).toBe(true)
+    // exactly the 3 intent calls — zero NPC/party catch-up flavor calls (040.6)
+    expect(provider.calls).toHaveLength(3)
   })
 
   it('preserves encounter state across reload', async () => {

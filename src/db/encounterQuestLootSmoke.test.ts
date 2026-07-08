@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { createTestDb } from './testUtils'
 import { createCampaign } from './repositories/campaigns'
 import { createCharacter } from './repositories/characters'
@@ -9,18 +9,23 @@ import { listEventsByCampaign } from './repositories/events'
 import { createStoryThread } from './repositories/storyThreads'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { runEncounterLootPass, runQuestLootPass } from '../main/lootPipeline'
-import {
-  BANDIT_LOOT_RESPONSE,
-  QUEST_LOOT_RESPONSE,
-  WOLF_LOOT_RESPONSE,
-  seedBanditLootEncounter,
-  seedWolfLootEncounter
-} from './encounterQuestLootSmokeFixtures'
+import { seedBanditLootEncounter, seedWolfLootEncounter } from './encounterQuestLootSmokeFixtures'
+
+const originalEnrichment = process.env['ENRICH_REWARD_NARRATION']
+
+afterEach(() => {
+  if (originalEnrichment === undefined) {
+    delete process.env['ENRICH_REWARD_NARRATION']
+  } else {
+    process.env['ENRICH_REWARD_NARRATION'] = originalEnrichment
+  }
+})
 
 describe('wolf encounter loot smoke', () => {
-  it('grants only misc — no weapon or magicItem in inventory', async () => {
+  it('grants only misc with zero LLM calls — no weapon or magicItem in inventory', async () => {
+    delete process.env['ENRICH_REWARD_NARRATION']
     const { db, campaign, region, player, encounter } = seedWolfLootEncounter()
-    const provider = createScriptedProvider([WOLF_LOOT_RESPONSE])
+    const provider = createScriptedProvider([])
     const loot = await runEncounterLootPass({
       db,
       provider,
@@ -29,6 +34,7 @@ describe('wolf encounter loot smoke', () => {
       playerCharacterId: player.id,
       regionId: region.id
     })
+    expect(provider.calls).toHaveLength(0)
     expect(loot?.lootGrants?.length).toBeGreaterThan(0)
     for (const row of listCharacterItems(db, player.id)) {
       const item = getCatalogItemById(db, row.itemId)!
@@ -38,8 +44,9 @@ describe('wolf encounter loot smoke', () => {
   })
 })
 
-describe('wolf loot validation smoke', () => {
+describe('wolf loot validation smoke (enrichment on)', () => {
   it('rejects agent-proposed greatsword at validation layer', async () => {
+    process.env['ENRICH_REWARD_NARRATION'] = 'true'
     const { db, campaign, region, player, encounter } = seedWolfLootEncounter()
     const badResponse = JSON.stringify({
       narrationText: 'A sword falls from the wolf.',
@@ -78,9 +85,10 @@ describe('wolf loot validation smoke', () => {
 })
 
 describe('bandit encounter loot smoke', () => {
-  it('grants at least one item within humanoid policy', async () => {
+  it('grants at least one item within humanoid policy with zero LLM calls', async () => {
+    delete process.env['ENRICH_REWARD_NARRATION']
     const { db, campaign, region, player, encounter } = seedBanditLootEncounter()
-    const provider = createScriptedProvider([BANDIT_LOOT_RESPONSE])
+    const provider = createScriptedProvider([])
     const loot = await runEncounterLootPass({
       db,
       provider,
@@ -89,18 +97,23 @@ describe('bandit encounter loot smoke', () => {
       playerCharacterId: player.id,
       regionId: region.id
     })
+    expect(provider.calls).toHaveLength(0)
     expect(loot?.lootGrants?.length).toBeGreaterThanOrEqual(1)
     const inventory = listCharacterItems(db, player.id)
-    const item = getCatalogItemById(db, inventory[0]!.itemId)!
-    expect(['weapon', 'misc', 'armor', 'potion']).toContain(item.itemType)
-    expect(['common', 'uncommon']).toContain(item.rarity)
+    expect(inventory.length).toBeGreaterThanOrEqual(1)
+    for (const row of inventory) {
+      const item = getCatalogItemById(db, row.itemId)!
+      expect(['weapon', 'misc', 'armor', 'potion']).toContain(item.itemType)
+      expect(['common', 'uncommon']).toContain(item.rarity)
+    }
   })
 
   it('appends loot_resolved with machine-readable payload', async () => {
+    delete process.env['ENRICH_REWARD_NARRATION']
     const { db, campaign, region, player, encounter } = seedBanditLootEncounter()
     await runEncounterLootPass({
       db,
-      provider: createScriptedProvider([BANDIT_LOOT_RESPONSE]),
+      provider: createScriptedProvider([]),
       encounter,
       campaignId: campaign.id,
       playerCharacterId: player.id,
@@ -115,7 +128,8 @@ describe('bandit encounter loot smoke', () => {
 })
 
 describe('quest completion loot smoke', () => {
-  it('grants within minor quest policy ceiling', async () => {
+  it('grants within minor quest policy ceiling with zero LLM calls', async () => {
+    delete process.env['ENRICH_REWARD_NARRATION']
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Quest', premisePrompt: 'errand', deathMode: 'standard' })
     const region = createRegion(db, { campaignId: campaign.id, name: 'Village', description: 'Quiet hamlet' })
@@ -132,18 +146,20 @@ describe('quest completion loot smoke', () => {
       state: 'completed',
       summary: 'Deliver grain to the miller.'
     })
+    const provider = createScriptedProvider([])
     const loot = await runQuestLootPass({
       db,
-      provider: createScriptedProvider([QUEST_LOOT_RESPONSE]),
+      provider,
       campaignId: campaign.id,
       threadId: thread.id,
       regionId: region.id,
       playerCharacterId: player.id,
       playerLevel: player.level
     })
+    expect(provider.calls).toHaveLength(0)
+    expect(loot?.lootGrants).toHaveLength(1)
     const item = getCatalogItemById(db, loot!.lootGrants![0]!.itemId)!
-    expect(item.itemType).toBe('misc')
+    expect(['misc', 'potion']).toContain(item.itemType)
     expect(item.rarity).toBe('common')
-    expect(item.mechanicalProperties.kind).toBe('misc')
   })
 })

@@ -2,15 +2,20 @@ import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import {
+  evaluateYieldRules,
+  fallbackYieldOutcome,
+  permittedYieldOutcomes,
+  yieldNarrationTemplate
+} from './yieldRules'
+import {
   parseYieldReviewResult,
-  type NpcYieldReviewOutcome,
   type YieldReviewInput,
   type YieldReviewResult
 } from '../shared/npcCombat/types'
 import type { NpcYieldOutcome } from '../shared/combat/types'
 
 function buildYieldReviewPrompt(input: YieldReviewInput): string {
-  const allowedList = [...input.allowedOutcomes, 'fight_on'].join('|')
+  const allowedList = permittedYieldOutcomes(input).join('|')
   return [
     `NPC: ${input.npcName} (${input.npcRole})`,
     `Alignment: ${input.alignment ?? 'unknown'}`,
@@ -36,33 +41,32 @@ function buildYieldReviewPrompt(input: YieldReviewInput): string {
   ].join('\n')
 }
 
-function defaultYieldOutcome(input: YieldReviewInput): NpcYieldReviewOutcome {
-  if (input.lethality === 'non_lethal') {
-    return 'incapacitated'
-  }
-  if (input.combatTier === 'villager') {
-    return 'surrender'
-  }
-  return 'incapacitated'
-}
-
+/**
+ * 040.8: rules-first. The pure decision table in `yieldRules.ts` decides most
+ * yields with zero LLM calls; the LLM is consulted only when the table returns
+ * `ambiguous` (veteran-tier judgment calls). LLM output is clamped to
+ * `permittedYieldOutcomes`, so the hard invariants (no `slain` under non-lethal
+ * intent or offered mercy, no `surrender` for non-speakers, outcome within
+ * `allowedOutcomes` ∪ `fight_on`) hold on every path.
+ */
 export async function proposeYieldOutcome(
   provider: Provider,
   input: YieldReviewInput
 ): Promise<YieldReviewResult> {
-  const allowed: readonly NpcYieldReviewOutcome[] = [...input.allowedOutcomes, 'fight_on']
+  const decision = evaluateYieldRules(input)
+  if (decision.kind === 'outcome') {
+    return { outcome: decision.outcome, narrationText: decision.narrationText }
+  }
+  const permitted = permittedYieldOutcomes(input)
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(buildYieldReviewPrompt(input))
-    const parsed = parseYieldReviewResult(tryParseJson(raw), allowed)
+    const parsed = parseYieldReviewResult(tryParseJson(raw), permitted)
     if (parsed) {
       return parsed
     }
   }
-  const outcome = defaultYieldOutcome(input)
-  return {
-    outcome,
-    narrationText: `${input.npcName} ${outcome === 'surrender' ? 'drops their weapon and raises their hands' : 'collapses unconscious'}.`
-  }
+  const outcome = fallbackYieldOutcome(input)
+  return { outcome, narrationText: yieldNarrationTemplate(input.npcName, outcome) }
 }
 
 export function buildYieldReviewInput(params: {

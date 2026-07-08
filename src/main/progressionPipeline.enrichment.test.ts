@@ -29,7 +29,7 @@ function makeEncounter(campaignId: string, npcId: string, playerId: string): Com
 }
 
 describe('progression pipeline enrichment', () => {
-  it('runs loot after XP in encounter enrichment', async () => {
+  it('runs loot after XP in encounter enrichment with zero LLM calls by default', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'T', premisePrompt: 't', deathMode: 'standard' })
     const region = createRegion(db, { campaignId: campaign.id, name: 'R', description: 'd' })
@@ -48,14 +48,7 @@ describe('progression pipeline enrichment', () => {
       disposition: 'hostile'
     })
     setNpcEncounterOutcome(db, bandit.id, 'slain')
-    const provider = createScriptedProvider([
-      JSON.stringify({ narrationText: 'XP beat.', xpAmount: 40 }),
-      JSON.stringify({
-        narrationText: 'Loot beat.',
-        itemGrants: [{ proposeNew: { name: 'Coin', description: 'Coins.', itemType: 'misc', rarityTier: 'common' } }],
-        nothingToFind: false
-      })
-    ])
+    const provider = createScriptedProvider([])
     const turn = await enrichTurnWithEncounterRewards({
       db,
       provider,
@@ -65,8 +58,11 @@ describe('progression pipeline enrichment', () => {
       regionId: region.id,
       base: { narrationText: 'Fight over.', npcReactions: [], partyMemberActions: [], pendingAlignmentShift: null }
     })
-    expect(turn.xpNarration).toContain('XP')
-    expect(turn.lootNarration).toContain('Loot')
+    expect(provider.calls).toHaveLength(0)
+    expect(turn.xpAmount).toBeGreaterThan(0)
+    expect(turn.xpNarration?.length).toBeGreaterThan(0)
+    expect(turn.lootGrants?.length).toBeGreaterThan(0)
+    expect(turn.lootNarration).toContain(turn.lootGrants![0]!.itemName)
     const events = listEventsByCampaign(db, campaign.id)
     const xpIndex = events.findIndex((e) => e.type === 'xp_awarded')
     const lootIndex = events.findIndex((e) => e.type === 'loot_resolved')

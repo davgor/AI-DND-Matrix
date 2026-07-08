@@ -5,11 +5,13 @@ import { getCharacterById, updateCharacter, type Character } from '../db/reposit
 import { awardXP } from '../engine/xp'
 import { applyLevelUpHitDice, hashStringSeed, type Archetype } from '../engine/hp'
 import type { CharacterHpStats } from '../shared/hp/types'
-import type { XPContext } from '../shared/progression/types'
+import type { XPContext, XPBudget } from '../shared/progression/types'
 import type { XpPassResult } from './progressionPipeline'
 import type { Provider } from '../agents/providers/types'
-import { resolveXpAward } from '../agents/xp'
+import { resolveXpAward, type XpAgentResponse } from '../agents/xp'
 import { clampXPProposal, resolveXPBudget, shouldSkipXpPass } from '../engine/xpBudget'
+import { isRewardNarrationEnrichmentEnabled } from './rewardEnrichment'
+import { xpNarrationTemplate } from './rewardNarrationTemplates'
 import { queueLevelUpCeremonies } from './progressionLevelUpQueue'
 
 function persistCharacterProgress(
@@ -71,6 +73,24 @@ function recordXpAward(
   })
 }
 
+/**
+ * Default zero-LLM path (040.7): the persisted amount is always the engine
+ * `budget.suggested`, so `xp_awarded.clamped` is always false on this path —
+ * an accepted, intended behavior change, not a bug. Setting
+ * `ENRICH_REWARD_NARRATION=true` restores the prior LLM-proposed amounts and
+ * flavor narration.
+ */
+async function resolveXpOutcome(
+  provider: Provider,
+  context: XPContext,
+  budget: XPBudget
+): Promise<XpAgentResponse> {
+  if (isRewardNarrationEnrichmentEnabled()) {
+    return resolveXpAward(provider, context, budget)
+  }
+  return { narrationText: xpNarrationTemplate(context.source), xpAmount: budget.suggested }
+}
+
 export async function executeXpPass(input: {
   db: Database.Database
   provider: Provider
@@ -87,7 +107,7 @@ export async function executeXpPass(input: {
     return null
   }
 
-  const agent = await resolveXpAward(provider, context, budget)
+  const agent = await resolveXpOutcome(provider, context, budget)
   const clamped = clampXPProposal(agent.xpAmount, budget)
   const award = awardXP({ xp: character.xp, level: character.level }, clamped.amount)
   const levelPatch = award.leveledUp ? applyLevelUpHp(character, award.levelsGained) : null

@@ -33,58 +33,79 @@ const fanaticInput: YieldReviewInput = {
   allowedOutcomes: ['surrender', 'incapacitated']
 }
 
-describe('proposeYieldOutcome: farmer surrenders', () => {
-  it('returns surrender for mundane farmer at threshold', async () => {
-    const provider = createScriptedProvider([
-      JSON.stringify({ outcome: 'surrender', narrationText: 'Elara drops her pitchfork and weeps.' })
-    ])
+const veteranInput: YieldReviewInput = {
+  npcName: 'Old Bren',
+  npcRole: 'retired mercenary',
+  alignment: 'true_neutral',
+  temperament: 'neutral',
+  canSpeak: true,
+  combatTier: 'retired_adventurer',
+  backstory: 'Twenty campaigns behind him; he knows when a fight is lost — and when it is not.',
+  hp: 2,
+  maxHp: 20,
+  lethality: 'lethal',
+  playerOffersMercy: false,
+  allowedOutcomes: ['surrender', 'flee', 'incapacitated']
+}
+
+describe('proposeYieldOutcome: rules-first, no LLM for clear-cut cases', () => {
+  it('villager farmer surrenders with zero provider calls', async () => {
+    const provider = createScriptedProvider([])
     const result = await proposeYieldOutcome(provider, farmerInput)
     expect(result.outcome).toBe('surrender')
-    expect(result.narrationText).toContain('pitchfork')
-    expect(provider.calls).toHaveLength(1)
+    expect(result.narrationText).toContain('Elara')
+    expect(provider.calls).toHaveLength(0)
   })
 
-  it('falls back to default when agent returns invalid JSON', async () => {
-    const provider = createScriptedProvider(['not json', 'still not json', 'nope'])
-    const result = await proposeYieldOutcome(provider, farmerInput)
-    expect(['surrender', 'incapacitated', 'flee']).toContain(result.outcome)
-  })
-})
-
-describe('proposeYieldOutcome: fanatic may fight_on', () => {
-  it('accepts fight_on for an aggressive fanatic', async () => {
-    const provider = createScriptedProvider([
-      JSON.stringify({ outcome: 'fight_on', narrationText: 'Malachar snarls and swings wildly.' })
-    ])
+  it('aggressive fanatic fights on with zero provider calls', async () => {
+    const provider = createScriptedProvider([])
     const result = await proposeYieldOutcome(provider, fanaticInput)
     expect(result.outcome).toBe('fight_on')
+    expect(provider.calls).toHaveLength(0)
   })
-})
 
-describe('proposeYieldOutcome: non-lethal never slain', () => {
-  it('returns incapacitated when non-lethal and agent fails schema', async () => {
-    const nonLethalInput: YieldReviewInput = {
+  it('non-lethal attack incapacitates with zero provider calls', async () => {
+    const provider = createScriptedProvider([])
+    const result = await proposeYieldOutcome(provider, {
       ...farmerInput,
       lethality: 'non_lethal',
       allowedOutcomes: ['incapacitated']
-    }
-    const provider = createScriptedProvider(['bad', 'bad', 'bad'])
-    const result = await proposeYieldOutcome(provider, nonLethalInput)
+    })
     expect(result.outcome).toBe('incapacitated')
     expect(result.outcome).not.toBe('slain')
+    expect(provider.calls).toHaveLength(0)
+  })
+})
+
+describe('proposeYieldOutcome: ambiguous veteran defers to the LLM', () => {
+  it('calls the provider once and uses its outcome', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({ outcome: 'surrender', narrationText: 'Bren plants his sword in the dirt.' })
+    ])
+    const result = await proposeYieldOutcome(provider, veteranInput)
+    expect(result.outcome).toBe('surrender')
+    expect(result.narrationText).toContain('sword')
+    expect(provider.calls).toHaveLength(1)
   })
 
-  it('rejects slain from agent when lethality is non_lethal', async () => {
-    const nonLethalInput: YieldReviewInput = {
-      ...farmerInput,
-      lethality: 'non_lethal',
-      allowedOutcomes: ['incapacitated', 'surrender']
-    }
+  it('falls back to a rules outcome when the agent fails schema on all attempts', async () => {
+    const provider = createScriptedProvider(['not json', 'still not json', 'nope'])
+    const result = await proposeYieldOutcome(provider, veteranInput)
+    expect(['surrender', 'incapacitated', 'flee']).toContain(result.outcome)
+    expect(result.narrationText.length).toBeGreaterThan(0)
+    expect(provider.calls).toHaveLength(3)
+  })
+
+  it('rejects slain from the agent when mercy is offered', async () => {
     const provider = createScriptedProvider([
-      JSON.stringify({ outcome: 'slain', narrationText: 'She dies.' }),
-      JSON.stringify({ outcome: 'incapacitated', narrationText: 'She slumps unconscious.' })
+      JSON.stringify({ outcome: 'slain', narrationText: 'He dies.' }),
+      JSON.stringify({ outcome: 'incapacitated', narrationText: 'He slumps unconscious.' })
     ])
-    const result = await proposeYieldOutcome(provider, nonLethalInput)
+    const result = await proposeYieldOutcome(provider, {
+      ...veteranInput,
+      playerOffersMercy: true,
+      allowedOutcomes: ['slain', 'incapacitated', 'surrender']
+    })
     expect(result.outcome).toBe('incapacitated')
   })
 })

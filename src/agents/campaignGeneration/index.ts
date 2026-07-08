@@ -27,6 +27,7 @@ import {
   buildWorldGenerationPrompt
 } from './prompts'
 import { persistGeneratedCampaign } from './persist'
+import { mapWithConcurrency } from './concurrency'
 import { buildAvailableRaceOptions } from '../raceLore'
 import type { AvailableRaceOption } from '../../shared/raceSelection/types'
 import type { CreateCampaignProgressCallback } from '../../shared/campaignCreate/types'
@@ -43,6 +44,7 @@ import type {
   AdditionalRegionResult,
   CampaignGenerationResult,
   CampaignSetupInput,
+  GeneratedNpc,
   GeneratedRegion,
   GeneratedSingleNpcResult,
   GeneratedStoryThread,
@@ -140,6 +142,111 @@ export async function generateCampaignStoryThread(
   return storyThread
 }
 
+/** In-flight cap for parallel shortfall single-NPC requests (rate-limit friendly). */
+const SHORTFALL_FILL_CONCURRENCY = 4
+
+interface ShortfallFillContext {
+  provider: Provider
+  premisePrompt: string
+  worldContext: WorldContext
+  availableRaces: AvailableRaceOption[]
+}
+
+/**
+ * Generates one shortfall NPC for `region`, or `undefined` when generation
+ * fails after retries.
+ *
+ * Failure semantics (deliberate 040.11 change): a failed single NPC no
+ * longer discards the whole repair. Previously `fillCampaignNpcShortfall`
+ * returned `undefined` on any single failure, throwing away every
+ * successfully generated NPC; now the irrecoverable slot is skipped and all
+ * successes are kept, so the fill can come back short of the target count.
+ */
+async function generateShortfallNpc(
+  ctx: ShortfallFillContext,
+  region: GeneratedRegion,
+  existingNpcNames: string[]
+): Promise<GeneratedNpc | undefined> {
+  try {
+    const generated = await generateSingleNpc(ctx.provider, {
+      campaignPremise: ctx.premisePrompt,
+      regionName: region.name,
+      regionDescription: region.description,
+      existingNpcNames,
+      seedPrompt: `Create another distinct local character in ${region.name}.`,
+      availableRaces: ctx.availableRaces,
+      worldContext: ctx.worldContext
+    })
+    return generated.npc
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Second-pass collision resolution: concurrent candidates are generated
+ * against the pre-batch name list and cannot see each other's in-flight
+ * names, so two candidates in one batch may collide. A candidate whose name
+ * collides with an already-accepted name is regenerated serially with the
+ * up-to-date name list (`generateSingleNpc` itself rejects colliding names
+ * and retries). An irrecoverable slot resolves to `undefined` and is skipped.
+ */
+async function resolveShortfallCollision(
+  ctx: ShortfallFillContext,
+  region: GeneratedRegion,
+  candidate: GeneratedNpc | undefined,
+  acceptedNames: string[]
+): Promise<GeneratedNpc | undefined> {
+  if (!candidate) {
+    return undefined
+  }
+  if (!npcNameCollides(candidate.name, acceptedNames)) {
+    return candidate
+  }
+  return generateShortfallNpc(ctx, region, acceptedNames)
+}
+
+async function fillRegionNpcShortfall(
+  ctx: ShortfallFillContext,
+  region: GeneratedRegion,
+  shortfall: number,
+  existingNpcNames: string[]
+): Promise<GeneratedNpc[]> {
+  // Phase 1: generate all candidates concurrently against the pre-batch names.
+  const slots = Array.from({ length: shortfall }, (_, index) => index)
+  const candidates = await mapWithConcurrency(slots, SHORTFALL_FILL_CONCURRENCY, () =>
+    generateShortfallNpc(ctx, region, existingNpcNames)
+  )
+  // Phase 2: serial de-duplication — regenerate any name collisions.
+  const accepted: GeneratedNpc[] = []
+  const names = [...existingNpcNames]
+  for (const candidate of candidates) {
+    const resolved = await resolveShortfallCollision(ctx, region, candidate, names)
+    if (resolved) {
+      accepted.push(resolved)
+      names.push(resolved.name)
+    }
+  }
+  return accepted
+}
+
+/**
+ * Tops up per-region NPC shortfalls with parallel single-NPC generation
+ * (capped at SHORTFALL_FILL_CONCURRENCY in-flight requests per region batch).
+ *
+ * Collision strategy: generate first, then detect and resolve duplicate
+ * names in a serial second pass (see `resolveShortfallCollision`), because
+ * concurrent requests cannot see each other's in-flight names.
+ *
+ * Failure semantics: partial success — failed slots are skipped, successes
+ * are kept (see `generateShortfallNpc`), so the result may still be short of
+ * `counts.npcsPerRegion`; callers re-validate with `isValidGenerationResult`.
+ *
+ * Parallelism is confined to this pre-persist, in-memory fill. Persistence
+ * (`persistCampaignNpcsFromGeneration` / `resolveOrRealizeCampaignRace`)
+ * stays serial — the latter is check-then-insert against
+ * UNIQUE(campaign_id, race_key) and would throw under concurrent same-race NPCs.
+ */
 async function fillCampaignNpcShortfall(input: {
   provider: Provider
   premisePrompt: string
@@ -147,32 +254,24 @@ async function fillCampaignNpcShortfall(input: {
   partial: CampaignGenerationResult
   counts: GenerationCounts
   availableRaces: AvailableRaceOption[]
-}): Promise<CampaignGenerationResult | undefined> {
+}): Promise<CampaignGenerationResult> {
   const { provider, premisePrompt, world, partial, counts, availableRaces } = input
+  const ctx: ShortfallFillContext = { provider, premisePrompt, worldContext: world, availableRaces }
   const npcs = [...partial.npcs]
-  const allNames = (): string[] => npcs.map((npc) => npc.name)
-  const worldContext: WorldContext = world
 
   for (const region of partial.regions) {
     const inRegion = npcs.filter((npc) => npc.regionName === region.name).length
-    let shortfall = counts.npcsPerRegion - inRegion
-    while (shortfall > 0) {
-      try {
-        const generated = await generateSingleNpc(provider, {
-          campaignPremise: premisePrompt,
-          regionName: region.name,
-          regionDescription: region.description,
-          existingNpcNames: allNames(),
-          seedPrompt: `Create another distinct local character in ${region.name}.`,
-          availableRaces,
-          worldContext
-        })
-        npcs.push(generated.npc)
-        shortfall -= 1
-      } catch {
-        return undefined
-      }
+    const shortfall = counts.npcsPerRegion - inRegion
+    if (shortfall <= 0) {
+      continue
     }
+    const filled = await fillRegionNpcShortfall(
+      ctx,
+      region,
+      shortfall,
+      npcs.map((npc) => npc.name)
+    )
+    npcs.push(...filled)
   }
 
   return { ...partial, npcs }
@@ -189,7 +288,9 @@ async function repairNpcShortfall(input: {
   if (counts.regionCount === 0 || counts.npcsPerRegion === 0 || !needsNpcTopUp(normalized, counts)) {
     return normalized
   }
-  const repaired = await fillCampaignNpcShortfall({
+  // Partial fills are kept as-is (040.11): the repaired result is at worst
+  // equal to `normalized`, never smaller.
+  return fillCampaignNpcShortfall({
     provider,
     premisePrompt,
     world: normalized.world,
@@ -197,7 +298,6 @@ async function repairNpcShortfall(input: {
     counts,
     availableRaces
   })
-  return repaired ?? normalized
 }
 
 async function finalizeGenerationResult(args: {
@@ -219,7 +319,7 @@ async function finalizeGenerationResult(args: {
     counts,
     availableRaces
   })
-  if (repaired && isValidGenerationResult(repaired, counts)) {
+  if (isValidGenerationResult(repaired, counts)) {
     return repaired
   }
   return normalized

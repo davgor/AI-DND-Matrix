@@ -4,8 +4,6 @@ import { createRegion } from './repositories/regions'
 import { createCharacter } from './repositories/characters'
 import { createNpc, setNpcCombatStats } from './repositories/npcs'
 
-export const NPC_REACTION = '{"dialogue":"The goblin snarls.","attack":true}'
-
 export const GOBLIN_LOOT_RESPONSE = JSON.stringify({
   narrationText: 'You find a few coins on the goblin.',
   itemGrants: [

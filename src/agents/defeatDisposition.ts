@@ -4,6 +4,7 @@ import type { Character } from '../db/repositories/characters'
 import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import { evaluateDefeatRules } from './defeatRules'
 import {
   parseDefeatDispositionProposal,
   type DefeatDisposition,
@@ -36,6 +37,13 @@ function buildDefeatPrompt(input: {
   ].join('\n')
 }
 
+/**
+ * 040.8: rules-first. Non-speaking victors keep their pre-existing LLM skip.
+ * Speaking victors are decided by the pure alignment + backstory-keyword +
+ * death-mode table in `defeatRules.ts` (which also templates `locationTag`
+ * for imprison/ransom continuity); the LLM is consulted only when the table
+ * returns `ambiguous`.
+ */
 export async function proposeDefeatDisposition(
   provider: Provider,
   input: {
@@ -50,6 +58,16 @@ export async function proposeDefeatDisposition(
       disposition: NON_SPEAKING_DEFEAT_DISPOSITION,
       narrationText: `${input.victor.name} leaves you unconscious in the dust.`
     }
+  }
+  const decision = evaluateDefeatRules({
+    victorName: input.victor.name,
+    role: input.victor.role,
+    alignment: input.victor.alignment,
+    backstory: input.victor.backstory,
+    deathMode: input.deathMode
+  })
+  if (decision.kind === 'proposal') {
+    return decision.proposal
   }
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(buildDefeatPrompt(input))

@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { AbilityScores, RandomFn } from '../engine/abilities'
 import { abilityModifier } from '../engine/abilities'
-import { resolveNpcAttack } from '../engine/npcAttack'
+import { resolveNpcAttack, type NpcAttackResolution } from '../engine/npcAttack'
 import { resolvePlayerAttackAgainstNpc } from '../engine/playerAttack'
 import { checkYieldEligibility } from '../engine/yieldEligibility'
 import { proficiencyBonus } from '../engine/proficiency'
@@ -32,6 +32,11 @@ import type { CombatAttackResult, NpcYieldOutcome } from '../shared/combat/types
 import { MAX_COMBAT_CATCHUP_TURNS } from '../shared/combat/types'
 import type { AttackLethality } from '../shared/npcCombat/types'
 import { applyDamageAndStartDyingIfNeeded } from './dyingResolution'
+import {
+  buildNpcCombatFlavor,
+  buildPartyMemberCombatFlavor,
+  combatLlmFlavorEnabled
+} from './combatFlavorTemplates'
 import type { TurnResult } from './turnIpc'
 import { CombatTurnError } from './combatErrors'
 
@@ -176,6 +181,28 @@ export async function resolveYieldReview(
   return {}
 }
 
+function appendNpcCombatAttackEvent(
+  db: Database.Database,
+  input: { campaignId: string; npc: Npc; player: Character; attack: NpcAttackResolution }
+): void {
+  const { campaignId, npc, player, attack } = input
+  appendEvent(db, {
+    campaignId,
+    type: 'combat_attack',
+    payload: {
+      attacker: { kind: 'npc', id: npc.id },
+      target: { kind: 'player', id: player.id },
+      hit: attack.hit,
+      crit: attack.crit,
+      attackRoll: attack.attackRoll,
+      attackTotal: attack.attackTotal,
+      damage: attack.damage,
+      targetHpAfter: getCharacterById(db, player.id)?.hp ?? 0,
+      targetDefeated: false
+    }
+  })
+}
+
 async function resolveNpcCombatTurn(input: CatchUpInput & { npcId: string }): Promise<
   TurnResult['npcReactions'][number] | undefined
 > {
@@ -184,7 +211,14 @@ async function resolveNpcCombatTurn(input: CatchUpInput & { npcId: string }): Pr
   if (!npc || !npcHasCombatStats(npc)) {
     return undefined
   }
-  const reaction = await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'Combat turn')
+  // Flavor only — hit/miss/damage are engine-resolved below. Default is a
+  // deterministic template (zero LLM calls per catch-up turn, 040.6); set
+  // COMBAT_LLM_FLAVOR=true to restore the LLM path for manual QA. The template
+  // must stay at this combat call site: the shared generateNpcReaction agent
+  // also serves the non-combat path, which persists NPC memories.
+  const llmReaction = combatLlmFlavorEnabled()
+    ? await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'Combat turn')
+    : undefined
   const { attackBonus, damageRoll } = resolveNpcAttackProfile(db, npc)
   const scores = (player.stats as { abilityScores?: AbilityScores }).abilityScores
   const attack = resolveNpcAttack({
@@ -203,22 +237,17 @@ async function resolveNpcCombatTurn(input: CatchUpInput & { npcId: string }): Pr
       }
     : { hit: false as const }
 
-  appendEvent(db, {
-    campaignId,
-    type: 'combat_attack',
-    payload: {
-      attacker: { kind: 'npc', id: npc.id },
-      target: { kind: 'player', id: player.id },
-      hit: attack.hit,
-      crit: attack.crit,
-      attackRoll: attack.attackRoll,
-      attackTotal: attack.attackTotal,
-      damage: attack.damage,
-      targetHpAfter: getCharacterById(db, player.id)?.hp ?? 0,
-      targetDefeated: false
-    }
-  })
+  appendNpcCombatAttackEvent(db, { campaignId, npc, player, attack })
 
+  const reaction =
+    llmReaction ??
+    buildNpcCombatFlavor({
+      npcName: npc.name,
+      temperament: npc.temperament,
+      disposition: npc.disposition,
+      canSpeak: npc.canSpeak,
+      hit: attack.hit
+    })
   return { npcId: npc.id, npcName: npc.name, text: reaction.text, reactionKind: reaction.reactionKind, attackResult }
 }
 
@@ -230,12 +259,16 @@ async function resolvePartyCombatTurn(
   if (!member) {
     return { characterId: memberId, name: 'Unknown', actionText: '' }
   }
-  const action = await decidePartyMemberAction(
-    provider,
-    member,
-    assemblePartyMemberContext(db, campaignId, member),
-    'Combat turn'
-  )
+  // Same template-by-default rule as NPC turns (040.6): party combat actions
+  // are flavor only, so skip decidePartyMemberAction unless the QA flag is set.
+  const action = combatLlmFlavorEnabled()
+    ? await decidePartyMemberAction(
+        provider,
+        member,
+        assemblePartyMemberContext(db, campaignId, member),
+        'Combat turn'
+      )
+    : { actionText: buildPartyMemberCombatFlavor(member.name) }
   appendEvent(db, {
     campaignId,
     type: 'party_member_action',

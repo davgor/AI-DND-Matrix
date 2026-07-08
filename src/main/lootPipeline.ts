@@ -1,14 +1,58 @@
 import type Database from 'better-sqlite3'
-import { resolveLoot } from '../agents/loot'
+import { resolveLoot, type LootAgentResponse } from '../agents/loot'
 import type { Provider } from '../agents/providers/types'
 import { resolveLootPolicy } from '../engine/lootPolicy'
-import { appendEvent } from '../db/repositories/events'
+import { appendEvent, listEventsByCampaign } from '../db/repositories/events'
 import type { CombatEncounter } from '../shared/combat/types'
-import type { LootContext, LootGrantAccepted, LootResolutionResult } from '../shared/loot/types'
+import type { CatalogItem } from '../shared/items/types'
+import type { LootContext, LootGrantAccepted, LootPolicy, LootResolutionResult } from '../shared/loot/types'
 import { assembleEncounterLootContext } from './encounterLootContext'
 import { assembleQuestLootContext } from './questLootContext'
 import { filterCatalogCandidatesForPolicy, validateAndPersistLootGrants } from './lootGrants'
+import { buildLootSeedKey, selectLootDeterministic } from './lootSelector'
+import { isRewardNarrationEnrichmentEnabled } from './rewardEnrichment'
+import { lootNarrationTemplate } from './rewardNarrationTemplates'
 import type { TurnResult } from './turnIpc'
+
+/** How many recent loot_resolved events feed the variety guard's recent-item set. */
+const RECENT_LOOT_EVENT_WINDOW = 5
+
+function collectRecentLootItemIds(db: Database.Database, campaignId: string): string[] {
+  const events = listEventsByCampaign(db, campaignId, {
+    type: 'loot_resolved',
+    limit: RECENT_LOOT_EVENT_WINDOW
+  })
+  return events.flatMap((event) => {
+    const ids = event.payload.acceptedItemIds
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : []
+  })
+}
+
+/**
+ * Default zero-LLM loot path (040.7): deterministic catalog selection with
+ * template narration. Accepted, intended behavior change: `proposeNew`
+ * homebrew catalog growth stops while enrichment is off — the selector only
+ * grants existing catalog items. `ENRICH_REWARD_NARRATION=true` restores the
+ * prior LLM selection (including proposeNew).
+ */
+function buildTemplateLootResponse(
+  db: Database.Database,
+  context: LootContext,
+  policy: LootPolicy,
+  candidates: CatalogItem[]
+): LootAgentResponse {
+  const selection = selectLootDeterministic({
+    candidates,
+    policy,
+    seedKey: buildLootSeedKey(context),
+    recentItemIds: collectRecentLootItemIds(db, context.campaignId)
+  })
+  return {
+    narrationText: lootNarrationTemplate(context.source, selection.map((item) => item.name)),
+    itemGrants: selection.map((item) => ({ catalogItemId: item.id })),
+    nothingToFind: selection.length === 0
+  }
+}
 
 export function shouldSkipQuestLoot(encounterLootRanThisTurn: boolean): boolean {
   return encounterLootRanThisTurn
@@ -31,7 +75,9 @@ async function executeLootPass(input: {
   }
 
   const candidates = filterCatalogCandidatesForPolicy(db, policy)
-  const agentResult = await resolveLoot(provider, context, policy, candidates)
+  const agentResult = isRewardNarrationEnrichmentEnabled()
+    ? await resolveLoot(provider, context, policy, candidates)
+    : buildTemplateLootResponse(db, context, policy, candidates)
   if (agentResult.nothingToFind && agentResult.itemGrants.length === 0) {
     appendLootResolvedEvent(db, {
       campaignId: context.campaignId,

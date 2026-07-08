@@ -6,8 +6,9 @@ import { createNpc } from '../db/repositories/npcs'
 import { createPlayerCharacter } from '../main/characterCreationIpc'
 import { createScriptedProvider } from './providers/mockHarness'
 import { buildDefeatPrompt, proposeDefeatDisposition } from './defeatDisposition'
+import type { Alignment } from '../shared/alignment/types'
 
-function seedVictor(backstory: string, alignment: 'lawful_good' | 'chaotic_good') {
+function seedVictor(input: { role: string; backstory: string; alignment: Alignment }) {
   const db = createTestDb()
   const campaign = createCampaign(db, {
     name: 'Test',
@@ -30,27 +31,23 @@ function seedVictor(backstory: string, alignment: 'lawful_good' | 'chaotic_good'
     campaignId: campaign.id,
     regionId: region.id,
     name: 'Mara',
-    role: 'guard captain',
+    role: input.role,
     disposition: 'hostile',
-    alignment,
-    backstory,
+    alignment: input.alignment,
+    backstory: input.backstory,
     canSpeak: true
   })
   return { db, campaign, player, victor }
 }
 
-describe('proposeDefeatDisposition lawful guard', () => {
-  it('maps guard captain backstory to imprison', async () => {
-    const { campaign, player, victor } = seedVictor(
-      'Mara led the town guard for twenty years before retiring.',
-      'lawful_good'
-    )
-    const provider = createScriptedProvider([
-      JSON.stringify({
-        disposition: 'imprison',
-        narrationText: 'Iron cuffs close around your wrists.'
-      })
-    ])
+describe('proposeDefeatDisposition rules-first: lawful guard', () => {
+  it('maps guard captain backstory to imprison with zero provider calls', async () => {
+    const { campaign, player, victor } = seedVictor({
+      role: 'guard captain',
+      backstory: 'Mara led the town guard for twenty years before retiring.',
+      alignment: 'lawful_good'
+    })
+    const provider = createScriptedProvider([])
     const proposal = await proposeDefeatDisposition(provider, {
       victor,
       player,
@@ -58,21 +55,20 @@ describe('proposeDefeatDisposition lawful guard', () => {
       encounterSummary: 'The guard captain prevailed.'
     })
     expect(proposal.disposition).toBe('imprison')
+    expect(proposal.locationTag).toBeDefined()
+    expect(proposal.narrationText).toContain('Mara')
+    expect(provider.calls).toHaveLength(0)
   })
 })
 
-describe('proposeDefeatDisposition reformed bandit', () => {
-  it('maps backstory to bury_out_back', async () => {
-    const { campaign, player, victor } = seedVictor(
-      'A former bandit who went straight after a decade on the road.',
-      'chaotic_good'
-    )
-    const provider = createScriptedProvider([
-      JSON.stringify({
-        disposition: 'bury_out_back',
-        narrationText: 'They drag you behind the stables and shovel cold earth over you.'
-      })
-    ])
+describe('proposeDefeatDisposition rules-first: reformed bandit', () => {
+  it('maps backstory to bury_out_back with zero provider calls', async () => {
+    const { campaign, player, victor } = seedVictor({
+      role: 'reformed bandit',
+      backstory: 'A former bandit who went straight after a decade on the road.',
+      alignment: 'chaotic_good'
+    })
+    const provider = createScriptedProvider([])
     const proposal = await proposeDefeatDisposition(provider, {
       victor,
       player,
@@ -80,13 +76,18 @@ describe('proposeDefeatDisposition reformed bandit', () => {
       encounterSummary: 'The reformed bandit won the brawl.'
     })
     expect(proposal.disposition).toBe('bury_out_back')
+    expect(provider.calls).toHaveLength(0)
   })
 })
 
 describe('proposeDefeatDisposition non-speaking victor', () => {
   it('skips agent call', async () => {
-    const { campaign, player, victor } = seedVictor('', 'true_neutral' as 'lawful_good')
-    const wolf = { ...victor, canSpeak: false, name: 'Wolf' }
+    const { campaign, player, victor } = seedVictor({
+      role: 'predator',
+      backstory: '',
+      alignment: 'true_neutral'
+    })
+    const wolf = { ...victor, canSpeak: false, name: 'Wolf', alignment: null }
     const provider = createScriptedProvider([])
     const proposal = await proposeDefeatDisposition(provider, {
       victor: wolf,
@@ -96,6 +97,49 @@ describe('proposeDefeatDisposition non-speaking victor', () => {
     })
     expect(proposal.disposition).toBe('leave_unconscious')
     expect(provider.calls).toHaveLength(0)
+  })
+})
+
+describe('proposeDefeatDisposition ambiguous victor defers to the LLM', () => {
+  it('calls the provider for an unmarked evil victor and uses its proposal', async () => {
+    const { campaign, player, victor } = seedVictor({
+      role: 'merchant',
+      backstory: 'A trader with cold eyes and colder ledgers.',
+      alignment: 'neutral_evil'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        disposition: 'ransom',
+        narrationText: 'She has you trussed up and priced.',
+        locationTag: 'the counting house cellar'
+      })
+    ])
+    const proposal = await proposeDefeatDisposition(provider, {
+      victor,
+      player,
+      deathMode: campaign.deathMode,
+      encounterSummary: 'The merchant hired muscle.'
+    })
+    expect(proposal.disposition).toBe('ransom')
+    expect(proposal.locationTag).toBe('the counting house cellar')
+    expect(provider.calls).toHaveLength(1)
+  })
+
+  it('falls back to leave_unconscious when the agent fails schema on all attempts', async () => {
+    const { campaign, player, victor } = seedVictor({
+      role: 'merchant',
+      backstory: 'A trader with cold eyes.',
+      alignment: 'neutral_evil'
+    })
+    const provider = createScriptedProvider(['bad', 'bad', 'bad'])
+    const proposal = await proposeDefeatDisposition(provider, {
+      victor,
+      player,
+      deathMode: campaign.deathMode,
+      encounterSummary: 'The merchant hired muscle.'
+    })
+    expect(proposal.disposition).toBe('leave_unconscious')
+    expect(provider.calls).toHaveLength(3)
   })
 })
 

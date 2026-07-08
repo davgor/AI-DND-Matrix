@@ -1,6 +1,22 @@
 # Encounter and quest loot
 
-Realistic loot resolves at two beat points — **encounter end** and **quest completion** — using engine-authoritative policy envelopes. Agents retrieve from catalog or propose flavor within bounds; grants persist through the existing item pipeline (epic 024).
+Realistic loot resolves at two beat points — **encounter end** and **quest completion** — using engine-authoritative policy envelopes. By default (epic 040.7) a **deterministic selector** picks grants from the policy-filtered catalog with template narration and **zero LLM calls**; with `ENRICH_REWARD_NARRATION=true` the loot agent retrieves from catalog or proposes flavor within bounds instead. Grants persist through the existing item pipeline (epic 024) on both paths.
+
+## Default deterministic path (040.7, zero-LLM)
+
+`selectLootDeterministic` (`src/main/lootSelector.ts`) replaces the LLM as the default item picker:
+
+- **Pick strategy:** seeded Fisher–Yates shuffle of the policy-filtered catalog candidates; the seed derives from campaign id + source + foe npc ids (or quest/thread id), so the same resolution is idempotent while different encounters vary.
+- **Grant count:** seeded pick in `[1, maxGrantCount]`, capped by candidate count; empty candidates → `nothingToFind`.
+- **Variety guard:** item ids from recent `loot_resolved` events are deprioritized so repeated encounters don't grant identical items.
+- **Narration:** template one-liner per source built from the granted item names (`src/main/rewardNarrationTemplates.ts`).
+
+Accepted behavior changes while enrichment is off (intended, not bugs):
+
+- Homebrew catalog growth via `proposeNew` stops — the selector only grants existing catalog items.
+- XP awards (epic 036) persist the engine `budget.suggested` amount, so `xp_awarded.clamped` is always false on the default path.
+
+Set `ENRICH_REWARD_NARRATION=true` in the environment (read by `src/main/rewardEnrichment.ts`) to restore the prior LLM behavior described below.
 
 ## Loot sources
 
@@ -64,7 +80,7 @@ When multiple buckets contribute, allowed types are the **intersection** of per-
 
 `listLootExemplarsForPolicy(policy)` returns flavor hints for the agent prompt. Exemplars are **suggestions only** — actual grants must use catalog retrieve or validated `proposeNew`.
 
-## Agent output
+## Agent output (enrichment path, `ENRICH_REWARD_NARRATION=true`)
 
 Dedicated `resolveLoot()` call (not per-turn `narrate()`):
 
