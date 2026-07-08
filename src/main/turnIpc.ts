@@ -34,6 +34,7 @@ import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damag
 import { resolveWeaponDamage } from '../engine/weaponDamage'
 import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
 import { resolveModificationTurn } from './modificationTurn'
+import { capSceneContextForPrompt } from './sceneContextCap'
 import { resolveCharacterMaxHp } from '../shared/hp/resolveMaxHp'
 import { proficiencyBonus } from '../engine/proficiency'
 import { resolveLongRest, resolveShortRest } from '../engine/rest'
@@ -408,19 +409,12 @@ async function resolveInactivePlayerActions(
   provider: Provider,
   input: {
     campaignId: string
-    regionId: string
-    activeCharacterId: string
+    inactivePlayers: Character[]
     sceneNarration: string
   }
 ): Promise<InactivePlayerActionResult[]> {
-  const inactivePlayers = listInactiveLivingPlayersInRegion(
-    db,
-    input.campaignId,
-    input.regionId,
-    input.activeCharacterId
-  )
   const results: InactivePlayerActionResult[] = []
-  for (const inactive of inactivePlayers) {
+  for (const inactive of input.inactivePlayers) {
     const context = assembleInactivePlayerContext(db, inactive.id, input.campaignId)
     const action = await decideInactivePlayerAction(provider, inactive, context, input.sceneNarration)
     appendEvent(db, {
@@ -542,7 +536,9 @@ interface BeatExecutionState {
   npcReactions: NpcReactionResult[]
   partyMemberActions: PartyMemberActionResult[]
   inactivePlayerActions: InactivePlayerActionResult[]
-  sceneContext: string
+  // One entry per beat that produced scene text. Never truncated within the
+  // turn — prompts receive a capped view via capSceneContextForPrompt (040.5).
+  sceneContextBeats: string[]
   lootNarration?: string
   lootGrants?: LootGrantAccepted[]
   xpNarration?: string
@@ -570,7 +566,7 @@ async function executeNpcResponseBeat(
       campaignId: input.campaignId,
       player: input.player,
       npcId,
-      sceneNarration: input.state.sceneContext,
+      sceneNarration: capSceneContextForPrompt(input.state.sceneContextBeats),
       rng: input.rng
     })
     if (reaction) {
@@ -614,18 +610,15 @@ function finalizeNarrationBeatEvents(
   updateBeatSceneContext(input.state, flavorText, sceneUpdate)
 }
 
-function updateBeatSceneContext(
-  state: BeatExecutionState,
+export function updateBeatSceneContext(
+  state: Pick<BeatExecutionState, 'sceneContextBeats'>,
   flavorText: string,
   sceneUpdate: string | undefined
 ): void {
   if (!flavorText && !sceneUpdate) {
     return
   }
-  const sceneContextAddition = sceneUpdate ?? flavorText
-  state.sceneContext = state.sceneContext
-    ? `${state.sceneContext} ${sceneContextAddition}`
-    : sceneContextAddition
+  state.sceneContextBeats.push(sceneUpdate ?? flavorText)
 }
 
 function applyNarrationPersistence(
@@ -713,9 +706,7 @@ function executePlayerActionExpressionBeat(
     actionDescription: beat.actionDescription
   })
   input.state.playerActionText = expressed
-  input.state.sceneContext = input.state.sceneContext
-    ? `${input.state.sceneContext} ${expressed}`
-    : expressed
+  input.state.sceneContextBeats.push(expressed)
 }
 
 async function executePartyMemberBeat(
@@ -730,9 +721,46 @@ async function executePartyMemberBeat(
     db,
     provider,
     input.activeCharacterId,
-    input.state.sceneContext
+    capSceneContextForPrompt(input.state.sceneContextBeats)
   )
   input.state.partyMemberActions.push(...actions)
+}
+
+// === 040.5: inactive-player proxy gate =======================================
+// The proxy costs one LLM call per inactive living player in the region, so it
+// only fires when the turn actually crossed into their story: the routing plan
+// referenced them, narration wrote cross-character log entries, or the player
+// named them. Gated-off turns return empty inactivePlayerActions with no call.
+
+export interface CrossCharacterSignalInput {
+  playerInput: string
+  plan: TurnRoutingPlan
+  narrationResult: NarrationResult | undefined
+  inactivePlayers: Array<{ id: string; name: string }>
+}
+
+function inputMentionsCharacterName(playerInput: string, name: string): boolean {
+  return name
+    .split(/\s+/)
+    .filter((token) => token.length >= 3)
+    .some((token) => {
+      const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return new RegExp(`\\b${escaped}\\b`, 'i').test(playerInput)
+    })
+}
+
+export function hasCrossCharacterSignal(input: CrossCharacterSignalInput): boolean {
+  const inactiveIds = new Set(input.inactivePlayers.map((inactive) => inactive.id))
+  const planReferencesInactive = input.plan.beats.some(
+    (beat) => beat.kind === 'npcResponse' && beat.npcIds.some((id) => inactiveIds.has(id))
+  )
+  return (
+    planReferencesInactive ||
+    (input.narrationResult?.crossCharacterLogBookEntries?.length ?? 0) > 0 ||
+    input.inactivePlayers.some((inactive) =>
+      inputMentionsCharacterName(input.playerInput, inactive.name)
+    )
+  )
 }
 
 async function executeInactivePlayerEncounter(
@@ -742,21 +770,78 @@ async function executeInactivePlayerEncounter(
     campaignId: string
     regionId: string
     activeCharacterId: string
+    playerInput: string
+    plan: TurnRoutingPlan
     state: BeatExecutionState
   }
 ): Promise<void> {
-  if (!input.state.sceneContext.trim()) {
+  if (input.state.sceneContextBeats.length === 0) {
+    return
+  }
+  const inactivePlayers = listInactiveLivingPlayersInRegion(
+    db,
+    input.campaignId,
+    input.regionId,
+    input.activeCharacterId
+  )
+  const gateInput = {
+    playerInput: input.playerInput,
+    plan: input.plan,
+    narrationResult: input.state.narrationResult,
+    inactivePlayers
+  }
+  if (inactivePlayers.length === 0 || !hasCrossCharacterSignal(gateInput)) {
     return
   }
   const actions = await resolveInactivePlayerActions(db, provider, {
     campaignId: input.campaignId,
-    regionId: input.regionId,
-    activeCharacterId: input.activeCharacterId,
-    sceneNarration: input.state.sceneContext
+    inactivePlayers,
+    sceneNarration: capSceneContextForPrompt(input.state.sceneContextBeats)
   })
   input.state.inactivePlayerActions.push(...actions)
   for (const action of actions) {
-    input.state.sceneContext = `${input.state.sceneContext} ${action.actionText}`
+    input.state.sceneContextBeats.push(action.actionText)
+  }
+}
+
+interface BeatLoopContext {
+  campaignId: string
+  regionId: string
+  character: Character
+  playerInput: string
+  resolved: ResolvedCheckOutcome
+  narrationContext: ReturnType<typeof assembleNarrationContext>
+  rng: RandomFn
+  state: BeatExecutionState
+}
+
+async function executePlannedBeat(
+  db: Database.Database,
+  provider: Provider,
+  beat: TurnBeat,
+  ctx: BeatLoopContext
+): Promise<void> {
+  if (beat.kind === 'playerActionExpression') {
+    executePlayerActionExpressionBeat(db, beat, {
+      campaignId: ctx.campaignId,
+      character: ctx.character,
+      playerInput: ctx.playerInput,
+      state: ctx.state
+    })
+  } else if (beat.kind === 'dmNarration') {
+    await executeDmNarrationBeat(db, provider, ctx)
+  } else if (beat.kind === 'npcResponse') {
+    await executeNpcResponseBeat(db, provider, beat, {
+      campaignId: ctx.campaignId,
+      player: ctx.character,
+      rng: ctx.rng,
+      state: ctx.state
+    })
+  } else if (beat.kind === 'partyMember') {
+    await executePartyMemberBeat(db, provider, {
+      activeCharacterId: ctx.character.id,
+      state: ctx.state
+    })
   }
 }
 
@@ -764,50 +849,26 @@ async function executeRoutingBeats(
   db: Database.Database,
   provider: Provider,
   plan: TurnRoutingPlan,
-  input: {
-    campaignId: string
-    regionId: string
-    character: Character
-    playerInput: string
-    resolved: ResolvedCheckOutcome
-    narrationContext: ReturnType<typeof assembleNarrationContext>
-    rng: RandomFn
-  }
+  input: Omit<BeatLoopContext, 'state'>
 ): Promise<BeatExecutionState> {
   const state: BeatExecutionState = {
     narrationText: '',
     npcReactions: [],
     partyMemberActions: [],
     inactivePlayerActions: [],
-    sceneContext: ''
+    sceneContextBeats: []
   }
 
   for (const beat of plan.beats) {
-    if (beat.kind === 'playerActionExpression') {
-      executePlayerActionExpressionBeat(db, beat, {
-        campaignId: input.campaignId,
-        character: input.character,
-        playerInput: input.playerInput,
-        state
-      })
-    } else if (beat.kind === 'dmNarration') {
-      await executeDmNarrationBeat(db, provider, { ...input, state })
-    } else if (beat.kind === 'npcResponse') {
-      await executeNpcResponseBeat(db, provider, beat, {
-        campaignId: input.campaignId,
-        player: input.character,
-        rng: input.rng,
-        state
-      })
-    } else if (beat.kind === 'partyMember') {
-      await executePartyMemberBeat(db, provider, { activeCharacterId: input.character.id, state })
-    }
+    await executePlannedBeat(db, provider, beat, { ...input, state })
   }
 
   await executeInactivePlayerEncounter(db, provider, {
     campaignId: input.campaignId,
     regionId: input.regionId,
     activeCharacterId: input.character.id,
+    playerInput: input.playerInput,
+    plan,
     state
   })
 

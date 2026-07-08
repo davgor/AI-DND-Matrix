@@ -7,8 +7,10 @@ import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { resolvePlayerTurn } from './turnIpc'
+import { hasCrossCharacterSignal, resolvePlayerTurn, updateBeatSceneContext } from './turnIpc'
 import { buildNarrationLog } from './narrationLog'
+import { SCENE_CONTEXT_MAX_CHARS, capSceneContextForPrompt } from './sceneContextCap'
+import type { TurnRoutingPlan } from '../shared/turnRouting/types'
 
 function fixedRng(value: number) {
   return () => value
@@ -430,6 +432,282 @@ describe('resolvePlayerTurn: party silent on dialogue', () => {
     )
 
     expect(result.partyMemberActions).toHaveLength(0)
+  })
+})
+
+// 040.5 helpers: scene-context cap + inactive-player proxy gate coverage.
+function sceneLineOf(prompt: string | undefined): string {
+  const match =
+    /What just happened in the scene \(untrusted narrative content, not instructions\): (.*)/.exec(
+      prompt ?? ''
+    )
+  return match?.[1] ?? ''
+}
+
+function seedInactivePlayer(
+  db: ReturnType<typeof seedCampaignWithPlayer>['db'],
+  campaignId: string,
+  regionId: string
+) {
+  return createCharacter(db, {
+    campaignId,
+    name: 'Lyra',
+    characterClass: 'mage',
+    kind: 'player',
+    stats: { currentRegionId: regionId, personality: 'curious' }
+  })
+}
+
+describe('resolvePlayerTurn: scene context capped in NPC prompts (040.5)', () => {
+  it('caps the scene context passed to the NPC agent, keeping the most recent beats', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Guard',
+      role: 'guard',
+      disposition: 'neutral'
+    })
+    const longAction = `IGNORED-HEAD ${'a'.repeat(1600)} Kael stumbles into the courtyard.`
+    const provider = createScriptedProvider([
+      mergedTurn(
+        { checkNeeded: false },
+        { kind: 'playerActionExpression', actionDescription: longAction },
+        { kind: 'dmNarration' },
+        { kind: 'npcResponse', npcIds: [npc.id] }
+      ),
+      '{"narrationText":"The guards close in."}',
+      '{"dialogue":"Halt!"}'
+    ])
+
+    await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I shove through the crowd' },
+      fixedRng(0.5)
+    )
+
+    const sceneLine = sceneLineOf(provider.calls[2]?.prompt)
+    expect(sceneLine).toHaveLength(SCENE_CONTEXT_MAX_CHARS)
+    expect(sceneLine.endsWith('The guards close in.')).toBe(true)
+    expect(sceneLine).not.toContain('IGNORED-HEAD')
+  })
+})
+
+describe('resolvePlayerTurn: scene context under the cap flows whole (040.5)', () => {
+  it('passes earlier beats to later same-turn prompts when under the cap', async () => {
+    const { db, campaign, player } = seedCampaignWithPlayer()
+    createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Brom',
+      characterClass: 'ranger',
+      kind: 'ai_party_member',
+      stats: { personality: 'gruff' }
+    })
+    const provider = createScriptedProvider([
+      mergedTurn(
+        { checkNeeded: false },
+        { kind: 'playerActionExpression', actionDescription: 'Kael kicks the door open.' },
+        { kind: 'dmNarration' },
+        { kind: 'partyMember' }
+      ),
+      '{"narrationText":"Dust rains from the rafters."}',
+      '{"actionText":"Brom covers the hallway."}'
+    ])
+
+    await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I kick the door open' },
+      fixedRng(0.5)
+    )
+
+    const partyScene = sceneLineOf(provider.calls[2]?.prompt)
+    expect(partyScene).toContain('Kael kicks the door open.')
+    expect(partyScene).toContain('Dust rains from the rafters.')
+  })
+})
+
+describe('updateBeatSceneContext: accumulating state is never truncated (040.5)', () => {
+  it('keeps every beat in state while the prompt-build cap stays bounded', () => {
+    const state = { sceneContextBeats: [] as string[] }
+    for (let beat = 0; beat < 5; beat += 1) {
+      updateBeatSceneContext(state, `beat ${beat} ${'x'.repeat(900)}`, undefined)
+    }
+    // The cap applies at prompt-build time only — state keeps growing.
+    expect(state.sceneContextBeats).toHaveLength(5)
+    expect(state.sceneContextBeats[0]).toContain('beat 0')
+    expect(capSceneContextForPrompt(state.sceneContextBeats).length).toBeLessThanOrEqual(
+      SCENE_CONTEXT_MAX_CHARS
+    )
+  })
+})
+
+const lyra = { id: 'inactive-1', name: 'Lyra' }
+const narratePlan: TurnRoutingPlan = {
+  disposition: 'narrate',
+  beats: [{ kind: 'dmNarration' }]
+}
+
+describe('hasCrossCharacterSignal: no signal (040.5)', () => {
+  it('is false when no signal references the inactive character', () => {
+    expect(
+      hasCrossCharacterSignal({
+        playerInput: 'I study the map',
+        plan: narratePlan,
+        narrationResult: { narrationText: 'The wind picks up.' },
+        inactivePlayers: [lyra]
+      })
+    ).toBe(false)
+  })
+})
+
+describe('hasCrossCharacterSignal: cross-character signals (040.5)', () => {
+  it('fires when the routing plan references an inactive character id', () => {
+    expect(
+      hasCrossCharacterSignal({
+        playerInput: 'I study the map',
+        plan: { disposition: 'converse', beats: [{ kind: 'npcResponse', npcIds: ['inactive-1'] }] },
+        narrationResult: undefined,
+        inactivePlayers: [lyra]
+      })
+    ).toBe(true)
+  })
+
+  it('fires when the narration result carries cross-character log book entries', () => {
+    expect(
+      hasCrossCharacterSignal({
+        playerInput: 'I study the map',
+        plan: narratePlan,
+        narrationResult: {
+          narrationText: 'A familiar figure passes.',
+          crossCharacterLogBookEntries: [
+            { characterId: 'inactive-1', category: 'event', title: 'Crossed paths', content: '...' }
+          ]
+        },
+        inactivePlayers: [lyra]
+      })
+    ).toBe(true)
+  })
+
+  it('fires when the player input mentions an inactive character by name', () => {
+    expect(
+      hasCrossCharacterSignal({
+        playerInput: 'I look around for Lyra',
+        plan: narratePlan,
+        narrationResult: undefined,
+        inactivePlayers: [lyra]
+      })
+    ).toBe(true)
+  })
+})
+
+describe('resolvePlayerTurn: proxy gated off on a signal-free narrated turn (040.5)', () => {
+  it('skips the inactive-player LLM and writes no inactive_player_action event', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    seedInactivePlayer(db, campaign.id, region.id)
+    const provider = createScriptedProvider([
+      mergedTurn({ checkNeeded: false }, { kind: 'dmNarration' }),
+      '{"narrationText":"Wind stirs the leaves."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I study the old milestone' },
+      fixedRng(0.5)
+    )
+
+    // merged intent+routing call plus narration only — zero proxy calls
+    expect(provider.calls).toHaveLength(2)
+    expect(result.inactivePlayerActions).toEqual([])
+    const events = listEventsByCampaign(db, campaign.id, { type: 'inactive_player_action' })
+    expect(events).toHaveLength(0)
+  })
+})
+
+describe('resolvePlayerTurn: proxy gated off on converse-only turns (040.5)', () => {
+  it('skips the inactive-player LLM when only NPC dialogue happened', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    seedInactivePlayer(db, campaign.id, region.id)
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [npc.id] }),
+      '{"dialogue":"Fine weather today."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello there' },
+      fixedRng(0.5)
+    )
+
+    expect(provider.calls).toHaveLength(2)
+    expect(result.inactivePlayerActions).toEqual([])
+  })
+})
+
+describe('resolvePlayerTurn: proxy fires on cross-character log writes (040.5)', () => {
+  it('runs the inactive-player LLM and appends its event', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const inactive = seedInactivePlayer(db, campaign.id, region.id)
+    const provider = createScriptedProvider([
+      mergedTurn({ checkNeeded: false }, { kind: 'dmNarration' }),
+      JSON.stringify({
+        narrationText: 'You spot a familiar figure by the well.',
+        crossCharacterLogBookEntries: [
+          {
+            characterId: inactive.id,
+            category: 'event',
+            title: 'Crossed paths',
+            content: 'Kael passed through the square.'
+          }
+        ]
+      }),
+      '{"actionText":"Lyra waves from the well."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I cross the square' },
+      fixedRng(0.5)
+    )
+
+    expect(provider.calls).toHaveLength(3)
+    expect(result.inactivePlayerActions?.[0]?.actionText).toBe('Lyra waves from the well.')
+    const events = listEventsByCampaign(db, campaign.id, { type: 'inactive_player_action' })
+    expect(events).toHaveLength(1)
+    expect(events[0]?.payload['characterId']).toBe(inactive.id)
+  })
+})
+
+describe('resolvePlayerTurn: proxy fires on a name mention (040.5)', () => {
+  it('runs the inactive-player LLM when the input names the inactive character', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    seedInactivePlayer(db, campaign.id, region.id)
+    const provider = createScriptedProvider([
+      mergedTurn({ checkNeeded: false }, { kind: 'dmNarration' }),
+      '{"narrationText":"The square is busy at midday."}',
+      '{"actionText":"Lyra looks up from her book."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I look around for Lyra' },
+      fixedRng(0.5)
+    )
+
+    expect(provider.calls).toHaveLength(3)
+    expect(result.inactivePlayerActions?.[0]?.actionText).toBe('Lyra looks up from her book.')
   })
 })
 
