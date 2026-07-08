@@ -55,7 +55,16 @@ describe('assembleNarrationContext log book entries', () => {
     })
 
     const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
-    expect(context.logBookEntries).toEqual([heroEntry])
+    // Slim shape (040.4): id preserved for amendment/deletion echo; campaignId/characterId/dates dropped.
+    expect(context.logBookEntries).toEqual([
+      {
+        id: heroEntry.id,
+        category: 'person',
+        title: 'Mira',
+        content: 'Runs the store.',
+        relatedEntityId: 'npc-mira'
+      }
+    ])
   })
 
   it('returns an empty log book section for a character with no entries', () => {

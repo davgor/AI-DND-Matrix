@@ -17,7 +17,6 @@ import type { EmergentDirectionCandidate } from '../engine/emergentDirection'
 import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 import { NARRATIVE_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
-import type { Event } from '../db/repositories/events'
 import { getNpcById } from '../db/repositories/npcs'
 import { type RegionStatus } from '../db/repositories/regions'
 import { updateStoryThreadStateAndSummary } from '../db/repositories/storyThreads'
@@ -33,8 +32,9 @@ import {
   updateLogEntryForCharacter
 } from '../db/repositories/logEntries'
 import type { ItemType } from '../shared/items/types'
-import type { LogEntry, LogEntryProposal } from '../shared/logBook/types'
+import type { LogEntryProposal } from '../shared/logBook/types'
 import type { CrossCharacterLogWrite, DeathCause } from '../shared/campaignHub/types'
+import type { SlimEvent, SlimLogEntry } from './contextSlim'
 import { loadNarrationContextFields } from './narrationContextFields'
 import { persistSpellGrants } from './narrationSpellContext'
 import { buildActiveQuestsPromptSection } from './questWindow'
@@ -287,10 +287,12 @@ export interface CheckOutcome {
 
 export interface NarrationContext {
   regionStatus: RegionStatus
-  recentEvents: Event[]
+  // Slim shapes (040.4): prompts never see raw event/log rows. Log entries keep
+  // `id` — logBookAmendments/logBookDeletions echo entryId back from the prompt.
+  recentEvents: SlimEvent[]
   storyThreadState: { id: string; state: string; summary: string } | null
   presentNpcs: { id: string; name: string }[]
-  logBookEntries: LogEntry[]
+  logBookEntries: SlimLogEntry[]
   playerAlignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
   playerInput: string

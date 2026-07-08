@@ -7,6 +7,7 @@ import { listLogEntriesByCharacter } from '../db/repositories/logEntries'
 import { listEventsByCampaign } from '../db/repositories/events'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { takeRecent } from './contextWindow'
+import { slimEvents, slimLogEntries, type SlimEvent, type SlimLogEntry } from './contextSlim'
 import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 
@@ -72,9 +73,9 @@ export interface InactivePlayerContext {
   identitySummary: string
   narrationLog: CharacterNarrationSnippet[]
   journalEntries: ReturnType<typeof listCharacterJournalEntries>
-  logBookEntries: ReturnType<typeof listLogEntriesByCharacter>
+  logBookEntries: SlimLogEntry[]
   storyThreadState: { id: string; state: string; summary: string } | null
-  recentCampaignEvents: ReturnType<typeof takeRecent>
+  recentCampaignEvents: SlimEvent[]
 }
 
 export function assembleInactivePlayerContext(
@@ -105,11 +106,11 @@ export function assembleInactivePlayerContext(
     identitySummary,
     narrationLog: takeRecent(buildNarrationSnippetsForCharacter(db, campaignId, inactiveCharacterId)),
     journalEntries: takeRecent(listCharacterJournalEntries(db, inactiveCharacterId)),
-    logBookEntries: takeRecent(listLogEntriesByCharacter(db, inactiveCharacterId)),
+    logBookEntries: slimLogEntries(takeRecent(listLogEntriesByCharacter(db, inactiveCharacterId))),
     storyThreadState: primaryThread
       ? { id: primaryThread.id, state: primaryThread.state, summary: primaryThread.summary }
       : null,
-    recentCampaignEvents: takeRecent(listEventsByCampaign(db, campaignId))
+    recentCampaignEvents: slimEvents(takeRecent(listEventsByCampaign(db, campaignId)))
   }
 }
 

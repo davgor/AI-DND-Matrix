@@ -50,7 +50,7 @@ describe('assembleNpcContext', () => {
 
     expect(context.npcId).toBe(npcA.id)
     expect(context.memories).toHaveLength(2)
-    expect(context.memories.every((m) => m.npcId === npcA.id)).toBe(true)
+    expect(context.memories.every((m) => m.content.startsWith("A's"))).toBe(true)
     expect(context.memories.some((m) => m.content.startsWith('B'))).toBe(false)
   })
 
@@ -71,7 +71,26 @@ describe('assembleNpcContext', () => {
 
     const context = assembleNpcContext(db, npcA)
 
-    expect(context.worldFacts.map((f) => f.id)).toEqual([matchingFact.id])
+    expect(context.worldFacts).toEqual([matchingFact.content])
+  })
+
+  it('windows world facts to the most recent 10 as content strings (040.4)', () => {
+    const db = createTestDb()
+    const { campaign, region, npcA } = seedTwoNpcs(db)
+    for (let index = 0; index < 15; index += 1) {
+      createWorldFact(db, {
+        campaignId: campaign.id,
+        regionId: region.id,
+        content: `Fact number ${index}`,
+        createdAt: `2026-01-01T00:00:${String(index).padStart(2, '0')}.000Z`
+      })
+    }
+
+    const context = assembleNpcContext(db, npcA)
+
+    expect(context.worldFacts).toHaveLength(10)
+    expect(context.worldFacts[0]).toBe('Fact number 5')
+    expect(context.worldFacts[9]).toBe('Fact number 14')
   })
 })
 

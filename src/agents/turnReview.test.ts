@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createCharacter } from '../db/repositories/characters'
+import { appendEvent } from '../db/repositories/events'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from './providers/mockHarness'
@@ -32,7 +33,7 @@ function seedReviewContext() {
     characterId: player.id,
     playerInput: 'Hello Mira'
   })
-  return { npc, narrationContext }
+  return { db, campaign, region, player, npc, narrationContext }
 }
 
 describe('reviewTurn: converse and act dispositions', () => {
@@ -122,6 +123,41 @@ describe('reviewTurn: narrate and composite dispositions', () => {
       'dmNarration',
       'npcResponse'
     ])
+  })
+})
+
+describe('reviewTurn: slim context (040.4)', () => {
+  it('sends slim recent events in the review prompt — no event ids or raw payloads', async () => {
+    const { db, campaign, region, player, npc } = seedReviewContext()
+    const priorEvent = appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'npc_reaction',
+      payload: {
+        npcId: npc.id,
+        npcName: 'Mira',
+        text: 'Back so soon?',
+        reactionKind: 'dialogue',
+        attack: false
+      }
+    })
+    const narrationContext = assembleNarrationContext({
+      db,
+      campaignId: campaign.id,
+      regionId: region.id,
+      characterId: player.id,
+      playerInput: 'Hello again'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({ disposition: 'converse', beats: [{ kind: 'npcResponse', npcIds: [npc.id] }] })
+    ])
+
+    await reviewTurn(provider, { ...narrationContext, intent: { checkNeeded: false } })
+
+    const prompt = provider.calls[0]?.prompt ?? ''
+    expect(prompt).toContain('Mira: Back so soon?')
+    expect(prompt).not.toContain(priorEvent.id)
+    expect(prompt).not.toContain(campaign.id)
+    expect(prompt).not.toContain('"reactionKind"')
   })
 })
 

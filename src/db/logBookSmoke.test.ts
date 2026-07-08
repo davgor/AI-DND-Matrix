@@ -56,7 +56,9 @@ describe('log book end-to-end smoke', () => {
 
     const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(context.logBookEntries.some((row) => row.title === 'Oakhollow')).toBe(true)
-    expect(context.logBookEntries.every((row) => row.characterId === player.id)).toBe(true)
+    // Slim entries (040.4) drop characterId; ownership is proven by id membership instead.
+    const ownEntryIds = new Set(entries.map((row) => row.id))
+    expect(context.logBookEntries.every((row) => ownEntryIds.has(row.id))).toBe(true)
   })
 
   it('returns empty grouped state for a character with no entries', () => {

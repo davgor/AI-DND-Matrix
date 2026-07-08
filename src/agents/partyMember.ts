@@ -1,17 +1,21 @@
 import type Database from 'better-sqlite3'
 import type { Character } from '../db/repositories/characters'
-import type { Event } from '../db/repositories/events'
 import { listEventsByCampaign } from '../db/repositories/events'
-import type { NpcMemory } from '../db/repositories/npcMemories'
 import { listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
 import { takeRecent } from './contextWindow'
+import {
+  slimEvents,
+  slimNpcMemories,
+  type SlimEvent,
+  type SlimNpcMemory
+} from './contextSlim'
 import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 
 export interface PartyMemberContext {
   characterId: string
-  relationshipEvents: Event[]
-  priorNpcMemories: NpcMemory[]
+  relationshipEvents: SlimEvent[]
+  priorNpcMemories: SlimNpcMemory[]
 }
 
 export function assemblePartyMemberContext(
@@ -22,9 +26,13 @@ export function assemblePartyMemberContext(
   const allEvents = listEventsByCampaign(db, campaignId)
   const relevant = allEvents.filter((event) => event.payload['characterId'] === character.id)
   const priorNpcMemories = character.sourceNpcId
-    ? takeRecent(listNpcMemoriesByNpc(db, character.sourceNpcId))
+    ? slimNpcMemories(takeRecent(listNpcMemoriesByNpc(db, character.sourceNpcId)))
     : []
-  return { characterId: character.id, relationshipEvents: takeRecent(relevant), priorNpcMemories }
+  return {
+    characterId: character.id,
+    relationshipEvents: slimEvents(takeRecent(relevant)),
+    priorNpcMemories
+  }
 }
 
 export interface PartyMemberAction {

@@ -7,6 +7,7 @@ import { createStoryThread } from '../db/repositories/storyThreads'
 import { listWorldFactsByRegionOrFaction } from '../db/repositories/worldFacts'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { createCharacter } from '../db/repositories/characters'
+import { appendEvent } from '../db/repositories/events'
 import { listCharacterItems } from '../db/repositories/characterItems'
 import { listCharacterJournalEntries } from '../db/repositories/characterJournalEntries'
 import { listCatalogItems } from '../db/repositories/items'
@@ -141,6 +142,50 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     expect(context.presentNpcs).toEqual([])
+  })
+})
+
+describe('narration context slimming (040.4)', () => {
+  it('sends slim recent events — no event ids, campaign ids, or raw payload blobs in the prompt', async () => {
+    const { db, campaign, region, player } = seedCampaignWithRegion()
+    const flavorEvent = appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'player_action',
+      payload: {
+        characterId: player.id,
+        outcome: { success: true, total: 14, dc: 10 },
+        narrationText: 'A wolf howls in the distance.',
+        dmLineKind: 'flavor'
+      }
+    })
+    const attackEvent = appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'combat_attack',
+      payload: {
+        attacker: { kind: 'player', id: player.id },
+        target: { kind: 'npc', id: 'npc-bandit-id' },
+        hit: true,
+        crit: false,
+        attackRoll: 15,
+        attackTotal: 18,
+        damage: 6,
+        targetHpAfter: 4,
+        targetDefeated: false
+      }
+    })
+    const provider = createScriptedProvider(['{"narrationText":"You press on."}'])
+    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+
+    await narrate(provider, { success: true, total: 10, dc: 10 }, context)
+
+    const prompt = provider.calls[0]?.prompt ?? ''
+    expect(prompt).toContain('A wolf howls in the distance.')
+    expect(prompt).toContain('player hit npc for 6 damage')
+    expect(prompt).not.toContain(flavorEvent.id)
+    expect(prompt).not.toContain(attackEvent.id)
+    expect(prompt).not.toContain(campaign.id)
+    expect(prompt).not.toContain('npc-bandit-id')
+    expect(prompt).not.toContain('"attackRoll"')
   })
 })
 

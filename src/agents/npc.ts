@@ -1,25 +1,25 @@
 import type Database from 'better-sqlite3'
 import type { Npc } from '../db/repositories/npcs'
-import type { NpcMemory } from '../db/repositories/npcMemories'
 import { listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
-import type { WorldFact } from '../db/repositories/worldFacts'
 import { listWorldFactsByRegionOrFaction } from '../db/repositories/worldFacts'
 import type { NpcReactionKind } from '../shared/alignment/types'
 import { wrapActionDescription } from '../shared/alignment/types'
 import { NPC_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
 import { takeRecent } from './contextWindow'
+import { slimNpcMemories, slimWorldFacts, type SlimNpcMemory } from './contextSlim'
 import { tryParseJson } from './jsonResponse'
 import type { Provider } from './providers/types'
 
 export interface NpcContext {
   npcId: string
-  memories: NpcMemory[]
-  worldFacts: WorldFact[]
+  memories: SlimNpcMemory[]
+  /** Windowed (most recent WORLD_FACT_WINDOW) fact content strings — never full rows. */
+  worldFacts: string[]
 }
 
 export function assembleNpcContext(db: Database.Database, npc: Npc): NpcContext {
-  const memories = takeRecent(listNpcMemoriesByNpc(db, npc.id))
-  const worldFacts = listWorldFactsByRegionOrFaction(db, npc.campaignId, npc.regionId)
+  const memories = slimNpcMemories(takeRecent(listNpcMemoriesByNpc(db, npc.id)))
+  const worldFacts = slimWorldFacts(listWorldFactsByRegionOrFaction(db, npc.campaignId, npc.regionId))
   return { npcId: npc.id, memories, worldFacts }
 }
 

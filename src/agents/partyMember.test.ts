@@ -33,13 +33,13 @@ describe('assemblePartyMemberContext', () => {
     const campaign = seedCampaign(db)
     const character = seedPartyMember(db, campaign.id)
 
-    const earlier = appendEvent(db, {
+    appendEvent(db, {
       campaignId: campaign.id,
       type: 'party_member_interaction',
       payload: { characterId: character.id, content: 'helped during the goblin ambush' },
       timestamp: '2024-01-01T00:00:00.000Z'
     })
-    const later = appendEvent(db, {
+    appendEvent(db, {
       campaignId: campaign.id,
       type: 'party_member_interaction',
       payload: { characterId: character.id, content: 'shared a meal at the tavern' },
@@ -49,7 +49,11 @@ describe('assemblePartyMemberContext', () => {
     const context = assemblePartyMemberContext(db, campaign.id, character)
 
     expect(context.characterId).toBe(character.id)
-    expect(context.relationshipEvents.map((e) => e.id)).toEqual([earlier.id, later.id])
+    // Slim event shape (040.4): no ids, just type + derived summary in original order.
+    expect(context.relationshipEvents.map((e) => e.summary)).toEqual([
+      'helped during the goblin ambush',
+      'shared a meal at the tavern'
+    ])
   })
 
   it('excludes events tagged to a different characterId', () => {
@@ -62,7 +66,7 @@ describe('assemblePartyMemberContext', () => {
       type: 'party_member_interaction',
       payload: { characterId: 'someone-else', content: "not this character's memory" }
     })
-    const own = appendEvent(db, {
+    appendEvent(db, {
       campaignId: campaign.id,
       type: 'party_member_interaction',
       payload: { characterId: character.id, content: "this character's memory" }
@@ -70,7 +74,7 @@ describe('assemblePartyMemberContext', () => {
 
     const context = assemblePartyMemberContext(db, campaign.id, character)
 
-    expect(context.relationshipEvents.map((e) => e.id)).toEqual([own.id])
+    expect(context.relationshipEvents.map((e) => e.summary)).toEqual(["this character's memory"])
   })
 })
 
