@@ -17,9 +17,9 @@ describe('combat encounter smoke', () => {
     // The goblin's catch-up turn uses deterministic template flavor (040.6),
     // so no NPC reaction response is scripted between the two attack intents.
     const provider = createScriptedProvider([
-      '{"checkNeeded":false,"combatIntent":"startEncounter"}',
-      '{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"' + goblin.id + '"}',
-      '{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"' + goblin.id + '"}',
+      '{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}',
+      '{"intent":{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"' + goblin.id + '"}}',
+      '{"intent":{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"' + goblin.id + '"}}',
       '{"outcome":"surrender","narrationText":"The goblin drops its weapon and raises its hands."}',
       '{"narrationText":"You gain insight from the fight.","xpAmount":40}',
       GOBLIN_LOOT_RESPONSE
@@ -43,7 +43,7 @@ describe('combat encounter smoke', () => {
     const { db, campaign, player, goblin } = seedCombatSmokeCampaign()
     await resolvePlayerTurn(
       db,
-      createScriptedProvider(['{"checkNeeded":false,"combatIntent":"startEncounter"}']),
+      createScriptedProvider(['{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}']),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'Combat!' },
       initiativeRng()
     )

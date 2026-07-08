@@ -32,7 +32,7 @@ describe('turnIpc modification + enchanted attack', () => {
     equipCharacterItem(db, player.id, row.id, 'mainHand')
 
     const provider = createScriptedProvider([
-      '{"checkNeeded":false,"actionType":"modifyItem"}',
+      '{"intent":{"checkNeeded":false,"actionType":"modifyItem"}}',
       JSON.stringify({
         narrationText: 'Embers wreath the blade.',
         modification: {

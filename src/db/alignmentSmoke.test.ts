@@ -25,8 +25,10 @@ describe('alignment smoke: setup and shift flow', () => {
     await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":false}',
-        JSON.stringify({ disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }),
+        JSON.stringify({
+          intent: { checkNeeded: false },
+          routingPlan: { disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }
+        }),
         JSON.stringify({
           narrationText: 'The shrine offers no resistance.',
           alignmentShiftWarning: {
@@ -47,8 +49,10 @@ describe('alignment smoke: setup and shift flow', () => {
     const result = await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":false}',
-        JSON.stringify({ disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }),
+        JSON.stringify({
+          intent: { checkNeeded: false },
+          routingPlan: { disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }
+        }),
         JSON.stringify({
           narrationText: 'You take the relic.',
           commitAlignmentShift: { newAlignment: 'neutral_evil' }
@@ -80,10 +84,12 @@ describe('alignment smoke: non-speaking creatures', () => {
     await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":false}',
         JSON.stringify({
-          disposition: 'composite',
-          beats: [{ kind: 'dmNarration' }, { kind: 'npcResponse', npcIds: [wolfNpc.id] }]
+          intent: { checkNeeded: false },
+          routingPlan: {
+            disposition: 'composite',
+            beats: [{ kind: 'dmNarration' }, { kind: 'npcResponse', npcIds: [wolfNpc.id] }]
+          }
         }),
         JSON.stringify({ narrationText: 'A wolf attacks.' }),
         JSON.stringify({ actionDescription: '**The wolf lunges.**' })

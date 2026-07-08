@@ -192,8 +192,10 @@ describe('non-combat NPC reaction path is untouched (data-integrity item 9)', ()
   it('still uses the LLM, persists an NPC memory, and resolves attack:true via the engine', async () => {
     const { db, campaign, player, npc } = seedCombatWorld()
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      JSON.stringify({ disposition: 'converse', beats: [{ kind: 'npcResponse', npcIds: [npc.id] }] }),
+      JSON.stringify({
+        intent: { checkNeeded: false },
+        routingPlan: { disposition: 'converse', beats: [{ kind: 'npcResponse', npcIds: [npc.id] }] }
+      }),
       '{"dialogue":"Die!","attack":true}'
     ])
 
@@ -204,7 +206,8 @@ describe('non-combat NPC reaction path is untouched (data-integrity item 9)', ()
       fixedRng(0.99)
     )
 
-    expect(provider.calls).toHaveLength(3)
+    // merged intent+routing call (040.2) plus the NPC reaction call
+    expect(provider.calls).toHaveLength(2)
     expect(result.npcReactions[0]?.text).toBe('Die!')
     expect(result.npcReactions[0]?.attackResult?.hit).toBe(true)
     const memories = listNpcMemoriesByNpc(db, npc.id)

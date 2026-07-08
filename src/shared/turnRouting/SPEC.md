@@ -1,6 +1,29 @@
 # Turn review and gameplay loop routing
 
-When the player submits an action, the DM turn-review step triages the submission before the app decides what to show. Mechanical resolution (`interpretIntent`, checks, rest, travel, dying) runs first; routing only decides presentation and which agents fire.
+When the player submits an action, the DM turn-review step triages the submission before the app decides what to show. Mechanical resolution (intent parsing, checks, rest, travel, dying) runs first; routing only decides presentation and which agents fire.
+
+## One merged intent + routing call (epic 040.2)
+
+Intent interpretation and turn routing arrive from a **single** LLM call — `interpretIntentAndRoute` (`src/agents/intentAndRoute.ts`), invoked from `resolvePlayerTurn`. The response carries both halves:
+
+```json
+{
+  "intent": { "checkNeeded": false, "combatIntent": "none", "...": "..." },
+  "routingPlan": { "disposition": "converse", "beats": [{ "kind": "npcResponse", "npcIds": ["..."] }] }
+}
+```
+
+- The `intent` half keeps the exact schema, DC clamping, and combat-intent validation of the standalone `interpretIntent`; invalid responses retry up to `MAX_SCHEMA_ATTEMPTS` and then throw `DmSchemaError`.
+- The `routingPlan` half is sanitized against present NPC ids (`sanitizeRoutingPlan`) exactly as the old standalone review call was.
+- Rest/travel/modifyItem and non-`none` combat intents bypass beat execution entirely, so the model may omit `routingPlan` on those turns; when present it is simply unused.
+- `reviewTurn` (`src/agents/turnReview.ts`) remains only as a deprecated redirect onto the merged call for test migration — there is no separate routing LLM call in production.
+
+**Routing happens before the d20 is rolled.** The old two-call flow fed the resolved check outcome into the routing prompt; the merged call cannot. Instead, when the response has `checkNeeded: true`, `ensureDmNarrationBeat` deterministically guarantees a `dmNarration` beat in the plan post-parse (inserted before the first `npcResponse` beat, else appended), so engine check outcomes always reach narration and its side-effect writes.
+
+Routing-source precedence (updated by epic 040.3 when the heuristic fast path lands):
+
+1. Merged LLM call (`interpretIntentAndRoute`) — current default for all routed turns.
+2. _(Reserved for 040.3)_ deterministic heuristic plans for provably simple turns, with the merged call as fallback.
 
 ## Three routing outcomes
 

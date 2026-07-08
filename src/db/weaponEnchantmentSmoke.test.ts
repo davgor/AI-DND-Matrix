@@ -14,7 +14,7 @@ import { getEquippedWeaponDamageProfile } from './repositories/characterItems'
 import { listModifications } from './repositories/characterItemModifications'
 import { seedWeaponEnchantmentSmoke } from './weaponEnchantmentSmokeFixtures'
 
-const ENCHANT_INTENT = '{"checkNeeded":false,"actionType":"modifyItem"}'
+const ENCHANT_INTENT = '{"intent":{"checkNeeded":false,"actionType":"modifyItem"}}'
 
 describe('weapon enchantment smoke', () => {
   it('runs enchant → profile → attack → reopen loop', async () => {

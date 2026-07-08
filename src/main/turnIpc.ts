@@ -13,13 +13,13 @@ import { generateNpcReaction, assembleNpcContext } from '../agents/npc'
 import {
   assembleNarrationContext,
   buildCombatIntentContext,
-  interpretIntent,
   narrate,
   persistNarrationSideEffects,
   type IntentInterpretation,
+  type NarrationContext,
   type NarrationResult
 } from '../agents/dm'
-import { reviewTurn } from '../agents/turnReview'
+import { interpretIntentAndRoute } from '../agents/intentAndRoute'
 import type { TurnBeat, TurnRoutingPlan } from '../shared/turnRouting/types'
 import type { Provider } from '../agents/providers/types'
 import { getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
@@ -433,6 +433,12 @@ interface CheckTurnInput {
   rng: RandomFn
 }
 
+interface RoutedTurnInput extends CheckTurnInput {
+  routingPlan: TurnRoutingPlan
+  regionId: string
+  narrationContext: NarrationContext
+}
+
 interface ResolvedCheckOutcome {
   outcome: ReturnType<typeof resolveOutcome>['outcome']
   rolled: boolean
@@ -805,23 +811,10 @@ async function resolveRoutedTurn(
   db: Database.Database,
   provider: Provider,
   campaignId: string,
-  turn: CheckTurnInput
+  turn: RoutedTurnInput
 ): Promise<TurnResult> {
-  const { character, intent, playerInput, rng } = turn
+  const { character, intent, playerInput, rng, routingPlan, regionId, narrationContext } = turn
   const resolved = resolveOutcome(character, intent, rng)
-  const regionId = getCurrentRegionId(db, campaignId, character)
-  const narrationContext = assembleNarrationContext({
-    db,
-    campaignId,
-    regionId,
-    characterId: character.id,
-    playerInput
-  })
-  const routingPlan = await reviewTurn(provider, {
-    ...narrationContext,
-    intent,
-    checkOutcome: resolved.rolled ? resolved.outcome : undefined
-  })
 
   appendPlayerAuditEvent(db, { campaignId, characterId: character.id, playerInput, resolved })
 
@@ -918,7 +911,7 @@ async function resolveCombatPlayerTurn(input: {
   provider: Provider
   turnInput: TurnInput
   character: Character
-  intent: Awaited<ReturnType<typeof interpretIntent>>
+  intent: IntentInterpretation
   rng: RandomFn
 }): Promise<TurnResult> {
   const { db, provider, turnInput, character, intent, rng } = input
@@ -936,14 +929,19 @@ async function resolveCombatPlayerTurn(input: {
   return { ...combatResult, ...buildTurnResultExtras(db, character.id) }
 }
 
-async function resolveIntentRoutedTurn(input: {
+interface IntentRoutedTurnInput {
   db: Database.Database
   provider: Provider
   turnInput: TurnInput
   character: Character
-  intent: Awaited<ReturnType<typeof interpretIntent>>
+  intent: IntentInterpretation
+  routingPlan: TurnRoutingPlan
+  regionId: string
+  narrationContext: NarrationContext
   rng: RandomFn
-}): Promise<TurnResult> {
+}
+
+async function resolveIntentRoutedTurn(input: IntentRoutedTurnInput): Promise<TurnResult> {
   const { db, provider, turnInput, character, intent, rng } = input
   if (intent.actionType === 'restShort' || intent.actionType === 'restLong') {
     return resolveRestTurn(db, {
@@ -979,8 +977,39 @@ async function resolveIntentRoutedTurn(input: {
     character,
     intent,
     playerInput: turnInput.playerInput,
-    rng
+    rng,
+    routingPlan: input.routingPlan,
+    regionId: input.regionId,
+    narrationContext: input.narrationContext
   })
+}
+
+// 040.2: one merged LLM call produces intent + routing plan. Combat and
+// rest/travel/modifyItem turns simply never execute the plan half.
+async function interpretTurnIntentAndPlan(
+  db: Database.Database,
+  provider: Provider,
+  turnInput: TurnInput,
+  character: Character
+): Promise<{
+  intent: IntentInterpretation
+  routingPlan: TurnRoutingPlan
+  regionId: string
+  narrationContext: NarrationContext
+}> {
+  const regionId = getCurrentRegionId(db, turnInput.campaignId, character)
+  const narrationContext = assembleNarrationContext({
+    db,
+    campaignId: turnInput.campaignId,
+    regionId,
+    characterId: character.id,
+    playerInput: turnInput.playerInput
+  })
+  const { intent, routingPlan } = await interpretIntentAndRoute(provider, {
+    ...narrationContext,
+    combat: buildCombatIntentContext(db, turnInput.campaignId, character.id, regionId)
+  })
+  return { intent, routingPlan, regionId, narrationContext }
 }
 
 export async function resolvePlayerTurn(
@@ -1001,10 +1030,11 @@ export async function resolvePlayerTurn(
     return dyingTurn
   }
 
-  const intent = await interpretIntent(
+  const { intent, routingPlan, regionId, narrationContext } = await interpretTurnIntentAndPlan(
+    db,
     provider,
-    turnInput.playerInput,
-    buildCombatIntentContext(db, turnInput.campaignId, character.id, getCurrentRegionId(db, turnInput.campaignId, character))
+    turnInput,
+    character
   )
 
   if (shouldRouteToCombat(db, turnInput.campaignId, character.id, intent)) {
@@ -1018,7 +1048,17 @@ export async function resolvePlayerTurn(
     }
   }
 
-  return resolveIntentRoutedTurn({ db, provider, turnInput, character, intent, rng })
+  return resolveIntentRoutedTurn({
+    db,
+    provider,
+    turnInput,
+    character,
+    intent,
+    routingPlan,
+    regionId,
+    narrationContext,
+    rng
+  })
 }
 
 export function registerTurnHandlers(): void {

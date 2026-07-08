@@ -30,14 +30,17 @@ function seedCampaignWithPlayer() {
   return { db, campaign, region, player }
 }
 
-function routingPlan(...beats: object[]) {
-  return JSON.stringify({ disposition: 'composite', beats })
+// 040.2: intent + routing plan arrive from a single merged LLM response.
+function mergedTurn(intent: object, ...beats: object[]) {
+  return JSON.stringify({ intent, routingPlan: { disposition: 'composite', beats } })
 }
 
 describe('resolvePlayerTurn: rest and travel branches', () => {
   it('resolves a short rest without calling the narration step', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
-    const provider = createScriptedProvider(['{"checkNeeded":false,"actionType":"restShort"}'])
+    const provider = createScriptedProvider([
+      JSON.stringify({ intent: { checkNeeded: false, actionType: 'restShort' } })
+    ])
     db.prepare('UPDATE characters SET hp = ? WHERE id = ?').run(5, player.id)
 
     const result = await resolvePlayerTurn(
@@ -55,7 +58,9 @@ describe('resolvePlayerTurn: rest and travel branches', () => {
 
   it('resolves a travel action, clamping the estimate and advancing in-game date', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
-    const provider = createScriptedProvider(['{"checkNeeded":false,"actionType":"travel","travelDays":90}'])
+    const provider = createScriptedProvider([
+      JSON.stringify({ intent: { checkNeeded: false, actionType: 'travel', travelDays: 90 } })
+    ])
 
     const result = await resolvePlayerTurn(
       db,
@@ -74,8 +79,10 @@ describe('resolvePlayerTurn: narrated check turn', () => {
   it('rolls a check, narrates when the plan includes dmNarration, and persists events', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
     const provider = createScriptedProvider([
-      '{"checkNeeded":true,"ability":"agility","dc":10,"proficient":false}',
-      routingPlan({ kind: 'dmNarration' }),
+      mergedTurn(
+        { checkNeeded: true, ability: 'agility', dc: 10, proficient: false },
+        { kind: 'dmNarration' }
+      ),
       '{"narrationText":"You slip past unseen."}'
     ])
 
@@ -91,10 +98,32 @@ describe('resolvePlayerTurn: narrated check turn', () => {
     const audit = listEventsByCampaign(db, campaign.id, { type: 'player_action' })
     expect(audit.some((event) => event.payload['auditOnly'] === true)).toBe(true)
   })
+
+  it('forces a dmNarration beat when a check-needed plan omits one, so the outcome is narrated', async () => {
+    const { db, campaign, player } = seedCampaignWithPlayer()
+    const provider = createScriptedProvider([
+      mergedTurn(
+        { checkNeeded: true, ability: 'agility', dc: 10, proficient: false },
+        { kind: 'playerActionExpression', actionDescription: 'Kael picks the lock.' }
+      ),
+      '{"narrationText":"The lock clicks open."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I pick the lock' },
+      fixedRng(0.5)
+    )
+
+    expect(result.check).toBeDefined()
+    expect(result.playerActionText).toBe('Kael picks the lock.')
+    expect(result.narrationText).toBe('The lock clicks open.')
+  })
 })
 
 describe('resolvePlayerTurn: converse-only routing', () => {
-  it('skips narration when the routing plan omits dmNarration', async () => {
+  it('skips narration when the routing plan omits dmNarration, using one intent+routing call', async () => {
     const { db, campaign, region, player } = seedCampaignWithPlayer()
     const npc = createNpc(db, {
       campaignId: campaign.id,
@@ -104,8 +133,7 @@ describe('resolvePlayerTurn: converse-only routing', () => {
       disposition: 'friendly'
     })
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      routingPlan({ kind: 'npcResponse', npcIds: [npc.id] }),
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [npc.id] }),
       '{"dialogue":"What do you need?"}'
     ])
 
@@ -118,7 +146,8 @@ describe('resolvePlayerTurn: converse-only routing', () => {
 
     expect(result.narrationText).toBe('')
     expect(result.npcReactions[0]?.text).toBe('What do you need?')
-    expect(provider.calls).toHaveLength(3)
+    // one merged intent+routing call plus the NPC reaction — no separate review call
+    expect(provider.calls).toHaveLength(2)
   })
 })
 
@@ -126,11 +155,10 @@ describe('resolvePlayerTurn: player action expression', () => {
   it('expresses a player physical action as bold prose when the plan includes playerActionExpression', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      routingPlan({
-        kind: 'playerActionExpression',
-        actionDescription: 'Kael draws his sword.'
-      })
+      mergedTurn(
+        { checkNeeded: false },
+        { kind: 'playerActionExpression', actionDescription: 'Kael draws his sword.' }
+      )
     ])
 
     const result = await resolvePlayerTurn(
@@ -141,6 +169,8 @@ describe('resolvePlayerTurn: player action expression', () => {
     )
 
     expect(result.playerActionText).toBe('Kael draws his sword.')
+    // the entire routed turn cost a single LLM call
+    expect(provider.calls).toHaveLength(1)
     const expressionEvents = listEventsByCampaign(db, campaign.id, { type: 'player_action_expression' })
     expect(expressionEvents[0]?.payload['playerInput']).toBe('I draw my sword')
   })
@@ -158,8 +188,7 @@ describe('resolvePlayerTurn: targeted NPC combat', () => {
     })
     db.prepare('UPDATE characters SET hp = 10 WHERE id = ?').run(player.id)
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      routingPlan({ kind: 'npcResponse', npcIds: [npc.id] }),
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [npc.id] }),
       '{"dialogue":"Die!","attack":true}'
     ])
 
@@ -187,8 +216,7 @@ describe('resolvePlayerTurn: non-speaking creature actions', () => {
       canSpeak: false
     })
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      routingPlan({ kind: 'npcResponse', npcIds: [wolf.id] }),
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [wolf.id] }),
       JSON.stringify({ actionDescription: '**The wolf lunges.**' })
     ])
 
@@ -215,8 +243,7 @@ describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
       disposition: 'friendly'
     })
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      routingPlan({ kind: 'dmNarration' }),
+      mergedTurn({ checkNeeded: false }, { kind: 'dmNarration' }),
       `{"narrationText":"Mira considers your offer.","proposedPromotionNpcId":"${npc.id}"}`
     ])
 
@@ -243,8 +270,7 @@ describe('resolvePlayerTurn: party member on narration turn', () => {
       stats: { personality: 'gruff' }
     })
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      routingPlan({ kind: 'dmNarration' }, { kind: 'partyMember' }),
+      mergedTurn({ checkNeeded: false }, { kind: 'dmNarration' }, { kind: 'partyMember' }),
       '{"narrationText":"Nothing much happens."}',
       '{"actionText":"Brom scouts ahead."}'
     ])
@@ -277,8 +303,7 @@ describe('resolvePlayerTurn: party silent on dialogue', () => {
       kind: 'ai_party_member'
     })
     const provider = createScriptedProvider([
-      '{"checkNeeded":false}',
-      routingPlan({ kind: 'npcResponse', npcIds: [npc.id] }),
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [npc.id] }),
       '{"dialogue":"Evening."}'
     ])
 

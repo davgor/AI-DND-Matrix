@@ -12,7 +12,7 @@ describe('combat HUD HP smoke', () => {
 
     const turn = await resolvePlayerTurn(
       db,
-      createScriptedProvider(['{"checkNeeded":false,"combatIntent":"startEncounter"}']),
+      createScriptedProvider(['{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}']),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'Fight!' },
       initiativeRng()
     )

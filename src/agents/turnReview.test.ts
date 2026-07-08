@@ -9,6 +9,9 @@ import { createScriptedProvider } from './providers/mockHarness'
 import { assembleNarrationContext, DmSchemaError, MAX_SCHEMA_ATTEMPTS } from './dm'
 import { reviewTurn } from './turnReview'
 
+// reviewTurn is a deprecated redirect onto the merged intent + routing call
+// (040.2) — providers script the merged {"intent":…,"routingPlan":…} schema.
+
 function seedReviewContext() {
   const db = createTestDb()
   const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
@@ -41,8 +44,11 @@ describe('reviewTurn: converse and act dispositions', () => {
     const { npc, narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
-        disposition: 'converse',
-        beats: [{ kind: 'npcResponse', npcIds: [npc.id] }]
+        intent: { checkNeeded: false },
+        routingPlan: {
+          disposition: 'converse',
+          beats: [{ kind: 'npcResponse', npcIds: [npc.id] }]
+        }
       })
     ])
 
@@ -60,8 +66,11 @@ describe('reviewTurn: converse and act dispositions', () => {
     const { narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
-        disposition: 'act',
-        beats: [{ kind: 'playerActionExpression', actionDescription: 'Kael draws his sword.' }]
+        intent: { checkNeeded: false },
+        routingPlan: {
+          disposition: 'act',
+          beats: [{ kind: 'playerActionExpression', actionDescription: 'Kael draws his sword.' }]
+        }
       })
     ])
 
@@ -79,43 +88,44 @@ describe('reviewTurn: converse and act dispositions', () => {
 })
 
 describe('reviewTurn: narrate and composite dispositions', () => {
-  it('routes a narrate-with-check turn including dmNarration', async () => {
+  it('routes a check turn including dmNarration — plan is produced before the roll', async () => {
     const { narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
-        disposition: 'narrate',
-        beats: [{ kind: 'dmNarration' }]
+        intent: { checkNeeded: true, ability: 'agility', dc: 12, proficient: false },
+        routingPlan: { disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }
       })
     ])
 
     const plan = await reviewTurn(provider, {
       ...narrationContext,
       playerInput: 'I pick the lock',
-      intent: { checkNeeded: true, ability: 'agility', dc: 12, proficient: false },
-      checkOutcome: { success: false, total: 8, dc: 12 }
+      intent: { checkNeeded: true, ability: 'agility', dc: 12, proficient: false }
     })
 
     expect(plan.beats).toEqual([{ kind: 'dmNarration' }])
-    expect(provider.calls[0]?.prompt).toContain('"success":false')
+    expect(provider.calls[0]?.prompt).not.toContain('Engine check outcome')
   })
 
   it('preserves composite beat ordering from the agent', async () => {
     const { npc, narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
-        disposition: 'composite',
-        beats: [
-          { kind: 'playerActionExpression', actionDescription: 'Kael lunges forward.' },
-          { kind: 'dmNarration' },
-          { kind: 'npcResponse', npcIds: [npc.id] }
-        ]
+        intent: { checkNeeded: true, ability: 'body', dc: 10, proficient: true },
+        routingPlan: {
+          disposition: 'composite',
+          beats: [
+            { kind: 'playerActionExpression', actionDescription: 'Kael lunges forward.' },
+            { kind: 'dmNarration' },
+            { kind: 'npcResponse', npcIds: [npc.id] }
+          ]
+        }
       })
     ])
 
     const plan = await reviewTurn(provider, {
       ...narrationContext,
-      intent: { checkNeeded: true, ability: 'body', dc: 10, proficient: true },
-      checkOutcome: { success: true, total: 14, dc: 10 }
+      intent: { checkNeeded: true, ability: 'body', dc: 10, proficient: true }
     })
 
     expect(plan.beats.map((beat) => beat.kind)).toEqual([
@@ -127,7 +137,7 @@ describe('reviewTurn: narrate and composite dispositions', () => {
 })
 
 describe('reviewTurn: slim context (040.4)', () => {
-  it('sends slim recent events in the review prompt — no event ids or raw payloads', async () => {
+  it('sends slim recent events in the merged prompt — no event ids or raw payloads', async () => {
     const { db, campaign, region, player, npc } = seedReviewContext()
     const priorEvent = appendEvent(db, {
       campaignId: campaign.id,
@@ -148,7 +158,10 @@ describe('reviewTurn: slim context (040.4)', () => {
       playerInput: 'Hello again'
     })
     const provider = createScriptedProvider([
-      JSON.stringify({ disposition: 'converse', beats: [{ kind: 'npcResponse', npcIds: [npc.id] }] })
+      JSON.stringify({
+        intent: { checkNeeded: false },
+        routingPlan: { disposition: 'converse', beats: [{ kind: 'npcResponse', npcIds: [npc.id] }] }
+      })
     ])
 
     await reviewTurn(provider, { ...narrationContext, intent: { checkNeeded: false } })
@@ -166,8 +179,11 @@ describe('reviewTurn: validation', () => {
     const { npc, narrationContext } = seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
-        disposition: 'converse',
-        beats: [{ kind: 'npcResponse', npcIds: [npc.id, 'not-in-scene'] }]
+        intent: { checkNeeded: false },
+        routingPlan: {
+          disposition: 'converse',
+          beats: [{ kind: 'npcResponse', npcIds: [npc.id, 'not-in-scene'] }]
+        }
       })
     ])
 
