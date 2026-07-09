@@ -712,6 +712,45 @@ describe('fillCampaignNpcShortfall parallelism (040.11)', () => {
   })
 })
 
+/** Phase-1 marker of the flagged two-phase pipeline — must never appear on one-shot paths. */
+const CORE_BUNDLE_PROMPT_MARKER = 'core identity bundle'
+
+describe('one-shot NPC generation call-count guards (040.13)', () => {
+  it('bulk campaign generation issues exactly one LLM call per NPC', async () => {
+    const responses = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
+    const provider = createScriptedProvider(responses)
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 2, npcsPerRegion: 3 })
+    expect(result.npcs).toHaveLength(6)
+    // world + regions + one call per NPC (6) + story thread = 9
+    expect(provider.calls).toHaveLength(9)
+    expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
+  })
+
+  it('additional-region generation issues a single one-shot call covering region and NPCs', async () => {
+    const provider = createScriptedProvider([ADDITIONAL_REGION])
+    const result = await generateAdditionalRegion(provider, 'A flooded kingdom.', ['Oakhollow'], {
+      seedPrompt: 'A marsh crossing'
+    })
+    expect(result.npcs).toHaveLength(3)
+    expect(provider.calls).toHaveLength(1)
+    expect(provider.calls[0]?.prompt).not.toContain(CORE_BUNDLE_PROMPT_MARKER)
+  })
+
+  it('shortfall top-up issues exactly one LLM call per topped-up NPC', async () => {
+    const region = makeRegion('Topup Vale', 'top')
+    const prelude = buildShortfallSeedPrelude(region, 2)
+    const provider = createScriptedProvider([
+      ...prelude,
+      shortfallNpcPayload(region.name, 'Gale North'),
+      shortfallNpcPayload(region.name, 'Hollis Reed')
+    ])
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 2 })
+    expect(result.npcs).toHaveLength(2)
+    expect(provider.calls).toHaveLength(prelude.length + 2)
+    expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
+  })
+})
+
 describe('generateAndPersistCampaign atomicity (007.4, persistence half)', () => {
   it('leaves no partial rows from a malformed attempt — exactly one complete campaign after malformed-then-valid', async () => {
     const db = createTestDb()

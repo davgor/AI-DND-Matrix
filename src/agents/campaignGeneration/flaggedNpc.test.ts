@@ -1,14 +1,31 @@
 import { describe, expect, it } from 'vitest'
+import { createCampaign } from '../../db/repositories/campaigns'
+import {
+  createCampaignRace,
+  getCampaignRaceByKey
+} from '../../db/repositories/campaignRaces'
+import { createRegion } from '../../db/repositories/regions'
+import {
+  ELF_LOREKEEPER_CORE,
+  ELF_LOREKEEPER_FINAL,
+  ELF_SCOUT_CORE,
+  ELF_SCOUT_FINAL
+} from '../../db/npcCoreBundleFixtures'
+import { createTestDb } from '../../db/testUtils'
 import { GENDER_ROSTER } from '../../shared/npcGender/types'
 import { NPC_CLASS_ROSTER } from '../../shared/npcClass/types'
 import { buildAvailableRaceOptions } from '../raceLore'
+import { AGENT_JSON_CONTRACT_SYSTEM } from '../sharedSystemPrompts'
 import {
   buildFlaggedNpcFinalPrompt,
   buildNpcCoreBundlePrompt,
+  generateFlaggedNpc,
+  generateFlaggedNpcDetails,
   generateNpcCoreBundle
 } from './flaggedNpc'
+import { RACE_LORE_RESPONSE } from './fixtures'
 import { createScriptedProvider } from '../providers/mockHarness'
-import type { NpcCoreBundle } from './types'
+import { CampaignGenerationSchemaError, type NpcCoreBundle } from './types'
 
 const SAMPLE_LORE = {
   summary: 'Humans are widespread settlers.',
@@ -87,22 +104,76 @@ describe('generateNpcCoreBundle (052.5 + 051.4)', () => {
   })
 })
 
-describe('generateNpcCoreBundle maxTokens (040.1)', () => {
+const NON_SPEAKING_BUNDLE_PAYLOAD = JSON.stringify({
+  canSpeak: false,
+  temperament: 'aggressive',
+  race: 'human',
+  gender: 'man'
+})
+
+const CORE_BUNDLE_INPUT = {
+  regionName: 'Wilds',
+  regionDescription: 'Deep forest.',
+  seedPrompt: 'A hostile dire wolf',
+  availableRaces: buildAvailableRaceOptions([])
+}
+
+describe('generateNpcCoreBundle GenerateContext (040.1 + 040.13)', () => {
   it('caps phase 1 at the structured-JSON band, not the prose band', async () => {
-    const payload = JSON.stringify({
-      canSpeak: false,
-      temperament: 'aggressive',
-      race: 'human',
-      gender: 'man'
-    })
-    const provider = createScriptedProvider([payload])
-    await generateNpcCoreBundle(provider, {
-      regionName: 'Wilds',
-      regionDescription: 'Deep forest.',
-      seedPrompt: 'A hostile dire wolf',
-      availableRaces: buildAvailableRaceOptions([])
-    })
+    const provider = createScriptedProvider([NON_SPEAKING_BUNDLE_PAYLOAD])
+    await generateNpcCoreBundle(provider, CORE_BUNDLE_INPUT)
     expect(provider.calls[0]?.context?.maxTokens).toBe(384)
+  })
+
+  it('sends the JSON contract via systemPrompt, not the user prompt', async () => {
+    const provider = createScriptedProvider([NON_SPEAKING_BUNDLE_PAYLOAD])
+    await generateNpcCoreBundle(provider, CORE_BUNDLE_INPUT)
+    const call = provider.calls[0]
+    expect(call?.context?.systemPrompt).toContain(AGENT_JSON_CONTRACT_SYSTEM)
+    expect(call?.context?.systemPrompt).toContain('"canSpeak":boolean')
+    expect(call?.prompt).not.toContain('Respond ONLY with JSON')
+  })
+
+  it('passes the identical context object on every schema-retry attempt', async () => {
+    const provider = createScriptedProvider(['not json', NON_SPEAKING_BUNDLE_PAYLOAD])
+    await generateNpcCoreBundle(provider, CORE_BUNDLE_INPUT)
+    expect(provider.calls).toHaveLength(2)
+    expect(provider.calls[1]?.context).toBe(provider.calls[0]?.context)
+  })
+})
+
+describe('generateFlaggedNpcDetails GenerateContext (040.13)', () => {
+  const detailsInput = {
+    regionName: 'Harbor',
+    regionDescription: 'A salt port.',
+    regionHistory: [],
+    seedPrompt: 'A grizzled veteran',
+    existingNpcNames: []
+  }
+
+  it('sends the speaking schema and backstory rule via systemPrompt with the prose cap', async () => {
+    const provider = createScriptedProvider([ELF_SCOUT_FINAL])
+    await generateFlaggedNpcDetails(provider, { ...detailsInput, bundle: SPEAKING_BUNDLE })
+    const call = provider.calls[0]
+    expect(call?.context?.maxTokens).toBe(4096)
+    expect(call?.context?.systemPrompt).toContain(AGENT_JSON_CONTRACT_SYSTEM)
+    expect(call?.context?.systemPrompt).toContain('"backstory":string')
+    expect(call?.context?.systemPrompt).toContain('two short paragraphs')
+    expect(call?.prompt).not.toContain('Respond ONLY with JSON')
+  })
+
+  it('sends the non-speaking schema (no backstory) via systemPrompt', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({ name: 'Grayfang', role: 'dire wolf', disposition: 'Snarls.' })
+    ])
+    await generateFlaggedNpcDetails(provider, {
+      ...detailsInput,
+      bundle: { canSpeak: false, temperament: 'aggressive' }
+    })
+    const call = provider.calls[0]
+    expect(call?.context?.systemPrompt).toContain('{"name":string,"role":string,"disposition":string}')
+    expect(call?.context?.systemPrompt).not.toContain('"backstory":string')
+    expect(call?.context?.systemPrompt).toContain('Omit backstory entirely')
   })
 })
 
@@ -140,6 +211,98 @@ describe('buildFlaggedNpcFinalPrompt (052.6 + 051.5)', () => {
       bundle: { canSpeak: false, temperament: 'aggressive' }
     })
     expect(prompt).not.toContain('Established identity facts')
-    expect(prompt).toContain('omit backstory entirely')
+    // The backstory-omission rule rides in systemPrompt since 040.13 (see
+    // 'generateFlaggedNpcDetails GenerateContext' above), not the user prompt.
+    expect(prompt).not.toContain('omit backstory entirely')
+  })
+})
+
+const SAMPLE_CAMPAIGN_RACE_LORE = {
+  summary: 'Elves are long-lived wardens of the deep woods.',
+  appearance: 'Slight, sharp-eared, and quick.',
+  culture: 'Bound to grove oaths and old songs.',
+  roleInThisLand: 'They watch the frontier treelines.',
+  hooks: ['An elven warden seeks a lost heirloom.']
+}
+
+function setupFlaggedNpcCampaign() {
+  const db = createTestDb()
+  const campaign = createCampaign(db, {
+    name: 'Flagged NPC Budget',
+    premisePrompt: 'A frontier town.',
+    deathMode: 'legendary'
+  })
+  const region = createRegion(db, {
+    campaignId: campaign.id,
+    name: 'Oakhollow',
+    description: 'A logging village.'
+  })
+  return { db, campaign, region }
+}
+
+function flaggedNpcInput(campaignId: string, region: { id: string; name: string; description: string }) {
+  return {
+    campaignId,
+    regionId: region.id,
+    regionName: region.name,
+    regionDescription: region.description,
+    seedPrompt: 'An elven scout',
+    existingNpcNames: []
+  }
+}
+
+describe('generateFlaggedNpc call-count ceilings (040.13)', () => {
+  it('issues exactly 2 provider calls when the chosen race is already realized', async () => {
+    const { db, campaign, region } = setupFlaggedNpcCampaign()
+    createCampaignRace(db, {
+      campaignId: campaign.id,
+      raceKey: 'elf',
+      kind: 'preset',
+      label: 'Elf',
+      seedPrompt: 'Forest folk.',
+      lore: SAMPLE_CAMPAIGN_RACE_LORE,
+      createdByCharacterId: null
+    })
+    const provider = createScriptedProvider([ELF_SCOUT_CORE, ELF_SCOUT_FINAL])
+    const result = await generateFlaggedNpc(db, provider, flaggedNpcInput(campaign.id, region))
+    expect(provider.calls).toHaveLength(2)
+    expect(result.npc.name).toBe('Sylwen')
+    expect(result.npc.raceKey).toBe('elf')
+  })
+
+  it('issues exactly 3 provider calls when the chosen race is not yet realized', async () => {
+    const { db, campaign, region } = setupFlaggedNpcCampaign()
+    const provider = createScriptedProvider([ELF_SCOUT_CORE, RACE_LORE_RESPONSE, ELF_SCOUT_FINAL])
+    const result = await generateFlaggedNpc(db, provider, flaggedNpcInput(campaign.id, region))
+    expect(provider.calls).toHaveLength(3)
+    expect(result.npc.name).toBe('Sylwen')
+    expect(getCampaignRaceByKey(db, campaign.id, 'elf')).toBeDefined()
+  })
+})
+
+describe('phase-2 failure keeps the realized campaign race (040.13, data-integrity item 12)', () => {
+  it('leaves the campaign_races row in place and the next NPC of that race reuses it', async () => {
+    const { db, campaign, region } = setupFlaggedNpcCampaign()
+    const failingProvider = createScriptedProvider([
+      ELF_SCOUT_CORE,
+      RACE_LORE_RESPONSE,
+      'not json',
+      'not json',
+      'not json'
+    ])
+    await expect(
+      generateFlaggedNpc(db, failingProvider, flaggedNpcInput(campaign.id, region))
+    ).rejects.toBeInstanceOf(CampaignGenerationSchemaError)
+    expect(getCampaignRaceByKey(db, campaign.id, 'elf')).toBeDefined()
+
+    // The orphaned row is intentional: the next NPC of the same race
+    // short-circuits the lore call, so the retry costs 2 calls, not 3.
+    const retryProvider = createScriptedProvider([ELF_LOREKEEPER_CORE, ELF_LOREKEEPER_FINAL])
+    const result = await generateFlaggedNpc(db, retryProvider, {
+      ...flaggedNpcInput(campaign.id, region),
+      seedPrompt: 'An elven lorekeeper'
+    })
+    expect(retryProvider.calls).toHaveLength(2)
+    expect(result.npc.name).toBe('Therin')
   })
 })

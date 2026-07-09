@@ -46,11 +46,9 @@ export function buildNpcCoreBundlePrompt(input: {
     'Available classes (exact key required when canSpeak is true):',
     formatClassOptions(input.availableClasses),
     'Available backgrounds (exact key required when canSpeak is true):',
-    formatBackgroundOptions(),
-    'Speaking NPCs (canSpeak true) must pick race, gender, alignment, class, and background from the lists above.',
-    'Beasts and mindless undead use canSpeak false and omit race, gender, alignment, class, and background.',
-    'Respond ONLY with JSON:',
-    '{"canSpeak":boolean,"temperament":string,"race"?:string,"gender"?:string,"alignment"?:string,"class"?:string,"background"?:string}'
+    formatBackgroundOptions()
+    // JSON contract + field-presence rules ride in the shared systemPrompt
+    // (flaggedNpc.ts CORE_BUNDLE_GENERATE_CONTEXT) since 040.13.
   ].join('\n')
 }
 
@@ -122,10 +120,6 @@ export function buildFlaggedNpcFinalPrompt(input: {
     input.regionHistory.length > 0
       ? ['Recorded region history (established fact):', ...input.regionHistory.map((entry) => `- ${entry}`)]
       : ['Recorded region history: (none yet)']
-  const backstoryRule = input.bundle.canSpeak
-    ? 'backstory must be two short paragraphs tying the NPC to this region.'
-    : 'omit backstory entirely (canSpeak is false).'
-
   return [
     'Generate name, role, disposition, and backstory for a new NPC using the established identity below.',
     ...(input.worldContextLines ?? []),
@@ -138,11 +132,8 @@ export function buildFlaggedNpcFinalPrompt(input: {
     ...buildIdentityFactBlock(input),
     NPC_NAMING_RULES,
     `Temperament (established): ${input.bundle.temperament}`,
-    `canSpeak (established): ${input.bundle.canSpeak}`,
-    backstoryRule,
-    'Respond ONLY with JSON:',
-    input.bundle.canSpeak
-      ? '{"name":string,"role":string,"disposition":string,"backstory":string}'
-      : '{"name":string,"role":string,"disposition":string}'
+    `canSpeak (established): ${input.bundle.canSpeak}`
+    // JSON contract + backstory rule ride in the shared systemPrompt
+    // (flaggedNpc.ts FINAL_*_GENERATE_CONTEXT, chosen by canSpeak) since 040.13.
   ].join('\n')
 }
