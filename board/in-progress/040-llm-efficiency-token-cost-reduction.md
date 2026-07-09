@@ -109,13 +109,13 @@ Wire through `GenerateContext.maxTokens` at each call site; do not change provid
 
 #### Acceptance Criteria
 
-- [ ] Grep for `provider.generate(` shows `maxTokens` passed (directly or via helper) at every production call site except documented exceptions
-- [ ] `flaggedNpc.ts`'s `CORE_BUNDLE_MAX_TOKENS` is tuned down from 2048 to the structured-JSON band (256–384) with a comment explaining why
-- [ ] Unit test or snapshot asserts key agents pass expected `maxTokens` to mock provider
-- [ ] No agent regression: schema retry paths still succeed on valid model output
-- [ ] Comment or small table in `src/agents/providers/types.ts` (or adjacent README) documents band rationale
-- [ ] **Truncation guard (do this first):** `claude.ts` inspects `stop_reason` and surfaces `max_tokens` truncation as a failure (or retry-with-larger-cap) instead of returning partial text — without this, tight caps make `narrate` persist raw truncated JSON into `events` and `generateNpcReaction` persist it as dialogue + an NPC memory row (both are single-shot with raw-text fallbacks, no retry loop)
-- [ ] Caps on agents whose output is persisted verbatim (`narrate`, `generateNpcReaction`, guided identity/opening scene `dmReply`, `backgroundStory`, `obituary`) are validated against real recorded output sizes before landing, not just the band table
+- [x] Grep for `provider.generate(` shows `maxTokens` passed (directly or via helper) at every production call site except documented exceptions
+- [x] `flaggedNpc.ts`'s `CORE_BUNDLE_MAX_TOKENS` is tuned down from 2048 to the structured-JSON band (256–384) with a comment explaining why
+- [x] Unit test or snapshot asserts key agents pass expected `maxTokens` to mock provider
+- [x] No agent regression: schema retry paths still succeed on valid model output
+- [x] Comment or small table in `src/agents/providers/types.ts` (or adjacent README) documents band rationale
+- [x] **Truncation guard (do this first):** `claude.ts` inspects `stop_reason` and surfaces `max_tokens` truncation as a failure (or retry-with-larger-cap) instead of returning partial text — without this, tight caps make `narrate` persist raw truncated JSON into `events` and `generateNpcReaction` persist it as dialogue + an NPC memory row (both are single-shot with raw-text fallbacks, no retry loop)
+- [ ] Caps on agents whose output is persisted verbatim (`narrate`, `generateNpcReaction`, guided identity/opening scene `dmReply`, `backgroundStory`, `obituary`) are validated against real recorded output sizes before landing, not just the band table — **remaining:** no real provider credentials were available in the implementation environment, so caps were reasoned from schema + prompt instructions (documented in per-call-site comments) and chosen generously; the new `stop_reason`/`finish_reason` truncation guard means an undershot cap now fails loudly and retries instead of persisting garbage. Close this by playing one manual session with a real provider (a few narration turns, an NPC reaction, a guided-identity interview, a background story, an obituary) and confirming no `TruncationError` occurs; bump any cap that trips it.
 
 ---
 
@@ -148,12 +148,12 @@ Depends on understanding **029** routing spec (`src/shared/turnRouting/SPEC.md`)
 
 #### Acceptance Criteria
 
-- [ ] Non-combat routed turn uses **one** LLM call for intent + routing plan under default path
-- [ ] Combat intent validation and engine check resolution behave identically to pre-merge (existing `dm.test.ts`, `turnIpc` tests updated)
-- [ ] Invalid combined schema retries up to `MAX_SCHEMA_ATTEMPTS`; throws `DmSchemaError` on exhaustion
-- [ ] `reviewTurn` export retained as thin wrapper or deprecated with redirect for tests — no duplicate production call path
-- [ ] **Check-outcome hole closed:** today `reviewTurn` sees the resolved `checkOutcome` (authoritative in its prompt); the merged call routes *before* the roll. When the merged response has `checkNeeded: true`, a `dmNarration` beat is deterministically ensured in the plan post-parse (or the turn falls back to two calls) so check outcomes always reach a narration beat and its side-effect writes
-- [ ] Tests assert on `plan.beats` (executed), not `plan.disposition` (validated but never read at runtime)
+- [x] Non-combat routed turn uses **one** LLM call for intent + routing plan under default path
+- [x] Combat intent validation and engine check resolution behave identically to pre-merge (existing `dm.test.ts`, `turnIpc` tests updated)
+- [x] Invalid combined schema retries up to `MAX_SCHEMA_ATTEMPTS`; throws `DmSchemaError` on exhaustion
+- [x] `reviewTurn` export retained as thin wrapper or deprecated with redirect for tests — no duplicate production call path
+- [x] **Check-outcome hole closed:** today `reviewTurn` sees the resolved `checkOutcome` (authoritative in its prompt); the merged call routes *before* the roll. When the merged response has `checkNeeded: true`, a `dmNarration` beat is deterministically ensured in the plan post-parse (or the turn falls back to two calls) so check outcomes always reach a narration beat and its side-effect writes
+- [x] Tests assert on `plan.beats` (executed), not `plan.disposition` (validated but never read at runtime)
 
 ---
 
@@ -179,12 +179,12 @@ Document precedence in `src/shared/turnRouting/SPEC.md`.
 
 #### Acceptance Criteria
 
-- [ ] Pure unit tests cover each heuristic row + `null` fallback cases
-- [ ] `resolveRoutedTurn` uses heuristic plan when non-null; otherwise merged/split LLM routing
-- [ ] No regression on composite turns (action + check + NPC) — those must fall through to LLM
-- [ ] Telemetry or debug log (dev-only) records `heuristic` vs `llm` routing source for smoke validation
-- [ ] **Side-effect starvation guard:** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, commerce, spells, alignment, and story-driven death — heuristic rows that omit it (`converse`-only, `act`-only) must return `null` (defer to LLM) whenever any signal suggests state could change: active quest whose objective text mentions a present NPC/region keyword, pending alignment shift, first interaction with an NPC this session, or player input containing transactional verbs (buy/sell/give/take/learn). The heuristic may only skip `dmNarration` on turns it can *prove* are inert
-- [ ] Integration test: a scripted quest-advancing dialogue turn routed by the heuristic still results in the quest objective ticking (i.e. it fell through to LLM routing) — the failure mode being guarded is silent, so it needs an explicit test
+- [x] Pure unit tests cover each heuristic row + `null` fallback cases
+- [x] `resolveRoutedTurn` uses heuristic plan when non-null; otherwise merged/split LLM routing
+- [x] No regression on composite turns (action + check + NPC) — those must fall through to LLM
+- [x] Telemetry or debug log (dev-only) records `heuristic` vs `llm` routing source for smoke validation
+- [x] **Side-effect starvation guard:** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, commerce, spells, alignment, and story-driven death — heuristic rows that omit it (`converse`-only, `act`-only) must return `null` (defer to LLM) whenever any signal suggests state could change: active quest whose objective text mentions a present NPC/region keyword, pending alignment shift, first interaction with an NPC this session, or player input containing transactional verbs (buy/sell/give/take/learn). The heuristic may only skip `dmNarration` on turns it can *prove* are inert
+- [x] Integration test: a scripted quest-advancing dialogue turn routed by the heuristic still results in the quest objective ticking (i.e. it fell through to LLM routing) — the failure mode being guarded is silent, so it needs an explicit test
 
 ---
 
@@ -208,11 +208,11 @@ Live in `src/agents/contextSlim.ts` (new file — confirmed nothing like it exis
 
 #### Acceptance Criteria
 
-- [ ] `assembleNarrationContext` uses slim serializers; prompts no longer include event `id` / `campaignId` / raw payload blobs
-- [ ] Unit tests: serializer output size bounded; wolf-bandit-logbook regression fixtures unchanged in **meaning** for narration tests
-- [ ] NPC context assembly windows world facts (max N) and slim memories
-- [ ] Party member context uses slim events
-- [ ] **Log-book `id` preserved in slim shape**, and a regression test proves a `logBookAmendments`/`logBookDeletions` round-trip still works post-slimming (LLM echoes an id it saw in the prompt; persist functions silently skip unknown ids, so this failure mode is otherwise invisible)
+- [x] `assembleNarrationContext` uses slim serializers; prompts no longer include event `id` / `campaignId` / raw payload blobs
+- [x] Unit tests: serializer output size bounded; wolf-bandit-logbook regression fixtures unchanged in **meaning** for narration tests
+- [x] NPC context assembly windows world facts (max N) and slim memories
+- [x] Party member context uses slim events
+- [x] **Log-book `id` preserved in slim shape**, and a regression test proves a `logBookAmendments`/`logBookDeletions` round-trip still works post-slimming (LLM echoes an id it saw in the prompt; persist functions silently skip unknown ids, so this failure mode is otherwise invisible)
 
 ---
 
@@ -235,12 +235,12 @@ When gated off, return empty `inactivePlayerActions` without LLM.
 
 #### Acceptance Criteria
 
-- [ ] `sceneContext` passed to NPC/party/inactive agents is capped; unit test asserts cap applied
-- [ ] Inactive-player LLM skipped on simple converse-only turns with no cross-character signal
-- [ ] Inactive-player LLM still fires when cross-character log writes or shared-scene cues present (integration test)
-- [ ] No change to event append semantics or `TurnResult` shape
-- [ ] Cap applied at **prompt-build time only**, not to the accumulating `BeatExecutionState.sceneContext` (the inactive-player loop appends actions back into it; truncating the state itself would drop earlier beats from later same-turn prompts)
-- [ ] **Compounding-starvation check:** `inactive_player_action` events are both the inactive character's only per-turn record and the only grounding for their future proxy calls — there is no backfill. Since `npcResponse` beats never touch `sceneContext`, converse-only turns already skip the proxy today; with 040.3's converse fast path layered on, an integration test must show inactive characters still act within a bounded number of mixed turns (not silent for a whole scripted session)
+- [x] `sceneContext` passed to NPC/party/inactive agents is capped; unit test asserts cap applied
+- [x] Inactive-player LLM skipped on simple converse-only turns with no cross-character signal
+- [x] Inactive-player LLM still fires when cross-character log writes or shared-scene cues present (integration test)
+- [x] No change to event append semantics or `TurnResult` shape
+- [x] Cap applied at **prompt-build time only**, not to the accumulating `BeatExecutionState.sceneContext` (the inactive-player loop appends actions back into it; truncating the state itself would drop earlier beats from later same-turn prompts)
+- [x] **Compounding-starvation check:** `inactive_player_action` events are both the inactive character's only per-turn record and the only grounding for their future proxy calls — there is no backfill. Since `npcResponse` beats never touch `sceneContext`, converse-only turns already skip the proxy today; with 040.3's converse fast path layered on, an integration test must show inactive characters still act within a bounded number of mixed turns (not silent for a whole scripted session)
 
 ---
 
@@ -266,11 +266,11 @@ Party member combat turns (`resolvePartyCombatTurn`) can use short templates sim
 
 #### Acceptance Criteria
 
-- [ ] Default combat catch-up produces zero `provider.generate` calls for NPC/party flavor
-- [ ] Template output uses correct `reactionKind` and emphasis conventions
-- [ ] Existing combat tests updated; player attack/yield/damage semantics unchanged
-- [ ] Optional `COMBAT_LLM_FLAVOR=true` env or setting restores LLM flavor for manual QA (document in runbook)
-- [ ] Template path lives in `resolveNpcCombatTurn` / `resolvePartyCombatTurn` (the combat call sites), **not** inside `generateNpcReaction` / `decidePartyMemberAction` — the same agents serve the non-combat path where `reaction.text` is persisted as an NPC memory and `attack: true` triggers a real engine attack; test asserts non-combat NPC reactions still write `npc_memories` and can still attack
+- [x] Default combat catch-up produces zero `provider.generate` calls for NPC/party flavor
+- [x] Template output uses correct `reactionKind` and emphasis conventions
+- [x] Existing combat tests updated; player attack/yield/damage semantics unchanged
+- [x] Optional `COMBAT_LLM_FLAVOR=true` env or setting restores LLM flavor for manual QA (document in runbook)
+- [x] Template path lives in `resolveNpcCombatTurn` / `resolvePartyCombatTurn` (the combat call sites), **not** inside `generateNpcReaction` / `decidePartyMemberAction` — the same agents serve the non-combat path where `reaction.text` is persisted as an NPC memory and `attack: true` triggers a real engine attack; test asserts non-combat NPC reactions still write `npc_memories` and can still attack
 
 ---
 
@@ -289,12 +289,12 @@ Add optional `enrichRewardNarration` setting (default **false**) that calls LLM 
 
 #### Acceptance Criteria
 
-- [ ] Encounter end + quest complete award XP/loot with **no** LLM when enrichment disabled
-- [ ] Template narration is grammatically acceptable one-liner per source type
-- [ ] Setting enables prior LLM flavor behavior without code path deletion
-- [ ] `encounterQuestLootSmoke.test.ts` and progression tests pass with enrichment off
-- [ ] **Deterministic loot selector designed and documented** — no engine item-picker exists today (`resolveLootPolicy` is only an envelope; the LLM currently *selects* items and can `proposeNew` catalog rows): define pick strategy (e.g. seeded random among policy-filtered candidates), respect `maxGrantCount`, and add a variety guard so repeated encounters don't grant identical items
-- [ ] Ticket documents two accepted behavior changes so they aren't later mistaken for bugs: persisted XP amounts become `budget.suggested` (midpoint, in-band; `xp_awarded.clamped` always false) and homebrew catalog growth via `proposeNew` stops while enrichment is off
+- [x] Encounter end + quest complete award XP/loot with **no** LLM when enrichment disabled
+- [x] Template narration is grammatically acceptable one-liner per source type
+- [x] Setting enables prior LLM flavor behavior without code path deletion
+- [x] `encounterQuestLootSmoke.test.ts` and progression tests pass with enrichment off
+- [x] **Deterministic loot selector designed and documented** — no engine item-picker exists today (`resolveLootPolicy` is only an envelope; the LLM currently *selects* items and can `proposeNew` catalog rows): define pick strategy (e.g. seeded random among policy-filtered candidates), respect `maxGrantCount`, and add a variety guard so repeated encounters don't grant identical items
+- [x] Ticket documents two accepted behavior changes so they aren't later mistaken for bugs: persisted XP amounts become `budget.suggested` (midpoint, in-band; `xp_awarded.clamped` always false) and homebrew catalog growth via `proposeNew` stops while enrichment is off
 
 ---
 
@@ -314,13 +314,13 @@ Invert default:
 
 #### Acceptance Criteria
 
-- [ ] Pure unit tests for rules tables cover cowardly surrender, beast flee, fanatic fight_on, non-lethal incapacitated, lawful imprison, etc.
-- [ ] LLM call count for yield/defeat drops to near-zero in scripted combat tests
-- [ ] Narration hints still produced from rules (template strings)
-- [ ] LLM fallback preserved when rules return `ambiguous`
-- [ ] Non-speaking-victor defeat skip (already working) is unaffected
-- [ ] **Hard invariants, not guidance:** yield table never returns `slain` when lethality is `non_lethal` or mercy is offered (today only a prompt guideline), always returns an outcome within `allowedOutcomes` ∪ `fight_on`, and never returns `surrender` for `canSpeak: false`. Property-style test over the input space — the outcome writes `encounter_outcome`, kills NPCs (`alive = false`), rewrites disposition, and gates XP *and* loot eligibility (`flee` earns neither), so a biased table changes persisted world state, not flavor
-- [ ] Defeat rules table produces `locationTag` (or explicitly documents dropping it) — today it's an LLM-only field persisted into `playerDefeatState` and the `player_defeated` event for imprison/ransom continuity
+- [x] Pure unit tests for rules tables cover cowardly surrender, beast flee, fanatic fight_on, non-lethal incapacitated, lawful imprison, etc.
+- [x] LLM call count for yield/defeat drops to near-zero in scripted combat tests
+- [x] Narration hints still produced from rules (template strings)
+- [x] LLM fallback preserved when rules return `ambiguous`
+- [x] Non-speaking-victor defeat skip (already working) is unaffected
+- [x] **Hard invariants, not guidance:** yield table never returns `slain` when lethality is `non_lethal` or mercy is offered (today only a prompt guideline), always returns an outcome within `allowedOutcomes` ∪ `fight_on`, and never returns `surrender` for `canSpeak: false`. Property-style test over the input space — the outcome writes `encounter_outcome`, kills NPCs (`alive = false`), rewrites disposition, and gates XP *and* loot eligibility (`flee` earns neither), so a biased table changes persisted world state, not flavor
+- [x] Defeat rules table produces `locationTag` (or explicitly documents dropping it) — today it's an LLM-only field persisted into `playerDefeatState` and the `player_defeated` event for imprison/ransom continuity
 
 ---
 
@@ -346,11 +346,11 @@ Pass via `provider.generate(prompt, { systemPrompt, maxTokens })`. User message 
 
 #### Acceptance Criteria
 
-- [ ] DM, turn review, NPC, loot, XP agents use shared system prompt; user prompts measurably shorter (snapshot or character-count test)
-- [ ] Claude and Player2 adapters both receive system message correctly (existing `player2.test.ts` pattern)
-- [ ] Schema validation tests still pass
-- [ ] `NARRATIVE_EMPHASIS_GUIDANCE`/`NPC_EMPHASIS_GUIDANCE` move from user prompt to `systemPrompt` where the call site allows it
-- [ ] Schema-retry loops pass the same `GenerateContext` (systemPrompt + maxTokens) on **every** attempt — today the loops pass no context at all, so this is easy to get wrong on attempt 2+; a test asserts the mock provider received identical context across retries
+- [x] DM, turn review, NPC, loot, XP agents use shared system prompt; user prompts measurably shorter (snapshot or character-count test)
+- [x] Claude and Player2 adapters both receive system message correctly (existing `player2.test.ts` pattern)
+- [x] Schema validation tests still pass
+- [x] `NARRATIVE_EMPHASIS_GUIDANCE`/`NPC_EMPHASIS_GUIDANCE` move from user prompt to `systemPrompt` where the call site allows it
+- [x] Schema-retry loops pass the same `GenerateContext` (systemPrompt + maxTokens) on **every** attempt — today the loops pass no context at all, so this is easy to get wrong on attempt 2+; a test asserts the mock provider received identical context across retries
 
 ---
 
@@ -366,12 +366,12 @@ Window the transcript to last **4–5** exchanges. Always include `currentFounda
 
 #### Acceptance Criteria
 
-- [ ] Prompt includes at most 5 transcript turns plus all completed foundation summaries
-- [ ] Unit test: 10-turn fixture produces same-sized transcript section regardless of turns 1–5 content
-- [ ] The static mechanical/identity block (race lore + background + alignment + archetype + ability scores) is sent once via `systemPrompt`, not re-serialized into the user prompt on every turn
-- [ ] `guidedCreationSmoke.test.ts` still passes
-- [ ] **Delayed-lock-in protection:** foundations are extracted incrementally per turn and the transcript is never re-processed after phase completion — the four `identity_*` columns are the only durable output. Under windowing, `mergeFoundationStatus` must stop **overwriting** an already-locked summary when the model re-emits `complete: true` (a re-emit summarized from a window that no longer contains the original discussion would silently replace a good summary with a thin one); locked summaries become append/keep-first
-- [ ] Phase completion requires all four `identity_*` summaries to be non-null — the current `allFoundationsComplete: true` model-flag bypass (which can advance the phase with null identity columns) is closed or explicitly re-justified, since windowing raises the odds the model claims completion without having locked everything
+- [x] Prompt includes at most 5 transcript turns plus all completed foundation summaries
+- [x] Unit test: 10-turn fixture produces same-sized transcript section regardless of turns 1–5 content
+- [x] The static mechanical/identity block (race lore + background + alignment + archetype + ability scores) is sent once via `systemPrompt`, not re-serialized into the user prompt on every turn
+- [x] `guidedCreationSmoke.test.ts` still passes
+- [x] **Delayed-lock-in protection:** foundations are extracted incrementally per turn and the transcript is never re-processed after phase completion — the four `identity_*` columns are the only durable output. Under windowing, `mergeFoundationStatus` must stop **overwriting** an already-locked summary when the model re-emits `complete: true` (a re-emit summarized from a window that no longer contains the original discussion would silently replace a good summary with a thin one); locked summaries become append/keep-first
+- [x] Phase completion requires all four `identity_*` summaries to be non-null — the current `allFoundationsComplete: true` model-flag bypass (which can advance the phase with null identity columns) is closed or explicitly re-justified, since windowing raises the odds the model claims completion without having locked everything
 
 ---
 
@@ -385,11 +385,11 @@ Parallelise per region batch (respect rate limits with optional concurrency cap 
 
 #### Acceptance Criteria
 
-- [ ] Shortfall fill issues parallel requests; test mocks confirm concurrent calls
-- [ ] Name collisions between concurrently-generated NPCs in the same batch are detected and resolved (regenerate or rename), not silently allowed through
-- [ ] Generation result has the same NPC count per region as serial ordering
-- [ ] Failed single NPC does not fail entire batch — **note: this is a behavior change, not parity.** Today `fillCampaignNpcShortfall` returns `undefined` on any single failure, discarding the entire repair (only the *initial* generation skips failed slots). State the intended semantics explicitly in the implementation
-- [ ] Parallelism stays in the pre-persist, in-memory fill only — `persistCampaignNpcsFromGeneration` and `resolveOrRealizeCampaignRace` remain serial (the latter is check-then-insert against `UNIQUE(campaign_id, race_key)` and would throw under concurrent same-race NPCs)
+- [x] Shortfall fill issues parallel requests; test mocks confirm concurrent calls
+- [x] Name collisions between concurrently-generated NPCs in the same batch are detected and resolved (regenerate or rename), not silently allowed through
+- [x] Generation result has the same NPC count per region as serial ordering
+- [x] Failed single NPC does not fail entire batch — **note: this is a behavior change, not parity.** Today `fillCampaignNpcShortfall` returns `undefined` on any single failure, discarding the entire repair (only the *initial* generation skips failed slots). State the intended semantics explicitly in the implementation
+- [x] Parallelism stays in the pre-persist, in-memory fill only — `persistCampaignNpcsFromGeneration` and `resolveOrRealizeCampaignRace` remain serial (the latter is check-then-insert against `UNIQUE(campaign_id, race_key)` and would throw under concurrent same-race NPCs)
 
 ---
 
@@ -418,10 +418,10 @@ Depends on **040.1–040.7 and 040.13** at minimum; run full suite after all tic
 
 #### Acceptance Criteria
 
-- [ ] Automated smoke tests assert call-count ceilings per scenario, including both flagged-NPC scenarios (race realized / not yet realized)
-- [ ] Prompt size regression fixture documents slim context savings (turn context) and identity block savings (guided identity)
-- [ ] Runbook lists scenarios and expected call budget
-- [ ] `npm test`, `npm run lint`, `npm run build` pass with epic complete
+- [x] Automated smoke tests assert call-count ceilings per scenario, including both flagged-NPC scenarios (race realized / not yet realized)
+- [x] Prompt size regression fixture documents slim context savings (turn context) and identity block savings (guided identity)
+- [x] Runbook lists scenarios and expected call budget
+- [x] `npm test`, `npm run lint`, `npm run build` pass with epic complete
 
 ---
 
@@ -448,9 +448,9 @@ This ticket's job is to make sure that deliberate cost is **measured, bounded, a
 
 #### Acceptance Criteria
 
-- [ ] `flaggedNpc.ts`'s phase-1 (`generateNpcCoreBundle`) and phase-2 (`generateFlaggedNpcDetails`) calls both pass tuned `maxTokens` (coordinated with 040.1)
-- [ ] Both `flaggedNpc.ts` calls adopt shared `systemPrompt` for their JSON-contract/emphasis boilerplate (coordinated with 040.9)
-- [ ] Call-count regression test (040.12) asserts exactly 2 calls when the chosen race is already realized in the campaign, and exactly 3 when it is not
-- [ ] Regression test confirms bulk campaign generation, additional-region generation, and shortfall top-up still issue exactly one LLM call per NPC (no accidental migration to the two-phase pipeline)
-- [ ] No change to `generateFlaggedNpc`'s output shape or the established-identity-before-flavor-text ordering — this ticket tunes cost, it does not change what gets generated or when
-- [ ] Documented as intended: a phase-2 failure after a phase-2-triggered race realize leaves the `campaign_races` row in place (benign and idempotent — the next NPC of that race short-circuits the lore call); do not add cleanup
+- [x] `flaggedNpc.ts`'s phase-1 (`generateNpcCoreBundle`) and phase-2 (`generateFlaggedNpcDetails`) calls both pass tuned `maxTokens` (coordinated with 040.1)
+- [x] Both `flaggedNpc.ts` calls adopt shared `systemPrompt` for their JSON-contract/emphasis boilerplate (coordinated with 040.9)
+- [x] Call-count regression test (040.12) asserts exactly 2 calls when the chosen race is already realized in the campaign, and exactly 3 when it is not
+- [x] Regression test confirms bulk campaign generation, additional-region generation, and shortfall top-up still issue exactly one LLM call per NPC (no accidental migration to the two-phase pipeline)
+- [x] No change to `generateFlaggedNpc`'s output shape or the established-identity-before-flavor-text ordering — this ticket tunes cost, it does not change what gets generated or when
+- [x] Documented as intended: a phase-2 failure after a phase-2-triggered race realize leaves the `campaign_races` row in place (benign and idempotent — the next NPC of that race short-circuits the lore call); do not add cleanup
