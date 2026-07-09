@@ -92,8 +92,9 @@ describe('quest-advancing dialogue falls through to LLM routing (starvation guar
       () => 0.5
     )
 
-    // The turn used merged LLM routing, not the heuristic converse row.
-    expect(provider.calls[0]?.prompt).toContain('routingPlan')
+    // The turn used merged LLM routing, not the heuristic converse row
+    // (040.9: schemas live in systemPrompt, so distinguish the call there).
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('routingPlan')
     expect(debugSpy).toHaveBeenCalledWith(
       'turn routing source',
       expect.objectContaining({ source: 'llm' })
@@ -126,8 +127,9 @@ describe('inert dialogue takes the heuristic fast path', () => {
     )
 
     expect(provider.calls).toHaveLength(2)
-    // Intent-only prompt: no routing schema, no scene grounding payloads.
-    expect(provider.calls[0]?.prompt).not.toContain('routingPlan')
+    // Intent-only call: no routing schema in the systemPrompt, no scene
+    // grounding payloads in the user prompt.
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').not.toContain('routingPlan')
     expect(provider.calls[0]?.prompt).not.toContain('Recent events')
     expect(debugSpy).toHaveBeenCalledWith(
       'turn routing source',

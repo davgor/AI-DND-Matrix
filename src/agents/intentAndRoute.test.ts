@@ -8,6 +8,7 @@ import { createScriptedProvider } from './providers/mockHarness'
 import { assembleNarrationContext, DmSchemaError, MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { TurnRoutingPlan } from '../shared/turnRouting/types'
 import {
+  INTENT_AND_ROUTE_SYSTEM_PROMPT,
   buildIntentAndRoutePrompt,
   ensureDmNarrationBeat,
   interpretIntentAndRoute
@@ -266,7 +267,7 @@ describe('interpretIntentAndRoute: checkNeeded responses always carry a narratio
 })
 
 describe('buildIntentAndRoutePrompt', () => {
-  it('carries scene grounding, both schemas, and the pre-roll narration rule in one prompt', () => {
+  it('carries turn-specific scene grounding only — schemas and guidance live in the systemPrompt (040.9)', () => {
     const { npc, narrationContext } = seedRouteContext()
 
     const prompt = buildIntentAndRoutePrompt({
@@ -275,14 +276,13 @@ describe('buildIntentAndRoutePrompt', () => {
     })
 
     expect(prompt).toContain('Hello Mira')
-    expect(prompt).toContain('"intent":')
-    expect(prompt).toContain('"routingPlan":')
-    expect(prompt).toContain('"checkNeeded"')
     expect(prompt).toContain('Player character alignment')
     expect(prompt).toContain('Region status')
     expect(prompt).toContain(npc.id)
     expect(prompt).toContain('Combat encounter active: false.')
-    expect(prompt).toContain('before any check is rolled')
+    expect(prompt).not.toContain('Respond ONLY with JSON')
+    expect(prompt).not.toContain('routingPlan')
+    expect(prompt).not.toContain('before any check is rolled')
   })
 
   it('never sends a resolved check outcome — routing happens before the roll', () => {
@@ -292,5 +292,49 @@ describe('buildIntentAndRoutePrompt', () => {
 
     expect(prompt).not.toContain('Engine check outcome')
     expect(prompt).not.toContain('"success"')
+  })
+})
+
+describe('shared systemPrompt adoption (040.9)', () => {
+  it('carries the JSON contract, both schemas, and the pre-roll narration rule in the systemPrompt', () => {
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('no markdown fences')
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('untrusted')
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('Respond ONLY with JSON: {"intent":')
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('"routingPlan":')
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('"checkNeeded"')
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('before any check is rolled')
+  })
+
+  it('sends the systemPrompt via GenerateContext on the merged call', async () => {
+    const { npc, narrationContext } = seedRouteContext()
+    const provider = createScriptedProvider([
+      mergedResponse(
+        { checkNeeded: false },
+        { disposition: 'converse', beats: [{ kind: 'npcResponse', npcIds: [npc.id] }] }
+      )
+    ])
+
+    await interpretIntentAndRoute(provider, narrationContext)
+
+    expect(provider.calls[0]?.context?.systemPrompt).toBe(INTENT_AND_ROUTE_SYSTEM_PROMPT)
+    expect(provider.calls[0]?.prompt).not.toContain('Respond ONLY with JSON')
+  })
+
+  it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {
+    const { narrationContext } = seedRouteContext()
+    const provider = createScriptedProvider([
+      'bad',
+      'still bad',
+      mergedResponse({ checkNeeded: false }, { disposition: 'narrate', beats: [{ kind: 'dmNarration' }] })
+    ])
+
+    await interpretIntentAndRoute(provider, narrationContext)
+
+    expect(provider.calls).toHaveLength(3)
+    const firstContext = provider.calls[0]?.context
+    expect(firstContext?.systemPrompt).toBe(INTENT_AND_ROUTE_SYSTEM_PROMPT)
+    for (const call of provider.calls) {
+      expect(call.context).toBe(firstContext)
+    }
   })
 })

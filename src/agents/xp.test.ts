@@ -36,4 +36,35 @@ describe('resolveXpAward', () => {
     expect(result.xpAmount).toBe(45)
     expect(result.narrationText).toContain('Well done')
   })
+
+  it('moves the XP schema into systemPrompt — user prompt keeps source and budget (040.9)', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({ narrationText: 'Well earned.', xpAmount: 40 })
+    ])
+
+    await resolveXpAward(provider, questContext, { min: 20, max: 60, suggested: 40 })
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('Deliver grain.')
+    expect(call.prompt).toContain('min: 20')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    expect(call.prompt).not.toContain('Propose xpAmount')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"narrationText":string,"xpAmount":number}')
+    expect(system).toContain('Propose xpAmount within the budget')
+    expect(system).toContain('no markdown fences')
+  })
+
+  it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {
+    const provider = createScriptedProvider(['bad', 'still bad', 'nope'])
+
+    await resolveXpAward(provider, questContext, { min: 20, max: 60, suggested: 40 })
+
+    expect(provider.calls).toHaveLength(3)
+    const firstContext = provider.calls[0]?.context
+    expect(firstContext?.systemPrompt).toBeTruthy()
+    for (const call of provider.calls) {
+      expect(call.context).toBe(firstContext)
+    }
+  })
 })

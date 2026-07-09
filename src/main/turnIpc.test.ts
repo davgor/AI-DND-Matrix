@@ -169,8 +169,9 @@ describe('resolvePlayerTurn: player action expression (040.3 heuristic fast path
 
     expect(result.playerActionText).toBe('Kael draws their sword.')
     // the entire routed turn cost a single, intent-only LLM call
+    // (040.9: schemas live in systemPrompt, so distinguish the call there)
     expect(provider.calls).toHaveLength(1)
-    expect(provider.calls[0]?.prompt).not.toContain('routingPlan')
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').not.toContain('routingPlan')
     const expressionEvents = listEventsByCampaign(db, campaign.id, { type: 'player_action_expression' })
     expect(expressionEvents[0]?.payload['playerInput']).toBe('I draw my sword')
   })
@@ -192,7 +193,7 @@ describe('resolvePlayerTurn: player action expression (040.3 heuristic fast path
     expect(result.check).toBeDefined()
     expect(result.playerActionText).toBe('Kael braces themselves.')
     expect(result.narrationText).toBe('You steady yourself on the ledge.')
-    expect(provider.calls[0]?.prompt).not.toContain('routingPlan')
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').not.toContain('routingPlan')
   })
 })
 
@@ -223,7 +224,7 @@ describe('resolvePlayerTurn: heuristic converse fast path (040.3)', () => {
     expect(result.narrationText).toBe('')
     expect(result.npcReactions[0]?.text).toBe('Back again so soon?')
     expect(provider.calls).toHaveLength(2)
-    expect(provider.calls[0]?.prompt).not.toContain('routingPlan')
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').not.toContain('routingPlan')
   })
 
   it('defers a first interaction with an NPC to LLM routing (starvation guard)', async () => {
@@ -248,7 +249,7 @@ describe('resolvePlayerTurn: heuristic converse fast path (040.3)', () => {
     )
 
     expect(result.npcReactions[0]?.text).toBe('Welcome, stranger.')
-    expect(provider.calls[0]?.prompt).toContain('routingPlan')
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('routingPlan')
   })
 })
 
@@ -286,7 +287,7 @@ describe('resolvePlayerTurn: composite turns fall through to LLM routing (040.3)
     )
 
     // Fell through to the merged LLM call — its plan (including the NPC beat) executed.
-    expect(provider.calls[0]?.prompt).toContain('routingPlan')
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('routingPlan')
     expect(result.playerActionText).toBe('Kael draws his sword and squares up.')
     expect(result.check).toBeDefined()
     expect(result.npcReactions[0]?.text).toBe('Easy now, no need for blood.')

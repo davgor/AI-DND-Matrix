@@ -1,7 +1,8 @@
 import type { ItemGrantProposal } from './dm'
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 import { listLootExemplarsForPolicy } from '../engine/lootProfiles'
 import type { CatalogItem } from '../shared/items/types'
 import { ITEM_TYPES } from '../shared/items/types'
@@ -80,6 +81,20 @@ function formatCandidates(candidates: CatalogItem[]): string {
   )
 }
 
+// 040.9: schema + static realism/retrieve-first rules ride in systemPrompt;
+// the one shared context object keeps every schema-retry attempt identical.
+const LOOT_GENERATE_CONTEXT: GenerateContext = {
+  systemPrompt: buildAgentSystemPrompt({
+    schemaFragment:
+      '{"narrationText":string,"itemGrants":Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"nothingToFind":boolean}',
+    guidanceLines: [
+      'Realism: wolves and beasts yield pelts, fangs, misc salvage only — never weapons or magic items.',
+      'Retrieve-first: prefer catalogItemId from the candidate list in the user message.',
+      'Do not invent mechanical stats — only name, description, itemType, rarityTier for proposeNew.'
+    ]
+  })
+}
+
 export function buildLootPrompt(ctx: LootContext, policy: LootPolicy, candidates: CatalogItem[]): string {
   const exemplars = listLootExemplarsForPolicy(policy)
   const sourceLine =
@@ -92,13 +107,8 @@ export function buildLootPrompt(ctx: LootContext, policy: LootPolicy, candidates
     sourceLine,
     `Player level: ${ctx.playerLevel}`,
     `Policy — allowed types: ${policy.allowedItemTypes.join(', ')}; max rarity: ${policy.maxRarity}; max grants: ${policy.maxGrantCount}`,
-    'Realism: wolves and beasts yield pelts, fangs, misc salvage only — never weapons or magic items.',
-    'Retrieve-first: prefer catalogItemId from the candidate list below.',
     `Catalog candidates: ${formatCandidates(candidates)}`,
-    `Flavor exemplars (suggestions only): ${JSON.stringify(exemplars.map((e) => e.name))}`,
-    'Do not invent mechanical stats — only name, description, itemType, rarityTier for proposeNew.',
-    'Respond ONLY with JSON:',
-    '{"narrationText":string,"itemGrants":Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"nothingToFind":boolean}'
+    `Flavor exemplars (suggestions only): ${JSON.stringify(exemplars.map((e) => e.name))}`
   ].join('\n')
 }
 
@@ -110,7 +120,7 @@ export async function resolveLoot(
 ): Promise<LootAgentResponse> {
   const prompt = buildLootPrompt(ctx, policy, candidates)
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt)
+    const raw = await provider.generate(prompt, LOOT_GENERATE_CONTEXT)
     const parsed = parseLootAgentResponse(tryParseJson(raw), policy.maxGrantCount)
     if (parsed) {
       return parsed

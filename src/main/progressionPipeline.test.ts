@@ -109,7 +109,10 @@ describe('progression pipeline — default zero-LLM XP path', () => {
     })
     expect(xp?.xpAmount).toBe(budget.suggested)
     expect(xp?.xpNarration).toBe(xpNarrationTemplate('encounter_end'))
-    expect(provider.calls.every((call) => !call.prompt.includes('Propose xpAmount'))).toBe(true)
+    // 040.9: the XP agent's instruction lives in systemPrompt now.
+    expect(
+      provider.calls.every((call) => !(call.context?.systemPrompt ?? '').includes('Propose xpAmount'))
+    ).toBe(true)
 
     const updated = getCharacterById(db, player.id)!
     expect(updated.level).toBe(2)
@@ -151,7 +154,7 @@ describe('progression pipeline — enrichment restores LLM flavor', () => {
       playerCharacterId: player.id,
       regionId: region.id
     })
-    expect(provider.calls[0]?.prompt).toContain('Propose xpAmount')
+    expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('Propose xpAmount')
     expect(xp?.xpNarration).toBe('You learn from battle.')
     expect(xp?.xpAmount).toBe(clampXPProposal(80, budget).amount)
   })

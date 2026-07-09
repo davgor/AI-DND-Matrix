@@ -110,6 +110,40 @@ describe('proposeYieldOutcome: ambiguous veteran defers to the LLM', () => {
   })
 })
 
+describe('proposeYieldOutcome: shared systemPrompt (040.9)', () => {
+  it('moves the yield schema and guidelines into systemPrompt — user prompt keeps NPC facts', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({ outcome: 'surrender', narrationText: 'Bren yields.' })
+    ])
+
+    await proposeYieldOutcome(provider, veteranInput)
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('Old Bren')
+    expect(call.prompt).toContain('Allowed outcomes:')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    expect(call.prompt).not.toContain('Guidelines:')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"outcome":string,"narrationText":string}')
+    expect(system).toContain('one of the allowed outcomes listed in the user message')
+    expect(system).toContain('never return slain')
+    expect(system).toContain('no markdown fences')
+  })
+
+  it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {
+    const provider = createScriptedProvider(['not json', 'still not json', 'nope'])
+
+    await proposeYieldOutcome(provider, veteranInput)
+
+    expect(provider.calls).toHaveLength(3)
+    const firstContext = provider.calls[0]?.context
+    expect(firstContext?.systemPrompt).toBeTruthy()
+    for (const call of provider.calls) {
+      expect(call.context).toBe(firstContext)
+    }
+  })
+})
+
 describe('buildYieldReviewInput', () => {
   it('builds a complete YieldReviewInput from NPC data', () => {
     const input = buildYieldReviewInput({

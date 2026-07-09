@@ -143,6 +143,59 @@ describe('proposeDefeatDisposition ambiguous victor defers to the LLM', () => {
   })
 })
 
+describe('proposeDefeatDisposition: shared systemPrompt (040.9)', () => {
+  it('moves the disposition schema into systemPrompt — user prompt keeps victor facts', async () => {
+    const { campaign, player, victor } = seedVictor({
+      role: 'merchant',
+      backstory: 'A trader with cold eyes.',
+      alignment: 'neutral_evil'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({ disposition: 'ransom', narrationText: 'Priced and packaged.' })
+    ])
+
+    await proposeDefeatDisposition(provider, {
+      victor,
+      player,
+      deathMode: campaign.deathMode,
+      encounterSummary: 'The merchant hired muscle.'
+    })
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('Mara')
+    expect(call.prompt).toContain('death mode:')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    expect(call.prompt).not.toContain('Do not invent new victor biography')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"disposition":"imprison"')
+    expect(system).toContain('Do not invent new victor biography')
+    expect(system).toContain('no markdown fences')
+  })
+
+  it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {
+    const { campaign, player, victor } = seedVictor({
+      role: 'merchant',
+      backstory: 'A trader with cold eyes.',
+      alignment: 'neutral_evil'
+    })
+    const provider = createScriptedProvider(['bad', 'bad', 'bad'])
+
+    await proposeDefeatDisposition(provider, {
+      victor,
+      player,
+      deathMode: campaign.deathMode,
+      encounterSummary: 'The merchant hired muscle.'
+    })
+
+    expect(provider.calls).toHaveLength(3)
+    const firstContext = provider.calls[0]?.context
+    expect(firstContext?.systemPrompt).toBeTruthy()
+    for (const call of provider.calls) {
+      expect(call.context).toBe(firstContext)
+    }
+  })
+})
+
 describe('buildDefeatPrompt', () => {
   it('includes death mode and stored backstory', () => {
     const prompt = buildDefeatPrompt({

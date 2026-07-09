@@ -129,6 +129,24 @@ describe('decidePartyMemberAction', () => {
     expect(action).toEqual({ actionText: 'Brom nocks an arrow and covers the rear.' })
   })
 
+  it('moves the action schema into systemPrompt — user prompt keeps persona and scene (040.9)', async () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const character = seedPartyMember(db, campaign.id)
+    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const provider = createScriptedProvider(['{"actionText":"Brom scans the treeline."}'])
+
+    await decidePartyMemberAction(provider, character, context, 'A twig snaps nearby.')
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('A twig snaps nearby.')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"actionText":string}')
+    expect(system).toContain('without waiting for player direction')
+    expect(system).toContain('no markdown fences')
+  })
+
   it('falls back to the raw response text when the schema is malformed', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)

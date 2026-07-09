@@ -44,9 +44,10 @@ export async function expectEmphasisGuidanceInPrompts(): Promise<void> {
     playerInput: 'Look around'
   })
   await narrate(dmProvider, { success: true, total: 10, dc: 10 }, context)
-  expect(dmProvider.calls[0]?.prompt).toContain(NARRATIVE_EMPHASIS_GUIDANCE)
+  // Emphasis guidance moved from the user prompt to systemPrompt (ticket 040.9)
+  expect(dmProvider.calls[0]?.context?.systemPrompt).toContain(NARRATIVE_EMPHASIS_GUIDANCE)
 
   const npcProvider = createScriptedProvider(['{"dialogue":"*Hello.*"}'])
   await generateNpcReaction(npcProvider, npc, assembleNpcContext(db, npc), 'The hero arrives.')
-  expect(npcProvider.calls[0]?.prompt).toContain(NPC_EMPHASIS_GUIDANCE)
+  expect(npcProvider.calls[0]?.context?.systemPrompt).toContain(NPC_EMPHASIS_GUIDANCE)
 }

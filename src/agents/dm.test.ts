@@ -12,6 +12,7 @@ import { listCharacterItems } from '../db/repositories/characterItems'
 import { listCharacterJournalEntries } from '../db/repositories/characterJournalEntries'
 import { listCatalogItems } from '../db/repositories/items'
 import { createScriptedProvider } from './providers/mockHarness'
+import { NARRATIVE_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
 import {
   DmSchemaError,
   MAX_SCHEMA_ATTEMPTS,
@@ -97,6 +98,36 @@ describe('interpretIntent (006.1 schema validation/retry + 006.2 DC clamp)', () 
     const result = await interpretIntent(provider, 'We travel')
     expect(result.travelDays).toBe(1)
     expect(provider.calls).toHaveLength(2)
+  })
+})
+
+describe('interpretIntent: shared systemPrompt (040.9)', () => {
+  it('moves the intent schema and guidance into systemPrompt — user prompt keeps the player input only', async () => {
+    const provider = createScriptedProvider(['{"checkNeeded":false}'])
+
+    await interpretIntent(provider, 'I wave at the guard')
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('I wave at the guard')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    expect(call.prompt).not.toContain('"checkNeeded"')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"checkNeeded"')
+    expect(system).toContain('restShort')
+    expect(system).toContain('no markdown fences')
+  })
+
+  it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {
+    const provider = createScriptedProvider(['bad', 'still bad', '{"checkNeeded":false}'])
+
+    await interpretIntent(provider, 'I do something odd')
+
+    expect(provider.calls).toHaveLength(3)
+    const firstContext = provider.calls[0]?.context
+    expect(firstContext?.systemPrompt).toBeTruthy()
+    for (const call of provider.calls) {
+      expect(call.context).toBe(firstContext)
+    }
   })
 })
 
@@ -237,6 +268,27 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
     await narrate(provider, outcome, context)
 
     expect(provider.calls[0].prompt).toContain(JSON.stringify(outcome))
+  })
+})
+
+describe('narrate: shared systemPrompt (040.9)', () => {
+  it('moves the narration schema, guidance, and emphasis rules into systemPrompt', async () => {
+    const { db, campaign, region, player } = seedCampaignWithRegion()
+    const provider = createScriptedProvider(['{"narrationText":"The door creaks open."}'])
+    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'I open the door' })
+
+    await narrate(provider, { success: true, total: 12, dc: 10 }, context)
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('I open the door')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    expect(call.prompt).not.toContain(NARRATIVE_EMPHASIS_GUIDANCE)
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"narrationText":string')
+    expect(system).toContain('"logBookAmendments"')
+    expect(system).toContain('sceneUpdate rewrites the surroundings description')
+    expect(system).toContain(NARRATIVE_EMPHASIS_GUIDANCE)
+    expect(system).toContain('no markdown fences')
   })
 })
 
@@ -393,5 +445,20 @@ describe('proposeHomebrewFlavor (006.8)', () => {
     // correctly typed; the absence of any *required* numeric field is what matters here.
     const result = await proposeHomebrewFlavor(provider, { tag: 'fire', count: 5 })
     expect(result).not.toHaveProperty('effectDice')
+  })
+
+  it('moves the flavor schema into systemPrompt — user prompt keeps the emergent-direction facts (040.9)', async () => {
+    const provider = createScriptedProvider([
+      '{"name":"Ember Step","description":"A flickering dash.","damageType":"fire"}'
+    ])
+
+    await proposeHomebrewFlavor(provider, { tag: 'fire', count: 4 })
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('"fire"-flavored actions')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"name":string')
+    expect(system).toContain('Do not include any numeric game values')
   })
 })

@@ -1,6 +1,7 @@
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 import { clampXPProposal, resolveXPBudget } from '../engine/xpBudget'
 import type { XPContext, XPBudget } from '../shared/progression/types'
 import { parseXpAwardAgentResponse } from '../shared/progression/types'
@@ -8,6 +9,15 @@ import { parseXpAwardAgentResponse } from '../shared/progression/types'
 export interface XpAgentResponse {
   narrationText: string
   xpAmount: number
+}
+
+// 040.9: schema + standing instruction ride in systemPrompt; the one shared
+// context object keeps every schema-retry attempt identical (item 11).
+const XP_GENERATE_CONTEXT: GenerateContext = {
+  systemPrompt: buildAgentSystemPrompt({
+    schemaFragment: '{"narrationText":string,"xpAmount":number}',
+    guidanceLines: ['Propose xpAmount within the budget. Justify narratively.']
+  })
 }
 
 export function buildXpPrompt(ctx: XPContext, budget: XPBudget): string {
@@ -20,10 +30,7 @@ export function buildXpPrompt(ctx: XPContext, budget: XPBudget): string {
     `XP source: ${ctx.source}`,
     sourceLine,
     `Player level: ${ctx.playerLevel}`,
-    `Budget — min: ${budget.min}, max: ${budget.max}, suggested: ${budget.suggested}`,
-    'Propose xpAmount within the budget. Justify narratively.',
-    'Respond ONLY with JSON:',
-    '{"narrationText":string,"xpAmount":number}'
+    `Budget — min: ${budget.min}, max: ${budget.max}, suggested: ${budget.suggested}`
   ].join('\n')
 }
 
@@ -34,7 +41,7 @@ export async function resolveXpAward(
 ): Promise<XpAgentResponse> {
   const prompt = buildXpPrompt(ctx, budget)
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt)
+    const raw = await provider.generate(prompt, XP_GENERATE_CONTEXT)
     const parsed = parseXpAwardAgentResponse(tryParseJson(raw))
     if (parsed) {
       const clamped = clampXPProposal(parsed.xpAmount, budget)
