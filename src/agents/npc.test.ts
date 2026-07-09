@@ -175,6 +175,7 @@ describe('generateNpcReaction: shared systemPrompt (040.9)', () => {
     expect(system).toContain('Only set "attack" to true')
     expect(system).toContain(NPC_EMPHASIS_GUIDANCE)
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(384)
   })
 
   it('moves the actionDescription schema and emphasis guidance into systemPrompt for non-speakers', async () => {
@@ -199,5 +200,6 @@ describe('generateNpcReaction: shared systemPrompt (040.9)', () => {
     expect(system).toContain('Respond ONLY with JSON: {"actionDescription":string')
     expect(system).toContain('wrapped in ** markers')
     expect(system).toContain(NPC_EMPHASIS_GUIDANCE)
+    expect(call.context?.maxTokens).toBe(384)
   })
 })

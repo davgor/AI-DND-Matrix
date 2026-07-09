@@ -53,6 +53,7 @@ describe('resolveXpAward', () => {
     expect(system).toContain('Respond ONLY with JSON: {"narrationText":string,"xpAmount":number}')
     expect(system).toContain('Propose xpAmount within the budget')
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(256)
   })
 
   it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {

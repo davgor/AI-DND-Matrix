@@ -53,6 +53,7 @@ describe('resolveItemModification success', () => {
       equippedWeapon: equippedProfile
     })
     expect(result.modification.damageType).toBe('fire')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(256)
   })
 })
 

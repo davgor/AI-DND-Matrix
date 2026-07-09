@@ -194,12 +194,15 @@ export function buildCombatIntentSection(combat?: CombatIntentContext): string {
 
 // 040.9: schema + static guidance ride in systemPrompt once per call; the one
 // shared context object keeps every schema-retry attempt identical
-// (data-integrity item 11). 040.1 adds maxTokens to these literals later.
+// (data-integrity item 11).
+// 040.1: 384 — structured intent JSON only; the optional combat/travel fields
+// push it above the smallest band but never near prose length.
 const INTENT_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: INTENT_SCHEMA_FIELDS,
     guidanceLines: INTENT_GUIDANCE_LINES
-  })
+  }),
+  maxTokens: 384
 }
 
 function buildIntentPrompt(playerInput: string, combat?: CombatIntentContext): string {
@@ -433,12 +436,19 @@ const NARRATION_GUIDANCE_LINES: readonly string[] = [
 
 // 040.9: narration schema, static guidance, and emphasis rules ride in the
 // systemPrompt; buildNarrationPrompt keeps only turn-specific context.
+// 040.1: 1024 — narrationText is persisted verbatim into `events` (no retry
+// loop; a truncated response now throws via the provider truncation guard
+// instead of persisting a fragment). Cap reasoned from the schema — brief DM
+// flavor prose plus optional structured side-effect fields (quests, log book,
+// grants) — not measured against recorded outputs; deliberately generous
+// because undershooting here corrupts the world record, not just flavor.
 const NARRATION_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: NARRATION_SCHEMA_FIELDS,
     guidanceLines: NARRATION_GUIDANCE_LINES,
     emphasisGuidance: NARRATIVE_EMPHASIS_GUIDANCE
-  })
+  }),
+  maxTokens: 1024
 }
 
 function buildNarrationPrompt(outcome: CheckOutcome, context: NarrationContext): string {
@@ -646,6 +656,7 @@ function isValidFlavorProposal(value: unknown): value is HomebrewFlavorProposal 
 }
 
 // 040.9: flavor schema + constraints ride in systemPrompt.
+// 040.1: 256 — a name, one short description, and a damage type.
 const HOMEBREW_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: '{"name":string,"description":string,"damageType":"physical|fire|cold|poison|arcane"}',
@@ -653,7 +664,8 @@ const HOMEBREW_GENERATE_CONTEXT: GenerateContext = {
       'Propose flavor for a new feature: a name, a short description, and a damage type.',
       'Do not include any numeric game values — those are computed by the engine, not you.'
     ]
-  })
+  }),
+  maxTokens: 256
 }
 
 function buildHomebrewPrompt(candidate: EmergentDirectionCandidate): string {

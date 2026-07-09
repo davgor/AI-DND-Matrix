@@ -11,6 +11,16 @@ export class ClaudeRequestError extends Error {
   }
 }
 
+/**
+ * 040.1: thrown when the response hit the max_tokens cap (stop_reason
+ * "max_tokens"). Returning the partial text instead would let single-shot
+ * callers with raw-text fallbacks (narrate, generateNpcReaction) persist a
+ * truncated JSON fragment permanently, and schema-retry loops would retry the
+ * identical prompt with the identical cap — failing deterministically. Failing
+ * loudly here turns a silent corruption bug into a visible error.
+ */
+export class ClaudeTruncationError extends ClaudeRequestError {}
+
 export interface ClaudeAdapterConfig {
   apiKey: string | undefined
   model: string
@@ -27,6 +37,7 @@ interface AnthropicContentBlock {
 
 interface AnthropicMessagesResponse {
   content: AnthropicContentBlock[]
+  stop_reason?: string
 }
 
 async function callAnthropic(
@@ -67,6 +78,11 @@ export function createClaudeProvider(config: ClaudeAdapterConfig): Provider {
       }
 
       const data = (await response.json()) as AnthropicMessagesResponse
+      if (data.stop_reason === 'max_tokens') {
+        throw new ClaudeTruncationError(
+          'Claude response was truncated at the max_tokens cap — partial output discarded'
+        )
+      }
       const textBlock = data.content.find((block) => block.type === 'text')
       return textBlock?.text ?? ''
     }

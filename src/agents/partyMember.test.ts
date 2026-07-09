@@ -145,6 +145,7 @@ describe('decidePartyMemberAction', () => {
     expect(system).toContain('Respond ONLY with JSON: {"actionText":string}')
     expect(system).toContain('without waiting for player direction')
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(256)
   })
 
   it('falls back to the raw response text when the schema is malformed', async () => {

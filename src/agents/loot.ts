@@ -83,6 +83,9 @@ function formatCandidates(candidates: CatalogItem[]): string {
 
 // 040.9: schema + static realism/retrieve-first rules ride in systemPrompt;
 // the one shared context object keeps every schema-retry attempt identical.
+// 040.1: 384 — narration line plus a grant array capped at policy.maxGrantCount;
+// proposeNew entries carry a name + short description each, so this needs more
+// headroom than XP but stays well short of prose length.
 const LOOT_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment:
@@ -92,7 +95,8 @@ const LOOT_GENERATE_CONTEXT: GenerateContext = {
       'Retrieve-first: prefer catalogItemId from the candidate list in the user message.',
       'Do not invent mechanical stats — only name, description, itemType, rarityTier for proposeNew.'
     ]
-  })
+  }),
+  maxTokens: 384
 }
 
 export function buildLootPrompt(ctx: LootContext, policy: LootPolicy, candidates: CatalogItem[]): string {

@@ -317,6 +317,7 @@ describe('shared systemPrompt adoption (040.9)', () => {
     await interpretIntentAndRoute(provider, narrationContext)
 
     expect(provider.calls[0]?.context?.systemPrompt).toBe(INTENT_AND_ROUTE_SYSTEM_PROMPT)
+    expect(provider.calls[0]?.context?.maxTokens).toBe(512)
     expect(provider.calls[0]?.prompt).not.toContain('Respond ONLY with JSON')
   })
 

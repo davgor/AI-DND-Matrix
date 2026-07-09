@@ -113,9 +113,12 @@ export const INTENT_AND_ROUTE_SYSTEM_PROMPT = buildAgentSystemPrompt({
 })
 
 // One shared context object so every schema-retry attempt carries the same
-// systemPrompt (data-integrity item 11); 040.1 adds maxTokens here later.
+// systemPrompt (data-integrity item 11).
+// 040.1: 512 — intent JSON plus a routing plan (a handful of beat objects);
+// larger than the plain-intent band because the response carries both halves.
 const INTENT_AND_ROUTE_GENERATE_CONTEXT: GenerateContext = {
-  systemPrompt: INTENT_AND_ROUTE_SYSTEM_PROMPT
+  systemPrompt: INTENT_AND_ROUTE_SYSTEM_PROMPT,
+  maxTokens: 512
 }
 
 export function buildIntentAndRoutePrompt(context: IntentAndRouteContext): string {

@@ -74,6 +74,7 @@ describe('runIdentityInterviewKickoff', () => {
     expect(systemPrompt).toContain('Kael')
     expect(systemPrompt).toContain('Elf')
     expect(systemPrompt).toContain('lawful_good')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(768)
   })
 })
 
@@ -120,6 +121,7 @@ describe('runIdentityInterviewTurn', () => {
     expect(systemPrompt).toContain('Kael')
     expect(systemPrompt).toContain('Elf')
     expect(systemPrompt).toContain('lawful_good')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(768)
   })
 
   it('sends the static identity block via systemPrompt, not the user prompt', async () => {

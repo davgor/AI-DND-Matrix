@@ -50,13 +50,15 @@ function isValidPartyMemberAction(value: unknown): value is PartyMemberAction {
 
 // 040.9: schema + standing instruction ride in systemPrompt; the user prompt
 // keeps the per-character persona and turn-specific scene context.
+// 040.1: 256 — a single actionText string.
 const PARTY_MEMBER_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: '{"actionText":string}',
     guidanceLines: [
       "Decide your character's action this round automatically, in character, without waiting for player direction."
     ]
-  })
+  }),
+  maxTokens: 256
 }
 
 function buildPartyMemberPrompt(

@@ -129,6 +129,7 @@ function isValidInactivePlayerAction(value: unknown): value is InactivePlayerAct
 
 // 040.9: schema + standing rules ride in systemPrompt; the user prompt keeps
 // the per-character grounding and turn-specific scene context.
+// 040.1: 256 — a single actionText string.
 const INACTIVE_PLAYER_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: '{"actionText":string}',
@@ -136,7 +137,8 @@ const INACTIVE_PLAYER_GENERATE_CONTEXT: GenerateContext = {
       "Speak and act from this character's established history only — do not invent mechanical stat changes.",
       'Decide how this inactive character reacts in the shared world — dialogue, gesture, or brief action.'
     ]
-  })
+  }),
+  maxTokens: 256
 }
 
 function buildInactivePlayerPrompt(

@@ -79,6 +79,13 @@ describe('generateBackgroundStory', () => {
     expect(provider.calls).toHaveLength(2)
   })
 
+  it('caps output at the two-paragraph prose band and reuses the context on retries (040.1)', async () => {
+    const provider = createScriptedProvider(['', 'A veteran of border skirmishes.'])
+    await generateBackgroundStory(provider, baseInput())
+    expect(provider.calls[0]?.context?.maxTokens).toBe(768)
+    expect(provider.calls[1]?.context).toBe(provider.calls[0]?.context)
+  })
+
   it('retries up to MAX_GENERATION_ATTEMPTS then throws', async () => {
     const provider = createScriptedProvider(['', '', ''])
     await expect(generateBackgroundStory(provider, baseInput())).rejects.toThrow()

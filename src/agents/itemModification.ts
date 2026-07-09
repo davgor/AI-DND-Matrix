@@ -1,10 +1,13 @@
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { ItemModificationAgentResponse, ItemModificationProposal } from '../shared/weaponModifications/types'
 import { parseItemModificationAgentResponse } from '../shared/weaponModifications/types'
 import type { WeaponDamageProfile } from '../shared/weaponModifications/types'
 import type { CharacterItemView } from '../shared/items/types'
+
+// 040.1: 256 — a narration line plus one small modification object.
+const ITEM_MODIFICATION_GENERATE_CONTEXT: GenerateContext = { maxTokens: 256 }
 
 export interface ItemModificationContext {
   playerInput: string
@@ -43,7 +46,7 @@ export async function resolveItemModification(
 ): Promise<ItemModificationAgentResponse> {
   const prompt = buildItemModificationPrompt(ctx)
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt)
+    const raw = await provider.generate(prompt, ITEM_MODIFICATION_GENERATE_CONTEXT)
     const parsed = parseItemModificationAgentResponse(tryParseJson(raw))
     if (parsed && isOwnedTarget(ctx, parsed.modification)) {
       return parsed

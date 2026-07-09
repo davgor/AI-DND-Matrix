@@ -13,11 +13,14 @@ export interface XpAgentResponse {
 
 // 040.9: schema + standing instruction ride in systemPrompt; the one shared
 // context object keeps every schema-retry attempt identical (item 11).
+// 040.1: 256 — one narration line plus a number; parse failure falls back to
+// budget.suggested, so a truncation-induced retry exhaustion stays in-band.
 const XP_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: '{"narrationText":string,"xpAmount":number}',
     guidanceLines: ['Propose xpAmount within the budget. Justify narratively.']
-  })
+  }),
+  maxTokens: 256
 }
 
 export function buildXpPrompt(ctx: XPContext, budget: XPBudget): string {

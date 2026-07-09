@@ -106,6 +106,7 @@ describe('resolveLoot', () => {
     expect(system).toContain('Retrieve-first')
     expect(system).toContain('wolves and beasts')
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(384)
   })
 
   it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {

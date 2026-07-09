@@ -1,8 +1,12 @@
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { LevelSpanContext } from '../shared/progression/types'
 import { parseLevelUpAgentResponse } from '../shared/progression/types'
+
+// 040.1: 512 — narration line plus exactly 3 perks, each with a name, short
+// description, and flavor tags; larger than the one-liner bands but bounded.
+const LEVEL_UP_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512 }
 
 export interface LevelUpAgentResult {
   narrationText: string
@@ -34,7 +38,7 @@ export async function resolveLevelUpPerks(
 ): Promise<LevelUpAgentResult> {
   const prompt = buildLevelUpPrompt(ctx)
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt)
+    const raw = await provider.generate(prompt, LEVEL_UP_GENERATE_CONTEXT)
     const parsed = parseLevelUpAgentResponse(tryParseJson(raw))
     if (parsed) {
       return parsed

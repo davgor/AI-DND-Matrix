@@ -17,6 +17,7 @@ import type { NpcYieldOutcome } from '../shared/combat/types'
 
 // 040.9: schema + static guidelines ride in systemPrompt; the allowed-outcome
 // list stays in the user prompt (it varies per yield) and parse clamps to it.
+// 040.1: 192 — an outcome word plus a 1-2 sentence narration seed.
 const YIELD_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: '{"outcome":string,"narrationText":string}',
@@ -32,7 +33,8 @@ const YIELD_GENERATE_CONTEXT: GenerateContext = {
       '- Do not invent new backstory; cite only the temperament and stored backstory in the user message',
       '"narrationText" is a short prose seed (1-2 sentences) the DM can use for narration.'
     ]
-  })
+  }),
+  maxTokens: 192
 }
 
 function buildYieldReviewPrompt(input: YieldReviewInput): string {

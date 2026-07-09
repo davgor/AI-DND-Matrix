@@ -115,6 +115,7 @@ describe('interpretIntent: shared systemPrompt (040.9)', () => {
     expect(system).toContain('Respond ONLY with JSON: {"checkNeeded"')
     expect(system).toContain('restShort')
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(384)
   })
 
   it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {
@@ -289,6 +290,7 @@ describe('narrate: shared systemPrompt (040.9)', () => {
     expect(system).toContain('sceneUpdate rewrites the surroundings description')
     expect(system).toContain(NARRATIVE_EMPHASIS_GUIDANCE)
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(1024)
   })
 })
 
@@ -460,5 +462,6 @@ describe('proposeHomebrewFlavor (006.8)', () => {
     const system = call.context?.systemPrompt ?? ''
     expect(system).toContain('Respond ONLY with JSON: {"name":string')
     expect(system).toContain('Do not include any numeric game values')
+    expect(call.context?.maxTokens).toBe(256)
   })
 })

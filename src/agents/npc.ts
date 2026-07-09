@@ -70,6 +70,13 @@ function parseActionReaction(value: unknown): NpcReaction | undefined {
 
 // 040.9: schema, attack rule, and emphasis guidance ride in systemPrompt; the
 // user prompt keeps the per-NPC persona and turn-specific scene context.
+// 040.1: 384 — a dialogue or action line plus the attack flag. The text is
+// persisted verbatim as dialogue AND as an npc_memories row (no retry loop;
+// truncation now throws at the provider instead of persisting a fragment).
+// Cap reasoned from the prompt's "line of dialogue / one action" instruction,
+// not measured against recorded outputs.
+const NPC_REACTION_MAX_TOKENS = 384
+
 const SPEAKING_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment: '{"dialogue":string,"attack"?:boolean}',
@@ -78,7 +85,8 @@ const SPEAKING_GENERATE_CONTEXT: GenerateContext = {
       'Only set "attack" to true if you are hostile and attacking the player right now — whether the attack actually lands and for how much damage is decided entirely by the engine, never by you.'
     ],
     emphasisGuidance: NPC_EMPHASIS_GUIDANCE
-  })
+  }),
+  maxTokens: NPC_REACTION_MAX_TOKENS
 }
 
 const ACTION_GENERATE_CONTEXT: GenerateContext = {
@@ -90,7 +98,8 @@ const ACTION_GENERATE_CONTEXT: GenerateContext = {
       'Only set "attack" to true if the creature is attacking the player right now.'
     ],
     emphasisGuidance: NPC_EMPHASIS_GUIDANCE
-  })
+  }),
+  maxTokens: NPC_REACTION_MAX_TOKENS
 }
 
 function buildSpeakingPrompt(npc: Npc, context: NpcContext, sceneNarration: string): string {

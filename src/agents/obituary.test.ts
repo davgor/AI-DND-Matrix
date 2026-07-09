@@ -57,6 +57,7 @@ describe('generateObituary happy path', () => {
     expect(provider.calls).toHaveLength(1)
     expect(provider.calls[0]?.prompt).toContain('Log-book People entries')
     expect(provider.calls[0]?.prompt).toContain('Bram')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(1024)
   })
 
   it('includes npc reactions when log-book People entries exist', async () => {

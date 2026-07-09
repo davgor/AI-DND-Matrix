@@ -170,6 +170,7 @@ describe('proposeDefeatDisposition: shared systemPrompt (040.9)', () => {
     expect(system).toContain('Respond ONLY with JSON: {"disposition":"imprison"')
     expect(system).toContain('Do not invent new victor biography')
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(192)
   })
 
   it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {

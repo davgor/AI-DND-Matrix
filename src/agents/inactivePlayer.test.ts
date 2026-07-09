@@ -141,5 +141,6 @@ describe('decideInactivePlayerAction', () => {
     expect(system).toContain('Respond ONLY with JSON: {"actionText":string}')
     expect(system).toContain('do not invent mechanical stat changes')
     expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(256)
   })
 })

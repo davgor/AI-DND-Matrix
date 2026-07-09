@@ -1,6 +1,6 @@
 import type { FleeAttemptResult } from '../engine/fleeDisengage'
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import {
   parseDmEscapeJudgment,
@@ -9,6 +9,9 @@ import {
 } from '../shared/combat/flee/types'
 
 export class FleeNarrationSchemaError extends Error {}
+
+// 040.1: 192 — an outcome word plus one short narration line.
+const FLEE_NARRATION_GENERATE_CONTEXT: GenerateContext = { maxTokens: 192 }
 
 export interface FleeNarrationContext {
   checkResult: FleeAttemptResult
@@ -39,7 +42,7 @@ export async function judgeEscapeNarration(
   const prompt = buildFleeNarrationPrompt(context)
   let lastError: unknown
   for (let attempt = 0; attempt < MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt)
+    const raw = await provider.generate(prompt, FLEE_NARRATION_GENERATE_CONTEXT)
     const parsed = parseDmEscapeJudgment(tryParseJson(raw))
     if (!parsed) {
       lastError = new FleeNarrationSchemaError('Invalid escape judgment JSON')

@@ -45,6 +45,7 @@ describe('runOpeningSceneTurn', () => {
     expect(provider.calls[0]?.prompt).toContain('Elf')
     expect(provider.calls[0]?.prompt).toContain('Soldier')
     expect(provider.calls[0]?.prompt).toContain('Years on the march.')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(768)
   })
 
   it('returns scene-ready when converged', async () => {

@@ -11,6 +11,13 @@ export { MAX_SCHEMA_ATTEMPTS as MAX_IDENTITY_ATTEMPTS }
 // is represented by the locked foundation summaries carried in the prompt.
 export const IDENTITY_TRANSCRIPT_WINDOW = 5
 
+// 040.1: 768 — dmReply is conversational interview prose persisted verbatim
+// into the transcript (plus foundation summaries on interview turns). Cap
+// reasoned from the prompt's ask (a warm conversational reply, not a scene
+// dump), not measured against recorded outputs; a truncated response now
+// throws at the provider instead of persisting a cut-off reply.
+const IDENTITY_REPLY_MAX_TOKENS = 768
+
 export interface IdentityInterviewResponse {
   dmReply: string
   foundations: IdentityFoundationsStatus
@@ -163,7 +170,10 @@ export async function runIdentityInterviewKickoff(
   provider: Provider,
   context: Omit<IdentityInterviewContext, 'transcript' | 'currentFoundations'>
 ): Promise<IdentityKickoffResponse> {
-  const generateContext = { systemPrompt: buildIdentityKickoffSystemPrompt(context) }
+  const generateContext = {
+    systemPrompt: buildIdentityKickoffSystemPrompt(context),
+    maxTokens: IDENTITY_REPLY_MAX_TOKENS
+  }
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(IDENTITY_KICKOFF_PROMPT, generateContext)
     const parsed = tryParseJson(raw)
@@ -200,7 +210,10 @@ export async function runIdentityInterviewTurn(
   context: IdentityInterviewContext,
   playerMessage: string
 ): Promise<IdentityInterviewResponse> {
-  const generateContext = { systemPrompt: buildIdentityInterviewSystemPrompt(context) }
+  const generateContext = {
+    systemPrompt: buildIdentityInterviewSystemPrompt(context),
+    maxTokens: IDENTITY_REPLY_MAX_TOKENS
+  }
   const prompt = buildIdentityInterviewPrompt(context, playerMessage)
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(prompt, generateContext)

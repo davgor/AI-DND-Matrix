@@ -39,6 +39,7 @@ describe('compressRegionHistory', () => {
     expect(provider.calls[0]?.prompt).toContain('First old event')
     expect(provider.calls[0]?.prompt).toContain('Second old event')
     expect(provider.calls[0]?.prompt).toContain('Third old event')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(256)
     expect(result?.isCompressed).toBe(true)
     expect(result?.content).toBe('A condensed summary of three old events.')
   })

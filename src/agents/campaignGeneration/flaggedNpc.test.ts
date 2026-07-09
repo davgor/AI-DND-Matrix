@@ -87,6 +87,25 @@ describe('generateNpcCoreBundle (052.5 + 051.4)', () => {
   })
 })
 
+describe('generateNpcCoreBundle maxTokens (040.1)', () => {
+  it('caps phase 1 at the structured-JSON band, not the prose band', async () => {
+    const payload = JSON.stringify({
+      canSpeak: false,
+      temperament: 'aggressive',
+      race: 'human',
+      gender: 'man'
+    })
+    const provider = createScriptedProvider([payload])
+    await generateNpcCoreBundle(provider, {
+      regionName: 'Wilds',
+      regionDescription: 'Deep forest.',
+      seedPrompt: 'A hostile dire wolf',
+      availableRaces: buildAvailableRaceOptions([])
+    })
+    expect(provider.calls[0]?.context?.maxTokens).toBe(384)
+  })
+})
+
 describe('buildFlaggedNpcFinalPrompt (052.6 + 051.5)', () => {
   it('includes full race lore, region history, and background grounding when the NPC speaks', () => {
     const prompt = buildFlaggedNpcFinalPrompt({

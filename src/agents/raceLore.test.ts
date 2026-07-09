@@ -52,6 +52,18 @@ describe('generateRaceLore', () => {
     expect(lore.summary).toBe(VALID_LORE.summary)
     expect(provider.calls).toHaveLength(2)
   })
+
+  it('caps output at the structured-lore band and reuses the context on retries (040.1)', async () => {
+    const provider = createScriptedProvider(['not json', JSON.stringify(VALID_LORE)])
+    await generateRaceLore(provider, 'Premise.', 'Summary.', {
+      kind: 'preset',
+      raceKey: 'human',
+      label: 'Human',
+      seedPrompt: 'Adaptable.'
+    })
+    expect(provider.calls[0]?.context?.maxTokens).toBe(512)
+    expect(provider.calls[1]?.context).toBe(provider.calls[0]?.context)
+  })
 })
 
 describe('buildAvailableRaceOptions', () => {

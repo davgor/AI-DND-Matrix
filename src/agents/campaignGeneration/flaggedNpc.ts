@@ -26,7 +26,11 @@ import {
 
 export { buildFlaggedNpcFinalPrompt, buildNpcCoreBundlePrompt } from './flaggedNpcPrompts'
 
-const CORE_BUNDLE_MAX_TOKENS = 2048
+// 040.1: phase 1 returns only a tiny structured object ({canSpeak, temperament,
+// race?, gender?, alignment?, class?, background?}) — the previous 2048 budget
+// was sized for prose it never produces; 384 is the structured-JSON band.
+const CORE_BUNDLE_MAX_TOKENS = 384
+// Phase 2 writes the prose backstory; left at 4096 until 040.13 measures it.
 const FINAL_NPC_MAX_TOKENS = 4096
 
 export async function generateNpcCoreBundle(

@@ -1,6 +1,12 @@
 import type { RaceLore } from '../shared/raceSelection/types'
 import { MAX_GENERATION_ATTEMPTS } from './campaignGeneration/types'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
+
+// 040.1: 768 — the prompt asks for approximately two paragraphs of prose,
+// persisted verbatim as the character's background story. Cap reasoned from
+// that instruction (two paragraphs comfortably fit), not measured against
+// recorded outputs; truncation now throws at the provider.
+const BACKGROUND_STORY_GENERATE_CONTEXT: GenerateContext = { maxTokens: 768 }
 
 export interface BackgroundStoryInput {
   characterName: string
@@ -84,7 +90,7 @@ export async function generateBackgroundStory(
 ): Promise<string> {
   const prompt = buildBackgroundStoryPrompt(input)
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt)
+    const raw = await provider.generate(prompt, BACKGROUND_STORY_GENERATE_CONTEXT)
     const trimmed = raw.trim()
     if (trimmed.length > 0) {
       return trimmed

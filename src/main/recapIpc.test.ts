@@ -27,5 +27,6 @@ describe('generateSessionRecap', () => {
 
     expect(recap).toBe('Previously, you fought off a goblin ambush.')
     expect(provider.calls[0]?.prompt).toContain('fought a goblin')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(256)
   })
 })

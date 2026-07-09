@@ -46,6 +46,7 @@ describe('reviewRetiredAdventurer', () => {
     const provider = createScriptedProvider(['{"upgrade":true,"profile":"veteran"}'])
     const result = await reviewRetiredAdventurer(provider, getNpcById(db, npc.id) as typeof npc)
     expect(result).toEqual({ upgrade: true, profile: 'veteran' })
+    expect(provider.calls[0]?.context?.maxTokens).toBe(128)
   })
 
   it('prompt forbids inventing new history', () => {

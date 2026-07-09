@@ -16,6 +16,8 @@ export const NON_SPEAKING_DEFEAT_DISPOSITION: DefeatDisposition = 'leave_unconsc
 
 // 040.9: schema + static disposition rules ride in systemPrompt; the user
 // prompt keeps the victor/player/encounter facts.
+// 040.1: 192 — a disposition word, a short narration line, and an optional
+// locationTag.
 const DEFEAT_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment:
@@ -26,7 +28,8 @@ const DEFEAT_GENERATE_CONTEXT: GenerateContext = {
       'Examples: lawful-good retired guard backstory → imprison; chaotic-good reformed bandit → bury_out_back.',
       'Do not invent new victor biography.'
     ]
-  })
+  }),
+  maxTokens: 192
 }
 
 function buildDefeatPrompt(input: {
