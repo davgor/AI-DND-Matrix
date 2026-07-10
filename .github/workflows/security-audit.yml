@@ -33,16 +33,21 @@ jobs:
           python3 - <<'PY'
           import json,sys
           data = json.load(open('audit.json'))
-          advisories = data.get('advisories') or {}
+          vulns_obj = data.get('vulnerabilities') or {}
           vulns = []
-          for k, v in advisories.items():
-              severity = v.get('severity')
+          for name, info in vulns_obj.items():
+              severity = info.get('severity')
               if severity in ('moderate', 'high', 'critical'):
-                  vulns.append((k, v.get('title'), severity))
+                  via = info.get('via', name)
+                  if isinstance(via, list) and via:
+                      via = via[0]
+                  if isinstance(via, dict):
+                      via = via.get('title', name)
+                  vulns.append((name, via, severity))
           if vulns:
               print('\nFound vulnerabilities (moderate+):')
               for v in vulns:
-                  print(f"- ID: {v[0]} | {v[1]} | severity={v[2]}")
+                  print(f"- {v[0]} | {v[1]} | severity={v[2]}")
               print('\nAction required: resolve or upgrade affected dependencies before merging.')
               sys.exit(1)
           print('No moderate+ vulnerabilities found')

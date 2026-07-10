@@ -3,14 +3,13 @@
  * Fail when ts-prune reports new unused exports not listed in .tsprune-ignore.
  * Scans tsconfig.node.json (main/preload/db/engine/agents) and tsconfig.web.json (renderer).
  */
-import { execFileSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const IGNORE_PATH = join(ROOT, '.tsprune-ignore')
-const TS_PRUNE = join(ROOT, 'node_modules', '.bin', 'ts-prune')
 const PROJECTS = ['tsconfig.node.json', 'tsconfig.web.json']
 
 /** @param {string} line */
@@ -41,12 +40,19 @@ export function readIgnoreSet(path) {
 
 /** @param {string} project */
 function runTsPrune(project) {
-  const out = execFileSync(TS_PRUNE, ['--project', project], {
+  const result = spawnSync('npx', ['ts-prune', '--project', project], {
     cwd: ROOT,
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe']
+    shell: true
   })
-  return out
+  if (result.error) {
+    throw result.error
+  }
+  if (result.status !== 0) {
+    const stderr = result.stderr?.trim()
+    throw new Error(stderr || `ts-prune failed for ${project} with exit code ${result.status}`)
+  }
+  return result.stdout
     .split(/\r?\n/)
     .map((line) => normalizeTsPruneLine(line))
     .filter(Boolean)
