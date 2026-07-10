@@ -5,7 +5,7 @@ import { createCharacter, getCharacterById } from '../db/repositories/characters
 import { createRegion } from '../db/repositories/regions'
 import { createNpc, setNpcEncounterOutcome } from '../db/repositories/npcs'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { clampXPProposal } from '../engine/xpBudget'
+import { listEventsByCampaign } from '../db/repositories/events'
 import {
   assertNoPendingLevelUp,
   getPendingLevelUpCeremony,
@@ -14,7 +14,7 @@ import {
 } from './progressionPipeline'
 import type { CombatEncounter } from '../shared/combat/types'
 
-const XP_RESPONSE = JSON.stringify({ narrationText: 'You learn from battle.', xpAmount: 80 })
+const XP_RESPONSE = JSON.stringify({ difficulty: 'medium' })
 const LEVEL_UP_RESPONSE = JSON.stringify({
   narrationText: 'You grow stronger.',
   perks: [
@@ -74,19 +74,15 @@ describe('progression pipeline', () => {
       playerCharacterId: player.id,
       regionId: region.id
     })
-    expect(xp?.xpAmount).toBeGreaterThan(0)
+    // Level 1 span 300, medium rating = 10% = 30 XP; 270 + 30 = 300 crosses to level 2
+    expect(xp?.xpAmount).toBe(30)
     const updated = getCharacterById(db, player.id)!
     expect(updated.level).toBe(2)
     const pending = getPendingLevelUpCeremony(db, player.id)
     expect(pending?.perks).toHaveLength(3)
     expect(() => assertNoPendingLevelUp(db, player.id)).toThrow(LevelUpPendingError)
-  })
-})
 
-describe('clampXPProposal integration', () => {
-  it('clamps over-budget agent proposals', () => {
-    const clamped = clampXPProposal(9999, { min: 10, max: 50, suggested: 30 })
-    expect(clamped.amount).toBe(50)
-    expect(clamped.clamped).toBe(true)
+    const xpEvent = listEventsByCampaign(db, campaign.id).find((e) => e.type === 'xp_awarded')
+    expect(xpEvent?.payload).toMatchObject({ amount: 30, difficulty: 'medium' })
   })
 })

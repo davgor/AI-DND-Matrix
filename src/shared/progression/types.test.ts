@@ -3,7 +3,7 @@ import {
   isPerkCategory,
   isXpSource,
   parseLevelUpAgentResponse,
-  parseXpAwardAgentResponse
+  parseXpDifficultyAgentResponse
 } from './types'
 
 describe('progression shared type guards', () => {
@@ -19,17 +19,23 @@ describe('progression shared type guards', () => {
     expect(isPerkCategory('magic_bonus')).toBe(false)
   })
 
-  it('parseXpAwardAgentResponse accepts valid JSON', () => {
-    const parsed = parseXpAwardAgentResponse({
-      narrationText: 'You grow wiser.',
-      xpAmount: 120
-    })
-    expect(parsed).toEqual({ narrationText: 'You grow wiser.', xpAmount: 120 })
+  it('parseXpDifficultyAgentResponse accepts every known difficulty', () => {
+    for (const difficulty of ['easy', 'medium', 'hard', 'extreme', 'impossible']) {
+      expect(parseXpDifficultyAgentResponse({ difficulty })).toEqual({ difficulty })
+    }
   })
 
-  it('parseXpAwardAgentResponse rejects missing fields', () => {
-    expect(parseXpAwardAgentResponse({ narrationText: 'x' })).toBeNull()
-    expect(parseXpAwardAgentResponse({ xpAmount: 1 })).toBeNull()
+  it('parseXpDifficultyAgentResponse normalizes case and whitespace', () => {
+    expect(parseXpDifficultyAgentResponse({ difficulty: ' Extreme ' })).toEqual({
+      difficulty: 'extreme'
+    })
+  })
+
+  it('parseXpDifficultyAgentResponse rejects unknown or missing difficulty', () => {
+    expect(parseXpDifficultyAgentResponse({ difficulty: 'apocalyptic' })).toBeNull()
+    expect(parseXpDifficultyAgentResponse({ difficulty: 3 })).toBeNull()
+    expect(parseXpDifficultyAgentResponse({})).toBeNull()
+    expect(parseXpDifficultyAgentResponse(null)).toBeNull()
   })
 
   it('parseLevelUpAgentResponse requires exactly 3 distinct perks', () => {
