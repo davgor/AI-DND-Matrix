@@ -1,6 +1,6 @@
 {
   "name": "ai-dnd-matrix",
-  "version": "0.13.0",
+  "version": "0.15.0",
   "private": true,
   "description": "AI-driven single-player text-adventure TTRPG desktop app",
   "repository": {
@@ -21,6 +21,7 @@
     "pretest": "npm run rebuild:node",
     "test": "vitest run",
     "terminology:check": "node scripts/terminology-check.mjs",
+    "deadcode": "node scripts/deadcode-check.mjs",
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
     "rebuild:node": "npm rebuild better-sqlite3"
   },
@@ -44,6 +45,7 @@
     "electron-vite": "^5.0.0",
     "happy-dom": "^20.10.6",
     "oxlint": "^1.71.0",
+    "ts-prune": "^0.10.3",
     "typescript": "^5.5.2",
     "vite": "^7.3.6",
     "vitest": "^4.1.9"
