@@ -177,7 +177,9 @@ src/agents/raceLore.ts:99 - ResolveOrRealizeParams
 src/agents/retiredAdventurerReview.ts:10 - RetiredAdventurerReviewError
 src/agents/retiredAdventurerReview.ts:42 - buildReviewPrompt
 src/agents/turnReview.ts:11 - TurnReviewContext
-src/agents/xp.ts:13 - buildXpPrompt
+src/agents/xp.ts:13 - XP_DIFFICULTY_MAX_TOKENS
+src/agents/xp.ts:15 - XpAwardResolution
+src/agents/xp.ts:36 - buildXpPrompt
 src/agents/xp.ts:53 - previewXpBudget
 src/agents/xp.ts:8 - XpAgentResponse
 src/db/catalog/bucketTags.ts:5 - CatalogEntityType
@@ -304,6 +306,7 @@ src/engine/conditions.ts:5 - ConditionEffect
 src/engine/currency.ts:1 - CurrencyState
 src/engine/currency.ts:5 - CurrencyResult
 src/engine/damage.ts:5 - ResistanceStatus
+src/engine/difficultyXp.ts:15 - DIFFICULTY_XP_SPAN_FRACTION
 src/engine/deathLegendary.ts:3 - LegendaryDeathResult
 src/engine/deathRespawn.ts:1 - RespawnRules
 src/engine/deathRespawn.ts:12 - RespawnOutcome
@@ -446,7 +449,7 @@ src/main/config.ts:19 - DEFAULT_CLAUDE_MODEL
 src/main/config.ts:4 - AgentProviderName
 src/main/dyingResolution.ts:159 - reloadCharacter
 src/main/encounterLootContext.ts:48 - AssembleEncounterLootContextParams
-src/main/encounterXpContext.ts:44 - AssembleEncounterXpContextParams
+src/main/encounterXpContext.ts:54 - AssembleEncounterXpContextParams
 src/main/guidedCreationAgentContext.ts:12 - BuildIdentityInterviewAgentContextInput
 src/main/guidedCreationAgentContext.ts:7 - abilityScoresFromCharacter
 src/main/guidedCreationIdentity.ts:122 - IdentityInterviewTurn
@@ -496,7 +499,7 @@ src/main/progressionPipeline.ts:197 - PerkProposal
 src/main/progressionPipeline.ts:44 - runEncounterXpPass
 src/main/promotionIpc.ts:34 - RecruitPartyMemberInput
 src/main/questRewardBeats.ts:85 - applyQuestRewardBeats
-src/main/questXpContext.ts:11 - shouldTriggerQuestXp
+src/main/questXpContext.ts:12 - shouldTriggerQuestXp
 src/main/raceIpc.ts:140 - registerRaceHandlers
 src/main/raceIpc.ts:153 - resolveRaceLabel
 src/main/raceIpc.ts:35 - getRaceRosterGrouped
@@ -814,8 +817,8 @@ src/shared/npcGender/types.ts:23 - isGenderKey
 src/shared/npcGender/types.ts:3 - GenderKey
 src/shared/npcGender/types.ts:39 - findGenderRosterEntry
 src/shared/progression/types.ts:10 - ACTIVITY_TAGS
-src/shared/progression/types.ts:102 - XpAwardAgentResponse
-src/shared/progression/types.ts:107 - LevelUpAgentResponse
+src/shared/progression/types.ts:105 - XpDifficultyAgentResponse
+src/shared/progression/types.ts:109 - LevelUpAgentResponse
 src/shared/progression/types.ts:13 - PERK_CATEGORIES
 src/shared/progression/types.ts:22 - PerkCategory
 src/shared/progression/types.ts:24 - CHECK_PROFICIENCY_ABILITIES

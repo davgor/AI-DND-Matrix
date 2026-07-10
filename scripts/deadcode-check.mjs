@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Fail when ts-prune reports new unused exports not listed in .tsprune-ignore.
  * Scans tsconfig.node.json (main/preload/db/engine/agents) and tsconfig.web.json (renderer).
