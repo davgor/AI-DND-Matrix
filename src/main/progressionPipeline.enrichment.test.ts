@@ -49,7 +49,7 @@ describe('progression pipeline enrichment', () => {
     })
     setNpcEncounterOutcome(db, bandit.id, 'slain')
     const provider = createScriptedProvider([
-      JSON.stringify({ narrationText: 'XP beat.', xpAmount: 40 }),
+      JSON.stringify({ difficulty: 'medium' }),
       JSON.stringify({
         narrationText: 'Loot beat.',
         itemGrants: [{ proposeNew: { name: 'Coin', description: 'Coins.', itemType: 'misc', rarityTier: 'common' } }],
@@ -65,7 +65,8 @@ describe('progression pipeline enrichment', () => {
       regionId: region.id,
       base: { narrationText: 'Fight over.', npcReactions: [], partyMemberActions: [], pendingAlignmentShift: null }
     })
-    expect(turn.xpNarration).toContain('XP')
+    expect(turn.xpNarration?.length).toBeGreaterThan(0)
+    expect(turn.xpAmount).toBeGreaterThan(0)
     expect(turn.lootNarration).toContain('Loot')
     const events = listEventsByCampaign(db, campaign.id)
     const xpIndex = events.findIndex((e) => e.type === 'xp_awarded')

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveXPBudget } from '../engine/xpBudget'
+import { resolveDifficultyXP } from '../engine/difficultyXp'
 import { assembleEncounterXpContext, encounterEligibleForXp } from './encounterXpContext'
 import { assembleQuestXpContext } from './questXpContext'
 import {
@@ -13,17 +13,30 @@ import { createRegion } from '../db/repositories/regions'
 import { createNpc, setNpcEncounterOutcome } from '../db/repositories/npcs'
 import { createStoryThread } from '../db/repositories/storyThreads'
 
+function seedSlainBanditWithCompanion() {
+  const { db, campaign, region, player } = seedEncounterLootBase()
+  const bandit = createNpc(db, {
+    campaignId: campaign.id,
+    regionId: region.id,
+    name: 'Bandit',
+    role: 'thug',
+    disposition: 'hostile'
+  })
+  setNpcEncounterOutcome(db, bandit.id, 'slain')
+  createCharacter(db, {
+    campaignId: campaign.id,
+    name: 'Sage',
+    characterClass: 'mage',
+    kind: 'ai_party_member',
+    level: 2,
+    ownerPlayerCharacterId: player.id
+  })
+  return { db, campaign, region, player, bandit }
+}
+
 describe('assembleEncounterXpContext', () => {
-  it('includes foe difficulty signals for budget resolver', () => {
-    const { db, campaign, region, player } = seedEncounterLootBase()
-    const bandit = createNpc(db, {
-      campaignId: campaign.id,
-      regionId: region.id,
-      name: 'Bandit',
-      role: 'thug',
-      disposition: 'hostile'
-    })
-    setNpcEncounterOutcome(db, bandit.id, 'slain')
+  it('includes foe summaries and party comp for the difficulty rater', () => {
+    const { db, campaign, region, player, bandit } = seedSlainBanditWithCompanion()
     const encounter = makeEncounter(campaign.id, [
       { kind: 'player', id: player.id },
       { kind: 'npc', id: bandit.id }
@@ -35,8 +48,9 @@ describe('assembleEncounterXpContext', () => {
       regionId: region.id
     })
     expect(ctx).not.toBeNull()
-    const budget = resolveXPBudget(ctx!)
-    expect(budget.max).toBeGreaterThan(0)
+    expect(ctx!.foes).toHaveLength(1)
+    expect(ctx!.partyMembers).toEqual([{ archetype: 'mage', level: 2 }])
+    expect(resolveDifficultyXP('medium', ctx!.playerLevel)).toBeGreaterThan(0)
   })
 
   it('returns null for all-fled zero-slain encounter', () => {
@@ -66,7 +80,7 @@ describe('assembleEncounterXpContext', () => {
 })
 
 describe('assembleQuestXpContext', () => {
-  it('includes quest scale from 035.5 heuristics', () => {
+  it('includes quest scale from 035.5 heuristics and party comp', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'T', premisePrompt: 't', deathMode: 'standard' })
     const region = createRegion(db, { campaignId: campaign.id, name: 'R', description: 'd' })
@@ -92,16 +106,6 @@ describe('assembleQuestXpContext', () => {
       playerLevel: player.level
     })
     expect(ctx?.questScale).toBe('major')
-    expect(resolveXPBudget(ctx!).max).toBeGreaterThan(
-      resolveXPBudget({
-        source: 'quest_complete',
-        foes: [],
-        campaignId: campaign.id,
-        regionId: region.id,
-        playerCharacterId: player.id,
-        playerLevel: player.level,
-        questScale: 'minor'
-      }).max
-    )
+    expect(ctx?.partyMembers).toEqual([])
   })
 })
