@@ -5,21 +5,21 @@ import { listWorldFactsByRegionOrFaction } from '../db/repositories/worldFacts'
 import type { NpcReactionKind } from '../shared/alignment/types'
 import { wrapActionDescription } from '../shared/alignment/types'
 import { NPC_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
-import { takeRecent } from './contextWindow'
-import { slimNpcMemories, slimWorldFacts, type SlimNpcMemory } from './contextSlim'
+import { slimWorldFacts, windowNpcMemories, type SlimNpcMemory } from './contextSlim'
 import { tryParseJson } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 
 export interface NpcContext {
   npcId: string
+  /** Budget-windowed (NPC_MEMORY_BUDGET) private memories — own rows only. */
   memories: SlimNpcMemory[]
-  /** Windowed (most recent WORLD_FACT_WINDOW) fact content strings — never full rows. */
+  /** Budget-windowed (WORLD_FACT_BUDGET) fact content strings — never full rows. */
   worldFacts: string[]
 }
 
 export function assembleNpcContext(db: Database.Database, npc: Npc): NpcContext {
-  const memories = slimNpcMemories(takeRecent(listNpcMemoriesByNpc(db, npc.id)))
+  const memories = windowNpcMemories(listNpcMemoriesByNpc(db, npc.id))
   const worldFacts = slimWorldFacts(listWorldFactsByRegionOrFaction(db, npc.campaignId, npc.regionId))
   return { npcId: npc.id, memories, worldFacts }
 }

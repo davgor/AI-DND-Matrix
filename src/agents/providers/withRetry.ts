@@ -1,3 +1,4 @@
+import { isTruncationError } from './tokenEscalation'
 import type { GenerateContext, Provider } from './types'
 
 export interface RetryLogger {
@@ -42,6 +43,11 @@ export function withRetry(
         const result = await attemptOnce(provider, prompt, context)
         if (typeof result === 'string') {
           return result
+        }
+        // 040.14: truncation is not a connectivity failure — retrying the same
+        // cap fails deterministically, so surface it for withTokenEscalation.
+        if (isTruncationError(result)) {
+          throw result
         }
         lastError = result
         if (attempt < options.maxAttempts) {

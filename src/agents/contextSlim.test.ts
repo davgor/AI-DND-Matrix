@@ -5,7 +5,8 @@ import type { WorldFact } from '../db/repositories/worldFacts'
 import type { LogEntry } from '../shared/logBook/types'
 import {
   EVENT_TEXT_MAX_LENGTH,
-  WORLD_FACT_WINDOW,
+  WORLD_FACT_BUDGET,
+  takeRecentWithinBudget,
   slimEvent,
   slimEvents,
   slimLogEntries,
@@ -205,28 +206,57 @@ describe('slimLogEntry / slimLogEntries', () => {
 })
 
 describe('slimWorldFacts', () => {
-  function makeFact(index: number): WorldFact {
+  function makeFact(index: number, content = `Fact number ${index}`): WorldFact {
     return {
       id: `fact-${index}`,
       campaignId: 'campaign-id',
       regionId: 'region-id',
       factionTag: null,
-      content: `Fact number ${index}`,
+      content,
       createdAt: '2026-01-01T00:00:00.000Z'
     }
   }
 
-  it('windows to the most recent facts and keeps content strings only', () => {
-    const facts = Array.from({ length: 25 }, (_, index) => makeFact(index))
-    const slim = slimWorldFacts(facts)
-    expect(slim).toHaveLength(WORLD_FACT_WINDOW)
-    expect(slim[0]).toBe(`Fact number ${25 - WORLD_FACT_WINDOW}`)
-    expect(slim[slim.length - 1]).toBe('Fact number 24')
+  it('keeps content strings only, never row fields', () => {
+    const slim = slimWorldFacts(Array.from({ length: 12 }, (_, index) => makeFact(index)))
+    expect(slim[slim.length - 1]).toBe('Fact number 11')
     expect(JSON.stringify(slim)).not.toContain('fact-')
   })
 
   it('returns all facts when under the window', () => {
     expect(slimWorldFacts([makeFact(0), makeFact(1)])).toEqual(['Fact number 0', 'Fact number 1'])
+  })
+
+  it('040.14: many short facts extend past the fixed minimum while the budget lasts', () => {
+    const facts = Array.from({ length: 25 }, (_, index) => makeFact(index))
+    const slim = slimWorldFacts(facts)
+    expect(slim.length).toBeGreaterThan(WORLD_FACT_BUDGET.minCount)
+    expect(slim).toHaveLength(25)
+    expect(slim[slim.length - 1]).toBe('Fact number 24')
+  })
+
+  it('040.14: long facts fall back to the guaranteed minimum count', () => {
+    const facts = Array.from({ length: 25 }, (_, index) => makeFact(index, `${index}: ${'lore '.repeat(80)}`))
+    const slim = slimWorldFacts(facts)
+    expect(slim).toHaveLength(WORLD_FACT_BUDGET.minCount)
+    expect(slim[slim.length - 1]?.startsWith('24:')).toBe(true)
+    expect(slim[0]?.startsWith(`${25 - WORLD_FACT_BUDGET.minCount}:`)).toBe(true)
+  })
+
+  it('040.14: never exceeds the hard max count even with tiny facts', () => {
+    const facts = Array.from({ length: 100 }, (_, index) => makeFact(index, `f${index}`))
+    expect(slimWorldFacts(facts)).toHaveLength(WORLD_FACT_BUDGET.maxCount)
+  })
+})
+
+describe('takeRecentWithinBudget', () => {
+  it('preserves chronological order and returns empty for empty input', () => {
+    expect(takeRecentWithinBudget([], WORLD_FACT_BUDGET, () => 1)).toEqual([])
+    const items = ['a', 'b', 'c']
+    expect(takeRecentWithinBudget(items, { minCount: 2, maxCount: 5, charBudget: 1 }, (item) => item.length)).toEqual([
+      'b',
+      'c'
+    ])
   })
 })
 

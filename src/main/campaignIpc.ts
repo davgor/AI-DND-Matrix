@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import { generateAndPersistCampaign } from '../agents/campaignGeneration'
 import { createProviderRegistry, selectProvider } from '../agents/providers/selectProvider'
+import { withTokenEscalation } from '../agents/providers/tokenEscalation'
 import { withRetry } from '../agents/providers/withRetry'
 import type { Provider } from '../agents/providers/types'
 import {
@@ -76,7 +77,9 @@ export function buildAgentProvider(): Provider {
   const persisted = loadSettingsOrNull(getSettingsFilePath(), createElectronSecretCodec(), DEFAULT_PROVIDER_SETTINGS)
   const resolved = resolveProviderRegistryConfig(envConfig, persisted)
   const registry = createProviderRegistry(resolved)
-  return withRetry(selectProvider(resolved.agentProvider, registry), logger)
+  // 040.14: escalation wraps retry — a truncated response is retried with a
+  // doubled cap (each cap attempt keeps its own connectivity retries beneath).
+  return withTokenEscalation(withRetry(selectProvider(resolved.agentProvider, registry), logger))
 }
 
 export async function generateCampaignFromPrompt(

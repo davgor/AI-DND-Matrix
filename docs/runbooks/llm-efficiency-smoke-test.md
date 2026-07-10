@@ -49,6 +49,13 @@ The identity fixture also proves windowing directly: a 10-turn transcript produc
 
 Accepted, intended behavior while both are off: persisted XP is always `budget.suggested` (`xp_awarded.clamped` always false) and organic homebrew catalog growth via `proposeNew` stops.
 
+## Adaptive ceilings (040.14 — large NPCs and large DM turns are safe)
+
+The tuned `maxTokens` bands and context windows are optimized for the common case, and two mechanisms keep them from clipping legitimately large content:
+
+- **Output — truncation escalation.** The production provider is wrapped in `withTokenEscalation` (`src/agents/providers/tokenEscalation.ts`): when a response hits its cap (adapter throws a truncation error instead of returning partial text), the same prompt is retried with a doubled cap — at most 2 escalations, absolute ceiling 8,192 tokens (e.g. `narrate` 1024 → 2048 → 4096). Escalation never fires on intentional micro-caps (≤ 8, connectivity pings), and `withRetry` treats truncation as non-retryable so no connectivity retries are burned on it. Cost model: the common case pays the tuned cap; the rare oversized output pays one or two extra calls instead of failing the turn.
+- **Input — knowledge-aware window budgets.** NPC world facts and NPC/party memories use `RecencyBudget` windows (`contextSlim.ts`): a guaranteed minimum of the most recent entries (10 facts / 20 memories, unchanged from the fixed windows), then older entries are included while a character budget lasts (2,000 / 3,000 chars), hard-capped at 30 / 60 entries. A knowledge-rich NPC with many short facts and memories carries substantially more of them into its prompt; long-entry NPCs cost no more than before.
+
 ## Manual verification (real provider)
 
 1. `npm run dev` with a configured provider and create a small campaign.

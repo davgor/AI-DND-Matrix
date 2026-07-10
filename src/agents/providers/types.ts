@@ -18,6 +18,12 @@ export interface GenerateContext {
    * | one-time bulk generation  | 2048–10240 | campaignGeneration bulk / additional region / single NPC / world-summary regen, flaggedNpc details (4096, tuned by 040.13) |
    *
    * Documented exceptions: settingsIpc's connectivity ping uses maxTokens: 1.
+   *
+   * 040.14: bands are starting points, not hard walls. The production provider
+   * is wrapped in withTokenEscalation (tokenEscalation.ts): a truncated call is
+   * automatically retried with a doubled cap (max 2 escalations, ceiling 8192),
+   * so a legitimately large output — a long NPC speech, a side-effect-heavy
+   * narration — recovers at bounded extra cost instead of failing the turn.
    */
   maxTokens?: number
 }

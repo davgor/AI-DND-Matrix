@@ -19,7 +19,10 @@ export class ClaudeRequestError extends Error {
  * identical prompt with the identical cap — failing deterministically. Failing
  * loudly here turns a silent corruption bug into a visible error.
  */
-export class ClaudeTruncationError extends ClaudeRequestError {}
+export class ClaudeTruncationError extends ClaudeRequestError {
+  /** Shared marker read by isTruncationError (040.14) — keep in sync with Player2TruncationError. */
+  readonly isProviderTruncation = true
+}
 
 export interface ClaudeAdapterConfig {
   apiKey: string | undefined

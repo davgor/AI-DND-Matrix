@@ -2,7 +2,6 @@ import type { Event } from '../db/repositories/events'
 import type { NpcMemory } from '../db/repositories/npcMemories'
 import type { WorldFact } from '../db/repositories/worldFacts'
 import type { LogCategory, LogEntry } from '../shared/logBook/types'
-import { takeRecent } from './contextWindow'
 
 // === 040.4: shared slim serializers — prompts get compact shapes, never raw DB rows. ===
 // Count-windowing lives in contextWindow/logBookWindow; this module is purely about
@@ -11,8 +10,45 @@ import { takeRecent } from './contextWindow'
 /** Per-field cap keeping each slim event's serialized size bounded. */
 export const EVENT_TEXT_MAX_LENGTH = 300
 
-/** NPC prompts see at most this many region/faction world facts (most recent first). */
-export const WORLD_FACT_WINDOW = 10
+/**
+ * 040.14: knowledge-aware window budgets. Fixed counts clip knowledge-heavy
+ * NPCs (many short facts/memories), so windows guarantee a minimum count of
+ * the most recent entries and then extend with older ones while a character
+ * budget lasts — many short entries admit more of them; long entries never
+ * exceed the guaranteed minimum. A hard max count bounds the tiny-entry case.
+ */
+export interface RecencyBudget {
+  minCount: number
+  maxCount: number
+  charBudget: number
+}
+
+/** NPC prompts: at least the 10 most recent region/faction facts, more while short. */
+export const WORLD_FACT_BUDGET: RecencyBudget = { minCount: 10, maxCount: 30, charBudget: 2000 }
+
+/** NPC/party prompts: at least the 20 most recent private memories, more while short. */
+export const NPC_MEMORY_BUDGET: RecencyBudget = { minCount: 20, maxCount: 60, charBudget: 3000 }
+
+export function takeRecentWithinBudget<T>(
+  items: T[],
+  budget: RecencyBudget,
+  measure: (item: T) => number
+): T[] {
+  const selected: T[] = []
+  let usedChars = 0
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    if (selected.length >= budget.maxCount) {
+      break
+    }
+    const size = measure(items[index] as T)
+    if (selected.length >= budget.minCount && usedChars + size > budget.charBudget) {
+      break
+    }
+    selected.push(items[index] as T)
+    usedChars += size
+  }
+  return selected.reverse()
+}
 
 export interface SlimEvent {
   type: string
@@ -152,11 +188,23 @@ export function slimLogEntries(entries: LogEntry[]): SlimLogEntry[] {
 
 export function slimWorldFacts(
   facts: WorldFact[],
-  limit: number = WORLD_FACT_WINDOW
+  budget: RecencyBudget = WORLD_FACT_BUDGET
 ): string[] {
-  return takeRecent(facts, limit).map((fact) => fact.content)
+  return takeRecentWithinBudget(facts, budget, (fact) => fact.content.length).map(
+    (fact) => fact.content
+  )
 }
 
 export function slimNpcMemories(memories: NpcMemory[]): SlimNpcMemory[] {
   return memories.map((memory) => ({ content: memory.content }))
+}
+
+/** Budget-aware window + slim in one step for NPC/party memory prompts (040.14). */
+export function windowNpcMemories(
+  memories: NpcMemory[],
+  budget: RecencyBudget = NPC_MEMORY_BUDGET
+): SlimNpcMemory[] {
+  return slimNpcMemories(
+    takeRecentWithinBudget(memories, budget, (memory) => memory.content.length)
+  )
 }

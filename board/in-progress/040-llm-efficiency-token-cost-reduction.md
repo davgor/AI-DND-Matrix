@@ -71,7 +71,7 @@ Broken down into sub-tickets **040.1–040.13**. This epic is done when all are 
 - smoke/regression test documents per-turn LLM call budget, including the flagged-NPC scenario
 - **no silent data loss:** every hole in the "Data-integrity review" section above is covered by its amended per-ticket acceptance criteria before the corresponding sub-ticket is marked done
 
-040.1 maxTokens on all agents · 040.2 merge interpretIntent + reviewTurn · 040.3 heuristic routing fast path · 040.4 slim scene context serializers · 040.5 cap sceneContext + gate inactive-player proxy · 040.6 combat catch-up flavor without per-combatant LLM · 040.7 XP/loot template defaults · 040.8 rules-first yield + defeat disposition · 040.9 shared systemPrompt for schemas · 040.10 guided identity transcript windowing (+ static identity block hygiene) · 040.11 parallelise NPC shortfall fill · 040.12 efficiency smoke + call-count regression · 040.13 flagged-NPC generation call-count tracking (049–052 fallout)
+040.1 maxTokens on all agents · 040.2 merge interpretIntent + reviewTurn · 040.3 heuristic routing fast path · 040.4 slim scene context serializers · 040.5 cap sceneContext + gate inactive-player proxy · 040.6 combat catch-up flavor without per-combatant LLM · 040.7 XP/loot template defaults · 040.8 rules-first yield + defeat disposition · 040.9 shared systemPrompt for schemas · 040.10 guided identity transcript windowing (+ static identity block hygiene) · 040.11 parallelise NPC shortfall fill · 040.12 efficiency smoke + call-count regression · 040.13 flagged-NPC generation call-count tracking (049–052 fallout) · 040.14 adaptive token ceilings (truncation escalation + knowledge-aware context budgets)
 
 ## Sub-tickets
 
@@ -454,3 +454,26 @@ This ticket's job is to make sure that deliberate cost is **measured, bounded, a
 - [x] Regression test confirms bulk campaign generation, additional-region generation, and shortfall top-up still issue exactly one LLM call per NPC (no accidental migration to the two-phase pipeline)
 - [x] No change to `generateFlaggedNpc`'s output shape or the established-identity-before-flavor-text ordering — this ticket tunes cost, it does not change what gets generated or when
 - [x] Documented as intended: a phase-2 failure after a phase-2-triggered race realize leaves the `campaign_races` row in place (benign and idempotent — the next NPC of that race short-circuits the lore call); do not add cleanup
+
+---
+
+### 040.14 Adaptive token ceilings — truncation escalation + knowledge-aware context budgets
+
+#### Description
+
+Follow-up hardening after 040.1/040.4 landed: fixed ceilings must not clip legitimately large content. Three concrete holes:
+
+1. **Truncation is a deterministic dead end.** The 040.1 guard makes the adapters throw (`ClaudeTruncationError` / `Player2TruncationError`) when output hits `maxTokens` — correct for preventing persisted garbage, but the schema-retry loops re-send the identical context, so a legitimately large output (a side-effect-heavy `narrate`, a long NPC speech) fails all attempts with the same cap. Single-shot callers (`narrate`) just fail the turn. Add a provider decorator `withTokenEscalation` that catches truncation and retries the same prompt/systemPrompt with a doubled cap (bounded: max 2 escalations, absolute ceiling, never mutating the shared module-level `GenerateContext` constants). Wire it into the production provider composition (`buildAgentProvider` and the campaign-create provider path). Tiny intentional caps (≤ 8, e.g. connectivity pings) never escalate.
+2. **The settings connectivity ping is broken under the guard.** `testPlayer2Connection` pings with `maxTokens: 1`; a real model reply will hit the cap, return `finish_reason: "length"`, and now throw — reporting a healthy endpoint as unreachable. Treat truncation as proof of connectivity (catch it and return ok).
+3. **Knowledge-heavy NPCs lose facts/memories to fixed count windows.** 040.4 capped NPC world facts at a fixed 10 most-recent and memories at the recency window (20). For "large" NPCs (long-lived, fact-rich regions) that clips real knowledge even when the individual entries are short. Make both windows budget-aware: guarantee the fixed count minimum, then extend with older entries while a character budget lasts (many short facts → more of them; long facts → no more than today). DM-side event windows stay as-is (each slim event is already truncated to 300 chars, so the DM prompt is bounded).
+
+#### Acceptance Criteria
+
+- [x] Both adapters' truncation errors carry a shared machine-readable marker; `isTruncationError` helper detects them without importing adapter classes
+- [x] `withTokenEscalation` retries truncated calls with doubled `maxTokens` (bounded escalations + absolute ceiling), passes the identical prompt and systemPrompt, does not mutate the caller's context object, skips escalation for caps ≤ the ping floor, and rethrows non-truncation errors untouched; fully unit-tested
+- [x] Production provider composition applies escalation for agent calls (campaignIpc `buildAgentProvider` + campaign-create provider path); scripted/mock providers in tests are unaffected (no call-count regressions)
+- [x] `testPlayer2Connection` treats a truncation error as a successful connectivity check (test covers it)
+- [x] `slimWorldFacts` and `slimNpcMemories` accept a budget: fixed-count minimum guaranteed, older entries included while the char budget lasts; unit tests cover many-short-facts (more than 10 included), few-long-facts (no more than the minimum), and empty cases
+- [x] NPC context assembly (`npc.ts`) and party-member prior memories use the budget-aware windows
+- [x] Band-table doc comment (`providers/types.ts`) and `docs/runbooks/llm-efficiency-smoke-test.md` document the escalation behavior
+- [x] `npm test`, `npm run lint`, `npm run build` pass

@@ -75,7 +75,10 @@ describe('assembleNpcContext', () => {
     expect(context.worldFacts).toEqual([matchingFact.content])
   })
 
-  it('windows world facts to the most recent 10 as content strings (040.4)', () => {
+})
+
+describe('assembleNpcContext world-fact budget window (040.14)', () => {
+  it('keeps all short facts for a knowledge-rich region', () => {
     const db = createTestDb()
     const { campaign, region, npcA } = seedTwoNpcs(db)
     for (let index = 0; index < 15; index += 1) {
@@ -89,9 +92,27 @@ describe('assembleNpcContext', () => {
 
     const context = assembleNpcContext(db, npcA)
 
+    expect(context.worldFacts).toHaveLength(15)
+    expect(context.worldFacts[14]).toBe('Fact number 14')
+  })
+
+  it('long facts fall back to the guaranteed minimum of 10 most recent', () => {
+    const db = createTestDb()
+    const { campaign, region, npcA } = seedTwoNpcs(db)
+    for (let index = 0; index < 15; index += 1) {
+      createWorldFact(db, {
+        campaignId: campaign.id,
+        regionId: region.id,
+        content: `${index}: ${'deep lore '.repeat(40)}`,
+        createdAt: `2026-01-01T00:00:${String(index).padStart(2, '0')}.000Z`
+      })
+    }
+
+    const context = assembleNpcContext(db, npcA)
+
     expect(context.worldFacts).toHaveLength(10)
-    expect(context.worldFacts[0]).toBe('Fact number 5')
-    expect(context.worldFacts[9]).toBe('Fact number 14')
+    expect(context.worldFacts[0]?.startsWith('5:')).toBe(true)
+    expect(context.worldFacts[9]?.startsWith('14:')).toBe(true)
   })
 })
 

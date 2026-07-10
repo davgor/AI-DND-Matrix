@@ -17,7 +17,10 @@ export class Player2UnreachableError extends Error {}
  * Partial text is never returned; callers fail loudly instead of persisting
  * a truncated fragment.
  */
-export class Player2TruncationError extends Player2RequestError {}
+export class Player2TruncationError extends Player2RequestError {
+  /** Shared marker read by isTruncationError (040.14) — keep in sync with ClaudeTruncationError. */
+  readonly isProviderTruncation = true
+}
 
 export interface Player2AdapterConfig {
   baseUrl: string

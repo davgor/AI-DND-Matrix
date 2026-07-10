@@ -99,6 +99,20 @@ describe('testPlayer2Connection', () => {
     expect(result.message.length).toBeGreaterThan(0)
     vi.unstubAllGlobals()
   })
+
+  it('treats a truncated 1-token ping as a successful connectivity check (040.14)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [{ message: { role: 'assistant', content: 'po' }, finish_reason: 'length' }]
+      })
+    }))
+
+    const result = await testPlayer2Connection('http://127.0.0.1:4315')
+    expect(result.ok).toBe(true)
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('checkLlamaRuntimeConfig', () => {

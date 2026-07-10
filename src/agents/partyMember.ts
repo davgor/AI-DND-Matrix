@@ -5,7 +5,7 @@ import { listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
 import { takeRecent } from './contextWindow'
 import {
   slimEvents,
-  slimNpcMemories,
+  windowNpcMemories,
   type SlimEvent,
   type SlimNpcMemory
 } from './contextSlim'
@@ -27,7 +27,7 @@ export function assemblePartyMemberContext(
   const allEvents = listEventsByCampaign(db, campaignId)
   const relevant = allEvents.filter((event) => event.payload['characterId'] === character.id)
   const priorNpcMemories = character.sourceNpcId
-    ? slimNpcMemories(takeRecent(listNpcMemoriesByNpc(db, character.sourceNpcId)))
+    ? windowNpcMemories(listNpcMemoriesByNpc(db, character.sourceNpcId))
     : []
   return {
     characterId: character.id,
