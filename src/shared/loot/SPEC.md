@@ -14,7 +14,7 @@ Realistic loot resolves at two beat points — **encounter end** and **quest com
 Accepted behavior changes while enrichment is off (intended, not bugs):
 
 - Homebrew catalog growth via `proposeNew` stops — the selector only grants existing catalog items.
-- XP awards (epic 036) persist the engine `budget.suggested` amount, so `xp_awarded.clamped` is always false on the default path.
+- XP awards use difficulty-rated engine amounts (ticket 061): the LLM rates difficulty, `src/engine/difficultyXp.ts` computes the XP, and `xp_awarded` events carry `difficulty`.
 
 Set `ENRICH_REWARD_NARRATION=true` in the environment (read by `src/main/rewardEnrichment.ts`) to restore the prior LLM behavior described below.
 

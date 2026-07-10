@@ -48,7 +48,9 @@ describe('progression pipeline enrichment', () => {
       disposition: 'hostile'
     })
     setNpcEncounterOutcome(db, bandit.id, 'slain')
-    const provider = createScriptedProvider([])
+    // 061: XP always costs exactly one tiny difficulty-rating call; loot stays
+    // zero-LLM by default (040.7's loot half is unchanged by 061).
+    const provider = createScriptedProvider([JSON.stringify({ difficulty: 'medium' })])
     const turn = await enrichTurnWithEncounterRewards({
       db,
       provider,
@@ -58,7 +60,7 @@ describe('progression pipeline enrichment', () => {
       regionId: region.id,
       base: { narrationText: 'Fight over.', npcReactions: [], partyMemberActions: [], pendingAlignmentShift: null }
     })
-    expect(provider.calls).toHaveLength(0)
+    expect(provider.calls).toHaveLength(1)
     expect(turn.xpAmount).toBeGreaterThan(0)
     expect(turn.xpNarration?.length).toBeGreaterThan(0)
     expect(turn.lootGrants?.length).toBeGreaterThan(0)

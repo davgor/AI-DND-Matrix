@@ -24,12 +24,20 @@ export type PerkCategory = (typeof PERK_CATEGORIES)[number]
 export const CHECK_PROFICIENCY_ABILITIES = ['body', 'agility', 'mind', 'presence'] as const
 export type CheckProficiencyAbility = (typeof CHECK_PROFICIENCY_ABILITIES)[number]
 
+export const ENCOUNTER_DIFFICULTIES = ['easy', 'medium', 'hard', 'extreme', 'impossible'] as const
+export type EncounterDifficulty = (typeof ENCOUNTER_DIFFICULTIES)[number]
+
 export interface XpFoeSummary {
   npcId: string
   npcRole: string
   combatTier: NpcCombatTier
   buckets: Bucket[]
   outcome: NpcYieldOutcome
+}
+
+export interface XpPartyMemberSummary {
+  archetype: string
+  level: number
 }
 
 export interface XPContext {
@@ -39,17 +47,12 @@ export interface XPContext {
   playerLevel: number
   playerCharacterId: string
   campaignId: string
+  partyMembers?: XpPartyMemberSummary[]
   roundCount?: number
   questThreadId?: string
   questId?: string
   questHookText?: string
   questScale?: QuestScale
-}
-
-export interface XPBudget {
-  min: number
-  max: number
-  suggested: number
 }
 
 export interface ActivityTagCounts {
@@ -99,9 +102,8 @@ export interface PendingLevelUpCeremony {
   perks: PerkProposal[]
 }
 
-export interface XpAwardAgentResponse {
-  narrationText: string
-  xpAmount: number
+export interface XpDifficultyAgentResponse {
+  difficulty: EncounterDifficulty
 }
 
 export interface LevelUpAgentResponse {
@@ -121,18 +123,19 @@ export function isCheckProficiencyAbility(value: unknown): value is CheckProfici
   return typeof value === 'string' && (CHECK_PROFICIENCY_ABILITIES as readonly string[]).includes(value)
 }
 
-export function parseXpAwardAgentResponse(raw: unknown): XpAwardAgentResponse | null {
+export function parseXpDifficultyAgentResponse(raw: unknown): XpDifficultyAgentResponse | null {
   if (!raw || typeof raw !== 'object') {
     return null
   }
   const body = raw as Record<string, unknown>
-  if (typeof body.narrationText !== 'string') {
+  if (typeof body.difficulty !== 'string') {
     return null
   }
-  if (typeof body.xpAmount !== 'number' || !Number.isFinite(body.xpAmount)) {
+  const normalized = body.difficulty.trim().toLowerCase()
+  if (!(ENCOUNTER_DIFFICULTIES as readonly string[]).includes(normalized)) {
     return null
   }
-  return { narrationText: body.narrationText, xpAmount: Math.floor(body.xpAmount) }
+  return { difficulty: normalized as EncounterDifficulty }
 }
 
 import { parsePerkProposal } from './parsePerkProposal'

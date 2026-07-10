@@ -140,12 +140,13 @@ describe('efficiency smoke: combat player attack with 2 NPC catch-up turns (040.
   })
 })
 
-describe('efficiency smoke: encounter end rewards with enrichment off (040.7)', () => {
-  it('finalizes the encounter and awards XP/loot with zero reward LLM calls', async () => {
+describe('efficiency smoke: encounter end rewards with enrichment off (040.7 + 061)', () => {
+  it('finalizes the encounter with one XP difficulty call and zero loot/yield LLM calls', async () => {
     const { db, campaign, player, goblins } = seedCombatScene({ goblinCount: 1, goblinHp: 1 })
     const provider = createScriptedProvider([
       '{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}',
-      `{"intent":{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"${goblins[0]!.id}"}}`
+      `{"intent":{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"${goblins[0]!.id}"}}`,
+      '{"difficulty":"easy"}'
     ])
     const turnInput = { campaignId: campaign.id, characterId: player.id }
     await resolvePlayerTurn(db, provider, { ...turnInput, playerInput: 'To arms!' }, initiativeRng())
@@ -155,9 +156,9 @@ describe('efficiency smoke: encounter end rewards with enrichment off (040.7)', 
       { ...turnInput, playerInput: 'I strike the goblin down' },
       attackRng(20)
     )
-    // 2 calls total = the two intent calls; yield (040.8), XP, and loot
-    // (040.7) all resolved rules-first/template with zero provider calls.
-    expect(provider.calls, 'reward budget: 0 XP/loot/yield LLM calls').toHaveLength(2)
+    // 3 calls total = two intents + one 64-token XP difficulty rating (061).
+    // Yield (040.8) and loot (040.7) resolve rules-first/template with zero calls.
+    expect(provider.calls, 'reward budget: 1 XP difficulty call, 0 loot/yield LLM calls').toHaveLength(3)
     expect(result.combatState).toBeNull()
     expect(getNpcById(db, goblins[0]!.id)?.encounterOutcome).toBe('slain')
     expect(result.xpAmount).toBeGreaterThan(0)

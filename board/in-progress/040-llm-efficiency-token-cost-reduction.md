@@ -296,6 +296,8 @@ Add optional `enrichRewardNarration` setting (default **false**) that calls LLM 
 - [x] **Deterministic loot selector designed and documented** — no engine item-picker exists today (`resolveLootPolicy` is only an envelope; the LLM currently *selects* items and can `proposeNew` catalog rows): define pick strategy (e.g. seeded random among policy-filtered candidates), respect `maxGrantCount`, and add a variety guard so repeated encounters don't grant identical items
 - [x] Ticket documents two accepted behavior changes so they aren't later mistaken for bugs: persisted XP amounts become `budget.suggested` (midpoint, in-band; `xp_awarded.clamped` always false) and homebrew catalog growth via `proposeNew` stops while enrichment is off
 
+> **Superseded (XP half only):** ticket **061** (difficulty-rated XP, merged from `main`) replaced 040.7's zero-LLM XP path — XP is now always one tiny difficulty-rating call with engine-computed amounts (`src/engine/difficultyXp.ts`) and per-difficulty template narration; `xp_awarded` carries `difficulty` instead of `clamped`, and `ENRICH_REWARD_NARRATION` no longer gates XP. The loot half of 040.7 (deterministic selector, template narration, enrichment flag) is unchanged.
+
 ---
 
 ### 040.8 Rules-first yield and defeat disposition

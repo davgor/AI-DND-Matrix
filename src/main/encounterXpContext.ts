@@ -1,12 +1,22 @@
 import type Database from 'better-sqlite3'
 import { getCreatureByKey } from '../db/catalog/creatures'
-import { getCharacterById } from '../db/repositories/characters'
+import { getCharacterById, listPartyMembersForPlayer } from '../db/repositories/characters'
 import type { CombatEncounter } from '../shared/combat/types'
 import { getNpcById } from '../db/repositories/npcs'
 import type { Npc } from '../db/repositories/npcs'
 import type { Bucket } from '../shared/catalogTaxonomy'
 import type { NpcYieldOutcome } from '../shared/combat/types'
-import type { XPContext, XpFoeSummary } from '../shared/progression/types'
+import type { XPContext, XpFoeSummary, XpPartyMemberSummary } from '../shared/progression/types'
+
+export function summarizePartyMembers(
+  db: Database.Database,
+  playerCharacterId: string
+): XpPartyMemberSummary[] {
+  return listPartyMembersForPlayer(db, playerCharacterId).map((member) => ({
+    archetype: member.characterClass,
+    level: member.level
+  }))
+}
 
 const XP_EARNING_OUTCOMES = new Set<NpcYieldOutcome>(['slain', 'incapacitated', 'surrender'])
 const DEFAULT_BUCKET: Bucket[] = ['humanoid']
@@ -66,6 +76,7 @@ export function assembleEncounterXpContext(
     playerLevel,
     playerCharacterId,
     campaignId,
+    partyMembers: summarizePartyMembers(db, playerCharacterId),
     roundCount: encounter.round
   }
 }

@@ -5,13 +5,11 @@ import { getCharacterById, updateCharacter, type Character } from '../db/reposit
 import { awardXP } from '../engine/xp'
 import { applyLevelUpHitDice, hashStringSeed, type Archetype } from '../engine/hp'
 import type { CharacterHpStats } from '../shared/hp/types'
-import type { XPContext, XPBudget } from '../shared/progression/types'
+import type { EncounterDifficulty, XPContext } from '../shared/progression/types'
 import type { XpPassResult } from './progressionPipeline'
 import type { Provider } from '../agents/providers/types'
-import { resolveXpAward, type XpAgentResponse } from '../agents/xp'
-import { clampXPProposal, resolveXPBudget, shouldSkipXpPass } from '../engine/xpBudget'
-import { isRewardNarrationEnrichmentEnabled } from './rewardEnrichment'
-import { xpNarrationTemplate } from './rewardNarrationTemplates'
+import { resolveXpAward } from '../agents/xp'
+import { shouldSkipXpPass } from '../engine/difficultyXp'
 import { queueLevelUpCeremonies } from './progressionLevelUpQueue'
 
 function persistCharacterProgress(
@@ -54,7 +52,8 @@ function recordXpAward(
   input: {
     context: XPContext
     characterId: string
-    clamped: { amount: number; clamped: boolean }
+    amount: number
+    difficulty: EncounterDifficulty
     newXpTotal: number
     narrationText: string
   }
@@ -65,30 +64,12 @@ function recordXpAward(
     payload: {
       characterId: input.characterId,
       source: input.context.source,
-      amount: input.clamped.amount,
-      clamped: input.clamped.clamped,
+      amount: input.amount,
+      difficulty: input.difficulty,
       newXpTotal: input.newXpTotal,
       narrationText: input.narrationText
     }
   })
-}
-
-/**
- * Default zero-LLM path (040.7): the persisted amount is always the engine
- * `budget.suggested`, so `xp_awarded.clamped` is always false on this path —
- * an accepted, intended behavior change, not a bug. Setting
- * `ENRICH_REWARD_NARRATION=true` restores the prior LLM-proposed amounts and
- * flavor narration.
- */
-async function resolveXpOutcome(
-  provider: Provider,
-  context: XPContext,
-  budget: XPBudget
-): Promise<XpAgentResponse> {
-  if (isRewardNarrationEnrichmentEnabled()) {
-    return resolveXpAward(provider, context, budget)
-  }
-  return { narrationText: xpNarrationTemplate(context.source), xpAmount: budget.suggested }
 }
 
 export async function executeXpPass(input: {
@@ -97,8 +78,7 @@ export async function executeXpPass(input: {
   context: XPContext
 }): Promise<XpPassResult | null> {
   const { db, provider, context } = input
-  const budget = resolveXPBudget(context)
-  if (shouldSkipXpPass(budget)) {
+  if (shouldSkipXpPass(context)) {
     return null
   }
 
@@ -107,9 +87,8 @@ export async function executeXpPass(input: {
     return null
   }
 
-  const agent = await resolveXpOutcome(provider, context, budget)
-  const clamped = clampXPProposal(agent.xpAmount, budget)
-  const award = awardXP({ xp: character.xp, level: character.level }, clamped.amount)
+  const agent = await resolveXpAward(provider, context)
+  const award = awardXP({ xp: character.xp, level: character.level }, agent.xpAmount)
   const levelPatch = award.leveledUp ? applyLevelUpHp(character, award.levelsGained) : null
   const updated = persistCharacterProgress(db, character.id, {
     xp: award.state.xp,
@@ -120,7 +99,8 @@ export async function executeXpPass(input: {
   recordXpAward(db, {
     context,
     characterId: character.id,
-    clamped,
+    amount: agent.xpAmount,
+    difficulty: agent.difficulty,
     newXpTotal: award.state.xp,
     narrationText: agent.narrationText
   })
@@ -137,7 +117,7 @@ export async function executeXpPass(input: {
 
   return {
     xpNarration: agent.narrationText,
-    xpAmount: clamped.amount,
+    xpAmount: agent.xpAmount,
     leveledUp: award.leveledUp,
     levelsGained: award.levelsGained
   }

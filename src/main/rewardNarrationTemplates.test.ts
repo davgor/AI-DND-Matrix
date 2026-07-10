@@ -1,22 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  formatItemNameList,
-  lootNarrationTemplate,
-  xpNarrationTemplate
-} from './rewardNarrationTemplates'
-
-describe('xpNarrationTemplate', () => {
-  it('produces a distinct one-liner per source', () => {
-    const encounter = xpNarrationTemplate('encounter_end')
-    const quest = xpNarrationTemplate('quest_complete')
-    expect(encounter).not.toBe(quest)
-    for (const line of [encounter, quest]) {
-      expect(line.length).toBeGreaterThan(0)
-      expect(line.endsWith('.')).toBe(true)
-      expect(line).not.toContain('\n')
-    }
-  })
-})
+import { formatItemNameList, lootNarrationTemplate } from './rewardNarrationTemplates'
 
 describe('formatItemNameList', () => {
   it('handles one, two, and three names grammatically', () => {

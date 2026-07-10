@@ -22,7 +22,7 @@ The suite drives the real turn pipeline (`resolvePlayerTurn`) and the real flagg
 | Simple dialogue turn — 1 previously-met NPC, no check, no cross-character signals | **2**: 1 intent-only call (no routing schema) + 1 `npcResponse` call; **0 routing calls** — the 040.3 heuristic converse row fires | 040.2 + 040.3 |
 | Check + narration turn | **≤ 2**: 1 merged intent+routing call + 1 `narrate` call | 040.2 |
 | Combat player attack with 2 NPC catch-up turns | **1** intent call for the attack turn; **0** catch-up flavor calls (template flavor) | 040.6 |
-| Encounter end rewards (enrichment off) | **0** XP/loot LLM calls (engine `budget.suggested` + deterministic loot selector + template narration); yield also resolves rules-first with 0 calls | 040.7 + 040.8 |
+| Encounter end rewards (enrichment off) | **1** XP difficulty-rating call (64-token cap, engine computes the amount — ticket 061) + **0** loot LLM calls (deterministic selector + template narration); yield also resolves rules-first with 0 calls | 040.7 + 040.8 + 061 |
 | Flag a new NPC, race already realized in campaign | **exactly 2**: core bundle + details | 040.13 |
 | Flag a new NPC, race not yet realized | **exactly 3**: core bundle + race-lore realize + details | 040.13 |
 
@@ -45,9 +45,9 @@ The identity fixture also proves windowing directly: a 10-turn transcript produc
 | Env flag | What `true` restores |
 |----------|----------------------|
 | `COMBAT_LLM_FLAVOR` | LLM flavor for NPC/party combat catch-up turns (one `generateNpcReaction` / `decidePartyMemberAction` call per catch-up turn) instead of deterministic templates. Manual-QA escape hatch for 040.6. |
-| `ENRICH_REWARD_NARRATION` | LLM XP/loot passes: LLM-proposed (engine-clamped) XP amounts, LLM loot selection including `proposeNew` homebrew catalog growth, and flavor narration, instead of the zero-LLM template path. Restores 040.7's prior behavior. |
+| `ENRICH_REWARD_NARRATION` | LLM **loot** selection including `proposeNew` homebrew catalog growth and flavor narration, instead of the zero-LLM template path. Loot-only since ticket 061: XP is always one difficulty-rating call with engine-computed amounts and templated narration (`src/engine/difficultyXp.ts`), regardless of this flag. |
 
-Accepted, intended behavior while both are off: persisted XP is always `budget.suggested` (`xp_awarded.clamped` always false) and organic homebrew catalog growth via `proposeNew` stops.
+Accepted, intended behavior while both are off: organic homebrew catalog growth via `proposeNew` stops. XP amounts are difficulty-fraction based (ticket 061); `xp_awarded` events carry `difficulty` instead of the old `clamped` flag.
 
 ## Adaptive ceilings (040.14 — large NPCs and large DM turns are safe)
 
@@ -63,7 +63,7 @@ The tuned `maxTokens` bands and context windows are optimized for the common cas
    - A plain dialogue line to one NPC you have already spoken with (e.g. *"Mira, how are you?"*) should log `heuristic` and produce dialogue with no DM narration.
    - A quest-relevant or transactional line (e.g. *"I buy the rope"*) should log `llm` — the starvation guard defers so `dmNarration` side-effect writes can land.
 3. Start a fight with 2+ hostile NPCs and attack: catch-up turns should resolve instantly with short template flavor lines (no per-NPC provider latency). Set `COMBAT_LLM_FLAVOR=true` and repeat to see the LLM flavor path return.
-4. Win the encounter: XP/loot narration should be immediate template one-liners. Set `ENRICH_REWARD_NARRATION=true` and repeat to see LLM flavor narration return.
+4. Win the encounter: XP narration is a per-difficulty template line (one fast 64-token rating call) and loot narration is an immediate template one-liner. Set `ENRICH_REWARD_NARRATION=true` and repeat to see LLM loot flavor return (XP behavior is unchanged by the flag).
 5. In Campaign Review, **Generate NPC** twice with the same race seed: the second generation should be visibly faster (2 calls, race lore reused — no re-realize).
 
 ## Recorded run (template)

@@ -1,18 +1,10 @@
 /**
- * Template one-liners for the default zero-LLM reward path (epic 040.7).
+ * Template one-liners for the default zero-LLM loot path (epic 040.7).
  * Keyed by reward source so encounter and quest beats read differently.
+ * XP narration templates live in `src/engine/difficultyXp.ts` (ticket 061,
+ * which superseded 040.7's XP half — the loot half is unchanged).
  */
-import type { XPSource } from '../shared/progression/types'
 import type { LootSource } from '../shared/loot/types'
-
-const XP_NARRATION_BY_SOURCE: Record<XPSource, string> = {
-  encounter_end: 'The fight is over, and its hard-won lessons settle in.',
-  quest_complete: 'With the task seen through, you come away more seasoned.'
-}
-
-export function xpNarrationTemplate(source: XPSource): string {
-  return XP_NARRATION_BY_SOURCE[source]
-}
 
 export function formatItemNameList(names: string[]): string {
   if (names.length <= 1) {

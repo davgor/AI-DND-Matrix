@@ -4,21 +4,6 @@ import { createRegion } from './repositories/regions'
 import { createCharacter } from './repositories/characters'
 import { createNpc, setNpcCombatStats } from './repositories/npcs'
 
-export const GOBLIN_LOOT_RESPONSE = JSON.stringify({
-  narrationText: 'You find a few coins on the goblin.',
-  itemGrants: [
-    {
-      proposeNew: {
-        name: 'Goblin Coin Pouch',
-        description: 'A handful of copper.',
-        itemType: 'misc',
-        rarityTier: 'common'
-      }
-    }
-  ],
-  nothingToFind: false
-})
-
 export function initiativeRng() {
   let calls = 0
   return () => {
