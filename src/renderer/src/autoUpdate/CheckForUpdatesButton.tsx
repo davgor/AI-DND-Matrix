@@ -1,6 +1,6 @@
 import { requestCheckForUpdates } from './checkForUpdates'
 
-export interface CheckForUpdatesButtonProps {
+interface CheckForUpdatesButtonProps {
   disabled?: boolean
   label?: string
 }
