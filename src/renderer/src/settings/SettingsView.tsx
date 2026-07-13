@@ -1,3 +1,4 @@
+import { CheckForUpdatesButton } from '../autoUpdate/CheckForUpdatesButton'
 import { useAppUpdate } from '../autoUpdate/UpdateBanner'
 import { ApiKeySection } from './ApiKeySection'
 import { LlamaLocalSection } from './LlamaLocalSection'
@@ -89,9 +90,12 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         <ProviderSection controller={controller} />
         {controller.saveFailed && <p className="settings-field-error">Could not save settings. Please try again.</p>}
         <footer className="settings-footer">
-          <p className="settings-version" aria-label={`Application version ${currentVersion}`}>
-            Version {currentVersion}
-          </p>
+          <div className="settings-version-row">
+            <p className="settings-version" aria-label={`Application version ${currentVersion}`}>
+              Version {currentVersion}
+            </p>
+            <CheckForUpdatesButton />
+          </div>
           <div className="settings-footer-actions">
             <button type="button" onClick={controller.requestClose}>
               Cancel
