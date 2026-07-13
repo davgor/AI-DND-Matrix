@@ -1,13 +1,27 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { autoUpdater } from 'electron-updater'
-import type { AutoUpdateState } from '../shared/autoUpdate/types'
+import type { AutoUpdatePhase, AutoUpdateState } from '../shared/autoUpdate/types'
 import { logger } from './logger'
 
-const CHECK_DELAY_MS = 8_000
+/** Delay before the first update check after launch. */
+export const INITIAL_CHECK_DELAY_MS = 8_000
+
+/** How often to re-check while the app stays open (Discord-style background polling). */
+export const POLL_INTERVAL_MS = 4 * 60 * 60 * 1000
 
 let state: AutoUpdateState = {
   phase: 'idle',
   currentVersion: app.getVersion()
+}
+
+let checkInFlight = false
+
+export function canStartUpdateCheck(phase: AutoUpdatePhase): boolean {
+  return phase === 'idle' || phase === 'error'
+}
+
+export function formatUpdateReadyMessage(version: string): string {
+  return `Version ${version} is ready. Restart to apply silently — no installer.`
 }
 
 function broadcastState(): void {
@@ -35,11 +49,34 @@ export function quitAndInstallUpdate(): void {
   autoUpdater.quitAndInstall(true, true)
 }
 
+export async function checkForUpdatesNow(): Promise<void> {
+  if (!isAutoUpdateEnabled()) {
+    return
+  }
+  if (checkInFlight || !canStartUpdateCheck(state.phase)) {
+    return
+  }
+
+  checkInFlight = true
+  try {
+    await autoUpdater.checkForUpdates()
+  } catch (error: unknown) {
+    logger.error('Auto-update check failed:', error)
+    setState({
+      phase: 'error',
+      message: error instanceof Error ? error.message : 'Update check failed'
+    })
+  } finally {
+    checkInFlight = false
+  }
+}
+
 export function registerAutoUpdateHandlers(): void {
   ipcMain.handle('autoUpdate:getState', () => getAutoUpdateState())
   ipcMain.handle('autoUpdate:quitAndInstall', () => {
     quitAndInstallUpdate()
   })
+  ipcMain.handle('autoUpdate:checkForUpdates', () => checkForUpdatesNow())
 }
 
 function wireAutoUpdaterEvents(): void {
@@ -56,7 +93,7 @@ function wireAutoUpdaterEvents(): void {
   })
 
   autoUpdater.on('update-not-available', () => {
-    setState({ phase: 'idle', availableVersion: undefined, downloadPercent: undefined })
+    setState({ phase: 'idle', availableVersion: undefined, downloadPercent: undefined, message: undefined })
   })
 
   autoUpdater.on('download-progress', (progress) => {
@@ -71,7 +108,7 @@ function wireAutoUpdaterEvents(): void {
       phase: 'downloaded',
       availableVersion: info.version,
       downloadPercent: 100,
-      message: `Version ${info.version} is ready. It will install when you quit, or restart now.`
+      message: formatUpdateReadyMessage(info.version)
     })
   })
 
@@ -84,16 +121,14 @@ function wireAutoUpdaterEvents(): void {
   })
 }
 
-function scheduleUpdateCheck(): void {
+function scheduleUpdateChecks(): void {
   setTimeout(() => {
-    void autoUpdater.checkForUpdates().catch((error: unknown) => {
-      logger.error('Auto-update check failed:', error)
-      setState({
-        phase: 'error',
-        message: error instanceof Error ? error.message : 'Update check failed'
-      })
-    })
-  }, CHECK_DELAY_MS)
+    void checkForUpdatesNow()
+  }, INITIAL_CHECK_DELAY_MS)
+
+  setInterval(() => {
+    void checkForUpdatesNow()
+  }, POLL_INTERVAL_MS)
 }
 
 export function initAutoUpdate(): void {
@@ -106,5 +141,5 @@ export function initAutoUpdate(): void {
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
   wireAutoUpdaterEvents()
-  scheduleUpdateCheck()
+  scheduleUpdateChecks()
 }

@@ -8,10 +8,18 @@ CI builds with `electron-builder --publish never` (artifacts only). The deploy w
 
 | Artifact | Auto-update | GitHub Release |
 |----------|-------------|----------------|
-| `AI TTRPG Matrix-Setup-x.y.z.exe` (NSIS) | Yes — silent download + install on quit (or “Restart now”) | Yes |
+| `AI TTRPG Matrix-Setup-x.y.z.exe` (NSIS) | Yes — background poll/download + **silent** install on quit or “Restart now” | Yes |
 | `AI TTRPG Matrix-x.y.z-Portable.exe` | No — manual download only | Yes |
 
 Install the **Setup** build for automatic updates. Keep the portable build for users who want a single file without installing.
+
+## How checks run (Setup builds)
+
+1. **Initial check** ~8 seconds after launch
+2. **Polling** every **4 hours** while the app stays open (skips if a check/download is already in flight or an update is ready)
+3. **Manual check** — Settings → “Check for updates” (same guarded path; no-op in dev / when `DISABLE_AUTO_UPDATE=1`)
+
+When an update is ready, the banner offers **Restart now**. Apply uses `quitAndInstall(true, true)`: silent NSIS (`/S`) and relaunch. Users should not see the installer wizard on update — only a brief restart, Discord-style.
 
 ## Versioning
 

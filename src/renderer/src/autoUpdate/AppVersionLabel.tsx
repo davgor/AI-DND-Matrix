@@ -2,7 +2,7 @@ export function formatAppVersionLabel(version: string): string {
   return version.startsWith('v') ? version : `v${version}`
 }
 
-export interface AppVersionLabelProps {
+interface AppVersionLabelProps {
   version: string
 }
 

@@ -123,8 +123,20 @@
   margin-left: auto;
 }
 
+.settings-version-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .settings-version {
   margin: 0;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.settings-check-updates {
+  font-size: 12px;
+  padding: 4px 8px;
 }
