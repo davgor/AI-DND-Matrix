@@ -23,6 +23,10 @@ Each successful deploy to `main` runs `scripts/bump-minor-version.mjs` before pa
 
 Version-bump commits use `[skip ci]` so deploy does not loop.
 
+## Verify an update landed
+
+The titlebar shows `vX.Y.Z` next to the product name (also under Settings → Version). After installing a Setup build and receiving an update, confirm that label matches the new release tag.
+
 ## Local / dev
 
-Auto-update is disabled when `app.isPackaged` is false. Set `DISABLE_AUTO_UPDATE=1` to disable in packaged builds.
+Auto-update is disabled when `app.isPackaged` is false. Set `DISABLE_AUTO_UPDATE=1` to disable in packaged builds. Dev still shows `package.json` version via `app.getVersion()`.

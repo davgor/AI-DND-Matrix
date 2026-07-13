@@ -109,8 +109,22 @@
 
 .settings-footer {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
   padding-top: 4px;
   border-top: 1px solid var(--border-subtle);
+}
+
+.settings-footer-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.settings-version {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
