@@ -495,6 +495,6 @@ Also closes a latent 040.5 hole found in review: `executeInactivePlayerEncounter
 - [x] Unused `WOLF_LOOT_RESPONSE` / `BANDIT_LOOT_RESPONSE` / `QUEST_LOOT_RESPONSE` removed (zero importers after template loot)
 - [x] Same-module-only 040 types/helpers unexported where safe; remaining intentional dead exports listed in `.tsprune-ignore` with current line numbers
 - [x] Converse-only turn that names an inactive player fires the proxy (regression test in `turnIpc.test.ts`); empty sceneContext no longer short-circuits the signal gate
-- [ ] `npm run deadcode` exits 0
-- [ ] `npm test`, `npm run lint`, `npm run build` pass
+- [x] `npm run deadcode` exits 0
+- [x] `npm test`, `npm run lint`, `npm run build` pass
 

@@ -710,8 +710,10 @@ describe('resolvePlayerTurn: proxy fires on a name mention (040.5)', () => {
     expect(provider.calls).toHaveLength(3)
     expect(result.inactivePlayerActions?.[0]?.actionText).toBe('Lyra looks up from her book.')
   })
+})
 
-  it('fires on converse-only turns that name the inactive character (empty sceneContext)', async () => {
+describe('resolvePlayerTurn: name mention on converse-only turns (040.5)', () => {
+  it('fires the proxy when sceneContext is empty but the input names them', async () => {
     // npcResponse never appends sceneContext beats — the signal gate must still
     // wake the proxy when the player names an inactive companion mid-dialogue.
     const { db, campaign, region, player } = seedCampaignWithPlayer()
