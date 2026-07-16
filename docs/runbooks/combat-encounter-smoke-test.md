@@ -19,6 +19,30 @@ npx vitest run src/db/combatEncounterSmoke.test.ts
 3. Player attacks on their turn — at least one hit and one miss across scripted RNG.
 4. NPC combat events append to the campaign event log.
 5. Encounter ends when the hostile is defeated; active encounter row clears.
+6. NPC/party catch-up turns produce **zero** LLM calls by default — flavor comes
+   from deterministic templates (epic 040.6, `src/main/combatFlavorTemplates.ts`).
+
+## Combat flavor: templates by default, LLM opt-in (040.6)
+
+During combat catch-up (the NPC/party turns resolved after each player action),
+hit/miss/damage are always engine-resolved; the accompanying flavor line is a
+deterministic template keyed by temperament, disposition, hit/miss, and
+speaking vs non-speaking (`reactionKind: 'dialogue'` plain text for speaking
+NPCs, `reactionKind: 'action'` with `**wrapped**` prose for non-speaking ones).
+Party members get short template action lines. No provider calls are made.
+
+For manual QA of the old per-combatant LLM flavor path, set the env flag in
+`.env` (or the shell) before launching:
+
+```
+COMBAT_LLM_FLAVOR=true
+```
+
+With the flag set, NPC catch-up turns call `generateNpcReaction` and party
+member turns call `decidePartyMemberAction` again (flavor only — combat
+outcomes are still engine-resolved either way). Any value other than the exact
+string `true` leaves templates on. Non-combat NPC reactions are unaffected by
+this flag: they always use the LLM and keep persisting NPC memories.
 
 ## Manual (dev)
 

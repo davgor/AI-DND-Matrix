@@ -88,13 +88,15 @@ export function seedCombatProgressionFixture() {
   const db = createTestDb()
   const campaign = createCampaign(db, { name: 'Progression', premisePrompt: 'xp', deathMode: 'standard' })
   const region = createRegion(db, { campaignId: campaign.id, name: 'Road', description: 'Dusty road' })
+  // 280 + the engine-suggested encounter award (27 here) crosses the level-2
+  // threshold (300) on the default zero-LLM XP path (040.7).
   const player = createCharacter(db, {
     campaignId: campaign.id,
     name: 'Fighter',
     characterClass: 'fighter',
     kind: 'player',
     level: 1,
-    xp: 270
+    xp: 280
   })
   const bandit = createNpc(db, {
     campaignId: campaign.id,

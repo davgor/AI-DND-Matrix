@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
 import { MAX_GENERATION_ATTEMPTS } from './campaignGeneration/types'
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { findRosterEntry, RACE_ROSTER } from '../engine/raceSelection/roster'
 import { getCampaignById } from '../db/repositories/campaigns'
 import {
@@ -17,6 +17,10 @@ import type {
 } from '../shared/raceSelection/types'
 
 export type { CampaignRace } from '../shared/raceSelection/types'
+
+// 040.1: 512 — structured lore JSON (five short flavor fields + 2-4 hook
+// strings), generated once per race per campaign.
+const RACE_LORE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512 }
 
 function isValidRaceLore(value: unknown): value is RaceLore {
   if (typeof value !== 'object' || value === null) {
@@ -65,7 +69,10 @@ export async function generateRaceLore(
   input: RaceLoreInput
 ): Promise<RaceLore> {
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildRaceLorePrompt(campaignPremise, worldSummary, input))
+    const raw = await provider.generate(
+      buildRaceLorePrompt(campaignPremise, worldSummary, input),
+      RACE_LORE_GENERATE_CONTEXT
+    )
     const parsed = tryParseJson(raw)
     if (isValidRaceLore(parsed)) {
       return parsed

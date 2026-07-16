@@ -49,6 +49,7 @@ describe('resolveLevelUpPerks', () => {
     ])
     const result = await resolveLevelUpPerks(provider, combatSpan)
     expect(hasMartialOption(result)).toBe(true)
+    expect(provider.calls[0]?.context?.maxTokens).toBe(512)
   })
 
   it('arcane-span fixture yields spell_access option', async () => {

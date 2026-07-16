@@ -1,16 +1,44 @@
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import { buildAgentSystemPrompt } from './sharedSystemPrompts'
+import {
+  evaluateYieldRules,
+  fallbackYieldOutcome,
+  permittedYieldOutcomes,
+  yieldNarrationTemplate
+} from './yieldRules'
 import {
   parseYieldReviewResult,
-  type NpcYieldReviewOutcome,
   type YieldReviewInput,
   type YieldReviewResult
 } from '../shared/npcCombat/types'
 import type { NpcYieldOutcome } from '../shared/combat/types'
 
+// 040.9: schema + static guidelines ride in systemPrompt; the allowed-outcome
+// list stays in the user prompt (it varies per yield) and parse clamps to it.
+// 040.1: 192 — an outcome word plus a 1-2 sentence narration seed.
+const YIELD_GENERATE_CONTEXT: GenerateContext = {
+  systemPrompt: buildAgentSystemPrompt({
+    schemaFragment: '{"outcome":string,"narrationText":string}',
+    guidanceLines: [
+      'Decide how this NPC responds to being at a disadvantage.',
+      '"outcome" must be one of the allowed outcomes listed in the user message.',
+      'Guidelines:',
+      '- Cowardly, civilian, or skittish backstories: prefer surrender or flee over fight_on',
+      '- Provoked villager or non-combatant who never wanted this fight: surrender at threshold',
+      '- Fanatic, mindless beast, or villain who would die before yielding: fight_on may be appropriate',
+      '- Non-speaking creatures (canSpeak false): cannot surrender; choose flee or incapacitated or fight_on',
+      '- If player used non-lethal intent or offers mercy: never return slain',
+      '- Do not invent new backstory; cite only the temperament and stored backstory in the user message',
+      '"narrationText" is a short prose seed (1-2 sentences) the DM can use for narration.'
+    ]
+  }),
+  maxTokens: 192
+}
+
 function buildYieldReviewPrompt(input: YieldReviewInput): string {
-  const allowedList = [...input.allowedOutcomes, 'fight_on'].join('|')
+  const allowedList = permittedYieldOutcomes(input).join('|')
   return [
     `NPC: ${input.npcName} (${input.npcRole})`,
     `Alignment: ${input.alignment ?? 'unknown'}`,
@@ -21,48 +49,36 @@ function buildYieldReviewPrompt(input: YieldReviewInput): string {
     `Attack lethality: ${input.lethality}`,
     `Player offers mercy: ${input.playerOffersMercy}`,
     `Backstory (read-only — do not invent or contradict): ${input.backstory || '(none)'}`,
-    '',
-    'Decide how this NPC responds to being at a disadvantage.',
-    `Allowed outcomes: ${allowedList}`,
-    'Guidelines:',
-    '- Cowardly, civilian, or skittish backstories: prefer surrender or flee over fight_on',
-    '- Provoked villager or non-combatant who never wanted this fight: surrender at threshold',
-    '- Fanatic, mindless beast, or villain who would die before yielding: fight_on may be appropriate',
-    '- Non-speaking creatures (canSpeak false): cannot surrender; choose flee or incapacitated or fight_on',
-    '- If player used non-lethal intent or offers mercy: never return slain',
-    '- Do not invent new backstory; cite only the temperament and stored backstory above',
-    'Respond ONLY with JSON: {"outcome":"' + allowedList + '","narrationText":string}',
-    '"narrationText" is a short prose seed (1-2 sentences) the DM can use for narration.'
+    `Allowed outcomes: ${allowedList}`
   ].join('\n')
 }
 
-function defaultYieldOutcome(input: YieldReviewInput): NpcYieldReviewOutcome {
-  if (input.lethality === 'non_lethal') {
-    return 'incapacitated'
-  }
-  if (input.combatTier === 'villager') {
-    return 'surrender'
-  }
-  return 'incapacitated'
-}
-
+/**
+ * 040.8: rules-first. The pure decision table in `yieldRules.ts` decides most
+ * yields with zero LLM calls; the LLM is consulted only when the table returns
+ * `ambiguous` (veteran-tier judgment calls). LLM output is clamped to
+ * `permittedYieldOutcomes`, so the hard invariants (no `slain` under non-lethal
+ * intent or offered mercy, no `surrender` for non-speakers, outcome within
+ * `allowedOutcomes` ∪ `fight_on`) hold on every path.
+ */
 export async function proposeYieldOutcome(
   provider: Provider,
   input: YieldReviewInput
 ): Promise<YieldReviewResult> {
-  const allowed: readonly NpcYieldReviewOutcome[] = [...input.allowedOutcomes, 'fight_on']
+  const decision = evaluateYieldRules(input)
+  if (decision.kind === 'outcome') {
+    return { outcome: decision.outcome, narrationText: decision.narrationText }
+  }
+  const permitted = permittedYieldOutcomes(input)
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildYieldReviewPrompt(input))
-    const parsed = parseYieldReviewResult(tryParseJson(raw), allowed)
+    const raw = await provider.generate(buildYieldReviewPrompt(input), YIELD_GENERATE_CONTEXT)
+    const parsed = parseYieldReviewResult(tryParseJson(raw), permitted)
     if (parsed) {
       return parsed
     }
   }
-  const outcome = defaultYieldOutcome(input)
-  return {
-    outcome,
-    narrationText: `${input.npcName} ${outcome === 'surrender' ? 'drops their weapon and raises their hands' : 'collapses unconscious'}.`
-  }
+  const outcome = fallbackYieldOutcome(input)
+  return { outcome, narrationText: yieldNarrationTemplate(input.npcName, outcome) }
 }
 
 export function buildYieldReviewInput(params: {

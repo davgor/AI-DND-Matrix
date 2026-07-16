@@ -1,9 +1,10 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
 import { afterEach, describe, expect, it } from 'vitest'
 import { persistNarrationSideEffects } from '../agents/dm'
+import { closeFileTestDb, openFileTestDb, reopenFileTestDb } from './fileDbTestUtils'
 import { createTestDb } from './testUtils'
 import { runMigrations } from './migrations'
 import { migrations } from './schema'
@@ -77,19 +78,21 @@ describe('character journal end-to-end smoke', () => {
 })
 
 describe('character journal persistence smoke', () => {
-  let dir: string
-  let db: Database.Database
+  let dir: string | undefined
+  let db: Database.Database | undefined
 
   afterEach(() => {
-    db?.close()
+    closeFileTestDb(db)
+    db = undefined
     if (dir) {
       rmSync(dir, { recursive: true, force: true })
+      dir = undefined
     }
   })
 
   it('preserves journal entries and order after reopening the database file', () => {
     dir = mkdtempSync(join(tmpdir(), 'journal-smoke-'))
-    db = new Database(join(dir, 'save.sqlite'))
+    db = openFileTestDb(join(dir, 'save.sqlite'))
     runMigrations(db, migrations)
     const { campaign, player } = seedCampaign(db)
     createCharacterJournalEntry(db, {
@@ -106,14 +109,11 @@ describe('character journal persistence smoke', () => {
       inGameDate: 3,
       createdAt: '2026-01-03T00:00:00.000Z'
     })
-    const filePath = db.name
-    db.close()
 
-    const reopened = new Database(filePath)
-    expect(listCharacterJournalEntries(reopened, player.id).map((row) => row.content)).toEqual([
+    db = reopenFileTestDb(db)
+    expect(listCharacterJournalEntries(db, player.id).map((row) => row.content)).toEqual([
       'Newer beat.',
       'Older beat.'
     ])
-    reopened.close()
   })
 })

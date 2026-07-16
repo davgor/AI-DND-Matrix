@@ -3,7 +3,7 @@
 ## Automated
 
 ```bash
-npm test -- src/db/npcYieldSmoke.test.ts src/engine/yieldEligibility.test.ts src/engine/playerAttack.test.ts src/agents/yieldReview.test.ts
+npm test -- src/db/npcYieldSmoke.test.ts src/engine/yieldEligibility.test.ts src/engine/playerAttack.test.ts src/agents/yieldReview.test.ts src/agents/yieldRules.test.ts
 ```
 
 ## Scenarios
@@ -36,7 +36,8 @@ Five scenarios exercise the full yield / non-lethal victory path:
 
 ## Notes
 
-- Yield outcome is determined by the `yieldReview` agent reading persisted `backstory`, `temperament`, and `combatTier` — no invented backstory.
+- **Rules-first (040.8):** yield outcomes are decided by a pure decision table (`src/agents/yieldRules.ts`) over `temperament` + `combatTier` + lethality + allowed outcomes, with zero LLM calls for clear-cut cases (cowardly surrender, beast flee, fanatic fight_on, non-lethal incapacitated, villager surrender). The `yieldReview` agent calls the LLM only when the table returns `ambiguous` — a retired-adventurer (veteran) tier NPC with multiple allowed outcomes and no clear-cut temperament. Narration hints come from template strings on the rules path.
+- Hard invariants enforced by the table (and clamped onto LLM output): never `slain` when the attack is non-lethal or mercy is offered, never `surrender` for non-speaking creatures, and the outcome is always within the engine's allowed outcomes ∪ `fight_on`. A property-style test in `src/agents/yieldRules.test.ts` enumerates the full input space.
 - `fight_on` is a transient agent outcome that never persists; the NPC stays in the encounter initiative order.
 - Only `slain` sets `alive: false`; the engine is authoritative for this flag.
 - The HUD `YieldBadge` shows surrender/fled/incapacitated badges; slain NPCs are omitted (they were never added with encounterOutcome).

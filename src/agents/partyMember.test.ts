@@ -33,13 +33,13 @@ describe('assemblePartyMemberContext', () => {
     const campaign = seedCampaign(db)
     const character = seedPartyMember(db, campaign.id)
 
-    const earlier = appendEvent(db, {
+    appendEvent(db, {
       campaignId: campaign.id,
       type: 'party_member_interaction',
       payload: { characterId: character.id, content: 'helped during the goblin ambush' },
       timestamp: '2024-01-01T00:00:00.000Z'
     })
-    const later = appendEvent(db, {
+    appendEvent(db, {
       campaignId: campaign.id,
       type: 'party_member_interaction',
       payload: { characterId: character.id, content: 'shared a meal at the tavern' },
@@ -49,7 +49,11 @@ describe('assemblePartyMemberContext', () => {
     const context = assemblePartyMemberContext(db, campaign.id, character)
 
     expect(context.characterId).toBe(character.id)
-    expect(context.relationshipEvents.map((e) => e.id)).toEqual([earlier.id, later.id])
+    // Slim event shape (040.4): no ids, just type + derived summary in original order.
+    expect(context.relationshipEvents.map((e) => e.summary)).toEqual([
+      'helped during the goblin ambush',
+      'shared a meal at the tavern'
+    ])
   })
 
   it('excludes events tagged to a different characterId', () => {
@@ -62,7 +66,7 @@ describe('assemblePartyMemberContext', () => {
       type: 'party_member_interaction',
       payload: { characterId: 'someone-else', content: "not this character's memory" }
     })
-    const own = appendEvent(db, {
+    appendEvent(db, {
       campaignId: campaign.id,
       type: 'party_member_interaction',
       payload: { characterId: character.id, content: "this character's memory" }
@@ -70,7 +74,7 @@ describe('assemblePartyMemberContext', () => {
 
     const context = assemblePartyMemberContext(db, campaign.id, character)
 
-    expect(context.relationshipEvents.map((e) => e.id)).toEqual([own.id])
+    expect(context.relationshipEvents.map((e) => e.summary)).toEqual(["this character's memory"])
   })
 })
 
@@ -123,6 +127,25 @@ describe('decidePartyMemberAction', () => {
     const action = await decidePartyMemberAction(provider, character, context, 'Goblins ambush the party.')
 
     expect(action).toEqual({ actionText: 'Brom nocks an arrow and covers the rear.' })
+  })
+
+  it('moves the action schema into systemPrompt — user prompt keeps persona and scene (040.9)', async () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const character = seedPartyMember(db, campaign.id)
+    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const provider = createScriptedProvider(['{"actionText":"Brom scans the treeline."}'])
+
+    await decidePartyMemberAction(provider, character, context, 'A twig snaps nearby.')
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('A twig snaps nearby.')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"actionText":string}')
+    expect(system).toContain('without waiting for player direction')
+    expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(256)
   })
 
   it('falls back to the raw response text when the schema is malformed', async () => {

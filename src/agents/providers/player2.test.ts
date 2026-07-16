@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Player2RequestError, Player2UnreachableError, createPlayer2Provider } from './player2'
+import {
+  Player2RequestError,
+  Player2TruncationError,
+  Player2UnreachableError,
+  createPlayer2Provider
+} from './player2'
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -79,5 +84,64 @@ describe('createPlayer2Provider', () => {
     const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
 
     await expect(provider.generate('hello')).rejects.toBeInstanceOf(Player2UnreachableError)
+  })
+})
+
+describe('createPlayer2Provider: max_tokens truncation guard (040.1)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('throws a typed truncation error instead of returning partial text when finish_reason is length', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content: '{"narrationText":"The goblin lunges and' },
+            finish_reason: 'length'
+          }
+        ]
+      })
+    )
+
+    const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
+
+    await expect(provider.generate('what do I see?', { maxTokens: 32 })).rejects.toSatisfy(
+      (error: unknown) => {
+        expect(error).toBeInstanceOf(Player2TruncationError)
+        expect(error).toBeInstanceOf(Player2RequestError)
+        expect((error as Player2TruncationError).message).toContain('max_tokens')
+        return true
+      }
+    )
+  })
+
+  it('returns the text normally when finish_reason is stop', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        choices: [
+          { index: 0, message: { role: 'assistant', content: 'a complete answer' }, finish_reason: 'stop' }
+        ]
+      })
+    )
+
+    const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
+
+    await expect(provider.generate('what do I see?')).resolves.toBe('a complete answer')
+  })
+
+  it('returns the text normally when the response has no finish_reason field', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ choices: [{ index: 0, message: { role: 'assistant', content: 'legacy-shaped' } }] })
+    )
+
+    const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
+
+    await expect(provider.generate('what do I see?')).resolves.toBe('legacy-shaped')
   })
 })

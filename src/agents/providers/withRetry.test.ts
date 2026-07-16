@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ClaudeTruncationError } from './claude'
 import type { Provider } from './types'
 import { ProviderUnreachableError, withRetry } from './withRetry'
 
@@ -54,5 +55,19 @@ describe('withRetry', () => {
     const retrying = withRetry(provider, undefined, { maxAttempts: 3, baseDelayMs: 1 })
 
     await expect(retrying.generate('prompt')).resolves.toBe('recovered response')
+  })
+
+  it('rethrows truncation immediately without burning connectivity retries (040.14)', async () => {
+    let attempts = 0
+    const provider: Provider = {
+      async generate(): Promise<string> {
+        attempts += 1
+        throw new ClaudeTruncationError('truncated at max_tokens')
+      }
+    }
+    const retrying = withRetry(provider, undefined, { maxAttempts: 3, baseDelayMs: 1 })
+
+    await expect(retrying.generate('prompt')).rejects.toBeInstanceOf(ClaudeTruncationError)
+    expect(attempts).toBe(1)
   })
 })

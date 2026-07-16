@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { Alignment, PendingAlignmentShift } from '../shared/alignment/types'
 import { getCharacterById, listPlayerCharacters } from '../db/repositories/characters'
-import { listEventsByCampaign, type Event } from '../db/repositories/events'
+import { listEventsByCampaign } from '../db/repositories/events'
 import { listNpcsByRegion } from '../db/repositories/npcs'
 import { getRegionById, type RegionStatus } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
@@ -10,10 +10,10 @@ import { getEquippedWeaponDamageProfile, summarizeWeaponProfile } from '../db/re
 import { getActiveEncounter } from '../db/repositories/combatEncounters'
 import { buildCombatSummaryForNarration } from './dmCombatContext'
 import { takeRecent } from './contextWindow'
+import { slimEvents, slimLogEntries, type SlimEvent, type SlimLogEntry } from './contextSlim'
 import { windowLogEntriesForNarration } from './logBookWindow'
 import { loadActiveQuestsForCharacter } from './narrationQuestContext'
 import { loadKnownSpellsForNarration } from './narrationSpellContext'
-import type { LogEntry } from '../shared/logBook/types'
 import type { ActiveQuestContext } from './questWindow'
 import type { KnownSpellContext } from './spellWindow'
 
@@ -44,12 +44,12 @@ function loadNarrationWorldFields(
   regionId: string
 ): {
   regionStatus: RegionStatus
-  recentEvents: Event[]
+  recentEvents: SlimEvent[]
   storyThreadState: { id: string; state: string; summary: string } | null
   presentNpcs: { id: string; name: string }[]
 } {
   const region = getRegionById(db, regionId)
-  const recentEvents = takeRecent(listEventsByCampaign(db, campaignId))
+  const recentEvents = slimEvents(takeRecent(listEventsByCampaign(db, campaignId)))
   const [primaryThread] = listStoryThreadsByCampaign(db, campaignId)
   const presentNpcs = listNpcsByRegion(db, regionId)
     .filter((npc) => !npc.isPartyMember)
@@ -68,7 +68,7 @@ function loadNarrationCharacterFields(
   db: Database.Database,
   input: { campaignId: string; regionId: string; characterId: string; presentNpcIds: string[] }
 ): {
-  logBookEntries: LogEntry[]
+  logBookEntries: SlimLogEntry[]
   playerAlignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
   combatSummary: ReturnType<typeof buildCombatSummaryForNarration>
@@ -79,7 +79,9 @@ function loadNarrationCharacterFields(
 } {
   const { campaignId, regionId, characterId, presentNpcIds } = input
   const allLogEntries = listLogEntriesByCharacter(db, characterId)
-  const logBookEntries = windowLogEntriesForNarration(allLogEntries, { regionId, presentNpcIds })
+  const logBookEntries = slimLogEntries(
+    windowLogEntriesForNarration(allLogEntries, { regionId, presentNpcIds })
+  )
   const character = getCharacterById(db, characterId)
   const encounter = getActiveEncounter(db, campaignId)
   const combatSummary = buildCombatSummaryForNarration(db, encounter)
@@ -114,10 +116,10 @@ export function loadNarrationContextFields(
   }
 ): {
   regionStatus: RegionStatus
-  recentEvents: Event[]
+  recentEvents: SlimEvent[]
   storyThreadState: { id: string; state: string; summary: string } | null
   presentNpcs: { id: string; name: string }[]
-  logBookEntries: LogEntry[]
+  logBookEntries: SlimLogEntry[]
   playerAlignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
   combatSummary: ReturnType<typeof buildCombatSummaryForNarration>

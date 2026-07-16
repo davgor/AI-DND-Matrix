@@ -11,6 +11,17 @@ export class Player2RequestError extends Error {
 
 export class Player2UnreachableError extends Error {}
 
+/**
+ * 040.1: same truncation guard as ClaudeTruncationError — Player2's
+ * OpenAI-compatible endpoint reports the cutoff as finish_reason "length".
+ * Partial text is never returned; callers fail loudly instead of persisting
+ * a truncated fragment.
+ */
+export class Player2TruncationError extends Player2RequestError {
+  /** Shared marker read by isTruncationError (040.14) — keep in sync with ClaudeTruncationError. */
+  readonly isProviderTruncation = true
+}
+
 export interface Player2AdapterConfig {
   baseUrl: string
 }
@@ -22,6 +33,7 @@ interface Player2ChatMessage {
 
 interface Player2ChatChoice {
   message: { role: string; content: string }
+  finish_reason?: string
 }
 
 interface Player2ChatCompletionResponse {
@@ -61,7 +73,13 @@ export function createPlayer2Provider(config: Player2AdapterConfig): Provider {
       }
 
       const data = (await response.json()) as Player2ChatCompletionResponse
-      return data.choices[0]?.message.content ?? ''
+      const choice = data.choices[0]
+      if (choice?.finish_reason === 'length') {
+        throw new Player2TruncationError(
+          'Player2 response was truncated at the max_tokens cap — partial output discarded'
+        )
+      }
+      return choice?.message.content ?? ''
     }
   }
 }

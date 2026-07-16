@@ -6,6 +6,7 @@ import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createWorldFact } from '../db/repositories/worldFacts'
 import { createScriptedProvider } from './providers/mockHarness'
+import { NPC_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
 import { assembleNpcContext, generateNpcReaction } from './npc'
 
 function seedTwoNpcs(db: ReturnType<typeof createTestDb>) {
@@ -50,7 +51,7 @@ describe('assembleNpcContext', () => {
 
     expect(context.npcId).toBe(npcA.id)
     expect(context.memories).toHaveLength(2)
-    expect(context.memories.every((m) => m.npcId === npcA.id)).toBe(true)
+    expect(context.memories.every((m) => m.content.startsWith("A's"))).toBe(true)
     expect(context.memories.some((m) => m.content.startsWith('B'))).toBe(false)
   })
 
@@ -71,7 +72,47 @@ describe('assembleNpcContext', () => {
 
     const context = assembleNpcContext(db, npcA)
 
-    expect(context.worldFacts.map((f) => f.id)).toEqual([matchingFact.id])
+    expect(context.worldFacts).toEqual([matchingFact.content])
+  })
+
+})
+
+describe('assembleNpcContext world-fact budget window (040.14)', () => {
+  it('keeps all short facts for a knowledge-rich region', () => {
+    const db = createTestDb()
+    const { campaign, region, npcA } = seedTwoNpcs(db)
+    for (let index = 0; index < 15; index += 1) {
+      createWorldFact(db, {
+        campaignId: campaign.id,
+        regionId: region.id,
+        content: `Fact number ${index}`,
+        createdAt: `2026-01-01T00:00:${String(index).padStart(2, '0')}.000Z`
+      })
+    }
+
+    const context = assembleNpcContext(db, npcA)
+
+    expect(context.worldFacts).toHaveLength(15)
+    expect(context.worldFacts[14]).toBe('Fact number 14')
+  })
+
+  it('long facts fall back to the guaranteed minimum of 10 most recent', () => {
+    const db = createTestDb()
+    const { campaign, region, npcA } = seedTwoNpcs(db)
+    for (let index = 0; index < 15; index += 1) {
+      createWorldFact(db, {
+        campaignId: campaign.id,
+        regionId: region.id,
+        content: `${index}: ${'deep lore '.repeat(40)}`,
+        createdAt: `2026-01-01T00:00:${String(index).padStart(2, '0')}.000Z`
+      })
+    }
+
+    const context = assembleNpcContext(db, npcA)
+
+    expect(context.worldFacts).toHaveLength(10)
+    expect(context.worldFacts[0]?.startsWith('5:')).toBe(true)
+    expect(context.worldFacts[9]?.startsWith('14:')).toBe(true)
   })
 })
 
@@ -135,5 +176,51 @@ describe('generateNpcReaction dialogue', () => {
       reactionKind: 'action',
       text: '**The wolf lunges at your throat.**'
     })
+  })
+})
+
+describe('generateNpcReaction: shared systemPrompt (040.9)', () => {
+  it('moves the dialogue schema and emphasis guidance into systemPrompt for speaking NPCs', async () => {
+    const db = createTestDb()
+    const { npcA } = seedTwoNpcs(db)
+    const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
+
+    await generateNpcReaction(provider, npcA, assembleNpcContext(db, npcA), 'The player arrives.')
+
+    const call = provider.calls[0]!
+    expect(call.prompt).toContain('The player arrives.')
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    expect(call.prompt).not.toContain(NPC_EMPHASIS_GUIDANCE)
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"dialogue":string')
+    expect(system).toContain('Only set "attack" to true')
+    expect(system).toContain(NPC_EMPHASIS_GUIDANCE)
+    expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(384)
+  })
+
+  it('moves the actionDescription schema and emphasis guidance into systemPrompt for non-speakers', async () => {
+    const db = createTestDb()
+    const { campaign, region } = seedTwoNpcs(db)
+    const wolf = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Wolf',
+      role: 'beast',
+      disposition: 'hostile',
+      temperament: 'aggressive',
+      canSpeak: false
+    })
+    const provider = createScriptedProvider(['{"actionDescription":"The wolf circles."}'])
+
+    await generateNpcReaction(provider, wolf, assembleNpcContext(db, wolf), 'The player approaches.')
+
+    const call = provider.calls[0]!
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"actionDescription":string')
+    expect(system).toContain('wrapped in ** markers')
+    expect(system).toContain(NPC_EMPHASIS_GUIDANCE)
+    expect(call.context?.maxTokens).toBe(384)
   })
 })

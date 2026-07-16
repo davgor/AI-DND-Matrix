@@ -4,7 +4,7 @@ import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from '../main/turnIpc'
 
 export function fleeIntentJson(): string {
-  return JSON.stringify({ checkNeeded: false, combatIntent: 'flee' })
+  return JSON.stringify({ intent: { checkNeeded: false, combatIntent: 'flee' } })
 }
 
 export function npcReactionJson(): string {
@@ -13,8 +13,10 @@ export function npcReactionJson(): string {
 
 export function exploreTurnResponses(): string[] {
   return [
-    JSON.stringify({ checkNeeded: false }),
-    JSON.stringify({ disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }),
+    JSON.stringify({
+      intent: { checkNeeded: false },
+      routingPlan: { disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }
+    }),
     JSON.stringify({ narrationText: 'You catch your breath in the hallway.' })
   ]
 }

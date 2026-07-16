@@ -5,8 +5,9 @@ import { buildNarrationLog } from '../main/narrationLog'
 import { filterDmExpositionEntries } from '../shared/inCampaignLayout/sceneContext'
 import { seedGameplayLoopSmokeCampaign } from './gameplayLoopSmokeFixtures'
 
-function routingPlan(...beats: object[]) {
-  return JSON.stringify({ disposition: 'composite', beats })
+// 040.2: intent + routing plan arrive from one merged LLM response.
+function mergedTurn(intent: object, ...beats: object[]) {
+  return JSON.stringify({ intent, routingPlan: { disposition: 'composite', beats } })
 }
 
 describe('gameplay loop smoke: converse turn', () => {
@@ -15,8 +16,7 @@ describe('gameplay loop smoke: converse turn', () => {
     const result = await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":false}',
-        routingPlan({ kind: 'npcResponse', npcIds: [shopkeeper.id] }),
+        mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [shopkeeper.id] }),
         '{"dialogue":"Looking for something in particular?"}'
       ]),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello, do you sell rope?' },
@@ -33,11 +33,10 @@ describe('gameplay loop smoke: action expression turn', () => {
     const result = await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":false}',
-        routingPlan({
-          kind: 'playerActionExpression',
-          actionDescription: 'Kael hefts a coil of rope from the shelf.'
-        })
+        mergedTurn(
+          { checkNeeded: false },
+          { kind: 'playerActionExpression', actionDescription: 'Kael hefts a coil of rope from the shelf.' }
+        )
       ]),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'I pick up the rope' },
       () => 0.5
@@ -52,8 +51,7 @@ describe('gameplay loop smoke: narrated check turn', () => {
     await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":false}',
-        routingPlan({ kind: 'npcResponse', npcIds: [shopkeeper.id] }),
+        mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [shopkeeper.id] }),
         '{"dialogue":"Evening."}'
       ]),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'Hi' },
@@ -62,11 +60,10 @@ describe('gameplay loop smoke: narrated check turn', () => {
     await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":false}',
-        routingPlan({
-          kind: 'playerActionExpression',
-          actionDescription: 'Kael hefts a coil of rope from the shelf.'
-        })
+        mergedTurn(
+          { checkNeeded: false },
+          { kind: 'playerActionExpression', actionDescription: 'Kael hefts a coil of rope from the shelf.' }
+        )
       ]),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'I pick up the rope' },
       () => 0.5
@@ -74,8 +71,10 @@ describe('gameplay loop smoke: narrated check turn', () => {
     const check = await resolvePlayerTurn(
       db,
       createScriptedProvider([
-        '{"checkNeeded":true,"ability":"agility","dc":12,"proficient":false}',
-        routingPlan({ kind: 'dmNarration' }),
+        mergedTurn(
+          { checkNeeded: true, ability: 'agility', dc: 12, proficient: false },
+          { kind: 'dmNarration' }
+        ),
         '{"narrationText":"The knot holds under your weight."}'
       ]),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'I test the knot' },
@@ -97,7 +96,7 @@ describe('gameplay loop smoke: short-circuits', () => {
 
     const rest = await resolvePlayerTurn(
       db,
-      createScriptedProvider(['{"checkNeeded":false,"actionType":"restShort"}']),
+      createScriptedProvider(['{"intent":{"checkNeeded":false,"actionType":"restShort"}}']),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'I rest' },
       () => 0.5
     )
@@ -105,7 +104,7 @@ describe('gameplay loop smoke: short-circuits', () => {
 
     const travel = await resolvePlayerTurn(
       db,
-      createScriptedProvider(['{"checkNeeded":false,"actionType":"travel","travelDays":2}']),
+      createScriptedProvider(['{"intent":{"checkNeeded":false,"actionType":"travel","travelDays":2}}']),
       { campaignId: campaign.id, characterId: player.id, playerInput: 'We travel' },
       () => 0.5
     )

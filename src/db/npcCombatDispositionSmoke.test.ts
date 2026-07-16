@@ -54,21 +54,16 @@ async function expectGuardImprisonsPlayer(
     backstory: 'Mara led the town guard for twenty years before retiring.',
     canSpeak: true
   })
-  const guardProposal = await proposeDefeatDisposition(
-    createScriptedProvider([
-      JSON.stringify({
-        disposition: 'imprison',
-        narrationText: 'Iron cuffs close around your wrists.'
-      })
-    ]),
-    {
-      victor: guard,
-      player,
-      deathMode: campaign.deathMode,
-      encounterSummary: 'Lost to the guard captain.'
-    }
-  )
+  // 040.8: rules-first — lawful law-keeper backstory resolves without the LLM.
+  const guardProvider = createScriptedProvider([])
+  const guardProposal = await proposeDefeatDisposition(guardProvider, {
+    victor: guard,
+    player,
+    deathMode: campaign.deathMode,
+    encounterSummary: 'Lost to the guard captain.'
+  })
   expect(guardProposal.disposition).toBe('imprison')
+  expect(guardProvider.calls).toHaveLength(0)
   const imprison = applyPlayerDefeatOutcome({
     db,
     campaignId: campaign.id,
@@ -96,21 +91,16 @@ async function expectBanditBuriesPlayer(
     backstory: 'A former bandit who went straight after a decade on the road.',
     canSpeak: true
   })
-  const banditProposal = await proposeDefeatDisposition(
-    createScriptedProvider([
-      JSON.stringify({
-        disposition: 'bury_out_back',
-        narrationText: 'Cold earth covers you behind the stables.'
-      })
-    ]),
-    {
-      victor: bandit,
-      player,
-      deathMode: campaign.deathMode,
-      encounterSummary: 'Lost to the reformed bandit.'
-    }
-  )
+  // 040.8: rules-first — good-aligned outlaw backstory resolves without the LLM.
+  const banditProvider = createScriptedProvider([])
+  const banditProposal = await proposeDefeatDisposition(banditProvider, {
+    victor: bandit,
+    player,
+    deathMode: campaign.deathMode,
+    encounterSummary: 'Lost to the reformed bandit.'
+  })
   expect(banditProposal.disposition).toBe('bury_out_back')
+  expect(banditProvider.calls).toHaveLength(0)
 }
 
 describe('npc combat disposition smoke scenario A', () => {

@@ -21,9 +21,11 @@ Manual verification in the dev app after automated `npcCombatDispositionSmoke.te
 1. Lose a fight vs a lawful-good guard-captain NPC with guard backstory on file → imprison banner and imprisoned status.
 2. Lose vs chaotic-good reformed-bandit backstory → bury-out-back narration (Standard mode rewinds; Legendary persists outcome text).
 
+**Rules-first (040.8):** speaking-victor dispositions are decided by a pure decision table (`src/agents/defeatRules.ts`) over victor alignment + backstory/role keywords + campaign death mode, with zero LLM calls for keyword-matched cases (both scenarios above resolve without the LLM — the smoke test asserts provider call count 0). The LLM is consulted only when the table returns `ambiguous`: unknown alignment, an unmarked evil victor with no keyword signal, or an execute-leaning killer under Legendary permadeath. `locationTag` (imprison/ransom continuity persisted into `playerDefeatState` and the `player_defeated` event) is templated per disposition on the rules path. Non-speaking victors keep their pre-existing skip (`leave_unconscious`, no LLM).
+
 ## Commands
 
 ```
-npm test -- src/db/npcCombatDispositionSmoke.test.ts
+npm test -- src/db/npcCombatDispositionSmoke.test.ts src/agents/defeatRules.test.ts src/agents/defeatDisposition.test.ts
 npm run dev
 ```

@@ -125,6 +125,22 @@ describe('decideInactivePlayerAction', () => {
     expect(action.actionText).toBe('Lyra looks up from her journal.')
     expect(provider.calls[0]?.prompt).toContain('Lyra')
     expect(provider.calls[0]?.prompt).toContain('crossroads')
-    expect(provider.calls[0]?.prompt).toContain('do not invent mechanical stat changes')
+  })
+
+  it('moves the action schema and standing rules into systemPrompt (040.9)', async () => {
+    const { db, campaign, inactive } = seedTwoPlayersSameRegion()
+    const provider = createScriptedProvider(['{"actionText":"Lyra nods."}'])
+    const context = assembleInactivePlayerContext(db, inactive.id, campaign.id)
+
+    await decideInactivePlayerAction(provider, inactive, context, 'Kael waves.')
+
+    const call = provider.calls[0]!
+    expect(call.prompt).not.toContain('Respond ONLY with JSON')
+    expect(call.prompt).not.toContain('do not invent mechanical stat changes')
+    const system = call.context?.systemPrompt ?? ''
+    expect(system).toContain('Respond ONLY with JSON: {"actionText":string}')
+    expect(system).toContain('do not invent mechanical stat changes')
+    expect(system).toContain('no markdown fences')
+    expect(call.context?.maxTokens).toBe(256)
   })
 })

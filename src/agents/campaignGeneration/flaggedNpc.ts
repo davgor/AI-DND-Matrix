@@ -6,7 +6,8 @@ import { NPC_CLASS_ROSTER, type NpcClassRosterEntry } from '../../shared/npcClas
 import type { AvailableRaceOption, RaceLore } from '../../shared/raceSelection/types'
 import type { Temperament } from '../../shared/alignment/types'
 import { tryParseJson } from '../jsonResponse'
-import type { Provider } from '../providers/types'
+import type { GenerateContext, Provider } from '../providers/types'
+import { buildAgentSystemPrompt } from '../sharedSystemPrompts'
 import { buildAvailableRaceOptions, resolveOrRealizeCampaignRace } from '../raceLore'
 import {
   parseFlaggedNpcDetailsRecord,
@@ -26,8 +27,44 @@ import {
 
 export { buildFlaggedNpcFinalPrompt, buildNpcCoreBundlePrompt } from './flaggedNpcPrompts'
 
-const CORE_BUNDLE_MAX_TOKENS = 2048
+// 040.13 (with 040.1 + 040.9): both flagged-NPC phases keep their tuned
+// maxTokens and carry their JSON contract in GenerateContext.systemPrompt.
+// Module-level constants so every schema-retry attempt passes the identical
+// context object.
+
+// 040.1: phase 1 returns only a tiny structured object ({canSpeak, temperament,
+// race?, gender?, alignment?, class?, background?}) — the previous 2048 budget
+// was sized for prose it never produces; 384 is the structured-JSON band.
+const CORE_BUNDLE_GENERATE_CONTEXT: GenerateContext = {
+  systemPrompt: buildAgentSystemPrompt({
+    schemaFragment:
+      '{"canSpeak":boolean,"temperament":string,"race"?:string,"gender"?:string,"alignment"?:string,"class"?:string,"background"?:string}',
+    guidanceLines: [
+      'Speaking NPCs (canSpeak true) must pick race, gender, alignment, class, and background from the available option lists in the user message.',
+      'Beasts and mindless undead use canSpeak false and omit race, gender, alignment, class, and background.'
+    ]
+  }),
+  maxTokens: 384
+}
+
+// Phase 2 writes the prose backstory; kept at 4096 (040.1) pending a measured cut.
 const FINAL_NPC_MAX_TOKENS = 4096
+
+const FINAL_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
+  systemPrompt: buildAgentSystemPrompt({
+    schemaFragment: '{"name":string,"role":string,"disposition":string,"backstory":string}',
+    guidanceLines: ['backstory must be two short paragraphs tying the NPC to its region.']
+  }),
+  maxTokens: FINAL_NPC_MAX_TOKENS
+}
+
+const FINAL_NON_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
+  systemPrompt: buildAgentSystemPrompt({
+    schemaFragment: '{"name":string,"role":string,"disposition":string}',
+    guidanceLines: ['Omit backstory entirely (canSpeak is false).']
+  }),
+  maxTokens: FINAL_NPC_MAX_TOKENS
+}
 
 export async function generateNpcCoreBundle(
   provider: Provider,
@@ -44,7 +81,7 @@ export async function generateNpcCoreBundle(
   const availableClasses = input.availableClasses ?? NPC_CLASS_ROSTER
   const prompt = buildNpcCoreBundlePrompt({ ...input, availableGenders, availableClasses })
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, { maxTokens: CORE_BUNDLE_MAX_TOKENS })
+    const raw = await provider.generate(prompt, CORE_BUNDLE_GENERATE_CONTEXT)
     const parsed = tryParseJson(raw)
     if (typeof parsed === 'object' && parsed !== null) {
       const bundle = parseNpcCoreBundleRecord(parsed as Record<string, unknown>, input.availableRaces)
@@ -61,8 +98,11 @@ export async function generateFlaggedNpcDetails(
   input: Parameters<typeof buildFlaggedNpcFinalPrompt>[0]
 ): Promise<{ name: string; role: string; disposition: string; backstory?: string }> {
   const prompt = buildFlaggedNpcFinalPrompt(input)
+  const context = input.bundle.canSpeak
+    ? FINAL_SPEAKING_GENERATE_CONTEXT
+    : FINAL_NON_SPEAKING_GENERATE_CONTEXT
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, { maxTokens: FINAL_NPC_MAX_TOKENS })
+    const raw = await provider.generate(prompt, context)
     const parsed = tryParseJson(raw)
     if (typeof parsed === 'object' && parsed !== null) {
       const details = parseFlaggedNpcDetailsRecord(parsed as Record<string, unknown>, input.bundle)
@@ -83,6 +123,10 @@ async function resolveRaceContext(
   if (!bundle.canSpeak || !bundle.raceKey) {
     return {}
   }
+  // 040.13 (epic 040 data-integrity item 12): if phase 2 fails after this
+  // call realized a new race, the campaign_races row is intentionally left in
+  // place — it is benign and idempotent (the next NPC of that race
+  // short-circuits the lore call via getCampaignRaceByKey). Do not add cleanup.
   const campaignRace = await resolveOrRealizeCampaignRace(db, provider, {
     campaignId,
     raceKey: bundle.raceKey

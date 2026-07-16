@@ -9,9 +9,15 @@ import type { CharacterObituary, DeathCause } from '../shared/campaignHub/types'
 import { takeRecent } from './contextWindow'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 
 export class ObituarySchemaError extends Error {}
+
+// 040.1: 1024 — long-form narrativeBody plus per-NPC reactions, persisted
+// verbatim as the character's permanent obituary. Cap reasoned from the schema
+// (multi-paragraph memorial + a handful of reaction entries), not measured
+// against recorded outputs; one-time cost, so generous on purpose.
+const OBITUARY_GENERATE_CONTEXT: GenerateContext = { maxTokens: 1024 }
 
 export interface ObituaryNpcHistory {
   npcId: string
@@ -192,7 +198,7 @@ export async function generateObituary(
   context: ObituaryContext
 ): Promise<CharacterObituary> {
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildObituaryPrompt(context))
+    const raw = await provider.generate(buildObituaryPrompt(context), OBITUARY_GENERATE_CONTEXT)
     const parsed = parseGeneratedObituary(tryParseJson(raw))
     if (parsed) {
       return {

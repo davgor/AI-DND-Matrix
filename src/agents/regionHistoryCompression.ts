@@ -4,7 +4,10 @@ import {
   replaceRegionHistoryWithCompressedSummary,
   type RegionHistoryEntry
 } from '../db/repositories/regionHistory'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
+
+// 040.1: 256 — one concise summary paragraph replacing the old entries.
+const COMPRESSION_GENERATE_CONTEXT: GenerateContext = { maxTokens: 256 }
 
 export async function compressRegionHistory(
   db: Database.Database,
@@ -17,7 +20,7 @@ export async function compressRegionHistory(
     return null
   }
 
-  const summary = await provider.generate(buildCompressionPrompt(candidates))
+  const summary = await provider.generate(buildCompressionPrompt(candidates), COMPRESSION_GENERATE_CONTEXT)
   const latestDate = Math.max(...candidates.map((candidate) => candidate.inGameDate))
 
   return replaceRegionHistoryWithCompressedSummary(db, {

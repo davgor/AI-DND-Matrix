@@ -1,10 +1,13 @@
 import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import { takeRecent } from '../agents/contextWindow'
-import type { Provider } from '../agents/providers/types'
+import type { GenerateContext, Provider } from '../agents/providers/types'
 import { listEventsByCampaign, type Event } from '../db/repositories/events'
 import { buildAgentProvider } from './campaignIpc'
 import { getDb } from './db'
+
+// 040.1: 256 — the prompt asks for a 2-4 sentence recap.
+const RECAP_GENERATE_CONTEXT: GenerateContext = { maxTokens: 256 }
 
 function buildRecapPrompt(recentEvents: Event[]): string {
   return [
@@ -22,7 +25,7 @@ export async function generateSessionRecap(
   if (recentEvents.length === 0) {
     return 'This is the start of your story — nothing has happened yet.'
   }
-  return provider.generate(buildRecapPrompt(recentEvents))
+  return provider.generate(buildRecapPrompt(recentEvents), RECAP_GENERATE_CONTEXT)
 }
 
 export function registerRecapHandlers(): void {

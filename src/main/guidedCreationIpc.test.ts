@@ -124,6 +124,75 @@ describe('sendGuidedCreationMessage identity phase', () => {
   })
 })
 
+describe('sendGuidedCreationMessage identity phase completion gate', () => {
+  it('does not advance the phase when the model claims completion with incomplete foundations', async () => {
+    const db = createTestDb()
+    const { campaign, player } = seedGuidedCampaign(db)
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'We are done!',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: false },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: true
+      })
+    ])
+
+    const result = await sendGuidedCreationMessage(db, provider, {
+      campaignId: campaign.id,
+      characterId: player.id,
+      phase: 'identity',
+      message: 'I am Kael. That is all.'
+    })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.allFoundationsComplete).toBe(false)
+      expect(result.guidedCreationPhase).toBe('identity')
+    }
+    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('identity')
+    expect(readGuidedCreationFields(db, player.id)?.identityWhy).toBeNull()
+  })
+})
+
+describe('sendGuidedCreationMessage identity summary lock-in', () => {
+  it('keeps the first locked summary when a later turn re-emits a different one', async () => {
+    const db = createTestDb()
+    const { campaign, player } = seedGuidedCampaign(db)
+    const foundations = (whoSummary: string) => ({
+      who: { complete: true, summary: whoSummary },
+      why: { complete: false },
+      where: { complete: false },
+      what: { complete: false }
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Locked in.',
+        foundations: foundations('Kael, a knight with a storied past.'),
+        allFoundationsComplete: false
+      }),
+      JSON.stringify({
+        dmReply: 'As I said, locked in.',
+        foundations: foundations('Kael.'),
+        allFoundationsComplete: false
+      })
+    ])
+    const sendInput = {
+      campaignId: campaign.id,
+      characterId: player.id,
+      phase: 'identity' as const
+    }
+
+    await sendGuidedCreationMessage(db, provider, { ...sendInput, message: 'I am Kael, a knight.' })
+    await sendGuidedCreationMessage(db, provider, { ...sendInput, message: 'Anything else?' })
+
+    expect(readGuidedCreationFields(db, player.id)?.identityWho).toBe('Kael, a knight with a storied past.')
+  })
+})
+
 describe('revertGuidedCreationPhase', () => {
   it('reverts onboarding phase when navigating back', () => {
     const db = createTestDb()

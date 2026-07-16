@@ -1,9 +1,10 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
 import { afterEach, describe, expect, it } from 'vitest'
 import { assembleNarrationContext, persistNarrationSideEffects } from '../agents/dm'
+import { closeFileTestDb, openFileTestDb, reopenFileTestDb } from './fileDbTestUtils'
 import { createTestDb } from './testUtils'
 import { runMigrations } from './migrations'
 import { migrations } from './schema'
@@ -56,7 +57,9 @@ describe('log book end-to-end smoke', () => {
 
     const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(context.logBookEntries.some((row) => row.title === 'Oakhollow')).toBe(true)
-    expect(context.logBookEntries.every((row) => row.characterId === player.id)).toBe(true)
+    // Slim entries (040.4) drop characterId; ownership is proven by id membership instead.
+    const ownEntryIds = new Set(entries.map((row) => row.id))
+    expect(context.logBookEntries.every((row) => ownEntryIds.has(row.id))).toBe(true)
   })
 
   it('returns empty grouped state for a character with no entries', () => {
@@ -68,19 +71,21 @@ describe('log book end-to-end smoke', () => {
 })
 
 describe('log book persistence smoke', () => {
-  let dir: string
-  let db: Database.Database
+  let dir: string | undefined
+  let db: Database.Database | undefined
 
   afterEach(() => {
-    db?.close()
+    closeFileTestDb(db)
+    db = undefined
     if (dir) {
       rmSync(dir, { recursive: true, force: true })
+      dir = undefined
     }
   })
 
   it('preserves log entries after reopening the database file', () => {
     dir = mkdtempSync(join(tmpdir(), 'logbook-smoke-'))
-    db = new Database(join(dir, 'save.sqlite'))
+    db = openFileTestDb(join(dir, 'save.sqlite'))
     runMigrations(db, migrations)
     const { campaign, player } = seedCampaign(db)
     createLogEntry(db, {
@@ -91,11 +96,8 @@ describe('log book persistence smoke', () => {
       content: 'Opens an old cellar door.',
       learnedInGameDate: 2
     })
-    const filePath = db.name
-    db.close()
 
-    const reopened = new Database(filePath)
-    expect(listLogEntriesByCharacter(reopened, player.id)).toHaveLength(1)
-    reopened.close()
+    db = reopenFileTestDb(db)
+    expect(listLogEntriesByCharacter(db, player.id)).toHaveLength(1)
   })
 })

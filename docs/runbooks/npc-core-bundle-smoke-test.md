@@ -13,6 +13,12 @@ Validates epic **052**: gender/class rosters, schema columns, bulk generation, a
 npx vitest run src/shared/npcGender/types.test.ts src/shared/npcClass/types.test.ts src/db/migrateNpcGenderClassV33.test.ts src/agents/campaignGeneration/flaggedNpc.test.ts src/agents/campaignGeneration/campaignGeneration.test.ts src/db/npcBackgroundPromotionIntegration.test.ts src/renderer/src/campaignReview/CampaignReviewNpcTraits.test.tsx
 ```
 
+## Call budget (040.13)
+
+One flagged **Generate NPC** action costs exactly **2** provider calls when the chosen race is already realized in the campaign (core bundle → details) and exactly **3** when it is not (core bundle → race-lore realize → details). Both phases send their JSON contract and static field rules via `GenerateContext.systemPrompt` (module constants in `flaggedNpc.ts`), not per-prompt boilerplate. Bulk generation, additional-region generation, and shortfall top-up stay on the one-shot path (one call per NPC; one call total for an additional region).
+
+Guarded by `generateFlaggedNpc call-count ceilings (040.13)` in `flaggedNpc.test.ts` and `one-shot NPC generation call-count guards (040.13)` in `campaignGeneration.test.ts`. A phase-2 failure after a phase-2-triggered race realize intentionally leaves the `campaign_races` row in place (idempotent — the next NPC of that race skips the lore call).
+
 ## Manual smoke (Campaign Review)
 
 1. Run `npm run dev` with a configured provider.

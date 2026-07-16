@@ -13,18 +13,17 @@ const winningCheck = {
 
 describe('judgeEscapeNarration', () => {
   it('returns still_pursued on successful check', async () => {
-    const result = await judgeEscapeNarration(
-      createScriptedProvider([
-        JSON.stringify({ outcome: 'still_pursued', narrationText: 'You gain ground but they follow.' })
-      ]),
-      {
-        checkResult: winningCheck,
-        regionDescription: 'A narrow alley',
-        hostileSummary: 'Two goblins',
-        repeatAttempt: false
-      }
-    )
+    const provider = createScriptedProvider([
+      JSON.stringify({ outcome: 'still_pursued', narrationText: 'You gain ground but they follow.' })
+    ])
+    const result = await judgeEscapeNarration(provider, {
+      checkResult: winningCheck,
+      regionDescription: 'A narrow alley',
+      hostileSummary: 'Two goblins',
+      repeatAttempt: false
+    })
     expect(result.outcome).toBe('still_pursued')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(192)
   })
 
   it('returns escaped when DM judges full clearance', async () => {

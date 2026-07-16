@@ -2,8 +2,10 @@ import type { DeathMode } from '../db/repositories/campaigns'
 import type { Npc } from '../db/repositories/npcs'
 import type { Character } from '../db/repositories/characters'
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import { buildAgentSystemPrompt } from './sharedSystemPrompts'
+import { evaluateDefeatRules } from './defeatRules'
 import {
   parseDefeatDispositionProposal,
   type DefeatDisposition,
@@ -11,6 +13,24 @@ import {
 } from '../shared/npcCombat/types'
 
 export const NON_SPEAKING_DEFEAT_DISPOSITION: DefeatDisposition = 'leave_unconscious'
+
+// 040.9: schema + static disposition rules ride in systemPrompt; the user
+// prompt keeps the victor/player/encounter facts.
+// 040.1: 192 — a disposition word, a short narration line, and an optional
+// locationTag.
+const DEFEAT_GENERATE_CONTEXT: GenerateContext = {
+  systemPrompt: buildAgentSystemPrompt({
+    schemaFragment:
+      '{"disposition":"imprison"|"bury_out_back"|"leave_unconscious"|"execute"|"ransom"|"mercy_release","narrationText":string,"locationTag"?:string}',
+    guidanceLines: [
+      'Choose how the victor treats the defeated player.',
+      'Disposition must follow alignment + persisted backstory already on file.',
+      'Examples: lawful-good retired guard backstory → imprison; chaotic-good reformed bandit → bury_out_back.',
+      'Do not invent new victor biography.'
+    ]
+  }),
+  maxTokens: 192
+}
 
 function buildDefeatPrompt(input: {
   victor: Npc
@@ -26,16 +46,17 @@ function buildDefeatPrompt(input: {
     `Victor backstory (read-only — do not contradict or extend): ${victor.backstory}`,
     `Player: ${player.name}`,
     `Campaign death mode: ${deathMode}`,
-    `Encounter context: ${encounterSummary}`,
-    'Choose how the victor treats the defeated player.',
-    'Disposition must follow alignment + persisted backstory already on file.',
-    'Examples: lawful-good retired guard backstory → imprison; chaotic-good reformed bandit → bury_out_back.',
-    'Do not invent new victor biography.',
-    'Respond ONLY with JSON:',
-    '{"disposition":"imprison"|"bury_out_back"|"leave_unconscious"|"execute"|"ransom"|"mercy_release","narrationText":string,"locationTag"?:string}'
+    `Encounter context: ${encounterSummary}`
   ].join('\n')
 }
 
+/**
+ * 040.8: rules-first. Non-speaking victors keep their pre-existing LLM skip.
+ * Speaking victors are decided by the pure alignment + backstory-keyword +
+ * death-mode table in `defeatRules.ts` (which also templates `locationTag`
+ * for imprison/ransom continuity); the LLM is consulted only when the table
+ * returns `ambiguous`.
+ */
 export async function proposeDefeatDisposition(
   provider: Provider,
   input: {
@@ -51,8 +72,18 @@ export async function proposeDefeatDisposition(
       narrationText: `${input.victor.name} leaves you unconscious in the dust.`
     }
   }
+  const decision = evaluateDefeatRules({
+    victorName: input.victor.name,
+    role: input.victor.role,
+    alignment: input.victor.alignment,
+    backstory: input.victor.backstory,
+    deathMode: input.deathMode
+  })
+  if (decision.kind === 'proposal') {
+    return decision.proposal
+  }
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildDefeatPrompt(input))
+    const raw = await provider.generate(buildDefeatPrompt(input), DEFEAT_GENERATE_CONTEXT)
     const parsed = parseDefeatDispositionProposal(tryParseJson(raw))
     if (parsed) {
       return parsed

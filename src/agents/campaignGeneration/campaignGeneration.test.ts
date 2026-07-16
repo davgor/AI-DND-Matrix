@@ -7,6 +7,8 @@ import { listRegionHistoryByRegion } from '../../db/repositories/regionHistory'
 import { listStoryThreadsByCampaign } from '../../db/repositories/storyThreads'
 import { listQuestHooksByRegion } from '../../db/repositories/worldFacts'
 import { createScriptedProvider } from '../providers/mockHarness'
+import type { ScriptedResponse } from '../providers/mockHarness'
+import type { Provider } from '../providers/types'
 import { buildAvailableRaceOptions } from '../raceLore'
 import {
   CampaignGenerationSchemaError,
@@ -614,6 +616,138 @@ describe('persistRegionWithNpcs', () => {
     expect(mistfen).toBeDefined()
     expect(listNpcsByRegion(db, mistfen!.id)).toHaveLength(3)
     expect(listQuestHooksByRegion(db, mistfen!.id)).toHaveLength(2)
+  })
+})
+
+interface ConcurrencyTrackingProvider extends Provider {
+  maxInFlight: () => number
+}
+
+/**
+ * Scripted provider that records how many generate calls are in flight at
+ * once. Responses are assigned in call order (all shortfall-fill calls in a
+ * region batch share the same prompt, so order-based assignment is safe).
+ */
+function createConcurrencyTrackingProvider(responses: ScriptedResponse[]): ConcurrencyTrackingProvider {
+  const queue = [...responses]
+  let inFlight = 0
+  let maxInFlight = 0
+  return {
+    maxInFlight: () => maxInFlight,
+    async generate(): Promise<string> {
+      const next = queue.shift()
+      inFlight += 1
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      await Promise.resolve()
+      inFlight -= 1
+      if (next === undefined) {
+        throw new Error('createConcurrencyTrackingProvider: no more scripted responses queued')
+      }
+      if (next instanceof Error) {
+        throw next
+      }
+      return next
+    }
+  }
+}
+
+function shortfallNpcPayload(regionName: string, name: string): string {
+  return JSON.stringify({ npc: { ...makeNpcs(regionName, 'Fill')[0]!, name } })
+}
+
+/** World + one region + all initial NPC slots failing + story, so the shortfall fill owns every slot. */
+function buildShortfallSeedPrelude(region: ReturnType<typeof makeRegion>, npcsPerRegion: number): string[] {
+  return [
+    JSON.stringify(VALID_WORLD),
+    JSON.stringify({ regions: [region] }),
+    ...Array.from({ length: npcsPerRegion * MAX_GENERATION_ATTEMPTS }, () => 'invalid npc slot response'),
+    JSON.stringify({ storyThread: { title: 'Shortfall Arc', state: 'starting', summary: 'Fill the cast.' } })
+  ]
+}
+
+describe('fillCampaignNpcShortfall parallelism (040.11)', () => {
+  it('issues concurrent single-NPC requests capped at 4 in flight', async () => {
+    const region = makeRegion('Emberfall Reach', 'ember')
+    const fillNames = ['Aldric Snow', 'Bess Marlow', 'Corin Vale', 'Dara Quill', 'Edda Frost', 'Fenn Harrow']
+    const provider = createConcurrencyTrackingProvider([
+      ...buildShortfallSeedPrelude(region, 6),
+      ...fillNames.map((name) => shortfallNpcPayload(region.name, name))
+    ])
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 6 })
+    expect(result.npcs).toHaveLength(6)
+    expect(new Set(result.npcs.map((npc) => npc.name)).size).toBe(6)
+    expect(provider.maxInFlight()).toBeGreaterThan(1)
+    expect(provider.maxInFlight()).toBeLessThanOrEqual(4)
+  })
+
+  it('detects and regenerates name collisions between concurrently generated NPCs', async () => {
+    const region = makeRegion('Gloamwater Fen', 'fen')
+    const provider = createScriptedProvider([
+      ...buildShortfallSeedPrelude(region, 3),
+      shortfallNpcPayload(region.name, 'Duplicate Dara'),
+      shortfallNpcPayload(region.name, 'Duplicate Dara'),
+      shortfallNpcPayload(region.name, 'Ferris Vale'),
+      shortfallNpcPayload(region.name, 'Renata Cole')
+    ])
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 3 })
+    const names = result.npcs.map((npc) => npc.name)
+    expect(result.npcs).toHaveLength(3)
+    expect(new Set(names).size).toBe(3)
+    expect(names.filter((name) => name === 'Duplicate Dara')).toHaveLength(1)
+    expect(names).toContain('Renata Cole')
+  })
+
+  it('keeps successful fills when a single NPC generation fails irrecoverably', async () => {
+    const region = makeRegion('Harrowmoor', 'moor')
+    const provider = createScriptedProvider([
+      ...buildShortfallSeedPrelude(region, 3),
+      shortfallNpcPayload(region.name, 'Alba Reed'),
+      new Error('provider outage'),
+      shortfallNpcPayload(region.name, 'Bryn Holt'),
+      // finalizeGenerationResult retries the still-missing slot once more; it fails too
+      new Error('provider outage')
+    ])
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 3 })
+    expect(result.npcs.map((npc) => npc.name).sort()).toEqual(['Alba Reed', 'Bryn Holt'])
+  })
+})
+
+/** Phase-1 marker of the flagged two-phase pipeline — must never appear on one-shot paths. */
+const CORE_BUNDLE_PROMPT_MARKER = 'core identity bundle'
+
+describe('one-shot NPC generation call-count guards (040.13)', () => {
+  it('bulk campaign generation issues exactly one LLM call per NPC', async () => {
+    const responses = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
+    const provider = createScriptedProvider(responses)
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 2, npcsPerRegion: 3 })
+    expect(result.npcs).toHaveLength(6)
+    // world + regions + one call per NPC (6) + story thread = 9
+    expect(provider.calls).toHaveLength(9)
+    expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
+  })
+
+  it('additional-region generation issues a single one-shot call covering region and NPCs', async () => {
+    const provider = createScriptedProvider([ADDITIONAL_REGION])
+    const result = await generateAdditionalRegion(provider, 'A flooded kingdom.', ['Oakhollow'], {
+      seedPrompt: 'A marsh crossing'
+    })
+    expect(result.npcs).toHaveLength(3)
+    expect(provider.calls).toHaveLength(1)
+    expect(provider.calls[0]?.prompt).not.toContain(CORE_BUNDLE_PROMPT_MARKER)
+  })
+
+  it('shortfall top-up issues exactly one LLM call per topped-up NPC', async () => {
+    const region = makeRegion('Topup Vale', 'top')
+    const prelude = buildShortfallSeedPrelude(region, 2)
+    const provider = createScriptedProvider([
+      ...prelude,
+      shortfallNpcPayload(region.name, 'Gale North'),
+      shortfallNpcPayload(region.name, 'Hollis Reed')
+    ])
+    const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 2 })
+    expect(result.npcs).toHaveLength(2)
+    expect(provider.calls).toHaveLength(prelude.length + 2)
+    expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
   })
 })
 

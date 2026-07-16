@@ -1,5 +1,5 @@
 import { tryParseJson } from './jsonResponse'
-import type { Provider } from './providers/types'
+import type { GenerateContext, Provider } from './providers/types'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { CharacterGuidedCreationFields } from '../shared/guidedCreation/types'
 import type { RaceLore } from '../shared/raceSelection/types'
@@ -30,6 +30,11 @@ export interface OpeningSceneResponse {
   proposedOpeningScene: string | null
   sceneReady: boolean
 }
+
+// 040.1: 768 — dmReply plus proposedOpeningScene prose; the accepted scene is
+// persisted verbatim as the character's opening scene. Cap reasoned from the
+// schema (two short prose fields), not measured against recorded outputs.
+const OPENING_SCENE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 768 }
 
 function isOpeningSceneResponse(value: unknown): value is OpeningSceneResponse {
   if (typeof value !== 'object' || value === null) {
@@ -90,7 +95,10 @@ export async function runOpeningSceneTurn(
   playerMessage: string
 ): Promise<OpeningSceneResponse> {
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildOpeningScenePrompt(context, playerMessage))
+    const raw = await provider.generate(
+      buildOpeningScenePrompt(context, playerMessage),
+      OPENING_SCENE_GENERATE_CONTEXT
+    )
     const parsed = tryParseJson(raw)
     if (isOpeningSceneResponse(parsed)) {
       return parsed

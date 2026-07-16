@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { createPlayer2Provider } from '../agents/providers/player2'
+import { isTruncationError } from '../agents/providers/tokenEscalation'
 import { DEFAULT_PROVIDER_SETTINGS, type ConnectionCheckResult } from '../shared/settings/types'
 import type { ProviderSettings, RedactedProviderSettings, SaveProviderSettingsInput } from '../shared/settings/types'
 import { redactProviderSettings, validateProviderSettings } from '../shared/settings/validation'
@@ -51,6 +52,11 @@ export async function testPlayer2Connection(baseUrl: string): Promise<Connection
     await provider.generate('ping', { maxTokens: 1 })
     return { ok: true, message: 'Connected to Player2 successfully.' }
   } catch (error) {
+    // 040.14: a 1-token ping usually stops at the cap — truncation proves the
+    // endpoint responded, so it counts as connected rather than unreachable.
+    if (isTruncationError(error)) {
+      return { ok: true, message: 'Connected to Player2 successfully.' }
+    }
     return { ok: false, message: `Could not reach Player2: ${(error as Error).message}` }
   }
 }

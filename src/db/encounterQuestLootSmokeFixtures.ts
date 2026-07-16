@@ -6,59 +6,6 @@ import { createNpc, setNpcCombatStats, setNpcEncounterOutcome } from './reposito
 import { upsertCreature } from './catalog/creatures'
 import type { CombatEncounter } from '../shared/combat/types'
 
-export const WOLF_LOOT_RESPONSE = JSON.stringify({
-  narrationText: 'You skin the wolves and collect fangs.',
-  itemGrants: [
-    {
-      proposeNew: {
-        name: 'Wolf Fang',
-        description: 'A sharp fang trophy.',
-        itemType: 'misc',
-        rarityTier: 'common'
-      }
-    },
-    {
-      proposeNew: {
-        name: 'Rough Hide',
-        description: 'Tanned beast hide.',
-        itemType: 'misc',
-        rarityTier: 'common'
-      }
-    }
-  ],
-  nothingToFind: false
-})
-
-export const BANDIT_LOOT_RESPONSE = JSON.stringify({
-  narrationText: 'You find a worn blade on the bandit.',
-  itemGrants: [
-    {
-      proposeNew: {
-        name: 'Bandit Blade',
-        description: 'A chipped short sword.',
-        itemType: 'weapon',
-        rarityTier: 'common'
-      }
-    }
-  ],
-  nothingToFind: false
-})
-
-export const QUEST_LOOT_RESPONSE = JSON.stringify({
-  narrationText: 'The miller presses a pouch of coins into your hand.',
-  itemGrants: [
-    {
-      proposeNew: {
-        name: 'Miller Coin Pouch',
-        description: 'A modest payment.',
-        itemType: 'misc',
-        rarityTier: 'common'
-      }
-    }
-  ],
-  nothingToFind: false
-})
-
 export function seedWolfLootEncounter() {
   const db = createTestDb()
   const campaign = createCampaign(db, { name: 'Loot', premisePrompt: 'wolves', deathMode: 'standard' })

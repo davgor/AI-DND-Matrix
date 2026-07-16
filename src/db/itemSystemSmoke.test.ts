@@ -1,10 +1,11 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
 import { afterEach, describe, expect, it } from 'vitest'
 import { computeAC } from '../engine/armorClass'
 import { resolvePlayerEquippedAttackDamage } from '../main/turnIpc'
+import { closeFileTestDb, openFileTestDb, reopenFileTestDb } from './fileDbTestUtils'
 import { createTestDb } from './testUtils'
 import { createCampaign } from './repositories/campaigns'
 import { createCharacter, getCharacterById } from './repositories/characters'
@@ -91,32 +92,31 @@ describe('item system end-to-end smoke', () => {
 })
 
 describe('item system persistence smoke', () => {
-  let dir: string
-  let db: Database.Database
+  let dir: string | undefined
+  let db: Database.Database | undefined
 
   afterEach(() => {
-    db?.close()
+    closeFileTestDb(db)
+    db = undefined
     if (dir) {
       rmSync(dir, { recursive: true, force: true })
+      dir = undefined
     }
   })
 
   it('preserves equipped state after reopening the database file', () => {
     dir = mkdtempSync(join(tmpdir(), 'item-smoke-'))
-    db = new Database(join(dir, 'save.sqlite'))
+    db = openFileTestDb(join(dir, 'save.sqlite'))
     runMigrations(db, migrations)
     const character = seedPlayer(db)
     const bow = findCatalogItemByName(db, 'Hunting Bow')!
     const row = addItemToCharacter(db, character.id, bow.id)
     equipCharacterItem(db, character.id, row.id, 'mainHand')
     const equippedId = listCharacterItems(db, character.id).find((r) => r.equippedSlot === 'mainHand')?.id
-    const filePath = db.name
-    db.close()
 
-    const reopened = new Database(filePath)
+    db = reopenFileTestDb(db)
     expect(
-      listCharacterItems(reopened, character.id).find((row) => row.id === equippedId)?.equippedSlot
+      listCharacterItems(db, character.id).find((row) => row.id === equippedId)?.equippedSlot
     ).toBe('mainHand')
-    reopened.close()
   })
 })
