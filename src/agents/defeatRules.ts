@@ -21,7 +21,7 @@ export interface DefeatRuleInput {
   deathMode: DeathMode
 }
 
-export type DefeatRuleDecision =
+type DefeatRuleDecision =
   | { kind: 'proposal'; proposal: DefeatDispositionProposal }
   | { kind: 'ambiguous' }
 

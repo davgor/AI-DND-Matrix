@@ -20,7 +20,7 @@ import { hashStringSeed } from '../engine/hp'
 import type { CatalogItem } from '../shared/items/types'
 import type { LootContext, LootPolicy } from '../shared/loot/types'
 
-export interface LootSelectionInput {
+interface LootSelectionInput {
   candidates: CatalogItem[]
   policy: LootPolicy
   seedKey: string

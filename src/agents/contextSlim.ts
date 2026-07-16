@@ -17,7 +17,7 @@ export const EVENT_TEXT_MAX_LENGTH = 300
  * budget lasts — many short entries admit more of them; long entries never
  * exceed the guaranteed minimum. A hard max count bounds the tiny-entry case.
  */
-export interface RecencyBudget {
+interface RecencyBudget {
   minCount: number
   maxCount: number
   charBudget: number
@@ -27,7 +27,7 @@ export interface RecencyBudget {
 export const WORLD_FACT_BUDGET: RecencyBudget = { minCount: 10, maxCount: 30, charBudget: 2000 }
 
 /** NPC/party prompts: at least the 20 most recent private memories, more while short. */
-export const NPC_MEMORY_BUDGET: RecencyBudget = { minCount: 20, maxCount: 60, charBudget: 3000 }
+const NPC_MEMORY_BUDGET: RecencyBudget = { minCount: 20, maxCount: 60, charBudget: 3000 }
 
 export function takeRecentWithinBudget<T>(
   items: T[],

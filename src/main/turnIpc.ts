@@ -732,7 +732,7 @@ async function executePartyMemberBeat(
 // referenced them, narration wrote cross-character log entries, or the player
 // named them. Gated-off turns return empty inactivePlayerActions with no call.
 
-export interface CrossCharacterSignalInput {
+interface CrossCharacterSignalInput {
   playerInput: string
   plan: TurnRoutingPlan
   narrationResult: NarrationResult | undefined
@@ -763,6 +763,29 @@ export function hasCrossCharacterSignal(input: CrossCharacterSignalInput): boole
   )
 }
 
+/**
+ * Prompt text for the inactive-player proxy. Prefer accumulated scene beats;
+ * on converse-only turns those stay empty (npcResponse never appends), so fall
+ * back to NPC reaction text, then the raw player input that named them.
+ */
+function sceneNarrationForInactiveProxy(
+  state: BeatExecutionState,
+  playerInput: string
+): string {
+  const fromBeats = capSceneContextForPrompt(state.sceneContextBeats)
+  if (fromBeats.length > 0) {
+    return fromBeats
+  }
+  const reactionBeats = state.npcReactions
+    .map((reaction) => reaction.text)
+    .filter((text) => text.length > 0)
+  const fromReactions = capSceneContextForPrompt(reactionBeats)
+  if (fromReactions.length > 0) {
+    return fromReactions
+  }
+  return `The active player said: ${playerInput}`
+}
+
 async function executeInactivePlayerEncounter(
   db: Database.Database,
   provider: Provider,
@@ -775,9 +798,6 @@ async function executeInactivePlayerEncounter(
     state: BeatExecutionState
   }
 ): Promise<void> {
-  if (input.state.sceneContextBeats.length === 0) {
-    return
-  }
   const inactivePlayers = listInactiveLivingPlayersInRegion(
     db,
     input.campaignId,
@@ -790,13 +810,15 @@ async function executeInactivePlayerEncounter(
     narrationResult: input.state.narrationResult,
     inactivePlayers
   }
+  // Signal gate alone decides whether to fire — empty sceneContext must not
+  // skip a name-mention / plan-reference turn (converse-only npcResponse path).
   if (inactivePlayers.length === 0 || !hasCrossCharacterSignal(gateInput)) {
     return
   }
   const actions = await resolveInactivePlayerActions(db, provider, {
     campaignId: input.campaignId,
     inactivePlayers,
-    sceneNarration: capSceneContextForPrompt(input.state.sceneContextBeats)
+    sceneNarration: sceneNarrationForInactiveProxy(input.state, input.playerInput)
   })
   input.state.inactivePlayerActions.push(...actions)
   for (const action of actions) {

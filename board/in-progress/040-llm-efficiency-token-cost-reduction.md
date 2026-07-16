@@ -71,7 +71,7 @@ Broken down into sub-tickets **040.1–040.13**. This epic is done when all are 
 - smoke/regression test documents per-turn LLM call budget, including the flagged-NPC scenario
 - **no silent data loss:** every hole in the "Data-integrity review" section above is covered by its amended per-ticket acceptance criteria before the corresponding sub-ticket is marked done
 
-040.1 maxTokens on all agents · 040.2 merge interpretIntent + reviewTurn · 040.3 heuristic routing fast path · 040.4 slim scene context serializers · 040.5 cap sceneContext + gate inactive-player proxy · 040.6 combat catch-up flavor without per-combatant LLM · 040.7 XP/loot template defaults · 040.8 rules-first yield + defeat disposition · 040.9 shared systemPrompt for schemas · 040.10 guided identity transcript windowing (+ static identity block hygiene) · 040.11 parallelise NPC shortfall fill · 040.12 efficiency smoke + call-count regression · 040.13 flagged-NPC generation call-count tracking (049–052 fallout) · 040.14 adaptive token ceilings (truncation escalation + knowledge-aware context budgets)
+040.1 maxTokens on all agents · 040.2 merge interpretIntent + reviewTurn · 040.3 heuristic routing fast path · 040.4 slim scene context serializers · 040.5 cap sceneContext + gate inactive-player proxy · 040.6 combat catch-up flavor without per-combatant LLM · 040.7 XP/loot template defaults · 040.8 rules-first yield + defeat disposition · 040.9 shared systemPrompt for schemas · 040.10 guided identity transcript windowing (+ static identity block hygiene) · 040.11 parallelise NPC shortfall fill · 040.12 efficiency smoke + call-count regression · 040.13 flagged-NPC generation call-count tracking (049–052 fallout) · 040.14 adaptive token ceilings (truncation escalation + knowledge-aware context budgets) · 040.15 clear deadcode CI baseline on PR
 
 ## Sub-tickets
 
@@ -479,3 +479,22 @@ Follow-up hardening after 040.1/040.4 landed: fixed ceilings must not clip legit
 - [x] NPC context assembly (`npc.ts`) and party-member prior memories use the budget-aware windows
 - [x] Band-table doc comment (`providers/types.ts`) and `docs/runbooks/llm-efficiency-smoke-test.md` document the escalation behavior
 - [x] `npm test`, `npm run lint`, `npm run build` pass
+
+---
+
+### 040.15 Clear deadcode CI on epic 040 PR (+ inactive-proxy name-mention hole)
+
+#### Description
+
+PR #10 fails the `Dead Code Check` workflow after merging main's ts-prune gate: `.tsprune-ignore` line numbers drifted for ~80 pre-existing exports, and 040 introduced new test-facing helpers plus a few truly unused fixture exports left over from the 040.7 template-loot path. Remove unused loot JSON fixtures, unexport same-module-only types, and refresh the ignore baseline so `npm run deadcode` is green without relaxing the check.
+
+Also closes a latent 040.5 hole found in review: `executeInactivePlayerEncounter` still early-returned when `sceneContextBeats` was empty, so converse-only / `npcResponse`-only turns that named an inactive character never reached `hasCrossCharacterSignal` and skipped the proxy's only per-turn continuity write.
+
+#### Acceptance Criteria
+
+- [x] Unused `WOLF_LOOT_RESPONSE` / `BANDIT_LOOT_RESPONSE` / `QUEST_LOOT_RESPONSE` removed (zero importers after template loot)
+- [x] Same-module-only 040 types/helpers unexported where safe; remaining intentional dead exports listed in `.tsprune-ignore` with current line numbers
+- [x] Converse-only turn that names an inactive player fires the proxy (regression test in `turnIpc.test.ts`); empty sceneContext no longer short-circuits the signal gate
+- [x] `npm run deadcode` exits 0
+- [x] `npm test`, `npm run lint`, `npm run build` pass
+
