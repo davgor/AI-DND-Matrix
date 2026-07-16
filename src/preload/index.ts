@@ -319,6 +319,7 @@ const settingsIntro = {
 
 const autoUpdate = {
   getState: (): Promise<AutoUpdateState> => ipcRenderer.invoke('autoUpdate:getState'),
+  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('autoUpdate:checkForUpdates'),
   quitAndInstall: (): Promise<void> => ipcRenderer.invoke('autoUpdate:quitAndInstall'),
   onEvent: (listener: (payload: AutoUpdateState) => void): (() => void) => {
     const handler = (_event: IpcRendererEvent, payload: AutoUpdateState): void => {

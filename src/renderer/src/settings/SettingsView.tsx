@@ -1,3 +1,5 @@
+import { CheckForUpdatesButton } from '../autoUpdate/CheckForUpdatesButton'
+import { useAppUpdate } from '../autoUpdate/UpdateBanner'
 import { ApiKeySection } from './ApiKeySection'
 import { LlamaLocalSection } from './LlamaLocalSection'
 import { Player2Section } from './Player2Section'
@@ -70,6 +72,7 @@ function canSave(controller: ReturnType<typeof useSettings>): boolean {
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
   const controller = useSettings(props.onClose)
+  const { currentVersion } = useAppUpdate()
 
   return (
     <div className="settings-overlay" role="dialog" aria-label="Settings">
@@ -87,12 +90,20 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         <ProviderSection controller={controller} />
         {controller.saveFailed && <p className="settings-field-error">Could not save settings. Please try again.</p>}
         <footer className="settings-footer">
-          <button type="button" onClick={controller.requestClose}>
-            Cancel
-          </button>
-          <button type="button" disabled={!canSave(controller)} onClick={() => void controller.save()}>
-            {controller.saving ? 'Saving...' : 'Save'}
-          </button>
+          <div className="settings-version-row">
+            <p className="settings-version" aria-label={`Application version ${currentVersion}`}>
+              Version {currentVersion}
+            </p>
+            <CheckForUpdatesButton />
+          </div>
+          <div className="settings-footer-actions">
+            <button type="button" onClick={controller.requestClose}>
+              Cancel
+            </button>
+            <button type="button" disabled={!canSave(controller)} onClick={() => void controller.save()}>
+              {controller.saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
           {controller.draft.mode === 'llamacpp' && !controller.llamaRuntimeChecked && controller.dirty && (
             <p className="settings-field-error">Run a successful runtime check before saving.</p>
           )}
