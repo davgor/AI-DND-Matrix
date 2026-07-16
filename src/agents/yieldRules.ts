@@ -13,7 +13,7 @@
 import type { Temperament } from '../shared/alignment/types'
 import type { NpcYieldReviewOutcome, YieldReviewInput } from '../shared/npcCombat/types'
 
-export type YieldRuleDecision =
+type YieldRuleDecision =
   | { kind: 'outcome'; outcome: NpcYieldReviewOutcome; narrationText: string }
   | { kind: 'ambiguous' }
 

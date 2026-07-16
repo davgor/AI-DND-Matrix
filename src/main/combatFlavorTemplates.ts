@@ -166,7 +166,7 @@ const NPC_COMBAT_LINES: Record<Temperament, TemperamentLines> = {
   }
 }
 
-export interface NpcCombatFlavorInput {
+interface NpcCombatFlavorInput {
   npcName: string
   temperament: Temperament
   disposition: string
@@ -174,7 +174,7 @@ export interface NpcCombatFlavorInput {
   hit: boolean
 }
 
-export interface NpcCombatFlavor {
+interface NpcCombatFlavor {
   reactionKind: NpcReactionKind
   text: string
 }

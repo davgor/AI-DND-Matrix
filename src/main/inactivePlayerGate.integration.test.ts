@@ -13,11 +13,12 @@ import { resolvePlayerTurn } from './turnIpc'
 // 040.5 compounding-starvation check (data-integrity item 6):
 // `inactive_player_action` events are the inactive character's only per-turn
 // record and the only grounding for their future proxy calls — there is no
-// backfill. Converse-only turns already skip the proxy (npcResponse never
-// touches sceneContext) and 040.3's converse fast path layers on top, so the
-// new signal gate must not leave inactive characters silent for a whole
-// session: they must act within a bounded number of mixed turns whenever a
-// cross-character signal occurs.
+// backfill. Signal-free converse-only turns skip the proxy (npcResponse never
+// touches sceneContext), but a name mention / plan reference / cross-character
+// log write must still wake it even when sceneContext is empty. 040.3's
+// converse fast path layers on top, so the signal gate must not leave inactive
+// characters silent for a whole session: they must act within a bounded number
+// of mixed turns whenever a cross-character signal occurs.
 
 function mergedTurn(intent: object, ...beats: object[]) {
   return JSON.stringify({ intent, routingPlan: { disposition: 'composite', beats } })

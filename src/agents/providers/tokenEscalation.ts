@@ -26,7 +26,7 @@ export const TOKEN_ESCALATION_CEILING = 8192
  * Player2TruncationError so callers can detect truncation without importing
  * adapter-specific classes.
  */
-export interface ProviderTruncationMarker {
+interface ProviderTruncationMarker {
   readonly isProviderTruncation: true
 }
 

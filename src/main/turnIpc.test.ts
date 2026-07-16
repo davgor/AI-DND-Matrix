@@ -710,6 +710,42 @@ describe('resolvePlayerTurn: proxy fires on a name mention (040.5)', () => {
     expect(provider.calls).toHaveLength(3)
     expect(result.inactivePlayerActions?.[0]?.actionText).toBe('Lyra looks up from her book.')
   })
+
+  it('fires on converse-only turns that name the inactive character (empty sceneContext)', async () => {
+    // npcResponse never appends sceneContext beats — the signal gate must still
+    // wake the proxy when the player names an inactive companion mid-dialogue.
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    seedInactivePlayer(db, campaign.id, region.id)
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    appendNpcMemory(db, { npcId: npc.id, content: 'Kael greeted me yesterday.', tags: [] })
+    const provider = createScriptedProvider([
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [npc.id] }),
+      '{"dialogue":"Lyra? She was just here."}',
+      '{"actionText":"Lyra glances over from a nearby stall."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      {
+        campaignId: campaign.id,
+        characterId: player.id,
+        playerInput: 'Mira, have you seen Lyra today?'
+      },
+      fixedRng(0.5)
+    )
+
+    expect(provider.calls).toHaveLength(3)
+    expect(result.inactivePlayerActions?.[0]?.actionText).toBe(
+      'Lyra glances over from a nearby stall.'
+    )
+  })
 })
 
 describe('resolvePlayerTurn: dying-sequence short-circuit', () => {

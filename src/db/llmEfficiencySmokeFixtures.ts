@@ -104,7 +104,7 @@ export function seedCombatScene(options: { goblinCount: number; goblinHp: number
 
 // --- flagged-NPC scenarios (040.13 ceilings, re-asserted here) ---------------
 
-export const FLAGGED_NPC_RACE_LORE = {
+const FLAGGED_NPC_RACE_LORE = {
   summary: 'Elves are long-lived wardens of the deep woods.',
   appearance: 'Slight, sharp-eared, and quick.',
   culture: 'Bound to grove oaths and old songs.',

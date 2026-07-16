@@ -13,7 +13,7 @@ import type { TurnRoutingPlan } from '../shared/turnRouting/types'
 // Any row that omits it may only fire on turns it can PROVE are inert; every
 // ambiguous signal returns null and defers to LLM routing.
 
-export interface PresentNpcSignal {
+interface PresentNpcSignal {
   id: string
   name: string
   /** False on the NPC's first interaction this session — a strong "state may change" signal. */

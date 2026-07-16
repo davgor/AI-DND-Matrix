@@ -23,11 +23,11 @@ import {
 // === 040.2: one LLM call replaces the sequential interpretIntent + reviewTurn ===
 // === pair on the turn hot path. The response carries both halves at once.     ===
 
-export interface IntentAndRouteContext extends NarrationContext {
+interface IntentAndRouteContext extends NarrationContext {
   combat?: CombatIntentContext
 }
 
-export interface IntentAndRouteResult {
+interface IntentAndRouteResult {
   intent: IntentInterpretation
   routingPlan: TurnRoutingPlan
 }
@@ -37,7 +37,7 @@ export interface IntentAndRouteResult {
  * execution — the engine short-circuits before routing — so the merged
  * response may omit routingPlan for them.
  */
-export function intentBypassesRouting(intent: IntentInterpretation): boolean {
+function intentBypassesRouting(intent: IntentInterpretation): boolean {
   if (intent.actionType !== undefined) {
     return true
   }
