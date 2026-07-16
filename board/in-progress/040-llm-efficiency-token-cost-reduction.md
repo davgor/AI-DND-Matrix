@@ -497,4 +497,5 @@ Also closes a latent 040.5 hole found in review: `executeInactivePlayerEncounter
 - [x] Converse-only turn that names an inactive player fires the proxy (regression test in `turnIpc.test.ts`); empty sceneContext no longer short-circuits the signal gate
 - [x] `npm run deadcode` exits 0
 - [x] `npm test`, `npm run lint`, `npm run build` pass
+- [x] Windows CI file-reopen smoke flakes fixed (`characterJournalSmoke` / `logBookSmoke` persistence): shared `fileDbTestUtils` with DELETE journal + retrying reopen
 
