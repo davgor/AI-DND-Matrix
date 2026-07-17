@@ -1,7 +1,7 @@
 import type { GuidedCreationMessage } from '../../../shared/guidedCreation/types'
 import { useDmThinkingStatus } from './useDmThinkingStatus'
 
-export interface GuidedConversationThreadProps {
+interface GuidedConversationThreadProps {
   loading: boolean
   kickingOff: boolean
   messages: GuidedCreationMessage[]

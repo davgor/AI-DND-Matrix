@@ -8,7 +8,7 @@ import { phaseDisplayMessages } from './phaseDisplayMessages'
 import { useGuidedConversation } from './useGuidedConversation'
 import './guidedConversation.css'
 
-export interface GuidedConversationShellProps {
+interface GuidedConversationShellProps {
   campaignId: string
   characterId: string
   phase: GuidedMessagePhase

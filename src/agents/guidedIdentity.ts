@@ -18,7 +18,7 @@ export const IDENTITY_TRANSCRIPT_WINDOW = 5
 // throws at the provider instead of persisting a cut-off reply.
 const IDENTITY_REPLY_MAX_TOKENS = 768
 
-export interface IdentityRegionOption {
+interface IdentityRegionOption {
   id: string
   name: string
   description: string

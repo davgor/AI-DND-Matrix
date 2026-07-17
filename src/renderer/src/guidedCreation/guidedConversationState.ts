@@ -3,14 +3,14 @@ import type {
   GuidedMessagePhase
 } from '../../../shared/guidedCreation/types'
 
-export const PENDING_PLAYER_MESSAGE_ID = 'pending-player'
-export const DM_THINKING_ELLIPSIS_FRAMES = 4
+const PENDING_PLAYER_MESSAGE_ID = 'pending-player'
+const DM_THINKING_ELLIPSIS_FRAMES = 4
 
 export function shouldDisableGuidedInput(sending: boolean, phaseComplete: boolean): boolean {
   return sending || phaseComplete
 }
 
-export function latestDmReply(messages: GuidedCreationMessage[]): string | null {
+function latestDmReply(messages: GuidedCreationMessage[]): string | null {
   const dmMessages = messages.filter((message) => message.role === 'dm')
   return dmMessages.at(-1)?.content ?? null
 }
