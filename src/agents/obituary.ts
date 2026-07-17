@@ -7,6 +7,7 @@ import { listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
 import { getNpcById } from '../db/repositories/npcs'
 import type { CharacterObituary, DeathCause } from '../shared/campaignHub/types'
 import { takeRecent } from './contextWindow'
+import { PROSE_CLARITY_RULES } from './campaignGeneration/prompts'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import { tryParseJson } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
@@ -175,6 +176,7 @@ function parseGeneratedObituary(value: unknown): Omit<CharacterObituary, 'genera
 function buildObituaryPrompt(context: ObituaryContext): string {
   return [
     'Write a grounded in-world obituary for a fallen player character.',
+    PROSE_CLARITY_RULES,
     'Ground ONLY on the SQLite-backed context below — not chat transcripts.',
     `Death cause code: ${context.deathCause}`,
     `Character: ${JSON.stringify({

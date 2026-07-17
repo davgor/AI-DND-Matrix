@@ -1,4 +1,5 @@
 import type { RaceLore } from '../shared/raceSelection/types'
+import { PROSE_CLARITY_RULES } from './campaignGeneration/prompts'
 import { MAX_GENERATION_ATTEMPTS } from './campaignGeneration/types'
 import type { GenerateContext, Provider } from './providers/types'
 
@@ -56,6 +57,7 @@ export function buildBackgroundStoryPrompt(input: BackgroundStoryInput): string 
   const lines = [
     'Write the player character personal background story for a fantasy TTRPG.',
     'Output approximately two paragraphs of first-person-adjacent narrative prose about their life before the adventure.',
+    PROSE_CLARITY_RULES,
     'Ground the story in the selected background description and fit the campaign world.',
     'Output flavor only — no mechanics, stats, ability scores, items, spells, or numbers in the prose.',
     ...appendUntrusted('Campaign premise', input.campaignPremise),

@@ -314,7 +314,17 @@ describe('buildWorldGenerationPrompt', () => {
     expect(prompt).toContain('krakens')
     expect(prompt).toContain('ziggurats')
     expect(prompt).toContain('border wars')
-    expect(prompt).toContain('one hyphenated compound per sentence')
+  })
+
+  it('asks for plain English fantasy, not hyphen-compound jargon', () => {
+    const prompt = buildWorldGenerationPrompt('A marsh kingdom')
+    expect(prompt).toContain('standard English')
+    expect(prompt).toContain('fog-dwellers')
+    expect(prompt).toContain('rune-etched')
+    expect(prompt).not.toContain('Hyphenated fantasy terms are fine in moderation')
+    expect(prompt).not.toContain('storm-priests')
+    expect(prompt).not.toContain('fog-veiled')
+    expect(prompt).not.toContain('storm-wracked')
   })
 })
 

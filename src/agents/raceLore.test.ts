@@ -28,6 +28,16 @@ describe('buildRaceLorePrompt', () => {
     expect(prompt).toContain('A flooded kingdom.')
   })
 
+  it('asks for plain English fantasy appearance and culture', () => {
+    const prompt = buildRaceLorePrompt('A flooded kingdom.', 'Recent storms.', {
+      kind: 'custom',
+      label: 'Marshfolk',
+      seedPrompt: 'Amphibious traders.'
+    })
+    expect(prompt).toContain('standard English')
+    expect(prompt).toContain('fog-dwellers')
+  })
+
   it('includes preset seed prompt for predefined races', () => {
     const entry = RACE_ROSTER[0]!
     const prompt = buildRaceLorePrompt('Premise.', 'Summary.', {

@@ -45,7 +45,7 @@ function GenerateRegionSeedField(props: {
         className="campaign-review-seed-input"
         value={props.seedPrompt}
         onChange={(event) => props.onSeedChange(event.target.value)}
-        placeholder="e.g. A fog-choked fishing village where the tide brings whispered warnings..."
+        placeholder="e.g. A foggy fishing village where the tide brings strange warnings..."
         rows={5}
         disabled={props.generating}
       />

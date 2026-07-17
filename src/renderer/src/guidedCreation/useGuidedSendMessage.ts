@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { GuidedCreationSendMessageResult, GuidedMessagePhase } from '../../../shared/guidedCreation/types'
-import { guidedSendErrorMessage, sendGuidedMessage } from './guidedSendMessage'
+import type { GuidedRefresh } from './guidedIdentityKickoff'
+import { executeGuidedSend } from './executeGuidedSend'
 
 export function useGuidedSendMessage(input: {
   campaignId: string
@@ -11,7 +12,8 @@ export function useGuidedSendMessage(input: {
   setSending: (value: boolean) => void
   setError: (value: string | null) => void
   setInputValue: (value: string) => void
-  refresh: () => Promise<void>
+  setPendingPlayerMessage: (value: string | null) => void
+  refresh: GuidedRefresh
   onStateChange?: () => void
 }): () => Promise<GuidedCreationSendMessageResult | null> {
   return useCallback(async () => {
@@ -19,26 +21,7 @@ export function useGuidedSendMessage(input: {
     if (!message || input.sending) {
       return null
     }
-    input.setSending(true)
-    input.setError(null)
-    try {
-      const result = await sendGuidedMessage({
-        campaignId: input.campaignId,
-        characterId: input.characterId,
-        phase: input.phase,
-        message,
-        refresh: input.refresh,
-        onStateChange: input.onStateChange
-      })
-      if (!result.ok) {
-        input.setError(guidedSendErrorMessage(result.reason))
-        return result
-      }
-      input.setInputValue('')
-      return result
-    } finally {
-      input.setSending(false)
-    }
+    return executeGuidedSend({ ...input, message })
   }, [
     input.campaignId,
     input.characterId,
@@ -49,6 +32,7 @@ export function useGuidedSendMessage(input: {
     input.sending,
     input.setError,
     input.setInputValue,
+    input.setPendingPlayerMessage,
     input.setSending
   ])
 }

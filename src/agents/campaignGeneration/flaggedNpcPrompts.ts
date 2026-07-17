@@ -6,7 +6,7 @@ import {
 import type { GenderRosterEntry } from '../../shared/npcGender/types'
 import type { NpcClassRosterEntry } from '../../shared/npcClass/types'
 import type { AvailableRaceOption, RaceLore } from '../../shared/raceSelection/types'
-import { NPC_NAMING_RULES } from './prompts'
+import { NPC_NAMING_RULES, PROSE_CLARITY_RULES } from './prompts'
 import type { NpcCoreBundle } from './types'
 
 function formatRaceOptions(availableRaces: AvailableRaceOption[]): string {
@@ -130,6 +130,7 @@ export function buildFlaggedNpcFinalPrompt(input: {
     input.seedPrompt,
     existingNpcs,
     ...buildIdentityFactBlock(input),
+    PROSE_CLARITY_RULES,
     NPC_NAMING_RULES,
     `Temperament (established): ${input.bundle.temperament}`,
     `canSpeak (established): ${input.bundle.canSpeak}`

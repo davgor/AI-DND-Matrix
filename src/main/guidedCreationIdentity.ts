@@ -9,8 +9,9 @@ import {
 } from '../agents/guidedIdentity'
 import type { Provider } from '../agents/providers/types'
 import { getCampaignById } from '../db/repositories/campaigns'
-import { getCharacterById } from '../db/repositories/characters'
+import { getCharacterById, updateCharacter } from '../db/repositories/characters'
 import { getCampaignRaceByKey } from '../db/repositories/campaignRaces'
+import { listRegionsByCampaign } from '../db/repositories/regions'
 import { findRosterEntry } from '../engine/raceSelection/roster'
 import { findBackgroundRosterEntry } from '../engine/characterBackground/roster'
 import type { RaceLore } from '../shared/raceSelection/types'
@@ -30,6 +31,14 @@ import type { GuidedCreationKickoffInput, GuidedCreationKickoffResult } from '..
 function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
   const scores = stats.abilityScores as Record<string, number> | undefined
   return scores ?? { body: 10, agility: 10, mind: 10, presence: 10 }
+}
+
+function regionsForCampaign(db: Database.Database, campaignId: string) {
+  return listRegionsByCampaign(db, campaignId).map((region) => ({
+    id: region.id,
+    name: region.name,
+    description: region.description
+  }))
 }
 
 export function resolveCharacterBackgroundContext(
@@ -101,7 +110,8 @@ export async function kickoffIdentityInterviewIfNeeded(
       raceLore: raceContext.raceLore,
       backgroundLabel: backgroundContext.backgroundLabel,
       backgroundDescription: backgroundContext.backgroundDescription,
-      backgroundStory: backgroundContext.backgroundStory
+      backgroundStory: backgroundContext.backgroundStory,
+      regions: regionsForCampaign(db, input.campaignId)
     })
     dmReply = kickoff.dmReply
   } catch {
@@ -126,6 +136,27 @@ export interface IdentityInterviewTurn {
   agentResult: IdentityInterviewResponse
 }
 
+function persistStartingRegionIfLocked(
+  db: Database.Database,
+  characterId: string,
+  turn: IdentityInterviewTurn,
+  merged: ReturnType<typeof mergeFoundationStatus>
+): void {
+  const whereNewlyLocked =
+    !turn.currentFoundations.where.complete && Boolean(merged.where.complete && merged.where.summary)
+  const regionId = turn.agentResult.startingRegionId
+  if (!whereNewlyLocked || typeof regionId !== 'string' || !regionId) {
+    return
+  }
+  const character = getCharacterById(db, characterId)
+  if (!character) {
+    return
+  }
+  updateCharacter(db, characterId, {
+    stats: { ...(character.stats as Record<string, unknown>), currentRegionId: regionId }
+  })
+}
+
 export function persistIdentityInterviewTurn(
   db: Database.Database,
   turn: IdentityInterviewTurn
@@ -139,6 +170,7 @@ export function persistIdentityInterviewTurn(
 
   db.transaction(() => {
     updateIdentityFoundationSummaries(db, characterId, summariesFromStatus(merged))
+    persistStartingRegionIfLocked(db, characterId, turn, merged)
     appendGuidedCreationMessage(db, {
       campaignId: input.campaignId,
       characterId: input.characterId,

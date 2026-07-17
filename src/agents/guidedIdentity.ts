@@ -18,10 +18,18 @@ export const IDENTITY_TRANSCRIPT_WINDOW = 5
 // throws at the provider instead of persisting a cut-off reply.
 const IDENTITY_REPLY_MAX_TOKENS = 768
 
+interface IdentityRegionOption {
+  id: string
+  name: string
+  description: string
+}
+
 export interface IdentityInterviewResponse {
   dmReply: string
   foundations: IdentityFoundationsStatus
   allFoundationsComplete: boolean
+  /** Set when Where locks; must be one of the campaign's generated region ids. */
+  startingRegionId?: string | null
 }
 
 export interface IdentityKickoffResponse {
@@ -39,6 +47,7 @@ export interface IdentityInterviewContext {
   backgroundLabel: string | null
   backgroundDescription: string | null
   backgroundStory: string | null
+  regions: IdentityRegionOption[]
   transcript: Array<{ role: 'player' | 'dm'; content: string }>
   currentFoundations: IdentityFoundationsStatus
 }
@@ -72,7 +81,30 @@ function isIdentityInterviewResponse(value: unknown): value is IdentityInterview
   if (typeof foundations !== 'object' || foundations === null) {
     return false
   }
-  return IDENTITY_FOUNDATIONS.every((key) => isFoundationStatus((foundations as Record<string, unknown>)[key]))
+  if (!IDENTITY_FOUNDATIONS.every((key) => isFoundationStatus((foundations as Record<string, unknown>)[key]))) {
+    return false
+  }
+  const startingRegionId = candidate['startingRegionId']
+  return (
+    startingRegionId === undefined ||
+    startingRegionId === null ||
+    typeof startingRegionId === 'string'
+  )
+}
+
+function whereStartingRegionIsValid(
+  response: IdentityInterviewResponse,
+  regions: IdentityRegionOption[]
+): boolean {
+  const where = response.foundations.where
+  if (!(where.complete && where.summary)) {
+    return true
+  }
+  const regionId = response.startingRegionId
+  if (typeof regionId !== 'string' || !regionId) {
+    return false
+  }
+  return regions.some((region) => region.id === regionId)
 }
 
 export function identityWhoKickoffFallback(characterName: string): string {
@@ -130,7 +162,8 @@ function buildIdentityContextLines(
   const lines = [
     `Mechanical character (established facts — do not change or overwrite): ${buildMechanicalCharacterBlock(context)}`,
     'Race and race lore were chosen during setup — reference them as established fact, not something to re-ask or overwrite.',
-    'Background type and description were chosen during setup — build on them as established fact rather than re-eliciting personal history from scratch.'
+    'Background type and description were chosen during setup — build on them as established fact rather than re-eliciting personal history from scratch.',
+    `Generated campaign regions (start location must be one of these): ${JSON.stringify(context.regions)}`
   ]
   const storyLine = buildBackgroundStoryLine(context.backgroundStory)
   if (storyLine) {
@@ -191,8 +224,10 @@ function buildIdentityInterviewSystemPrompt(
     'You are the DM conducting a pre-play identity interview. Interview for Who / Why / Where / What.',
     'Ask follow-up questions freely. Do not invent mechanical stats, checks, loot, or world mutations.',
     ...buildIdentityStaticSystemLines(context),
-    'Respond ONLY with JSON: {"dmReply":string,"foundations":{"who":{"complete":bool,"summary"?:string},"why":{"complete":bool,"summary"?:string},"where":{"complete":bool,"summary"?:string},"what":{"complete":bool,"summary"?:string}},"allFoundationsComplete":bool}',
-    'Set complete true and include summary only when a foundation is ready to lock in.'
+    'When covering Where: ask which of these generated regions they start in. Origin/homeland may still be discussed, but the play start location must be one listed region (confirm the only region if there is just one).',
+    'Respond ONLY with JSON: {"dmReply":string,"foundations":{"who":{"complete":bool,"summary"?:string},"why":{"complete":bool,"summary"?:string},"where":{"complete":bool,"summary"?:string},"what":{"complete":bool,"summary"?:string}},"allFoundationsComplete":bool,"startingRegionId":string|null}',
+    'Set complete true and include summary only when a foundation is ready to lock in.',
+    'When locking Where, set startingRegionId to that region\'s id from the generated campaign regions list; otherwise set startingRegionId to null.'
   ].join('\n')
 }
 
@@ -218,7 +253,10 @@ export async function runIdentityInterviewTurn(
   for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
     const raw = await provider.generate(prompt, generateContext)
     const parsed = tryParseJson(raw)
-    if (isIdentityInterviewResponse(parsed)) {
+    if (
+      isIdentityInterviewResponse(parsed) &&
+      whereStartingRegionIsValid(parsed, context.regions)
+    ) {
       return parsed
     }
   }

@@ -1,11 +1,12 @@
 import type { GuidedCreationState, GuidedMessagePhase } from '../../../shared/guidedCreation/types'
 import { kickoffGuidedIdentity, shouldStartIdentityKickoff } from './guidedIdentityKickoff'
+import type { GuidedRefresh } from './guidedIdentityKickoff'
 
 function startIdentityKickoff(input: {
   campaignId: string
   characterId: string
   kickoffStartedRef: { current: boolean }
-  refresh: () => Promise<void>
+  refresh: GuidedRefresh
   setKickingOff: (value: boolean) => void
   setError: (value: string | null) => void
   onStateChange?: () => void
@@ -46,7 +47,7 @@ export function runIdentityKickoffEffect(input: {
   sending: boolean
   state: GuidedCreationState | null
   kickoffStartedRef: { current: boolean }
-  refresh: () => Promise<void>
+  refresh: GuidedRefresh
   setKickingOff: (value: boolean) => void
   setError: (value: string | null) => void
   onStateChange?: () => void

@@ -23,15 +23,15 @@ import type {
 const WORLD_JSON_EXAMPLE = JSON.stringify({
   worldName: 'Tyria',
   worldSummary:
-    'Tyria is a storm-wracked world of fractured isles and drowned coasts where old empires left only ruins and stubborn freeholds. Trade still crosses the inner seas, but every captain carries charts marked with vanished ports.\n\nHarbor towns tax the same moorings twice while storm-priests and salvage cults argue over wreck rights. Farmers watch refugee columns pass on the coastal roads each autumn.\n\nPower is fragmented today — harbor councils, company charters, and free captains all claim legitimacy. The weather still decides who eats when the squall season arrives.',
+    'Tyria is a world of stormy seas, broken islands, and drowned coasts where old empires left only ruins and stubborn freeholds. Trade still crosses the inner seas, but every captain carries charts marked with vanished ports.\n\nHarbor towns tax the same moorings twice while storm priests and salvage cults argue over wreck rights. Farmers watch refugee columns pass on the coastal roads each autumn.\n\nPower is fragmented today — harbor councils, company charters, and free captains all claim legitimacy. The weather still decides who eats when the squall season arrives.',
   worldHistory:
-    'Three ages ago the continental shelf cracked during the Sundering, swallowing coastal kingdoms and leaving archipelagos where farmland once stretched to the horizon. Temples rang warning bells for weeks, but the sea still climbed through harbor streets faster than any evacuation plan. Survivors who reached high ground rebuilt as cliff clans who still measure wealth in rope and fresh water.\n\nSalvagers still dredge barnacled crowns and drowned libraries from the inner bays. Scholars argue whether the flood was natural, divine punishment, or sabotage between rival archmages, and every court commissions a different answer. Dredging licenses have become the fastest path to a noble title in port cities.\n\nFor two centuries the Charting Compact mapped safe passages and taxed moorings until guild wars broke the tithe system and beacon-fires fell dark. Captains who remembered the old routes became kings of smuggling lanes overnight. The Compact’s seal houses are ruins now, but their ledgers still surface in wreck sales.\n\nIn the last generation explorer crews have pushed past the outer shoals again, returning with cursed ore, missing manifests, and rumors of living reefs that remember every ship that wronged them. Few crews return with the same crew count they left with. Insurance brokers on the inner quay have doubled their rates twice in five years.\n\nToday the inner sea routes are contested again — not by emperors alone, but by storm-priests, smuggler princes, and captains who swear the drowned still vote on every treaty. Festival markets flourish beside famine roads, and everyone knows the next squall may rewrite the map. Beacon chains are relit one tower at a time, always too late for someone.'
+    'Three ages ago the continental shelf cracked during the Sundering, swallowing coastal kingdoms and leaving archipelagos where farmland once stretched to the horizon. Temples rang warning bells for weeks, but the sea still climbed through harbor streets faster than any evacuation plan. Survivors who reached high ground rebuilt as cliff clans who still measure wealth in rope and fresh water.\n\nSalvagers still dredge barnacled crowns and drowned libraries from the inner bays. Scholars argue whether the flood was natural, divine punishment, or sabotage between rival archmages, and every court commissions a different answer. Dredging licenses have become the fastest path to a noble title in port cities.\n\nFor two centuries the Charting Compact mapped safe passages and taxed moorings until guild wars broke the tithe system and beacon fires fell dark. Captains who remembered the old routes became kings of smuggling lanes overnight. The Compact’s seal houses are ruins now, but their ledgers still surface in wreck sales.\n\nIn the last generation explorer crews have pushed past the outer shoals again, returning with cursed ore, missing manifests, and rumors of living reefs that remember every ship that wronged them. Few crews return with the same crew count they left with. Insurance brokers on the inner quay have doubled their rates twice in five years.\n\nToday the inner sea routes are contested again — not by emperors alone, but by storm priests, smuggler princes, and captains who swear the drowned still vote on every treaty. Festival markets flourish beside famine roads, and everyone knows the next squall may rewrite the map. Beacon chains are relit one tower at a time, always too late for someone.'
 })
 
 const WORLD_PARAGRAPH_SHAPE_RULES = [
   'Each paragraph must be separated by a blank line (two newlines).',
   'Each paragraph must contain at least three full sentences — not one long sentence, not semicolon-stacked clauses, not a single run-on epic line.',
-  'Write concrete fantasy hook prose with names, places, factions, and sensory detail spread across sentences.'
+  'Write concrete fantasy description with names, places, factions, and everyday sensory detail in normal sentences.'
 ].join('\n')
 
 export const WORLD_FANTASY_TONE_RULES = [
@@ -40,9 +40,10 @@ export const WORLD_FANTASY_TONE_RULES = [
 ].join('\n')
 
 export const PROSE_CLARITY_RULES = [
-  'Write clear, readable fantasy prose. Prefer concrete facts — who lives where, what they do, what threatens them — over stacks of adjectives and invented compound words.',
-  'Use at most one hyphenated compound per sentence (e.g. "storm-priests" OR "fog-veiled", not both in the same line). Spread them sparingly across a paragraph — two per paragraph is plenty.',
-  'Hyphenated fantasy terms are fine in moderation. The problem is stacking three to five into every sentence.',
+  'Write clear, standard English about a fantasy setting. Prefer concrete facts — who lives where, what they do, what threatens them — over stacks of adjectives.',
+  'Do not invent purple jargon or hyphenated compound labels. Avoid stacks like "fog-dwellers", "wind-tangled", "rune-etched", "spice-scars", "prayer-veils", or "barrow-cloaks".',
+  'Say ordinary phrases instead: "people who live in the fog", "hair tangled by the wind", "skin marked with runes", "cloaks torn by wolves".',
+  'Ordinary fantasy words are fine (wizard, guild, temple, dragon, harbor). Invented compound labels and epic word-salad are not.',
   'Never repeat the same sentence or distinctive phrase anywhere in your response.',
   'Each sentence must add new information. No generic filler about travelers, hearths, trade routes, or "tales told around fires" unless it names this specific world.'
 ].join('\n')
@@ -65,11 +66,11 @@ const WORLD_PROSE_RULES = [
 const REGION_JSON_EXAMPLE = JSON.stringify({
   name: 'Tidemark Reach',
   description:
-    'A storm-battered harbor clings to black cliffs where explorer ships resupply before pushing into open water. Salt-stained warehouses, net menders on the quay, and the smell of tar and kelp define daily life.\n\nAt night, lantern light pools on wet cobbles while captains argue over charts in cramped taverns. The town feels prosperous but tense — everyone knows the last crews out did not all return.',
+    'A battered harbor clings to black cliffs where explorer ships resupply before pushing into open water. Warehouses stained with salt, net menders on the quay, and the smell of tar and kelp define daily life.\n\nAt night, lantern light pools on wet cobbles while captains argue over charts in cramped taverns. The town feels prosperous but tense — everyone knows the last crews out did not all return.',
   historyBackstory:
     'Tidemark Reach was raised atop drowned ruins after the last age of sail, when a great storm swallowed the old port whole. Salvagers still find carved stone and barnacled timbers when dredging the inner bay.\n\nFor two generations the harbor served charting guilds mapping the outer shoals. Rival companies fought quietly over mooring rights until a council of shipmasters formalized the docks and the tithe that funds the beacon chain.',
   recentHistory:
-    'Three explorer crews vanished after charting a new reef chain to the south. Rumors blame a rogue current, a reef-spirit, or sabotage between competing guilds.',
+    'Three explorer crews vanished after charting a new reef chain to the south. Rumors blame a rogue current, a reef spirit, or sabotage between competing guilds.',
   potentialQuests: [
     'Recover a logbook from a wrecked survey vessel.',
     'Broker peace between rival charting guilds.'
@@ -94,7 +95,7 @@ const NPC_JSON_EXAMPLE = JSON.stringify({
 })
 
 export const NPC_NAMING_RULES = [
-  'NPC naming: give every NPC a distinct, memorable name. Mix plain everyday names (Hana, Tomas, Marta, Rook, Saff, Brin), occupational nicknames, and region-appropriate compound names.',
+  'NPC naming: give every NPC a distinct, memorable name. Mix plain everyday names (Hana, Tomas, Marta, Rook, Saff, Brin), occupational nicknames, and names that fit the region culture.',
   'Vary culture and sound across the cast — do not reuse the same surname, prefix, or rhyme scheme for multiple NPCs.',
   'Avoid overused fantasy clichés and near-duplicates: Eld-/Elr-/Elara-/Eldric-/Eldridge-style names, Kael-/Thal-, apostrophe-heavy "dark elf" names, or "-wyn" endings unless the premise explicitly calls for them.',
   'Region names should likewise feel specific to the premise — not generic "Mystwood" or "Silverhaven" unless the story demands it.'
@@ -104,13 +105,14 @@ const REGION_PROSE_RULES = [
   'Region name: kingdoms, duchies, provinces, city-states, marches, and geographic realms belong here — not at the world layer.',
   PROSE_CLARITY_RULES,
   FANTASY_TROPE_DIVERSITY_RULES,
-  'Region description: two short paragraphs (present-day atmosphere, geography, what visitors notice).',
+  'Region description: two short paragraphs in plain English (present-day look, geography, what visitors notice).',
   'Region historyBackstory: two short paragraphs (deeper past, founding, old conflicts or legends).',
   'Region recentHistory: one paragraph on what changed lately.',
   'potentialQuests: 2-3 short quest hooks (one sentence each).'
 ].join('\n')
 
 const NPC_PROSE_RULES = [
+  PROSE_CLARITY_RULES,
   'Speaking NPCs (canSpeak true): backstory must be two short paragraphs — everyday life, ties to the region, and one personal stake or secret. Most are ordinary people; veteran or adventuring pasts are rare exceptions stated plainly.',
   'Speaking NPCs must include alignment, temperament, race (use an exact race key from the available-races list), background (use an exact background key from the available-backgrounds list), gender (exact key from available-genders), and class (exact key from available-classes). disposition is one or two sentences on how they treat the player.',
   'Beasts and mindless undead use canSpeak false and omit alignment, backstory, race, background, gender, and class.'

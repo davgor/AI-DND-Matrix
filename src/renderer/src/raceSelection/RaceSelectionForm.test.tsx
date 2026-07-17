@@ -91,6 +91,7 @@ describe('RaceSelection lore', () => {
       onChange: () => {}
     })
     expect(summaryField.props.children[1].props.disabled).toBe(false)
+    expect(summaryField.props.children[1].props.className).toContain('race-selection-autofit-textarea')
   })
 
   it('shows read-only lore for already-realized preset picks', () => {

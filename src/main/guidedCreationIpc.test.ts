@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { createCampaign } from '../db/repositories/campaigns'
-import { createCharacter } from '../db/repositories/characters'
+import { createCharacter, getCharacterById } from '../db/repositories/characters'
 import { createRegion } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listGuidedCreationMessagesByCharacter } from '../db/repositories/guidedCreationMessages'
@@ -190,6 +190,46 @@ describe('sendGuidedCreationMessage identity summary lock-in', () => {
     await sendGuidedCreationMessage(db, provider, { ...sendInput, message: 'Anything else?' })
 
     expect(readGuidedCreationFields(db, player.id)?.identityWho).toBe('Kael, a knight with a storied past.')
+  })
+})
+
+describe('sendGuidedCreationMessage Where starting region', () => {
+  it('persists currentRegionId when Where locks to a generated region', async () => {
+    const db = createTestDb()
+    const { campaign, player } = seedGuidedCampaign(db)
+    const region = createRegion(db, {
+      campaignId: campaign.id,
+      name: 'Blackmire',
+      description: 'A flooded fen.'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Blackmire it is — you begin among the reeds.',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: true, summary: 'Justice.' },
+          where: { complete: true, summary: 'Starts in Blackmire; grew up nearby.' },
+          what: { complete: true, summary: 'A fighter.' }
+        },
+        allFoundationsComplete: true,
+        startingRegionId: region.id
+      })
+    ])
+
+    const result = await sendGuidedCreationMessage(db, provider, {
+      campaignId: campaign.id,
+      characterId: player.id,
+      phase: 'identity',
+      message: 'I start in Blackmire.'
+    })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.allFoundationsComplete).toBe(true)
+    }
+    const updated = getCharacterById(db, player.id)
+    expect(updated).toBeTruthy()
+    expect((updated!.stats as { currentRegionId?: string }).currentRegionId).toBe(region.id)
   })
 })
 

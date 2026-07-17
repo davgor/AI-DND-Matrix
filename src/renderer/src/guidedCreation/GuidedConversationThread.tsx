@@ -1,6 +1,7 @@
 import type { GuidedCreationMessage } from '../../../shared/guidedCreation/types'
+import { useDmThinkingStatus } from './useDmThinkingStatus'
 
-export interface GuidedConversationThreadProps {
+interface GuidedConversationThreadProps {
   loading: boolean
   kickingOff: boolean
   messages: GuidedCreationMessage[]
@@ -10,14 +11,17 @@ export interface GuidedConversationThreadProps {
 }
 
 export function GuidedConversationThread(props: GuidedConversationThreadProps): JSX.Element {
+  const thinking = props.sending || props.kickingOff
+  const thinkingStatus = useDmThinkingStatus(thinking)
+  const showLoading = props.loading && props.messages.length === 0
+  const showIdleEmpty = !showLoading && props.messages.length === 0 && !thinking
+
   return (
     <div className="guided-conversation-thread panel-card" ref={props.threadRef}>
-      {props.loading ? (
+      {showLoading ? (
         <p className="guided-conversation-empty">Loading conversation…</p>
-      ) : props.messages.length === 0 ? (
-        <p className="guided-conversation-empty">
-          {props.kickingOff ? 'The DM is preparing your first question…' : 'Waiting for the DM…'}
-        </p>
+      ) : showIdleEmpty ? (
+        <p className="guided-conversation-empty">Waiting for the DM…</p>
       ) : (
         props.messages.map((message) => (
           <div
@@ -33,8 +37,10 @@ export function GuidedConversationThread(props: GuidedConversationThreadProps): 
           </div>
         ))
       )}
-      {props.sending || props.kickingOff ? (
-        <p className="guided-conversation-status">The DM is thinking…</p>
+      {thinkingStatus ? (
+        <p className="guided-conversation-status" aria-live="polite">
+          {thinkingStatus}
+        </p>
       ) : null}
       {props.error ? <p className="guided-conversation-error">{props.error}</p> : null}
     </div>

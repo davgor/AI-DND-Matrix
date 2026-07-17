@@ -17,7 +17,7 @@ function seedCampaign(db: ReturnType<typeof createTestDb>) {
     premisePrompt: 'A haunted marsh.',
     deathMode: 'legendary'
   })
-  createRegion(db, { campaignId: campaign.id, name: 'Oakhollow', description: 'A village.' })
+  const region = createRegion(db, { campaignId: campaign.id, name: 'Oakhollow', description: 'A village.' })
   createStoryThread(db, {
     campaignId: campaign.id,
     title: 'Main',
@@ -31,13 +31,13 @@ function seedCampaign(db: ReturnType<typeof createTestDb>) {
     kind: 'player',
     stats: { abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 } }
   })
-  return { campaign, player }
+  return { campaign, player, region }
 }
 
 describe('guided creation end-to-end smoke', () => {
   it('runs identity and opening-scene phases then allows play entry', async () => {
     const db = createTestDb()
-    const { campaign, player } = seedCampaign(db)
+    const { campaign, player, region } = seedCampaign(db)
     expect(canEnterPlay(player)).toBe(false)
     setGuidedCreationPhase(db, player.id, 'identity')
 
@@ -47,10 +47,11 @@ describe('guided creation end-to-end smoke', () => {
         foundations: {
           who: { complete: true, summary: 'Kael, a knight.' },
           why: { complete: true, summary: 'Justice.' },
-          where: { complete: true, summary: 'Oakhollow.' },
+          where: { complete: true, summary: 'Starts in Oakhollow.' },
           what: { complete: true, summary: 'Steadfast fighter.' }
         },
-        allFoundationsComplete: true
+        allFoundationsComplete: true,
+        startingRegionId: region.id
       })
     ])
     const identityResult = await sendGuidedCreationMessage(db, identityProvider, {

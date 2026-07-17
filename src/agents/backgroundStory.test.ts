@@ -39,6 +39,12 @@ describe('buildBackgroundStoryPrompt', () => {
     expect(prompt.toLowerCase()).toMatch(/two paragraph/)
   })
 
+  it('asks for plain English fantasy, not purple jargon', () => {
+    const prompt = buildBackgroundStoryPrompt(baseInput())
+    expect(prompt).toContain('standard English')
+    expect(prompt).toContain('fog-dwellers')
+  })
+
   it('includes player guidance when provided', () => {
     const prompt = buildBackgroundStoryPrompt(baseInput({ playerPrompt: 'Mention my old captain.' }))
     expect(prompt).toContain('Mention my old captain.')

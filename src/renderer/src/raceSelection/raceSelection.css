@@ -113,6 +113,13 @@
   resize: vertical;
 }
 
+.race-selection-autofit-textarea {
+  field-sizing: content;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  resize: none;
+}
+
 .race-selection-lore-field input {
   min-height: auto;
 }
