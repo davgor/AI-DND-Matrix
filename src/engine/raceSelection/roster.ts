@@ -7,13 +7,13 @@ export const RACE_ROSTER: RaceRosterEntry[] = [
     key: 'human',
     label: 'Human',
     category: 'common_folk',
-    seedPrompt: 'Adaptable, short-lived, ambitious; the most widespread and varied ancestry.'
+    seedPrompt: 'Adaptable, short-lived, and ambitious; the most widespread and varied ancestry.'
   },
   {
     key: 'elf',
     label: 'Elf',
     category: 'common_folk',
-    seedPrompt: 'Long-lived, graceful, magically attuned; deep ties to nature or high tradition.'
+    seedPrompt: 'Long-lived and graceful, often skilled with magic; deep ties to nature or high tradition.'
   },
   {
     key: 'half_elf',
@@ -25,7 +25,7 @@ export const RACE_ROSTER: RaceRosterEntry[] = [
     key: 'dwarf',
     label: 'Dwarf',
     category: 'common_folk',
-    seedPrompt: 'Stout, enduring mountain/underground folk; master smiths and stubborn traditionalists.'
+    seedPrompt: 'Stout folk of the mountains or underground; master smiths and stubborn traditionalists.'
   },
   {
     key: 'halfling',
@@ -61,49 +61,49 @@ export const RACE_ROSTER: RaceRosterEntry[] = [
     key: 'dragonborn',
     label: 'Dragonborn',
     category: 'outsider_bloodlines',
-    seedPrompt: 'Draconic humanoids with a breath weapon lineage, prideful and clan-honor driven.'
+    seedPrompt: 'Humanoids with dragon ancestry and a breath weapon; prideful and driven by clan honor.'
   },
   {
     key: 'genasi',
     label: 'Genasi / Elemental-touched',
     category: 'outsider_bloodlines',
-    seedPrompt: 'Bearer of elemental heritage (fire, water, air, earth) with a manifest trait.'
+    seedPrompt: 'People with elemental heritage (fire, water, air, or earth) and a visible trait of that element.'
   },
   {
     key: 'orc',
     label: 'Orc',
     category: 'monstrous_feral',
-    seedPrompt: 'Strong, fierce, honor- or clan-bound warriors often cast as outsiders.'
+    seedPrompt: 'Strong, fierce warriors bound by honor or clan, often cast as outsiders.'
   },
   {
     key: 'goliath',
     label: 'Goliath',
     category: 'monstrous_feral',
-    seedPrompt: 'Towering, mountain-dwelling folk built for endurance and competition.'
+    seedPrompt: 'Towering folk of the mountains, built for endurance and competition.'
   },
   {
     key: 'drow',
     label: 'Drow',
     category: 'monstrous_feral',
-    seedPrompt: 'Subterranean dark elves from a harsh, insular, often matriarchal society.'
+    seedPrompt: 'Dark elves from underground societies that are harsh, insular, and often matriarchal.'
   },
   {
     key: 'lizardfolk',
     label: 'Lizardfolk',
     category: 'monstrous_feral',
-    seedPrompt: 'Cold-blooded reptilian folk, pragmatic and survival-minded.'
+    seedPrompt: 'Cold-blooded reptilian folk; pragmatic and focused on survival.'
   },
   {
     key: 'kobold',
     label: 'Kobold',
     category: 'monstrous_feral',
-    seedPrompt: 'Small draconic-kin, communal, trap-clever, pack-minded.'
+    seedPrompt: 'Small folk with dragon ancestry; communal, clever with traps, and loyal to their pack.'
   },
   {
     key: 'beastfolk',
     label: 'Beastfolk',
     category: 'monstrous_feral',
-    seedPrompt: 'Animal-featured humanoids (varied) shaped by instinct and kinship.'
+    seedPrompt: 'Humanoids with animal features (varied), shaped by instinct and kinship.'
   },
   {
     key: 'fae',
@@ -121,7 +121,7 @@ export const RACE_ROSTER: RaceRosterEntry[] = [
     key: 'automaton',
     label: 'Automaton / Construct',
     category: 'uncanny_otherworldly',
-    seedPrompt: 'Artificial, awakened being of metal or clay seeking place and purpose.'
+    seedPrompt: 'An artificial being of metal or clay that has awakened and seeks a place and purpose.'
   }
 ]
 

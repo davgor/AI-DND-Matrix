@@ -29,17 +29,19 @@ export function meetsPremiseTropeDiversity(prose: string, premise: string): bool
 }
 
 export function meetsWorldTropeDiversity(world: GeneratedWorld, premise: string): boolean {
-  const prose = `${world.worldName}\n${world.worldSummary}\n${world.worldHistory}`
-  return meetsPremiseTropeDiversity(prose, premise)
+  // Check fields separately. Joining with a single `\n` merges adjacent
+  // paragraphs in splitParagraphs and can false-reject valid hyphen budgets.
+  return [world.worldName, world.worldSummary, world.worldHistory].every((prose) =>
+    meetsPremiseTropeDiversity(prose, premise)
+  )
 }
 
 export function meetsRegionTropeDiversity(region: GeneratedRegion, premise: string): boolean {
-  const prose = [
+  return [
     region.name,
     region.description,
     region.historyBackstory,
     region.recentHistory,
     ...region.potentialQuests
-  ].join('\n')
-  return meetsPremiseTropeDiversity(prose, premise)
+  ].every((prose) => meetsPremiseTropeDiversity(prose, premise))
 }

@@ -1,11 +1,12 @@
 import type { GuidedCreationSendMessageResult, GuidedMessagePhase } from '../../../shared/guidedCreation/types'
+import type { GuidedRefresh } from './guidedIdentityKickoff'
 
 export async function sendGuidedMessage(input: {
   campaignId: string
   characterId: string
   phase: GuidedMessagePhase
   message: string
-  refresh: () => Promise<void>
+  refresh: GuidedRefresh
   onStateChange?: () => void
 }): Promise<GuidedCreationSendMessageResult> {
   const result = await window.guidedCreation.sendMessage({
@@ -15,7 +16,7 @@ export async function sendGuidedMessage(input: {
     message: input.message
   })
   if (result.ok) {
-    await input.refresh()
+    await input.refresh({ silent: true })
     input.onStateChange?.()
   }
   return result

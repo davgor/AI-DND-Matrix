@@ -11,6 +11,11 @@ import {
 } from './guidedIdentity'
 import { createScriptedProvider } from './providers/mockHarness'
 
+const SAMPLE_REGIONS = [
+  { id: 'region-oak', name: 'Oakhollow', description: 'A quiet village.' },
+  { id: 'region-mire', name: 'Blackmire', description: 'A flooded fen.' }
+]
+
 const IDENTITY_INTERVIEW_CONTEXT = {
   campaignPremise: 'A flooded kingdom.',
   characterName: 'Kael',
@@ -28,6 +33,7 @@ const IDENTITY_INTERVIEW_CONTEXT = {
   backgroundLabel: null,
   backgroundDescription: null,
   backgroundStory: null,
+  regions: SAMPLE_REGIONS,
   transcript: [] as Array<{ role: 'player' | 'dm'; content: string }>,
   currentFoundations: defaultIdentityFoundations()
 }
@@ -67,13 +73,16 @@ describe('runIdentityInterviewKickoff', () => {
       raceLore: IDENTITY_INTERVIEW_CONTEXT.raceLore,
       backgroundLabel: IDENTITY_INTERVIEW_CONTEXT.backgroundLabel,
       backgroundDescription: IDENTITY_INTERVIEW_CONTEXT.backgroundDescription,
-      backgroundStory: IDENTITY_INTERVIEW_CONTEXT.backgroundStory
+      backgroundStory: IDENTITY_INTERVIEW_CONTEXT.backgroundStory,
+      regions: IDENTITY_INTERVIEW_CONTEXT.regions
     })
     expect(result.dmReply.toLowerCase()).toContain('who')
     const systemPrompt = provider.calls[0]?.context?.systemPrompt ?? ''
     expect(systemPrompt).toContain('Kael')
     expect(systemPrompt).toContain('Elf')
     expect(systemPrompt).toContain('lawful_good')
+    expect(systemPrompt).toContain('Oakhollow')
+    expect(systemPrompt).toContain('Blackmire')
     expect(provider.calls[0]?.context?.maxTokens).toBe(768)
   })
 })
@@ -101,7 +110,8 @@ describe('runIdentityInterviewKickoff background context', () => {
       raceLore: IDENTITY_INTERVIEW_CONTEXT.raceLore,
       backgroundLabel: 'Soldier',
       backgroundDescription: 'You served in an army.',
-      backgroundStory: 'I marched on the northern border.'
+      backgroundStory: 'I marched on the northern border.',
+      regions: IDENTITY_INTERVIEW_CONTEXT.regions
     })
     const systemPrompt = provider.calls[0]?.context?.systemPrompt ?? ''
     expect(systemPrompt).toContain('Soldier')
@@ -121,6 +131,8 @@ describe('runIdentityInterviewTurn', () => {
     expect(systemPrompt).toContain('Kael')
     expect(systemPrompt).toContain('Elf')
     expect(systemPrompt).toContain('lawful_good')
+    expect(systemPrompt).toContain('Oakhollow')
+    expect(systemPrompt).toContain('which of these generated regions')
     expect(provider.calls[0]?.context?.maxTokens).toBe(768)
   })
 
@@ -148,6 +160,57 @@ describe('runIdentityInterviewTurn', () => {
     const provider = createScriptedProvider(['bad', 'still bad', 'nope'])
     await expect(runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'x')).rejects.toThrow()
     expect(provider.calls).toHaveLength(MAX_SCHEMA_ATTEMPTS)
+  })
+})
+
+describe('runIdentityInterviewTurn starting region', () => {
+  it('accepts startingRegionId when Where locks to a listed region', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Oakhollow it is.',
+        foundations: {
+          who: { complete: true, summary: 'Kael' },
+          why: { complete: true, summary: 'Justice' },
+          where: { complete: true, summary: 'Starts in Oakhollow; grew up nearby.' },
+          what: { complete: true, summary: 'Fighter' }
+        },
+        allFoundationsComplete: true,
+        startingRegionId: 'region-oak'
+      })
+    ])
+    const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'Oakhollow.')
+    expect(result.startingRegionId).toBe('region-oak')
+    expect(result.foundations.where.complete).toBe(true)
+  })
+
+  it('retries when Where completes without a valid startingRegionId', async () => {
+    const valid = JSON.stringify({
+      dmReply: 'Oakhollow it is.',
+      foundations: {
+        who: { complete: true, summary: 'Kael' },
+        why: { complete: true, summary: 'Justice' },
+        where: { complete: true, summary: 'Starts in Oakhollow.' },
+        what: { complete: true, summary: 'Fighter' }
+      },
+      allFoundationsComplete: true,
+      startingRegionId: 'region-oak'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Somewhere.',
+        foundations: {
+          who: { complete: true, summary: 'Kael' },
+          why: { complete: true, summary: 'Justice' },
+          where: { complete: true, summary: 'A distant land.' },
+          what: { complete: true, summary: 'Fighter' }
+        },
+        allFoundationsComplete: true
+      }),
+      valid
+    ])
+    const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'Far away.')
+    expect(result.startingRegionId).toBe('region-oak')
+    expect(provider.calls).toHaveLength(2)
   })
 })
 

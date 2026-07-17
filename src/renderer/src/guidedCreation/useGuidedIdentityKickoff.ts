@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { GuidedCreationState, GuidedMessagePhase } from '../../../shared/guidedCreation/types'
+import type { GuidedRefresh } from './guidedIdentityKickoff'
 import { runIdentityKickoffEffect } from './runIdentityKickoffEffect'
 
 export function useGuidedIdentityKickoff(input: {
@@ -10,7 +11,7 @@ export function useGuidedIdentityKickoff(input: {
   kickingOff: boolean
   sending: boolean
   state: GuidedCreationState | null
-  refresh: () => Promise<void>
+  refresh: GuidedRefresh
   setKickingOff: (value: boolean) => void
   setError: (value: string | null) => void
   onStateChange?: () => void

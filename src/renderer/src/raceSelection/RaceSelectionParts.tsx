@@ -60,6 +60,7 @@ export function LoreField(props: {
       <label>{props.label}</label>
       {props.multiline ? (
         <textarea
+          className="race-selection-autofit-textarea"
           value={props.value}
           disabled={!props.editable}
           onChange={(event) => props.onChange(event.target.value)}

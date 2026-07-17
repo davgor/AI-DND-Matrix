@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { IdentityInterviewContext } from '../agents/guidedIdentity'
 import type { Character } from '../db/repositories/characters'
+import { listRegionsByCampaign } from '../db/repositories/regions'
 import type { IdentityFoundationsStatus } from '../shared/guidedCreation/types'
 import { resolveCharacterBackgroundContext, resolveCharacterRaceContext } from './guidedCreationIdentity'
 
@@ -26,6 +27,11 @@ export function buildIdentityInterviewAgentContext(
     input.character.backgroundKey,
     input.character.backgroundStory
   )
+  const regions = listRegionsByCampaign(input.db, input.campaignId).map((region) => ({
+    id: region.id,
+    name: region.name,
+    description: region.description
+  }))
   return {
     campaignPremise: input.campaignPremise,
     characterName: input.character.name,
@@ -37,6 +43,7 @@ export function buildIdentityInterviewAgentContext(
     backgroundLabel: backgroundContext.backgroundLabel,
     backgroundDescription: backgroundContext.backgroundDescription,
     backgroundStory: backgroundContext.backgroundStory,
+    regions,
     transcript: input.transcript,
     currentFoundations: input.currentFoundations
   }

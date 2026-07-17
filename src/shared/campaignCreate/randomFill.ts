@@ -84,12 +84,12 @@ const PREMISE_TEMPLATES = [
 const PREMISE_TONES = ['grim', 'mysterious', 'volatile', 'decaying', 'hopeful', 'lawless'] as const
 const PREMISE_SETTINGS = [
   'river kingdom',
-  'salt-crusted port',
+  'busy salt port',
   'mountain pass',
   'border duchy',
   'ruined monastery',
   'mining colony',
-  'fogbound marsh',
+  'foggy marsh',
   'desert caravan city'
 ] as const
 const PREMISE_HOOKS = [
@@ -129,14 +129,14 @@ const RESPAWN_LOCATIONS = [
 ] as const
 
 const REGION_SEED_PLACES = [
-  'mist-laced fishing village',
+  'misty fishing village',
   'cliffside observatory',
   'abandoned toll fort',
   'orchard valley with buried standing stones',
   'smuggler cove',
   'glassblower district',
   'sunken amphitheater',
-  'wind-scoured plateau monastery'
+  'windswept plateau monastery'
 ] as const
 
 const REGION_SEED_MOODS = [

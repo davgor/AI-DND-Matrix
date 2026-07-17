@@ -40,7 +40,7 @@ export function CharacterSetupCoreFields(props: {
         <input
           type="text"
           value={setup.name}
-          placeholder="e.g. Kael Thornwick"
+          placeholder="e.g. Tomas Reed"
           autoComplete="off"
           onChange={(event) => setup.setName(event.target.value)}
         />
