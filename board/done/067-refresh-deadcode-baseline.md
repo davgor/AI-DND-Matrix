@@ -4,7 +4,7 @@
 
 ## Acceptance criteria
 
-- [ ] Same-module-only dead exports unexported where safe (`IdentityRegionOption`, guided conversation props/constants)
-- [ ] `.tsprune-ignore` refreshed to current `ts-prune` findings for `tsconfig.node.json` + `tsconfig.web.json`
-- [ ] `npm run deadcode` exits 0
-- [ ] `npm test`, `npm run lint`, and `npm run build` pass
+- [x] Same-module-only dead exports unexported where safe (`IdentityRegionOption`, guided conversation props/constants); unused `latestDmReply` removed
+- [x] `.tsprune-ignore` refreshed to current `ts-prune` findings for `tsconfig.node.json` + `tsconfig.web.json`
+- [x] `npm run deadcode` exits 0
+- [x] `npm test`, `npm run lint`, and `npm run build` pass

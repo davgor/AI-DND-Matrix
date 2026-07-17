@@ -10,11 +10,6 @@ export function shouldDisableGuidedInput(sending: boolean, phaseComplete: boolea
   return sending || phaseComplete
 }
 
-function latestDmReply(messages: GuidedCreationMessage[]): string | null {
-  const dmMessages = messages.filter((message) => message.role === 'dm')
-  return dmMessages.at(-1)?.content ?? null
-}
-
 /** Cycles `.` → `..` → `...` → `....` → repeat for the DM thinking status line. */
 export function dmThinkingStatusLabel(frame: number): string {
   const dots = (Math.floor(frame) % DM_THINKING_ELLIPSIS_FRAMES) + 1
