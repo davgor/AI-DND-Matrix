@@ -10,7 +10,7 @@ import type { useGuidedRefresh } from './useGuidedRefresh'
 
 type GuidedState = ReturnType<typeof useGuidedRefresh>['state']
 
-export interface GuidedConversationActionsInput {
+interface GuidedConversationActionsInput {
   campaignId: string
   characterId: string
   phase: GuidedMessagePhase

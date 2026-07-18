@@ -11,7 +11,7 @@ export function shouldDisableGuidedInput(sending: boolean, phaseComplete: boolea
 }
 
 /** Cycles `.` → `..` → `...` → `....` → repeat after a busy prefix. */
-export function ellipsisBusyLabel(prefix: string, frame: number): string {
+function ellipsisBusyLabel(prefix: string, frame: number): string {
   const dots = (Math.floor(frame) % BUSY_ELLIPSIS_FRAMES) + 1
   return `${prefix}${'.'.repeat(dots)}`
 }

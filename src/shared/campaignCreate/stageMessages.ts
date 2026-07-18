@@ -6,14 +6,6 @@ import {
 } from './types'
 
 export const CREATE_STAGE_GOOFY_MESSAGES: Record<CreateCampaignStage, readonly string[]> = {
-  world: [
-    'Arguing with the geography committee…',
-    'Teaching dragons which way is north…',
-    'Sketching continents on a napkin…',
-    'Rolling for divine favor…',
-    'Convincing tectonic plates to cooperate…',
-    'Asking the stars to pick a theme…'
-  ],
   canon: [
     'Checking if this world already has a map…',
     'Asking the lore librarians for names…',
@@ -21,6 +13,22 @@ export const CREATE_STAGE_GOOFY_MESSAGES: Record<CreateCampaignStage, readonly s
     'Matching the premise to remembered kingdoms…',
     'Looking up famous locals (politely)…',
     'Consulting the setting concordance…'
+  ],
+  pantheon: [
+    'Counting temple seats for quarrelsome gods…',
+    'Negotiating with forgotten deities…',
+    'Sorting major and minor miracles…',
+    'Naming powers the maps forgot…',
+    'Arguing about domains over tea…',
+    'Dusting off lost cults…'
+  ],
+  world: [
+    'Arguing with the geography committee…',
+    'Teaching dragons which way is north…',
+    'Sketching continents on a napkin…',
+    'Rolling for divine favor…',
+    'Convincing tectonic plates to cooperate…',
+    'Asking the stars to pick a theme…'
   ],
   regions: [
     'Drawing borders nobody will respect…',
@@ -73,10 +81,12 @@ export function buildCreateProgress(stage: CreateCampaignStage): CreateCampaignP
 
 export function mapCreateStageToPlayerMessage(stage: CreateCampaignStage | null): string {
   switch (stage) {
-    case 'world':
-      return 'Imagining your world'
     case 'canon':
       return 'Recalling known places and people'
+    case 'pantheon':
+      return 'Assembling the pantheon'
+    case 'world':
+      return 'Imagining your world'
     case 'regions':
       return 'Shaping regions'
     case 'npcs':
@@ -92,10 +102,12 @@ export function mapCreateStageToPlayerMessage(stage: CreateCampaignStage | null)
 
 export function mapCreateStageTraceLabel(stage: CreateCampaignStage): string {
   switch (stage) {
-    case 'world':
-      return 'World'
     case 'canon':
       return 'Canon'
+    case 'pantheon':
+      return 'Pantheon'
+    case 'world':
+      return 'World'
     case 'regions':
       return 'Regions'
     case 'npcs':

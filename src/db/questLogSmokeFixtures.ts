@@ -1,9 +1,10 @@
 import type { CampaignGenerationResult } from '../agents/campaignGeneration/types'
 
-import { VALID_WORLD } from '../agents/campaignGeneration/fixtures'
+import { VALID_PANTHEON, VALID_WORLD } from '../agents/campaignGeneration/fixtures'
 
 export const QUEST_SMOKE_GENERATION: CampaignGenerationResult = {
   world: VALID_WORLD,
+  pantheon: VALID_PANTHEON,
   regions: [
     {
       name: 'Millbrook',

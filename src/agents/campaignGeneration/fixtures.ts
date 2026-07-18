@@ -68,14 +68,64 @@ export const EMPTY_CANON_RESPONSE = JSON.stringify({
   recognizedSetting: false,
   settingLabel: '',
   knownPlaces: [],
-  knownCharacters: []
+  knownCharacters: [],
+  knownDeities: []
 })
 
 export const SHIELD_HERO_CANON = {
   recognizedSetting: true,
   settingLabel: 'The Rising of the Shield Hero',
   knownPlaces: ['Melromarc', 'Siltvelt'],
-  knownCharacters: ['Raphtalia', 'Naofumi Iwatani', 'Filo']
+  knownCharacters: ['Raphtalia', 'Naofumi Iwatani', 'Filo'],
+  knownDeities: ['The Three Heroes', 'Ost Hero', 'The Guardian Heroes']
+}
+
+function makeDeity(
+  name: string,
+  options: { forgotten?: boolean; domains?: string[]; epithet?: string } = {}
+) {
+  return {
+    name,
+    epithet: options.epithet ?? '',
+    domains: options.domains ?? ['fate'],
+    tenets: [`Honor ${name}`, `Remember ${name} in quiet hours`],
+    blurb: `${name} is a power whose shrines still shape local custom.`,
+    isForgotten: options.forgotten ?? false
+  }
+}
+
+/** Valid 8-deity pantheon for scripted providers (2 forgotten). */
+export const VALID_PANTHEON = {
+  pantheonSummary:
+    'Faith here is a bargain between living temples and ruin chapels. Major cults argue over oaths and wreck rights while quieter shrines keep older names.\n\nAt least two powers are forgotten — remembered only in cracked idols and tide-marked graves.\n\nPriests still warn travelers which names to speak aloud after dark.',
+  deities: [
+    makeDeity('Vhalor', { epithet: 'the Drowned Judge', domains: ['death', 'tides'] }),
+    makeDeity('Sereth', { forgotten: true, epithet: 'the Hollow Flame', domains: ['fire'] }),
+    makeDeity('Kaelen', { domains: ['harvest'] }),
+    makeDeity('Mirath', { domains: ['knowledge'] }),
+    makeDeity('Thorn', { domains: ['trickery'] }),
+    makeDeity('Belwyn', { forgotten: true, domains: ['hearth'] }),
+    makeDeity('Orrin', { domains: ['storms'] }),
+    makeDeity('Lirae', { domains: ['war'] })
+  ]
+}
+
+export const VALID_PANTHEON_RESPONSE = JSON.stringify(VALID_PANTHEON)
+
+/** Shield Hero–shaped pantheon preferring knownDeities names. */
+export const SHIELD_HERO_PANTHEON = {
+  pantheonSummary:
+    'Melromarc’s state faith elevates the Three Heroes while quieter cults remember older guardians. Wave after wave reshapes who is called holy.\n\nOst Hero and the Guardian Heroes still appear in oaths and festival plays.\n\nForgotten names cling to ruined churches the crown no longer funds.',
+  deities: [
+    makeDeity('The Three Heroes', { domains: ['heroism', 'order'] }),
+    makeDeity('Ost Hero', { domains: ['salvation'] }),
+    makeDeity('The Guardian Heroes', { domains: ['protection'] }),
+    makeDeity('Wave Saint', { domains: ['calamity'] }),
+    makeDeity('Filolial Matron', { domains: ['kinship'] }),
+    makeDeity('Queen’s Chapel', { domains: ['crown'] }),
+    makeDeity('Ashen Cardinal', { forgotten: true, domains: ['heresy'] }),
+    makeDeity('Silent Shield', { forgotten: true, domains: ['exile'] })
+  ]
 }
 
 /** Common live-model world shape: snake_case keys and double-newline paragraph breaks. */
@@ -123,7 +173,11 @@ export function buildCrimsonReachCascadingResponses(input: {
     makeRegion('Kingdom of Granary Pass', 'frost'),
     makeRegion('Deadface Marches', 'bandit')
   ].slice(0, input.regionCount)
-  const responses: string[] = [JSON.stringify(CRIMSON_REACH_LLM_WORLD), EMPTY_CANON_RESPONSE]
+  const responses: string[] = [
+    EMPTY_CANON_RESPONSE,
+    VALID_PANTHEON_RESPONSE,
+    JSON.stringify(CRIMSON_REACH_LLM_WORLD)
+  ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
   for (const region of regions) {
@@ -155,8 +209,9 @@ export function buildRealisticLlmCascadingSeedResponses(input: {
     makeRegion('Windward Marches', 'frost')
   ].slice(0, input.regionCount)
   const responses: string[] = [
-    `\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``,
-    EMPTY_CANON_RESPONSE
+    EMPTY_CANON_RESPONSE,
+    VALID_PANTHEON_RESPONSE,
+    `\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``
   ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
@@ -192,7 +247,9 @@ export function buildCascadingSeedResponses(input: {
     settingLabel: string
     knownPlaces: string[]
     knownCharacters: string[]
+    knownDeities?: string[]
   }
+  pantheon?: typeof VALID_PANTHEON
 }): string[] {
   const regions =
     input.regions ??
@@ -208,10 +265,16 @@ export function buildCascadingSeedResponses(input: {
     recognizedSetting: false,
     settingLabel: '',
     knownPlaces: [] as string[],
-    knownCharacters: [] as string[]
+    knownCharacters: [] as string[],
+    knownDeities: [] as string[]
   }
+  const pantheonPayload = input.pantheon ?? VALID_PANTHEON
 
-  const responses: string[] = [JSON.stringify(VALID_WORLD), JSON.stringify(canonPayload)]
+  const responses: string[] = [
+    JSON.stringify(canonPayload),
+    JSON.stringify(pantheonPayload),
+    JSON.stringify(VALID_WORLD)
+  ]
   responses.push(JSON.stringify({ regions }))
   for (const region of regions) {
     const npcTemplates = makeNpcs(region.name, region.name.slice(0, 4))
@@ -233,7 +296,11 @@ export function buildShieldHeroCascadingSeedResponses(input: {
     makeRegion('Siltvelt', 'beast')
   ].slice(0, input.regionCount)
   const characterNames = ['Raphtalia', 'Naofumi Iwatani', 'Filo', 'Motoyasu Kitamura', 'Itsuki Kawasumi', 'Ren Amaki']
-  const responses: string[] = [JSON.stringify(VALID_WORLD), JSON.stringify(SHIELD_HERO_CANON)]
+  const responses: string[] = [
+    JSON.stringify(SHIELD_HERO_CANON),
+    JSON.stringify(SHIELD_HERO_PANTHEON),
+    JSON.stringify(VALID_WORLD)
+  ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
   for (const region of regions) {

@@ -12,6 +12,7 @@ import { touchLastPlayed } from './sessions'
 import { createStoryThread } from './storyThreads'
 import { createWorldFact } from './worldFacts'
 import { createCampaignRace } from './campaignRaces'
+import { createDeity } from './deities'
 import { deleteCampaignCascade } from './deleteCampaign'
 
 const SAMPLE_RACE_LORE = {
@@ -59,6 +60,19 @@ function countForCampaign(db: ReturnType<typeof createTestDb>, table: string, ca
   return row.count
 }
 
+function seedDeityForCampaign(db: ReturnType<typeof createTestDb>, campaignId: string, label: string): void {
+  createDeity(db, {
+    campaignId,
+    name: `${label} God`,
+    epithet: 'the Tested',
+    domains: ['trials'],
+    tenets: ['Endure', 'Witness'],
+    blurb: 'A test deity.',
+    isForgotten: false,
+    sortOrder: 0
+  })
+}
+
 function seedCampaignFootprint(db: ReturnType<typeof createTestDb>, label: string) {
   const campaign = createCampaign(db, {
     name: label,
@@ -96,6 +110,7 @@ function seedCampaignFootprint(db: ReturnType<typeof createTestDb>, label: strin
     lore: SAMPLE_RACE_LORE,
     createdByCharacterId: character.id
   })
+  seedDeityForCampaign(db, campaign.id, label)
   createSaveSnapshot(db, campaign.id)
   createWorldFact(db, { campaignId: campaign.id, content: 'Fact', regionId: region.id })
   createStoryThread(db, { campaignId: campaign.id, title: 'Thread', state: 'open' })
@@ -115,7 +130,8 @@ function expectCampaignFullyDeleted(db: ReturnType<typeof createTestDb>, campaig
     'story_threads',
     'events',
     'sessions',
-    'campaign_races'
+    'campaign_races',
+    'deities'
   ]) {
     expect(countForCampaign(db, table, campaignId)).toBe(0)
   }
@@ -137,6 +153,7 @@ describe('deleteCampaignCascade', () => {
     expect(getCampaignById(db, other.id)?.name).toBe('Other')
     expect(countForCampaign(db, 'characters', other.id)).toBe(1)
     expect(countForCampaign(db, 'campaign_races', other.id)).toBe(1)
+    expect(countForCampaign(db, 'deities', other.id)).toBe(1)
   })
 
   it('succeeds when foreign keys are enforced (post-migration connection state)', () => {
@@ -147,6 +164,7 @@ describe('deleteCampaignCascade', () => {
     expect(() => deleteCampaignCascade(db, target.id)).not.toThrow()
     expect(getCampaignById(db, target.id)).toBeUndefined()
     expect(countForCampaign(db, 'campaign_races', target.id)).toBe(0)
+    expect(countForCampaign(db, 'deities', target.id)).toBe(0)
   })
 
   it('rolls back when a forced mid-delete failure occurs', () => {
@@ -165,5 +183,6 @@ describe('deleteCampaignCascade', () => {
     expect(countForCampaign(db, 'characters', target.id)).toBe(1)
     expect(countForCampaign(db, 'events', target.id)).toBe(1)
     expect(countForCampaign(db, 'campaign_races', target.id)).toBe(1)
+    expect(countForCampaign(db, 'deities', target.id)).toBe(1)
   })
 })

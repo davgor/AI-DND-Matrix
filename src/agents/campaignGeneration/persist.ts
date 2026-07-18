@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import { resolveOrRealizeCampaignRace } from '../raceLore'
 import { createCampaign, type Campaign } from '../../db/repositories/campaigns'
+import { createDeity } from '../../db/repositories/deities'
 import { createNpcWithCombatReview } from '../../db/repositories/npcCombatHydration'
 import { createRegion } from '../../db/repositories/regions'
 import { createRegionHistoryEntry } from '../../db/repositories/regionHistory'
@@ -15,6 +16,7 @@ import type {
   CampaignGenerationResult,
   CampaignSetupInput,
   GeneratedNpc,
+  GeneratedPantheon,
   GeneratedRegion,
   PersistRegionWithNpcsInput
 } from './types'
@@ -162,6 +164,25 @@ async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput
   }
 }
 
+function persistGeneratedPantheon(
+  db: Database.Database,
+  campaignId: string,
+  pantheon: GeneratedPantheon
+): void {
+  for (const [index, deity] of pantheon.deities.entries()) {
+    createDeity(db, {
+      campaignId,
+      name: deity.name,
+      epithet: deity.epithet,
+      domains: deity.domains,
+      tenets: deity.tenets,
+      blurb: deity.blurb,
+      isForgotten: deity.isForgotten,
+      sortOrder: index
+    })
+  }
+}
+
 export async function persistGeneratedCampaign(
   db: Database.Database,
   provider: Provider,
@@ -175,8 +196,11 @@ export async function persistGeneratedCampaign(
     respawnRules: input.respawnRules ?? null,
     worldName: generation.world.worldName,
     worldSummary: generation.world.worldSummary,
-    worldHistory: generation.world.worldHistory
+    worldHistory: generation.world.worldHistory,
+    pantheonSummary: generation.pantheon.pantheonSummary
   })
+
+  persistGeneratedPantheon(db, campaign.id, generation.pantheon)
 
   const regionIdsByName = persistGeneratedRegionsWithQuests(db, campaign.id, generation.regions)
   await persistCampaignNpcsFromGeneration({

@@ -26,7 +26,7 @@ export interface OpeningSceneContext {
   currentOpeningScene: string | null
 }
 
-export type OpeningSceneKickoffContext = Omit<OpeningSceneContext, 'transcript'>
+type OpeningSceneKickoffContext = Omit<OpeningSceneContext, 'transcript'>
 
 export interface OpeningSceneResponse {
   dmReply: string

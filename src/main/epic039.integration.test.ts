@@ -60,7 +60,8 @@ describe('epic 039 review gates', () => {
       npcs: [],
       regionExtras: [],
       storyThreads: [],
-      characters: []
+      characters: [],
+      deities: []
     }
     expect(getCampaignReviewContinueBlockers(detail)).toContain('no-npcs')
 
@@ -109,7 +110,8 @@ describe('epic 039 play gate', () => {
       npcs: [{ id: 'n1', campaignId: campaign.id, regionId: regionA.id, name: 'Mira' } as never],
       regionExtras: [],
       storyThreads: [],
-      characters: []
+      characters: [],
+      deities: []
     }
     expect(getCampaignPlayBlockers(blocked)).toHaveLength(1)
     expect(canEnterCampaignPlay(blocked)).toBe(false)

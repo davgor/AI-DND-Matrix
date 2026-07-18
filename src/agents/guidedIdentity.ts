@@ -17,7 +17,7 @@ export const IDENTITY_TRANSCRIPT_WINDOW = 5
 const IDENTITY_REPLY_MAX_TOKENS = 384
 
 /** Shared style rules so kickoff and interview turns stay short and question-led. */
-export const IDENTITY_DM_REPLY_STYLE_RULES = [
+const IDENTITY_DM_REPLY_STYLE_RULES = [
   'dmReply must be concise: briefly acknowledge if needed, then ask one clear question that prompts the player to answer.',
   'Do not restate locked foundation summaries in dmReply — neither verbatim nor as purple paraphrase. Summaries belong only in the foundations JSON fields.',
   'Avoid florid restatements like "Your Why surges…" or epic word-salad. Plain, conversational English.',

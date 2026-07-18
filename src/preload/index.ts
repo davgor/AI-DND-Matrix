@@ -9,6 +9,7 @@ import type {
   DeleteNpcInput,
   EditWorldHistoryInput,
   EditWorldSummaryInput,
+  EditPantheonSummaryInput,
   GenerateRegionInput,
   GenerateNpcInput
 } from '../main/campaignEditIpc'
@@ -88,6 +89,8 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:deleteRegion', input),
   editWorldSummary: (input: EditWorldSummaryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldSummary', input),
+  editPantheonSummary: (input: EditPantheonSummaryInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editPantheonSummary', input),
   editWorldHistory: (input: EditWorldHistoryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldHistory', input),
   editNpcDisposition: (input: EditNpcDispositionInput): Promise<CampaignDetail> =>

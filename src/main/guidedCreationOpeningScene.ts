@@ -34,8 +34,6 @@ import { resolveOpeningSceneForReady } from '../shared/guidedCreation/resolveOpe
 import { abilityScoresFromCharacter } from './guidedCreationAgentContext'
 import { resolveCharacterBackgroundContext, resolveCharacterRaceContext } from './guidedCreationIdentity'
 
-export { resolveOpeningSceneForReady }
-
 export function persistOpeningSceneTurn(
   db: Database.Database,
   input: GuidedCreationSendMessageInput,
@@ -82,7 +80,7 @@ export function persistOpeningSceneTurn(
   }
 }
 
-export function buildOpeningSceneIdentity(
+function buildOpeningSceneIdentity(
   fields: CharacterGuidedCreationFields,
   raceContext: { raceName: string | null; raceLore: RaceLore | null },
   backgroundContext: {

@@ -61,7 +61,7 @@ for (const root of SCAN_ROOTS) {
     for (const rule of BANNED) {
       if (rule.pattern.test(text)) {
         if (rel.replaceAll('\\', '/') === 'package.json' && rule.label === 'D&D brand') {
-          if (!/"productName":\s*"AI TTRPG Matrix"/.test(text)) {
+          if (!/"productName":\s*"AI-TTRPG"/.test(text)) {
             violations.push({ file: rel, rule: rule.label })
           }
           if (/"description":[^]*D&D/.test(text)) {

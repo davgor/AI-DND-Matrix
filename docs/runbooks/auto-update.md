@@ -8,8 +8,8 @@ CI builds with `electron-builder --publish never` (artifacts only). The deploy w
 
 | Artifact | Auto-update | GitHub Release |
 |----------|-------------|----------------|
-| `AI TTRPG Matrix-Setup-x.y.z.exe` (NSIS) | Yes — background poll/download + **silent** install on quit or “Restart now” | Yes |
-| `AI TTRPG Matrix-x.y.z-Portable.exe` | No — manual download only | Yes |
+| `AI-TTRPG-Setup-x.y.z.exe` (NSIS) | Yes — background poll/download + **silent** install on quit or “Restart now” | Yes |
+| `AI-TTRPG-x.y.z-Portable.exe` | No — manual download only | Yes |
 
 Install the **Setup** build for automatic updates. Keep the portable build for users who want a single file without installing.
 

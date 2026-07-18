@@ -17,7 +17,8 @@ function playableDetail(): CampaignDetail {
     npcs: [{ id: 'n1', regionId: 'r1' } as CampaignDetail['npcs'][number]],
     regionExtras: [],
     storyThreads: [],
-    characters: []
+    characters: [],
+    deities: []
   }
 }
 

@@ -9,12 +9,14 @@ import {
 import {
   isValidAdditionalRegionResult,
   isValidCanonRecall,
+  isValidGeneratedPantheon,
   isValidGeneratedSingleNpcResult,
   isValidGeneratedWorld,
   isValidGenerationResult,
   needsNpcTopUp,
   nextPreferredCanonName,
   normalizeCanonRecall,
+  normalizeGeneratedPantheon,
   normalizeGeneratedWorld,
   normalizeRegionsGeneration,
   normalizeStoryThreadGeneration,
@@ -25,6 +27,7 @@ import {
 import {
   buildAdditionalRegionPrompt,
   buildCanonRecallPrompt,
+  buildPantheonGenerationPrompt,
   buildRegionsGenerationPrompt,
   buildSingleNpcPrompt,
   buildStoryThreadGenerationPrompt,
@@ -49,7 +52,9 @@ import type {
   CampaignGenerationResult,
   CanonRecall,
   CampaignSetupInput,
+  GeneratedDeity,
   GeneratedNpc,
+  GeneratedPantheon,
   GeneratedRegion,
   GeneratedSingleNpcResult,
   GeneratedStoryThread,
@@ -69,6 +74,7 @@ export * from './worldSummaryRegen'
 
 const WORLD_MAX_TOKENS = 8192
 const CANON_MAX_TOKENS = 2048
+const PANTHEON_MAX_TOKENS = 8192
 const REGIONS_MAX_TOKENS = 8192
 const STORY_THREAD_MAX_TOKENS = 2048
 const ADDITIONAL_REGION_MAX_TOKENS = 10240
@@ -95,11 +101,12 @@ async function generateWithRetries<T>(input: {
 
 export async function generateCampaignWorld(
   provider: Provider,
-  premisePrompt: string
+  premisePrompt: string,
+  pantheon?: GeneratedPantheon
 ): Promise<GeneratedWorld> {
   return generateWithRetries({
     provider,
-    buildPrompt: () => buildWorldGenerationPrompt(premisePrompt),
+    buildPrompt: () => buildWorldGenerationPrompt(premisePrompt, pantheon),
     maxTokens: WORLD_MAX_TOKENS,
     normalize: normalizeGeneratedWorld,
     isValid: (world) => isValidGeneratedWorld(world) && meetsWorldTropeDiversity(world, premisePrompt),
@@ -109,11 +116,12 @@ export async function generateCampaignWorld(
 
 /**
  * Soft stage: malformed recall falls back to empty lists so original premises never abort.
+ * World context is optional so canon can run before world/pantheon.
  */
 export async function generateCanonRecall(
   provider: Provider,
   premisePrompt: string,
-  world: GeneratedWorld
+  world?: GeneratedWorld
 ): Promise<CanonRecall> {
   try {
     return await generateWithRetries({
@@ -127,6 +135,21 @@ export async function generateCanonRecall(
   } catch {
     return EMPTY_CANON_RECALL
   }
+}
+
+export async function generateCampaignPantheon(
+  provider: Provider,
+  premisePrompt: string,
+  canon: CanonRecall = EMPTY_CANON_RECALL
+): Promise<GeneratedPantheon> {
+  return generateWithRetries({
+    provider,
+    buildPrompt: () => buildPantheonGenerationPrompt(premisePrompt, canon),
+    maxTokens: PANTHEON_MAX_TOKENS,
+    normalize: normalizeGeneratedPantheon,
+    isValid: isValidGeneratedPantheon,
+    errorMessage: 'DM agent did not return a valid pantheon schema after retries'
+  })
 }
 
 export async function generateCampaignRegions(input: {
@@ -156,12 +179,21 @@ export async function generateCampaignRegions(input: {
 export async function generateCampaignStoryThread(
   provider: Provider,
   premisePrompt: string,
-  world: GeneratedWorld,
-  regions: GeneratedRegion[]
+  input: {
+    world: GeneratedWorld
+    regions: GeneratedRegion[]
+    deities?: GeneratedDeity[]
+  }
 ): Promise<GeneratedStoryThread> {
   const storyThread = await generateWithRetries({
     provider,
-    buildPrompt: () => buildStoryThreadGenerationPrompt(premisePrompt, world, regions),
+    buildPrompt: () =>
+      buildStoryThreadGenerationPrompt(
+        premisePrompt,
+        input.world,
+        input.regions,
+        input.deities ?? []
+      ),
     maxTokens: STORY_THREAD_MAX_TOKENS,
     normalize: normalizeStoryThreadGeneration,
     isValid: (thread) =>
@@ -183,6 +215,7 @@ interface ShortfallFillContext {
   worldContext: WorldContext
   availableRaces: AvailableRaceOption[]
   canon: CanonRecall
+  deities: GeneratedDeity[]
 }
 
 /**
@@ -213,7 +246,8 @@ async function generateShortfallNpc(
       availableRaces: ctx.availableRaces,
       worldContext: ctx.worldContext,
       canon: ctx.canon,
-      preferredCanonName
+      preferredCanonName,
+      deities: ctx.deities
     })
     return generated.npc
   } catch {
@@ -301,7 +335,8 @@ async function fillCampaignNpcShortfall(input: {
     premisePrompt,
     worldContext: world,
     availableRaces,
-    canon
+    canon,
+    deities: partial.pantheon.deities
   }
   const npcs = [...partial.npcs]
 
@@ -383,6 +418,7 @@ async function generateNpcSlotForRegion(input: {
   existingNpcNames: string[]
   availableRaces: AvailableRaceOption[]
   canon: CanonRecall
+  deities: GeneratedDeity[]
 }): Promise<GeneratedSingleNpcResult['npc'] | undefined> {
   const preferredCanonName = nextPreferredCanonName(
     input.canon.knownCharacters,
@@ -401,7 +437,8 @@ async function generateNpcSlotForRegion(input: {
         availableRaces: input.availableRaces,
         worldContext: input.world,
         canon: input.canon,
-        preferredCanonName
+        preferredCanonName,
+        deities: input.deities
       })
       if (generated) {
         return generated.npc
@@ -421,6 +458,7 @@ async function generateNpcsForRegions(input: {
   npcsPerRegion: number
   availableRaces: AvailableRaceOption[]
   canon: CanonRecall
+  deities: GeneratedDeity[]
   onNpcRegionStart?: () => void
 }): Promise<GeneratedSingleNpcResult['npc'][]> {
   const npcs: GeneratedSingleNpcResult['npc'][] = []
@@ -435,7 +473,8 @@ async function generateNpcsForRegions(input: {
         region,
         existingNpcNames: npcs.map((npc) => npc.name),
         availableRaces: input.availableRaces,
-        canon: input.canon
+        canon: input.canon,
+        deities: input.deities
       })
       if (generated) {
         npcs.push(generated)
@@ -446,6 +485,33 @@ async function generateNpcsForRegions(input: {
   return npcs
 }
 
+async function generateSeedNpcs(input: {
+  provider: Provider
+  premisePrompt: string
+  world: GeneratedWorld
+  regions: GeneratedRegion[]
+  counts: GenerationCounts
+  availableRaces: AvailableRaceOption[]
+  canon: CanonRecall
+  deities: GeneratedDeity[]
+  onNpcRegionStart?: () => void
+}): Promise<GeneratedSingleNpcResult['npc'][]> {
+  if (input.counts.regionCount === 0 || input.counts.npcsPerRegion === 0) {
+    return []
+  }
+  return generateNpcsForRegions({
+    provider: input.provider,
+    premisePrompt: input.premisePrompt,
+    world: input.world,
+    regions: input.regions,
+    npcsPerRegion: input.counts.npcsPerRegion,
+    availableRaces: input.availableRaces,
+    canon: input.canon,
+    deities: input.deities,
+    onNpcRegionStart: input.onNpcRegionStart
+  })
+}
+
 async function runCampaignSeedAttempt(input: {
   provider: Provider
   premisePrompt: string
@@ -453,10 +519,12 @@ async function runCampaignSeedAttempt(input: {
   availableRaces: AvailableRaceOption[]
   onProgress?: CreateCampaignProgressCallback
 }): Promise<CampaignGenerationResult> {
-  input.onProgress?.('world')
-  const world = await generateCampaignWorld(input.provider, input.premisePrompt)
   input.onProgress?.('canon')
-  const canon = await generateCanonRecall(input.provider, input.premisePrompt, world)
+  const canon = await generateCanonRecall(input.provider, input.premisePrompt)
+  input.onProgress?.('pantheon')
+  const pantheon = await generateCampaignPantheon(input.provider, input.premisePrompt, canon)
+  input.onProgress?.('world')
+  const world = await generateCampaignWorld(input.provider, input.premisePrompt, pantheon)
   input.onProgress?.('regions')
   const regions = await generateCampaignRegions({
     provider: input.provider,
@@ -466,30 +534,27 @@ async function runCampaignSeedAttempt(input: {
     canon
   })
   input.onProgress?.('npcs')
-  const npcs =
-    input.counts.regionCount === 0 || input.counts.npcsPerRegion === 0
-      ? []
-      : await generateNpcsForRegions({
-          provider: input.provider,
-          premisePrompt: input.premisePrompt,
-          world,
-          regions,
-          npcsPerRegion: input.counts.npcsPerRegion,
-          availableRaces: input.availableRaces,
-          canon,
-          onNpcRegionStart: () => input.onProgress?.('npcs')
-        })
-  input.onProgress?.('story')
-  const storyThread = await generateCampaignStoryThread(
-    input.provider,
-    input.premisePrompt,
+  const npcs = await generateSeedNpcs({
+    provider: input.provider,
+    premisePrompt: input.premisePrompt,
     world,
-    regions
-  )
+    regions,
+    counts: input.counts,
+    availableRaces: input.availableRaces,
+    canon,
+    deities: pantheon.deities,
+    onNpcRegionStart: () => input.onProgress?.('npcs')
+  })
+  input.onProgress?.('story')
+  const storyThread = await generateCampaignStoryThread(input.provider, input.premisePrompt, {
+    world,
+    regions,
+    deities: pantheon.deities
+  })
   return repairNpcShortfall({
     provider: input.provider,
     premisePrompt: input.premisePrompt,
-    normalized: { world, regions, npcs, storyThread },
+    normalized: { world, pantheon, regions, npcs, storyThread },
     counts: input.counts,
     availableRaces: input.availableRaces,
     canon
@@ -588,7 +653,8 @@ export async function generateAdditionalRegion(
       buildAdditionalRegionPrompt(campaignPremise, existingRegionNames, {
         seedPrompt,
         npcCount,
-        history: request.history
+        history: request.history,
+        deities: request.deities
       }, availableRaces),
       { maxTokens: ADDITIONAL_REGION_MAX_TOKENS }
     )
@@ -628,6 +694,7 @@ async function attemptGenerateSingleNpc(
     worldContext?: WorldContext
     canon?: CanonRecall
     preferredCanonName?: string
+    deities?: GeneratedDeity[]
   }
 ): Promise<GeneratedSingleNpcResult | undefined> {
   const raw = await provider.generate(buildSingleNpcPrompt(input), {
@@ -657,6 +724,7 @@ export async function generateSingleNpc(
     worldContext?: WorldContext
     canon?: CanonRecall
     preferredCanonName?: string
+    deities?: GeneratedDeity[]
   }
 ): Promise<GeneratedSingleNpcResult> {
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {

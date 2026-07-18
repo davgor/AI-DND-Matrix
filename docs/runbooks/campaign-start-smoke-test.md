@@ -48,7 +48,7 @@ Options:
 
 ## Packaged smoke
 
-1. Copy `.env` beside `release/AI TTRPG Matrix.exe` if needed.
+1. Copy `.env` beside `release/AI-TTRPG.exe` if needed.
 2. Launch packaged app or run `node scripts/campaign-start-smoke.mjs` (includes packaged leg).
 
 **Expected outcome:** Same modal → loading → review flow as dev.

@@ -139,5 +139,5 @@ jobs:
           fi
           printf 'Uploading:\n%s\n' "${assets[@]}"
           gh release create "v${{ needs.prepare.outputs.version }}" "${assets[@]}" \
-            --title "AI TTRPG Matrix v${{ needs.prepare.outputs.version }}" \
+            --title "AI-TTRPG v${{ needs.prepare.outputs.version }}" \
             --generate-notes

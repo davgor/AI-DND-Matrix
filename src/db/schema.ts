@@ -548,5 +548,25 @@ export const migrations: Migration[] = [
       addColumnIfMissing(db, 'campaigns', 'world_summary', "TEXT NOT NULL DEFAULT ''")
       addColumnIfMissing(db, 'campaigns', 'world_history', "TEXT NOT NULL DEFAULT ''")
     }
+  },
+  {
+    version: 35,
+    up: (db) => {
+      addColumnIfMissing(db, 'campaigns', 'pantheon_summary', "TEXT NOT NULL DEFAULT ''")
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS deities (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          epithet TEXT NOT NULL,
+          domains TEXT NOT NULL,
+          tenets TEXT NOT NULL,
+          blurb TEXT NOT NULL,
+          is_forgotten INTEGER NOT NULL DEFAULT 0,
+          sort_order INTEGER NOT NULL,
+          FOREIGN KEY (campaign_id) REFERENCES campaigns(id)
+        )
+      `)
+    }
   }
 ]

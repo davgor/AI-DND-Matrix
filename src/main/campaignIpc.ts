@@ -17,6 +17,7 @@ import { listRegionsByCampaign, type Region } from '../db/repositories/regions'
 import { listRegionHistoryByRegion } from '../db/repositories/regionHistory'
 import { listStoryThreadsByCampaign, type StoryThread } from '../db/repositories/storyThreads'
 import { listQuestHooksByRegion } from '../db/repositories/worldFacts'
+import { listDeitiesByCampaign, type Deity } from '../db/repositories/deities'
 import { touchLastPlayed } from '../db/repositories/sessions'
 import { loadConfig } from './config'
 import { logger } from './logger'
@@ -37,6 +38,7 @@ export interface CampaignDetail {
   regionExtras: RegionExtras[]
   storyThreads: StoryThread[]
   characters: Character[]
+  deities: Deity[]
 }
 
 export function listCampaignsForSidebar(db: Database.Database): CampaignWithLastPlayed[] {
@@ -63,7 +65,8 @@ export function getCampaignDetail(db: Database.Database, campaignId: string): Ca
     npcs: regions.flatMap((region) => listNpcsByRegion(db, region.id)),
     regionExtras: buildRegionExtras(db, campaignId),
     storyThreads: listStoryThreadsByCampaign(db, campaignId),
-    characters: listCharactersByCampaign(db, campaignId)
+    characters: listCharactersByCampaign(db, campaignId),
+    deities: listDeitiesByCampaign(db, campaignId)
   }
 }
 

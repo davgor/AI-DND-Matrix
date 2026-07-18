@@ -1,4 +1,4 @@
-# AI TTRPG Matrix
+# AI-TTRPG
 
 A single-player, text-adventure-style TTRPG desktop app (Electron + React + TypeScript). Two cooperating AI agents run the game — a **DM agent** that sets scenes, drives the plot, and designs encounters, and **NPC/party-member agents** that roleplay individual characters and enemies. Campaigns are generated from a free-text prompt and then played; world state is durable and causally consistent — if you burn down a village, every later scene remembers it's gone.
 
@@ -8,10 +8,13 @@ Each campaign supports **multiple player characters** in one shared world. After
 
 **Shipped through epic 039** (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: campaign creation with configurable region/NPC counts, onboarding review, guided character creation, hub-based multi-character management, turn-based play with combat, progression, loot, and packaging.
 
-**Next committed backlog** (`board/backlog/revisit/`):
+**Active backlog** (`board/backlog/`):
 
 - **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
-- **021** — consolidated end-to-end smoke test (v1 definition of done)
+
+**Still parked** (`board/backlog/revisit/`):
+
+- **021** — consolidated end-to-end smoke test (v1 definition of done; pairs with 020 local parity)
 
 **Exploratory** (`board/backlog/moonshots/`): image generation (m001), host-driven multiplayer (m002), mod-driven homebrew catalog (m003). Not committed delivery scope until promoted to the main backlog.
 
@@ -19,10 +22,10 @@ Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-prog
 
 ## Setup
 
-**Running the packaged app** (if someone sent you `AI TTRPG Matrix.exe`, start here):
+**Running the packaged app** (if someone sent you `AI-TTRPG.exe`, start here):
 
 1. Place a `.env` file in the same folder as the `.exe` (see below for what it needs).
-2. Double-click `AI TTRPG Matrix.exe`. It's a portable build — no installer, no admin rights, nothing else to install.
+2. Double-click `AI-TTRPG.exe`. It's a portable build — no installer, no admin rights, nothing else to install.
 
 **Configuring a Claude API key** (the default, recommended provider):
 
@@ -127,11 +130,16 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 |------|--------|
 | **046** | **Player spellbook modal** — known spells from catalog, journal tab entry point, DM spell grants; see `src/shared/spells/SPEC.md` and `docs/runbooks/spellbook-smoke-test.md` |
 
-### Revisit backlog
+### Active backlog
 
 | Epic | Intent |
 |------|--------|
 | **020** | Local llama.cpp provider: managed `llama-server` lifecycle, adapter behind the existing provider interface, settings wiring, packaged runtime, and smoke parity across major flows without a cloud API key |
+
+### Revisit backlog
+
+| Epic | Intent |
+|------|--------|
 | **021** | Single v1 end-to-end smoke matrix covering campaign creation through restart integrity (cloud-provider runbook; pairs with 020's local parity tickets) |
 
 ### Moonshots (exploratory)

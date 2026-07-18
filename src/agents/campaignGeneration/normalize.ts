@@ -8,7 +8,9 @@ import type {
   AdditionalRegionResult,
   CampaignGenerationResult,
   CanonRecall,
+  GeneratedDeity,
   GeneratedNpc,
+  GeneratedPantheon,
   GeneratedRegion,
   GeneratedSingleNpcResult,
   GeneratedStoryThread,
@@ -141,6 +143,34 @@ function readRecognizedSetting(record: Record<string, unknown>): boolean {
   return false
 }
 
+function readCanonRecallLists(record: Record<string, unknown>): {
+  knownPlaces: string[]
+  knownCharacters: string[]
+  knownDeities: string[]
+} {
+  return {
+    knownPlaces: dedupeCanonNames(readStringArray(record, 'knownPlaces', 'known_places', 'places')),
+    knownCharacters: dedupeCanonNames(
+      readStringArray(record, 'knownCharacters', 'known_characters', 'characters')
+    ),
+    knownDeities: dedupeCanonNames(
+      readStringArray(record, 'knownDeities', 'known_deities', 'deities')
+    )
+  }
+}
+
+function resolveRecognizedSetting(
+  record: Record<string, unknown>,
+  lists: { knownPlaces: string[]; knownCharacters: string[]; knownDeities: string[] }
+): boolean {
+  return (
+    readRecognizedSetting(record) ||
+    lists.knownPlaces.length > 0 ||
+    lists.knownCharacters.length > 0 ||
+    lists.knownDeities.length > 0
+  )
+}
+
 /**
  * Always returns a CanonRecall (never undefined). Invalid payloads become EMPTY_CANON_RECALL
  * so an unrecognized or malformed recall never aborts campaign create.
@@ -150,21 +180,23 @@ export function normalizeCanonRecall(value: unknown): CanonRecall {
     return EMPTY_CANON_RECALL
   }
   const record = value as Record<string, unknown>
-  const knownPlaces = dedupeCanonNames(readStringArray(record, 'knownPlaces', 'known_places', 'places'))
-  const knownCharacters = dedupeCanonNames(
-    readStringArray(record, 'knownCharacters', 'known_characters', 'characters')
-  )
+  const lists = readCanonRecallLists(record)
   const settingLabel = readString(record, 'settingLabel', 'setting_label', 'setting') ?? ''
-  const recognizedSetting =
-    readRecognizedSetting(record) || knownPlaces.length > 0 || knownCharacters.length > 0
-  if (!recognizedSetting && knownPlaces.length === 0 && knownCharacters.length === 0) {
+  const recognizedSetting = resolveRecognizedSetting(record, lists)
+  if (
+    !recognizedSetting &&
+    lists.knownPlaces.length === 0 &&
+    lists.knownCharacters.length === 0 &&
+    lists.knownDeities.length === 0
+  ) {
     return EMPTY_CANON_RECALL
   }
   return {
     recognizedSetting,
     settingLabel,
-    knownPlaces,
-    knownCharacters
+    knownPlaces: lists.knownPlaces,
+    knownCharacters: lists.knownCharacters,
+    knownDeities: lists.knownDeities
   }
 }
 
@@ -174,8 +206,10 @@ export function isValidCanonRecall(value: CanonRecall): boolean {
     typeof value.settingLabel === 'string' &&
     Array.isArray(value.knownPlaces) &&
     Array.isArray(value.knownCharacters) &&
+    Array.isArray(value.knownDeities) &&
     value.knownPlaces.every((name) => typeof name === 'string') &&
-    value.knownCharacters.every((name) => typeof name === 'string')
+    value.knownCharacters.every((name) => typeof name === 'string') &&
+    value.knownDeities.every((name) => typeof name === 'string')
   )
 }
 
@@ -267,6 +301,22 @@ function defaultLegacyWorld(): GeneratedWorld {
       'The frontier still holds scattered freeholds where river trade and old oaths overlap. Farmers bargain with ferry crews while ruin-scouts sell maps that may be lies.\n\nGuild charters and temple courts both claim the same toll roads, so every caravan pays twice or learns to travel by night. No single banner rules the heartland, and that vacuum keeps mercenary companies employed.\n\nStorm seasons and border feuds have sharpened lately, and rumor says something woke under the oldest barrows. Locals watch strangers closely until they prove which side of the toll ledger they stand on.',
     worldHistory:
       'In the first age the lowlands flooded when the river gods quarreled, drowning crown cities and leaving only hill forts above the mud. Survivors rebuilt as river clans who still swear oaths on the same cracked stones.\n\nA league of mason-kings later raised the high roads and taxed every bridge until revolt burned their seal-houses. The roads remain, but each province now posts its own toll and its own story about who betrayed whom.\n\nWar between temple orders and mining companies scarred the northern passes for two generations. Both sides hired the same mercenary companies, and veterans settled the border towns they once looted.\n\nTwenty years ago a red drought withered the central grain belt and sent refugee columns into coastal cities. Harbor councils opened granaries late, and the riots that followed reshaped who may vote in port law.\n\nToday the heartland looks stable only from a distance. River levels shift without season, old barrows glow on foggy nights, and every faction hires adventurers before it admits it is afraid.'
+  }
+}
+
+function defaultLegacyPantheon(): GeneratedPantheon {
+  const deities: GeneratedDeity[] = Array.from({ length: 8 }, (_, index) => ({
+    name: `Legacy Power ${index + 1}`,
+    epithet: '',
+    domains: ['fate'],
+    tenets: ['Keep the old rites', 'Speak carefully of lost names'],
+    blurb: 'A quiet power retained only for legacy campaign payloads.',
+    isForgotten: index < 2
+  }))
+  return {
+    pantheonSummary:
+      'Faith here is local and half-remembered. Shrines keep older names the maps forgot.\n\nMajor temples argue quietly.\n\nAt least two powers are already lost to time.',
+    deities
   }
 }
 
@@ -584,6 +634,31 @@ function resolveRegions(
   return regions
 }
 
+function parseCampaignGenerationStoryThread(
+  candidate: Record<string, unknown>
+): GeneratedStoryThread | undefined {
+  return normalizeGeneratedStoryThread(
+    candidate['storyThread'] ?? candidate['story_thread'] ?? candidate['mainStoryThread']
+  )
+}
+
+function assembleCampaignGenerationResult(input: {
+  candidate: Record<string, unknown>
+  regions: GeneratedRegion[]
+  npcs: GeneratedNpc[]
+  storyThread: GeneratedStoryThread
+}): CampaignGenerationResult {
+  const world = normalizeGeneratedWorld(input.candidate['world']) ?? defaultLegacyWorld()
+  const pantheon = normalizeGeneratedPantheon(input.candidate['pantheon']) ?? defaultLegacyPantheon()
+  return {
+    world,
+    pantheon,
+    regions: input.regions,
+    npcs: input.npcs,
+    storyThread: input.storyThread
+  }
+}
+
 export function normalizeCampaignGeneration(
   value: unknown,
   counts: GenerationCounts = resolveInitialGenerationCounts()
@@ -603,16 +678,12 @@ export function normalizeCampaignGeneration(
     return undefined
   }
 
-  const storyThread = normalizeGeneratedStoryThread(
-    candidate['storyThread'] ?? candidate['story_thread'] ?? candidate['mainStoryThread']
-  )
+  const storyThread = parseCampaignGenerationStoryThread(candidate)
   if (!storyThread) {
     return undefined
   }
 
-  const world = normalizeGeneratedWorld(candidate['world']) ?? defaultLegacyWorld()
-
-  return { world, regions, npcs, storyThread }
+  return assembleCampaignGenerationResult({ candidate, regions, npcs, storyThread })
 }
 
 /** @internal test hook */
@@ -874,4 +945,131 @@ export function isValidGeneratedSingleNpcResult(
     return false
   }
   return rawNpc.regionName === regionName
+}
+
+const MIN_PANTHEON_DEITIES = 8
+const MAX_PANTHEON_DEITIES = 12
+const MIN_FORGOTTEN_DEITIES = 2
+const MIN_DEITY_TENETS = 2
+
+function readFlexibleStringList(record: Record<string, unknown>, ...keys: string[]): string[] {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value
+        .split(',')
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0)
+    }
+    if (Array.isArray(value)) {
+      const items = value
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+        .map((entry) => entry.trim())
+      if (items.length > 0) {
+        return items
+      }
+    }
+  }
+  return []
+}
+
+function readForgottenFlag(record: Record<string, unknown>): boolean {
+  const raw = record.isForgotten ?? record.is_forgotten ?? record.forgotten
+  if (typeof raw === 'boolean') {
+    return raw
+  }
+  if (typeof raw === 'string') {
+    const lowered = raw.trim().toLowerCase()
+    return lowered === 'true' || lowered === 'yes'
+  }
+  return false
+}
+
+function normalizeGeneratedDeity(value: unknown): GeneratedDeity | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const name = readString(record, 'name', 'deity_name', 'deityName')
+  const blurb = readString(record, 'blurb', 'description', 'summary')
+  if (!name || !blurb) {
+    return undefined
+  }
+  const domains = readFlexibleStringList(record, 'domains', 'domain')
+  const tenets = readFlexibleStringList(record, 'tenets', 'tenet')
+  if (domains.length === 0 || tenets.length < MIN_DEITY_TENETS) {
+    return undefined
+  }
+  return {
+    name,
+    epithet: readString(record, 'epithet', 'title') ?? '',
+    domains,
+    tenets,
+    blurb,
+    isForgotten: readForgottenFlag(record)
+  }
+}
+
+function unwrapPantheonRecord(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const nested = record.pantheon ?? record.pantheon_data
+  if (typeof nested === 'object' && nested !== null) {
+    return nested as Record<string, unknown>
+  }
+  return record
+}
+
+export function normalizeGeneratedPantheon(value: unknown): GeneratedPantheon | undefined {
+  const record = unwrapPantheonRecord(value)
+  if (!record) {
+    return undefined
+  }
+  const pantheonSummary =
+    readString(record, 'pantheonSummary', 'pantheon_summary', 'summary') ?? ''
+  const rawDeities = record.deities ?? record.gods ?? record.pantheon
+  if (!Array.isArray(rawDeities)) {
+    return undefined
+  }
+  const deities: GeneratedDeity[] = []
+  for (const entry of rawDeities) {
+    const deity = normalizeGeneratedDeity(entry)
+    if (!deity) {
+      return undefined
+    }
+    deities.push(deity)
+  }
+  if (!pantheonSummary.trim() || deities.length === 0) {
+    return undefined
+  }
+  return { pantheonSummary: pantheonSummary.trim(), deities }
+}
+
+function deityNamesAreUnique(deities: GeneratedDeity[]): boolean {
+  const seen = new Set<string>()
+  for (const deity of deities) {
+    const key = deity.name.trim().toLowerCase().replace(/\s+/g, ' ')
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+  }
+  return true
+}
+
+export function isValidGeneratedPantheon(value: unknown): value is GeneratedPantheon {
+  const pantheon = normalizeGeneratedPantheon(value)
+  if (!pantheon) {
+    return false
+  }
+  if (pantheon.deities.length < MIN_PANTHEON_DEITIES || pantheon.deities.length > MAX_PANTHEON_DEITIES) {
+    return false
+  }
+  if (!deityNamesAreUnique(pantheon.deities)) {
+    return false
+  }
+  const forgottenCount = pantheon.deities.filter((deity) => deity.isForgotten).length
+  return forgottenCount >= MIN_FORGOTTEN_DEITIES
 }

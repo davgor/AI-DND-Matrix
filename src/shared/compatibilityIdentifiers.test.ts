@@ -21,7 +21,7 @@ describe('terminology scrub compatibility identifiers', () => {
     expect(readPackageJson().build.appId).toBe('com.davgor.aidndmatrix')
   })
 
-  it('updates only user-facing productName to TTRPG wording', () => {
-    expect(readPackageJson().build.productName).toBe('AI TTRPG Matrix')
+  it('updates only user-facing productName to AI-TTRPG', () => {
+    expect(readPackageJson().build.productName).toBe('AI-TTRPG')
   })
 })

@@ -33,6 +33,7 @@ export function deleteCampaignCascade(
     ).run(campaignId)
     db.prepare('DELETE FROM quests WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM campaign_races WHERE campaign_id = ?').run(campaignId)
+    db.prepare('DELETE FROM deities WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM characters WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM npcs WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM world_facts WHERE campaign_id = ?').run(campaignId)

@@ -13,6 +13,7 @@ export function makeTestCampaign(overrides: Partial<Campaign> = {}): Campaign {
     worldName: 'The Shattered Vale',
     worldSummary: 'A fractured kingdom of mist and stone.\n\nOld oaths bind the living.\n\nWar stirs again.',
     worldHistory: 'Age one.\n\nAge two.\n\nAge three.\n\nAge four.',
+    pantheonSummary: '',
     inGameDate: 12,
     deathMode: 'standard',
     respawnRules: null,
@@ -73,6 +74,7 @@ export function makeTestHubSnapshot(overrides: Partial<PlayAwareHubSnapshot> = {
     ],
     storyThreads: [makeTestStoryThread()],
     characters: [],
+    deities: [],
     currentStateSummary: 'Tension rises along the northern border.',
     recentEvents: [
       {

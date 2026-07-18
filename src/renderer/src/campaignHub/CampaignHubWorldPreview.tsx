@@ -2,6 +2,7 @@ import type { PlayAwareHubSnapshot } from '../../../shared/campaignHub/types'
 import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
 import { CampaignReviewWorldContent } from '../campaignReview/CampaignReviewWorldContent'
+import { CampaignReviewPantheonSection } from '../campaignReview/CampaignReviewPantheonSection'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { FormattedText } from '../shared/FormattedText'
 import { buildHubRegionBlocks } from './hubUtils'
@@ -98,6 +99,11 @@ export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JS
           }
         />
       ) : null}
+      <CampaignReviewPantheonSection
+        pantheonSummary={snapshot.campaign?.pantheonSummary ?? ''}
+        deities={snapshot.deities}
+        readOnly
+      />
       {snapshot.currentStateSummary ? <HubCurrentStateSection summary={snapshot.currentStateSummary} /> : null}
       <CampaignReviewStory storyThreads={snapshot.storyThreads} playAware />
       <HubRegionsSection
