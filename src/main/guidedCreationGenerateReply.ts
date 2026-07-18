@@ -159,9 +159,7 @@ function buildOpeningScenePlayerReplyInput(input: {
     input.db,
     {
       campaignId: input.request.campaignId,
-      characterId: input.request.characterId,
-      phase: 'opening_scene',
-      message: '.'
+      characterId: input.request.characterId
     },
     input.character,
     input.fields
