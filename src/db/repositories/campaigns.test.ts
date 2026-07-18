@@ -10,7 +10,8 @@ import {
   updateCampaignDeathMode,
   updateCampaignStateSummary,
   updateCampaignWorldHistory,
-  updateCampaignWorldSummary
+  updateCampaignWorldSummary,
+  updateCampaignPantheonSummary
 } from './campaigns'
 
 describe('campaigns repository: create + getById round-trip', () => {
@@ -34,6 +35,7 @@ describe('campaigns repository: create + getById round-trip', () => {
     expect(fetched?.worldName).toBe('')
     expect(fetched?.worldSummary).toBe('')
     expect(fetched?.worldHistory).toBe('')
+    expect(fetched?.pantheonSummary).toBe('')
   })
 
   it('round-trips a non-null respawn_rules object', () => {
@@ -151,6 +153,22 @@ describe('campaigns repository: world field updates', () => {
     const fetched = getCampaignById(db, created.id)
     expect(fetched?.worldSummary).toContain('New summary')
     expect(fetched?.worldHistory).toContain('Deep past')
+  })
+})
+
+describe('campaigns repository: pantheon summary', () => {
+  it('round-trips pantheonSummary at create and via update helper', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Test',
+      premisePrompt: '...',
+      deathMode: 'standard',
+      pantheonSummary: 'Gods of tide and ash still argue over drowned crowns.'
+    })
+    expect(getCampaignById(db, created.id)?.pantheonSummary).toContain('tide and ash')
+
+    updateCampaignPantheonSummary(db, created.id, 'A quieter faith remains in ruin chapels.')
+    expect(getCampaignById(db, created.id)?.pantheonSummary).toContain('ruin chapels')
   })
 })
 

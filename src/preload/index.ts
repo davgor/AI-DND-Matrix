@@ -9,6 +9,7 @@ import type {
   DeleteNpcInput,
   EditWorldHistoryInput,
   EditWorldSummaryInput,
+  EditPantheonSummaryInput,
   GenerateRegionInput,
   GenerateNpcInput
 } from '../main/campaignEditIpc'
@@ -88,6 +89,8 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:deleteRegion', input),
   editWorldSummary: (input: EditWorldSummaryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldSummary', input),
+  editPantheonSummary: (input: EditPantheonSummaryInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editPantheonSummary', input),
   editWorldHistory: (input: EditWorldHistoryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldHistory', input),
   editNpcDisposition: (input: EditNpcDispositionInput): Promise<CampaignDetail> =>
@@ -296,9 +299,19 @@ const guidedCreation = {
     ipcRenderer.invoke('guidedCreation:sendMessage', input),
   kickoffIdentity: (input: GuidedCreationKickoffInput): Promise<GuidedCreationKickoffResult> =>
     ipcRenderer.invoke('guidedCreation:kickoffIdentity', input),
+  kickoffOpeningScene: (input: GuidedCreationKickoffInput): Promise<GuidedCreationKickoffResult> =>
+    ipcRenderer.invoke('guidedCreation:kickoffOpeningScene', input),
+  generateReply: (
+    input: import('../shared/guidedCreation/types').GuidedCreationGenerateReplyInput
+  ): Promise<import('../shared/guidedCreation/types').GuidedCreationGenerateReplyResult> =>
+    ipcRenderer.invoke('guidedCreation:generateReply', input),
   revertPhase: (input: import('../shared/guidedCreation/types').GuidedCreationRevertPhaseInput): Promise<
     import('../shared/guidedCreation/types').GuidedCreationRevertPhaseResult
-  > => ipcRenderer.invoke('guidedCreation:revertPhase', input)
+  > => ipcRenderer.invoke('guidedCreation:revertPhase', input),
+  readyToEnterPlay: (
+    input: import('../shared/guidedCreation/types').GuidedCreationReadyToEnterPlayInput
+  ): Promise<import('../shared/guidedCreation/types').GuidedCreationReadyToEnterPlayResult> =>
+    ipcRenderer.invoke('guidedCreation:readyToEnterPlay', input)
 }
 
 const settings = {

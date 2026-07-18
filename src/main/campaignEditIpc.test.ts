@@ -5,7 +5,7 @@ import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
-import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
 
 function makeRegion(name: string) {
   return {
@@ -141,6 +141,25 @@ describe('editNpcTraits', () => {
     expect(updated?.temperament).toBe('cautious')
     expect(updated?.alignment).toBe('lawful_neutral')
     expect(updated?.canSpeak).toBe(false)
+  })
+})
+
+describe('editPantheonSummary', () => {
+  it('persists pantheon summary and returns refreshed detail', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Test Campaign',
+      premisePrompt: 'A flooded kingdom.',
+      deathMode: 'legendary',
+      pantheonSummary: 'Old faith.'
+    })
+
+    const detail = editPantheonSummary(db, {
+      campaignId: campaign.id,
+      pantheonSummary: 'Gods of tide and ash still argue over drowned crowns.'
+    })
+
+    expect(detail.campaign?.pantheonSummary).toContain('tide and ash')
   })
 })
 

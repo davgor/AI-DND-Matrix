@@ -22,6 +22,7 @@ const ALL_TABLE_NAMES = [
   'character_quests',
   'characters',
   'combat_encounters',
+  'deities',
   'events',
   'guided_creation_messages',
   'items',
@@ -59,6 +60,29 @@ describe('the real app migrations registry', () => {
 
     runMigrations(db, migrations)
     expect(tableNames(db)).toEqual(ALL_TABLE_NAMES)
+  })
+})
+
+describe('schema migrations specifics', () => {
+  it('migration 35 adds deities table and pantheon_summary column', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 34)
+    )
+    expect(tableNames(db)).not.toContain('deities')
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 35)
+    )
+
+    expect(tableNames(db)).toContain('deities')
+    const campaignColumns = db
+      .prepare('PRAGMA table_info(campaigns)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(campaignColumns).toContain('pantheon_summary')
   })
 
   it('migration 17 adds alignment and temperament columns', () => {

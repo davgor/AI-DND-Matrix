@@ -7,7 +7,7 @@ import { createRegion } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listGuidedCreationMessagesByCharacter } from '../db/repositories/guidedCreationMessages'
 import { setGuidedCreationPhase } from '../db/repositories/guidedCreation'
-import { sendGuidedCreationMessage, kickoffGuidedCreationIdentity, revertGuidedCreationPhase } from './guidedCreationIpc'
+import { sendGuidedCreationMessage, kickoffGuidedCreationIdentity, revertGuidedCreationPhase, generateGuidedCreationReply } from './guidedCreationIpc'
 import { readGuidedCreationFields } from '../db/repositories/guidedCreation'
 
 function seedGuidedCampaign(db: ReturnType<typeof createTestDb>) {
@@ -276,5 +276,64 @@ describe('revertGuidedCreationPhase', () => {
       ok: false,
       reason: 'invalid_revert'
     })
+  })
+})
+
+describe('generateGuidedCreationReply', () => {
+  it('returns a player reply draft without appending transcript messages', async () => {
+    const db = createTestDb()
+    const { campaign, player } = seedGuidedCampaign(db)
+    await kickoffGuidedCreationIdentity(db, createScriptedProvider([
+      JSON.stringify({ dmReply: 'Who are you, beyond the name on your sheet?' })
+    ]), {
+      campaignId: campaign.id,
+      characterId: player.id
+    })
+    const provider = createScriptedProvider(['I am Kael, a fighter from the marsh edge.'])
+
+    const result = await generateGuidedCreationReply(db, provider, {
+      campaignId: campaign.id,
+      characterId: player.id,
+      phase: 'identity'
+    })
+
+    expect(result).toEqual({
+      ok: true,
+      reply: 'I am Kael, a fighter from the marsh edge.'
+    })
+    expect(listGuidedCreationMessagesByCharacter(db, player.id)).toHaveLength(1)
+    expect(listGuidedCreationMessagesByCharacter(db, player.id)[0]?.role).toBe('dm')
+    expect(provider.calls[0]?.prompt).toContain('Who are you, beyond the name on your sheet?')
+    expect(provider.calls[0]?.prompt).toContain('Kael')
+  })
+
+  it('rejects when phase does not match the character guided-creation phase', async () => {
+    const db = createTestDb()
+    const { campaign, player } = seedGuidedCampaign(db)
+    const provider = createScriptedProvider(['Should not run.'])
+
+    const result = await generateGuidedCreationReply(db, provider, {
+      campaignId: campaign.id,
+      characterId: player.id,
+      phase: 'opening_scene'
+    })
+
+    expect(result).toEqual({ ok: false, reason: 'invalid_phase' })
+    expect(provider.calls).toHaveLength(0)
+  })
+
+  it('passes an existing draft into the generation prompt', async () => {
+    const db = createTestDb()
+    const { campaign, player } = seedGuidedCampaign(db)
+    const provider = createScriptedProvider(['I am Kael of the marsh.'])
+
+    await generateGuidedCreationReply(db, provider, {
+      campaignId: campaign.id,
+      characterId: player.id,
+      phase: 'identity',
+      existingDraft: 'quiet knight'
+    })
+
+    expect(provider.calls[0]?.prompt).toContain('quiet knight')
   })
 })

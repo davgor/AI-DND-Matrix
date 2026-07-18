@@ -11,12 +11,19 @@ export { MAX_SCHEMA_ATTEMPTS as MAX_IDENTITY_ATTEMPTS }
 // is represented by the locked foundation summaries carried in the prompt.
 export const IDENTITY_TRANSCRIPT_WINDOW = 5
 
-// 040.1: 768 — dmReply is conversational interview prose persisted verbatim
-// into the transcript (plus foundation summaries on interview turns). Cap
-// reasoned from the prompt's ask (a warm conversational reply, not a scene
-// dump), not measured against recorded outputs; a truncated response now
+// 040.1 / 074: 384 — dmReply is a short interview question (not a scene dump or
+// foundation restatement). Cap reasoned from the concise-reply rules; truncation
 // throws at the provider instead of persisting a cut-off reply.
-const IDENTITY_REPLY_MAX_TOKENS = 768
+const IDENTITY_REPLY_MAX_TOKENS = 384
+
+/** Shared style rules so kickoff and interview turns stay short and question-led. */
+const IDENTITY_DM_REPLY_STYLE_RULES = [
+  'dmReply must be concise: briefly acknowledge if needed, then ask one clear question that prompts the player to answer.',
+  'Do not restate locked foundation summaries in dmReply — neither verbatim nor as purple paraphrase. Summaries belong only in the foundations JSON fields.',
+  'Avoid florid restatements like "Your Why surges…" or epic word-salad. Plain, conversational English.',
+  'When offering Where choices, name each region with at most one short distinguishing phrase — do not paste full region descriptions into dmReply.',
+  'Ability scores in the mechanical character block are for your context only — never recite score numbers or labels like "Body 10" in dmReply.'
+].join('\n')
 
 interface IdentityRegionOption {
   id: string
@@ -108,7 +115,7 @@ function whereStartingRegionIsValid(
 }
 
 export function identityWhoKickoffFallback(characterName: string): string {
-  return `Let's start with who you are. I have "${characterName}" on your sheet — tell me about them: how they carry themselves, where they come from, and what history they claim as their own.`
+  return `Who are you? I have "${characterName}" on your sheet — tell me how they carry themselves, where they come from, and what history they claim.`
 }
 
 function isIdentityKickoffResponse(value: unknown): value is IdentityKickoffResponse {
@@ -190,13 +197,15 @@ function buildIdentityKickoffSystemPrompt(
   return [
     'You are the DM beginning a pre-play identity interview. The player has not spoken yet.',
     ...buildIdentityStaticSystemLines(context),
+    IDENTITY_DM_REPLY_STYLE_RULES,
     'Respond ONLY with JSON: {"dmReply":string}'
   ].join('\n')
 }
 
 const IDENTITY_KICKOFF_PROMPT = [
-  'Open the conversation with a warm, in-character prompt about WHO they are (name, lineage, appearance, personal history).',
-  'Do not ask about Why, Where, or What yet — focus only on Who.'
+  'Open with a concise, in-character question about WHO they are (name, lineage, appearance, personal history).',
+  'Do not ask about Why, Where, or What yet — focus only on Who.',
+  'Keep dmReply short — one or two sentences that prompt an answer.'
 ].join('\n')
 
 export async function runIdentityInterviewKickoff(
@@ -224,6 +233,7 @@ function buildIdentityInterviewSystemPrompt(
     'You are the DM conducting a pre-play identity interview. Interview for Who / Why / Where / What.',
     'Ask follow-up questions freely. Do not invent mechanical stats, checks, loot, or world mutations.',
     ...buildIdentityStaticSystemLines(context),
+    IDENTITY_DM_REPLY_STYLE_RULES,
     'When covering Where: ask which of these generated regions they start in. Origin/homeland may still be discussed, but the play start location must be one listed region (confirm the only region if there is just one).',
     'Respond ONLY with JSON: {"dmReply":string,"foundations":{"who":{"complete":bool,"summary"?:string},"why":{"complete":bool,"summary"?:string},"where":{"complete":bool,"summary"?:string},"what":{"complete":bool,"summary"?:string}},"allFoundationsComplete":bool,"startingRegionId":string|null}',
     'Set complete true and include summary only when a foundation is ready to lock in.',

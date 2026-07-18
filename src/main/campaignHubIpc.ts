@@ -9,6 +9,7 @@ import type {
 } from '../shared/campaignHub/types'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listCharactersByCampaign } from '../db/repositories/characters'
+import { listDeitiesByCampaign } from '../db/repositories/deities'
 import { listEventsByCampaign } from '../db/repositories/events'
 import { listNpcsByRegion } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
@@ -109,7 +110,8 @@ export function buildHubSnapshot(db: Database.Database, campaignId: string): Pla
     npcs: regions.flatMap((region) => listNpcsByRegion(db, region.id)),
     regionExtras: buildRegionExtras(db, campaignId),
     storyThreads: listStoryThreadsByCampaign(db, campaignId),
-    characters: listCharactersByCampaign(db, campaignId)
+    characters: listCharactersByCampaign(db, campaignId),
+    deities: listDeitiesByCampaign(db, campaignId)
   }
 
   return {

@@ -28,6 +28,7 @@ import { registerRaceHandlers } from './raceIpc'
 import { registerBackgroundHandlers } from './backgroundIpc'
 import { registerProgressionHandlers } from './progressionIpc'
 import { initAutoUpdate, registerAutoUpdateHandlers } from './autoUpdate'
+import { configureSpellcheck } from './spellcheck'
 
 Menu.setApplicationMenu(null)
 loadConfig()
@@ -42,9 +43,12 @@ function createMainWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      spellcheck: true
     }
   })
+
+  configureSpellcheck(mainWindow)
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])

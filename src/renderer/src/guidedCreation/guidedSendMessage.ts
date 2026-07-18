@@ -25,3 +25,13 @@ export async function sendGuidedMessage(input: {
 export function guidedSendErrorMessage(reason: GuidedCreationSendMessageResult['reason']): string {
   return reason === 'schema_error' ? 'The DM could not respond. Try again.' : 'Unable to send message.'
 }
+
+export function guidedGenerateErrorMessage(
+  reason: import('../../../shared/guidedCreation/types').GuidedCreationFailureReason
+): string {
+  if (reason === 'provider_error' || reason === 'schema_error') {
+    return 'Unable to generate a reply. Try again.'
+  }
+  return 'Unable to generate a reply.'
+}
+

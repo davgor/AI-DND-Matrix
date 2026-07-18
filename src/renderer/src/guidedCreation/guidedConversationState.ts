@@ -4,16 +4,26 @@ import type {
 } from '../../../shared/guidedCreation/types'
 
 const PENDING_PLAYER_MESSAGE_ID = 'pending-player'
-const DM_THINKING_ELLIPSIS_FRAMES = 4
+const BUSY_ELLIPSIS_FRAMES = 4
 
 export function shouldDisableGuidedInput(sending: boolean, phaseComplete: boolean): boolean {
   return sending || phaseComplete
 }
 
+/** Cycles `.` → `..` → `...` → `....` → repeat after a busy prefix. */
+function ellipsisBusyLabel(prefix: string, frame: number): string {
+  const dots = (Math.floor(frame) % BUSY_ELLIPSIS_FRAMES) + 1
+  return `${prefix}${'.'.repeat(dots)}`
+}
+
 /** Cycles `.` → `..` → `...` → `....` → repeat for the DM thinking status line. */
 export function dmThinkingStatusLabel(frame: number): string {
-  const dots = (Math.floor(frame) % DM_THINKING_ELLIPSIS_FRAMES) + 1
-  return `The DM is thinking${'.'.repeat(dots)}`
+  return ellipsisBusyLabel('The DM is thinking', frame)
+}
+
+/** Same ellipsis cycle for the guided Generate button while a draft is in flight. */
+export function generatingStatusLabel(frame: number): string {
+  return ellipsisBusyLabel('Generating', frame)
 }
 
 export function messagesWithPendingPlayer(

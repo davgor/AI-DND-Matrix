@@ -60,6 +60,7 @@ export function buildHubSnapshotFromDetail(detail: CampaignDetail): PlayAwareHub
     regionExtras: detail.regionExtras,
     storyThreads: detail.storyThreads,
     characters: detail.characters,
+    deities: detail.deities,
     currentStateSummary: detail.campaign?.currentStateSummary ?? '',
     recentEvents: [],
     cast: buildHubCast(detail),

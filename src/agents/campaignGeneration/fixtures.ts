@@ -63,6 +63,71 @@ export const VALID_WORLD = {
     'Three ages ago the continental shelf cracked during the Sundering, swallowing coastal kingdoms and leaving archipelagos where farmland once stretched to the horizon. Temples rang warning bells for weeks, but the sea still climbed through harbor streets faster than any evacuation plan. Survivors who reached high ground rebuilt as cliff clans who still measure wealth in rope and fresh water.\n\nSalvagers still dredge barnacled crowns and drowned libraries from the inner bays. Scholars argue whether the flood was natural, divine punishment, or sabotage between rival archmages, and every court commissions a different answer. Dredging licenses have become the fastest path to a noble title in port cities.\n\nFor two centuries the Charting Compact mapped safe passages and taxed moorings until guild wars broke the tithe system and beacon fires fell dark. Captains who remembered the old routes became kings of smuggling lanes overnight. The Compact’s seal houses are ruins now, but their ledgers still surface in wreck sales.\n\nIn the last generation explorer crews have pushed past the outer shoals again, returning with cursed ore, missing manifests, and rumors of living reefs that remember every ship that wronged them. Few crews return with the same crew count they left with. Insurance brokers on the inner quay have doubled their rates twice in five years.\n\nToday the inner sea routes are contested again — not by emperors alone, but by storm priests, smuggler princes, and captains who swear the drowned still vote on every treaty. Festival markets flourish beside famine roads, and everyone knows the next squall may rewrite the map. Beacon chains are relit one tower at a time, always too late for someone.'
 }
 
+/** Empty canon recall — original / unrecognized premise. */
+export const EMPTY_CANON_RESPONSE = JSON.stringify({
+  recognizedSetting: false,
+  settingLabel: '',
+  knownPlaces: [],
+  knownCharacters: [],
+  knownDeities: []
+})
+
+export const SHIELD_HERO_CANON = {
+  recognizedSetting: true,
+  settingLabel: 'The Rising of the Shield Hero',
+  knownPlaces: ['Melromarc', 'Siltvelt'],
+  knownCharacters: ['Raphtalia', 'Naofumi Iwatani', 'Filo'],
+  knownDeities: ['The Three Heroes', 'Ost Hero', 'The Guardian Heroes']
+}
+
+function makeDeity(
+  name: string,
+  options: { forgotten?: boolean; domains?: string[]; epithet?: string } = {}
+) {
+  return {
+    name,
+    epithet: options.epithet ?? '',
+    domains: options.domains ?? ['fate'],
+    tenets: [`Honor ${name}`, `Remember ${name} in quiet hours`],
+    blurb: `${name} is a power whose shrines still shape local custom.`,
+    isForgotten: options.forgotten ?? false
+  }
+}
+
+/** Valid 8-deity pantheon for scripted providers (2 forgotten). */
+export const VALID_PANTHEON = {
+  pantheonSummary:
+    'Faith here is a bargain between living temples and ruin chapels. Major cults argue over oaths and wreck rights while quieter shrines keep older names.\n\nAt least two powers are forgotten — remembered only in cracked idols and tide-marked graves.\n\nPriests still warn travelers which names to speak aloud after dark.',
+  deities: [
+    makeDeity('Vhalor', { epithet: 'the Drowned Judge', domains: ['death', 'tides'] }),
+    makeDeity('Sereth', { forgotten: true, epithet: 'the Hollow Flame', domains: ['fire'] }),
+    makeDeity('Kaelen', { domains: ['harvest'] }),
+    makeDeity('Mirath', { domains: ['knowledge'] }),
+    makeDeity('Thorn', { domains: ['trickery'] }),
+    makeDeity('Belwyn', { forgotten: true, domains: ['hearth'] }),
+    makeDeity('Orrin', { domains: ['storms'] }),
+    makeDeity('Lirae', { domains: ['war'] })
+  ]
+}
+
+export const VALID_PANTHEON_RESPONSE = JSON.stringify(VALID_PANTHEON)
+
+/** Shield Hero–shaped pantheon preferring knownDeities names. */
+export const SHIELD_HERO_PANTHEON = {
+  pantheonSummary:
+    'Melromarc’s state faith elevates the Three Heroes while quieter cults remember older guardians. Wave after wave reshapes who is called holy.\n\nOst Hero and the Guardian Heroes still appear in oaths and festival plays.\n\nForgotten names cling to ruined churches the crown no longer funds.',
+  deities: [
+    makeDeity('The Three Heroes', { domains: ['heroism', 'order'] }),
+    makeDeity('Ost Hero', { domains: ['salvation'] }),
+    makeDeity('The Guardian Heroes', { domains: ['protection'] }),
+    makeDeity('Wave Saint', { domains: ['calamity'] }),
+    makeDeity('Filolial Matron', { domains: ['kinship'] }),
+    makeDeity('Queen’s Chapel', { domains: ['crown'] }),
+    makeDeity('Ashen Cardinal', { forgotten: true, domains: ['heresy'] }),
+    makeDeity('Silent Shield', { forgotten: true, domains: ['exile'] })
+  ]
+}
+
 /** Common live-model world shape: snake_case keys and double-newline paragraph breaks. */
 export const REALISTIC_LLM_WORLD = {
   world_name: 'Eldermere',
@@ -108,7 +173,11 @@ export function buildCrimsonReachCascadingResponses(input: {
     makeRegion('Kingdom of Granary Pass', 'frost'),
     makeRegion('Deadface Marches', 'bandit')
   ].slice(0, input.regionCount)
-  const responses: string[] = [JSON.stringify(CRIMSON_REACH_LLM_WORLD)]
+  const responses: string[] = [
+    EMPTY_CANON_RESPONSE,
+    VALID_PANTHEON_RESPONSE,
+    JSON.stringify(CRIMSON_REACH_LLM_WORLD)
+  ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
   for (const region of regions) {
@@ -139,7 +208,11 @@ export function buildRealisticLlmCascadingSeedResponses(input: {
     makeRegion('Ashen Crown Kingdom', 'desert'),
     makeRegion('Windward Marches', 'frost')
   ].slice(0, input.regionCount)
-  const responses: string[] = [`\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``]
+  const responses: string[] = [
+    EMPTY_CANON_RESPONSE,
+    VALID_PANTHEON_RESPONSE,
+    `\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``
+  ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
   for (const region of regions) {
@@ -169,6 +242,14 @@ export function buildCascadingSeedResponses(input: {
   npcsPerRegion: number
   regions?: ReturnType<typeof makeRegion>[]
   storyThread?: { title: string; state: string; summary: string }
+  canon?: {
+    recognizedSetting: boolean
+    settingLabel: string
+    knownPlaces: string[]
+    knownCharacters: string[]
+    knownDeities?: string[]
+  }
+  pantheon?: typeof VALID_PANTHEON
 }): string[] {
   const regions =
     input.regions ??
@@ -180,8 +261,20 @@ export function buildCascadingSeedResponses(input: {
   const storyThread =
     input.storyThread ??
     ({ title: 'The Crown Beneath the Waves', state: 'starting', summary: 'A throne lies hidden.' } as const)
+  const canonPayload = input.canon ?? {
+    recognizedSetting: false,
+    settingLabel: '',
+    knownPlaces: [] as string[],
+    knownCharacters: [] as string[],
+    knownDeities: [] as string[]
+  }
+  const pantheonPayload = input.pantheon ?? VALID_PANTHEON
 
-  const responses: string[] = [JSON.stringify(VALID_WORLD)]
+  const responses: string[] = [
+    JSON.stringify(canonPayload),
+    JSON.stringify(pantheonPayload),
+    JSON.stringify(VALID_WORLD)
+  ]
   responses.push(JSON.stringify({ regions }))
   for (const region of regions) {
     const npcTemplates = makeNpcs(region.name, region.name.slice(0, 4))
@@ -190,6 +283,50 @@ export function buildCascadingSeedResponses(input: {
     }
   }
   responses.push(JSON.stringify({ storyThread }))
+  return responses
+}
+
+/** Fandom-shaped seed: Shield Hero canon → Melromarc / Raphtalia in scripted output. */
+export function buildShieldHeroCascadingSeedResponses(input: {
+  regionCount: number
+  npcsPerRegion: number
+}): string[] {
+  const regions = [
+    makeRegion('Melromarc', 'kingdom'),
+    makeRegion('Siltvelt', 'beast')
+  ].slice(0, input.regionCount)
+  const characterNames = ['Raphtalia', 'Naofumi Iwatani', 'Filo', 'Motoyasu Kitamura', 'Itsuki Kawasumi', 'Ren Amaki']
+  const responses: string[] = [
+    JSON.stringify(SHIELD_HERO_CANON),
+    JSON.stringify(SHIELD_HERO_PANTHEON),
+    JSON.stringify(VALID_WORLD)
+  ]
+  responses.push(JSON.stringify({ regions }))
+  let npcIndex = 0
+  for (const region of regions) {
+    for (let slot = 0; slot < input.npcsPerRegion; slot += 1) {
+      const name = characterNames[npcIndex] ?? `Local ${npcIndex}`
+      const template = makeNpcs(region.name, 'Shld')[0]!
+      responses.push(
+        makeSingleNpcPayload(region.name, {
+          ...template,
+          name,
+          regionName: region.name,
+          backstory: `${name} lives and works in ${region.name}.`
+        })
+      )
+      npcIndex += 1
+    }
+  }
+  responses.push(
+    JSON.stringify({
+      storyThread: {
+        title: 'Waves of Calamity',
+        state: 'starting',
+        summary: 'Survive the next wave while Melromarc’s politics sharpen around the Shield Hero.'
+      }
+    })
+  )
   return responses
 }
 

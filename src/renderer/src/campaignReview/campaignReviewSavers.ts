@@ -20,6 +20,10 @@ export function createCampaignReviewSavers(
     saveWorldHistory: async (worldHistory: string): Promise<void> => {
       const next = await window.campaigns.editWorldHistory({ campaignId, worldHistory })
       onDetailChange(next)
+    },
+    savePantheonSummary: async (pantheonSummary: string): Promise<void> => {
+      const next = await window.campaigns.editPantheonSummary({ campaignId, pantheonSummary })
+      onDetailChange(next)
     }
   }
 }

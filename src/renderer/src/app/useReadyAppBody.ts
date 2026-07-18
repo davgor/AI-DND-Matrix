@@ -4,6 +4,22 @@ import type { OnboardingStage } from '../../../shared/guidedCreation/stageRoutin
 import { useHubCampaignState } from './useHubCampaignState'
 import { usePlayEntryState } from './usePlayEntryState'
 
+type PlayEntryBase = {
+  detail: CampaignDetail | null
+  stage: OnboardingStage
+  setStage: (stage: OnboardingStage) => void
+  activeCharacterId: string | null
+  setActiveCharacterId: (id: string | null) => void
+}
+
+/** Compose play-entry hook input with a required campaign detail refresh. */
+export function attachPlayEntryRefreshDetail(
+  base: PlayEntryBase,
+  refreshDetail: () => Promise<void>
+): PlayEntryBase & { refreshDetail: () => Promise<void> } {
+  return { ...base, refreshDetail }
+}
+
 export function useReadyAppBodyState(input: {
   detail: CampaignDetail | null
   stage: OnboardingStage
@@ -12,7 +28,6 @@ export function useReadyAppBodyState(input: {
 }) {
   const [activeCharacterId, setActiveCharacterId] = useState<string | null>(null)
   const hub = useHubCampaignState({ ...input, setActiveCharacterId })
-  const play = usePlayEntryState({ ...input, activeCharacterId, setActiveCharacterId })
 
   async function refreshDetail(): Promise<void> {
     if (!input.detail?.campaign) {
@@ -24,6 +39,13 @@ export function useReadyAppBodyState(input: {
       await hub.refreshHubSnapshot()
     }
   }
+
+  const play = usePlayEntryState(
+    attachPlayEntryRefreshDetail(
+      { ...input, activeCharacterId, setActiveCharacterId },
+      refreshDetail
+    )
+  )
 
   return {
     ...hub,

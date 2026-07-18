@@ -52,7 +52,7 @@
   },
   "build": {
     "appId": "com.davgor.aidndmatrix",
-    "productName": "AI TTRPG Matrix",
+    "productName": "AI-TTRPG",
     "directories": {
       "output": "release"
     },

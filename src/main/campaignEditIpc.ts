@@ -18,6 +18,7 @@ import {
   updateCampaignDeathMode,
   updateCampaignWorldHistory,
   updateCampaignWorldSummary,
+  updateCampaignPantheonSummary,
   type DeathMode,
   type RespawnRules
 } from '../db/repositories/campaigns'
@@ -26,6 +27,7 @@ import { deleteRegionCascade } from '../db/repositories/deleteRegion'
 import { getNpcById, listNpcsByRegion, updateNpcDisposition, updateNpcTraits } from '../db/repositories/npcs'
 import { getRegionById, listRegionsByCampaign, updateRegionDescription } from '../db/repositories/regions'
 import { listCampaignRaces } from '../db/repositories/campaignRaces'
+import { listDeitiesByCampaign } from '../db/repositories/deities'
 import {
   MAX_ADDITIONAL_REGION_NPC_COUNT,
   MIN_ADDITIONAL_REGION_NPC_COUNT
@@ -105,6 +107,19 @@ export function editWorldSummary(
   input: EditWorldSummaryInput
 ): CampaignDetail {
   updateCampaignWorldSummary(db, input.campaignId, input.worldSummary)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface EditPantheonSummaryInput {
+  campaignId: string
+  pantheonSummary: string
+}
+
+export function editPantheonSummary(
+  db: Database.Database,
+  input: EditPantheonSummaryInput
+): CampaignDetail {
+  updateCampaignPantheonSummary(db, input.campaignId, input.pantheonSummary)
   return getCampaignDetail(db, input.campaignId)
 }
 
@@ -214,7 +229,15 @@ export async function generateRegionForCampaign(
       seedPrompt: seed,
       npcCount,
       history,
-      availableRaces: buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId))
+      availableRaces: buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId)),
+      deities: listDeitiesByCampaign(db, input.campaignId).map((deity) => ({
+        name: deity.name,
+        epithet: deity.epithet,
+        domains: deity.domains,
+        tenets: deity.tenets,
+        blurb: deity.blurb,
+        isForgotten: deity.isForgotten
+      }))
     }
   )
 
@@ -310,6 +333,10 @@ export function registerCampaignEditHandlers(): void {
 
   ipcMain.handle('campaigns:editWorldSummary', (_event, input: EditWorldSummaryInput) =>
     editWorldSummary(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:editPantheonSummary', (_event, input: EditPantheonSummaryInput) =>
+    editPantheonSummary(getDb(), input)
   )
 
   ipcMain.handle('campaigns:editWorldHistory', async (_event, input: EditWorldHistoryInput) =>

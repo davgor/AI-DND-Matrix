@@ -3,6 +3,8 @@ import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/type
 import { resolveBackgroundDisplayLabel } from '../../../shared/characterBackground/resolveLabel'
 import { findGenderRosterEntry } from '../../../shared/npcGender/types'
 import { findNpcClassRosterEntry } from '../../../shared/npcClass/types'
+import { resolveRaceDisplayLabel } from '../../../shared/raceSelection/resolveLabel'
+import type { CampaignRace } from '../../../shared/raceSelection/types'
 
 import { CampaignReviewPanel } from './CampaignReviewPanel'
 
@@ -10,48 +12,55 @@ function formatTemperament(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-export function CampaignReviewNpcTraits(props: { npc: Npc }): JSX.Element {
-  const { npc } = props
-  const backgroundLabel = resolveBackgroundDisplayLabel(npc.backgroundKey)
-  const genderLabel = npc.genderKey ? findGenderRosterEntry(npc.genderKey)?.label : null
-  const classLabel = npc.classKey ? findNpcClassRosterEntry(npc.classKey)?.label : null
+function traitRow(label: string, value: string): JSX.Element {
+  return (
+    <div className="campaign-review-npc-trait-row">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  )
+}
+
+function optionalTraitRow(label: string, value: string | null | undefined): JSX.Element | null {
+  return value ? traitRow(label, value) : null
+}
+
+function speakingIdentityRows(npc: Npc, campaignRaces: CampaignRace[]): Array<JSX.Element | null> {
+  return [
+    optionalTraitRow('Race', resolveRaceDisplayLabel(npc.raceKey, campaignRaces)),
+    optionalTraitRow(
+      'Alignment',
+      npc.alignment ? ALIGNMENT_LABELS[npc.alignment as Alignment] : null
+    ),
+    optionalTraitRow(
+      'Gender',
+      npc.genderKey ? findGenderRosterEntry(npc.genderKey)?.label : null
+    ),
+    optionalTraitRow(
+      'Class',
+      npc.classKey ? findNpcClassRosterEntry(npc.classKey)?.label : null
+    ),
+    optionalTraitRow('Background', resolveBackgroundDisplayLabel(npc.backgroundKey))
+  ]
+}
+
+function buildTraitRows(npc: Npc, campaignRaces: CampaignRace[]): JSX.Element[] {
+  const rows: Array<JSX.Element | null> = [
+    traitRow('Temperament', formatTemperament(npc.temperament)),
+    ...speakingIdentityRows(npc, campaignRaces),
+    npc.canSpeak ? null : traitRow('Speech', 'Non-verbal (deaf or mute)')
+  ]
+  return rows.filter((row): row is JSX.Element => row !== null)
+}
+
+export function CampaignReviewNpcTraits(props: {
+  npc: Npc
+  campaignRaces?: CampaignRace[]
+}): JSX.Element {
   return (
     <CampaignReviewPanel legend="Traits">
       <dl className="campaign-review-npc-traits">
-        <div className="campaign-review-npc-trait-row">
-          <dt>Temperament</dt>
-          <dd>{formatTemperament(npc.temperament)}</dd>
-        </div>
-        {npc.alignment ? (
-          <div className="campaign-review-npc-trait-row">
-            <dt>Alignment</dt>
-            <dd>{ALIGNMENT_LABELS[npc.alignment as Alignment]}</dd>
-          </div>
-        ) : null}
-        {genderLabel ? (
-          <div className="campaign-review-npc-trait-row">
-            <dt>Gender</dt>
-            <dd>{genderLabel}</dd>
-          </div>
-        ) : null}
-        {classLabel ? (
-          <div className="campaign-review-npc-trait-row">
-            <dt>Class</dt>
-            <dd>{classLabel}</dd>
-          </div>
-        ) : null}
-        {backgroundLabel ? (
-          <div className="campaign-review-npc-trait-row">
-            <dt>Background</dt>
-            <dd>{backgroundLabel}</dd>
-          </div>
-        ) : null}
-        {!npc.canSpeak ? (
-          <div className="campaign-review-npc-trait-row">
-            <dt>Speech</dt>
-            <dd>Non-verbal (deaf or mute)</dd>
-          </div>
-        ) : null}
+        {buildTraitRows(props.npc, props.campaignRaces ?? [])}
       </dl>
     </CampaignReviewPanel>
   )

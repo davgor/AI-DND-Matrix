@@ -149,6 +149,59 @@
   margin-bottom: 28px;
 }
 
+.campaign-review-pantheon {
+  margin-bottom: 28px;
+}
+
+.campaign-review-pantheon h2 {
+  margin: 0 0 12px;
+}
+
+.campaign-review-view-pantheon {
+  padding: 8px 12px;
+}
+
+.campaign-review-pantheon-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+  margin: 12px 0;
+}
+
+.campaign-review-deity-card {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.campaign-review-deity-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.campaign-review-deity-header h3 {
+  margin: 0;
+}
+
+.campaign-review-forgotten-tag {
+  font-size: 0.85em;
+  opacity: 0.85;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.24));
+  padding: 2px 8px;
+}
+
+.campaign-review-deity-domains {
+  margin: 6px 0;
+}
+
+.campaign-review-deity-tenets ul {
+  margin: 4px 0 8px;
+  padding-left: 1.2em;
+}
+
 .campaign-review-world h2 {
   margin: 0 0 12px;
 }

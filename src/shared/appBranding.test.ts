@@ -9,8 +9,9 @@ function readPackageJson(): { build: { productName: string } } {
 }
 
 describe('appBranding', () => {
-  it('uses neutral TTRPG display name', () => {
-    expect(APP_DISPLAY_NAME).toBe('AI TTRPG Matrix')
+  it('uses AI-TTRPG display name without Matrix', () => {
+    expect(APP_DISPLAY_NAME).toBe('AI-TTRPG')
+    expect(APP_DISPLAY_NAME).not.toMatch(/Matrix/i)
     const legacyBrand = new RegExp('D' + '&' + 'D')
     expect(APP_DISPLAY_NAME).not.toMatch(legacyBrand)
   })
@@ -20,6 +21,6 @@ describe('appBranding', () => {
   })
 
   it('derives exe name from display name', () => {
-    expect(APP_EXE_NAME).toBe('AI TTRPG Matrix.exe')
+    expect(APP_EXE_NAME).toBe('AI-TTRPG.exe')
   })
 })

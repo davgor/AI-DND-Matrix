@@ -94,6 +94,18 @@ export type GuidedCreationFailureReason =
   | 'provider_error'
   | 'empty_message'
 
+export interface GuidedCreationGenerateReplyInput {
+  campaignId: string
+  characterId: string
+  phase: GuidedMessagePhase
+  /** Optional composer text to revise into a stronger reply. */
+  existingDraft?: string | null
+}
+
+export type GuidedCreationGenerateReplyResult =
+  | { ok: true; reply: string }
+  | { ok: false; reason: GuidedCreationFailureReason }
+
 export interface GuidedCreationSendMessageSuccess {
   ok: true
   dmReply: string
@@ -112,6 +124,15 @@ export interface GuidedCreationSendMessageFailure {
 export type GuidedCreationSendMessageResult =
   | GuidedCreationSendMessageSuccess
   | GuidedCreationSendMessageFailure
+
+export interface GuidedCreationReadyToEnterPlayInput {
+  campaignId: string
+  characterId: string
+}
+
+export type GuidedCreationReadyToEnterPlayResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_found' | 'invalid_phase' }
 
 export interface GuidedCreationState {
   guidedCreationPhase: GuidedCreationPhase

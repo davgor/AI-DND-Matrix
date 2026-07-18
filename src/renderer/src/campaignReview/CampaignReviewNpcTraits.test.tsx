@@ -89,3 +89,46 @@ describe('CampaignReviewNpcTraits gender/class rows (052.8)', () => {
     expect(text).not.toContain('Class')
   })
 })
+
+describe('CampaignReviewNpcTraits race row (068)', () => {
+  it('shows Race when the NPC has a raceKey', () => {
+    const tree = CampaignReviewNpcTraits({ npc: baseNpc({ raceKey: 'human' }) })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Race')
+    expect(text).toContain('Human')
+  })
+
+  it('hides Race when raceKey is null', () => {
+    const tree = CampaignReviewNpcTraits({ npc: baseNpc({ raceKey: null }) })
+    const text = collectText(tree).join(' ')
+    expect(text).not.toContain('Race')
+  })
+
+  it('uses campaign catalog label for custom races', () => {
+    const tree = CampaignReviewNpcTraits({
+      npc: baseNpc({ raceKey: 'custom_ashwalkers' }),
+      campaignRaces: [
+        {
+          id: 'cr-1',
+          campaignId: 'camp-1',
+          raceKey: 'custom_ashwalkers',
+          kind: 'custom',
+          label: 'Ashwalker',
+          seedPrompt: 'Desert folk.',
+          lore: {
+            summary: 'Desert folk.',
+            appearance: 'Ash-streaked.',
+            culture: 'Nomadic.',
+            roleInThisLand: 'Scouts.',
+            hooks: ['Trade route']
+          },
+          createdByCharacterId: null,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ]
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Race')
+    expect(text).toContain('Ashwalker')
+  })
+})

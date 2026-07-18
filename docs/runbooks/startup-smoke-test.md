@@ -9,7 +9,7 @@ Validates epic 015: loading screen, DB boot stage, LLM boot stage, handoff to ap
   - **claude**: valid `CLAUDE_API_KEY`
   - **llamacpp**: `llama-server` reachable (attach) or managed paths configured
 - Dev: `npm install`
-- Packaged: `npm run package` → `release/AI TTRPG Matrix.exe`
+- Packaged: `npm run package` → `release/AI-TTRPG.exe`
 
 ## Dev-mode smoke (happy path)
 
@@ -26,7 +26,7 @@ Validates epic 015: loading screen, DB boot stage, LLM boot stage, handoff to ap
 
 ## Packaged-mode smoke (happy path)
 
-1. Copy `.env` beside `release/AI TTRPG Matrix.exe`.
+1. Copy `.env` beside `release/AI-TTRPG.exe`.
 2. Ensure provider runtime is available (Player2 running for default config).
 3. Launch the `.exe`.
 4. Repeat observations from dev smoke.

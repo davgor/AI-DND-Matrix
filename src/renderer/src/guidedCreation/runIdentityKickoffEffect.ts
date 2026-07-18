@@ -18,6 +18,7 @@ function startIdentityKickoff(input: {
   void kickoffGuidedIdentity({
     campaignId: input.campaignId,
     characterId: input.characterId,
+    phase: input.phase,
     refresh: input.refresh,
     onStateChange: input.onStateChange
   })
@@ -26,7 +27,7 @@ function startIdentityKickoff(input: {
         return
       }
       input.kickoffStartedRef.current = false
-      input.setError('The DM could not start the interview. Try reloading.')
+      input.setError('The DM could not start the conversation. Try reloading.')
     })
     .finally(() => {
       // Always clear — effect re-runs (e.g. after refresh updates messages) call cleanup
@@ -53,7 +54,7 @@ export function runIdentityKickoffEffect(input: {
   onStateChange?: () => void
 }): (() => void) | void {
   const identityMessageCount =
-    input.state?.messages.filter((message) => message.phase === 'identity').length ?? 0
+    input.state?.messages.filter((message) => message.phase === input.phase).length ?? 0
   if (
     !shouldStartIdentityKickoff({
       phase: input.phase,

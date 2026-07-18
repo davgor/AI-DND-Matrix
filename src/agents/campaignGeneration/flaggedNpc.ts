@@ -15,8 +15,9 @@ import {
   resolveBundleBlurbs
 } from './flaggedNpcParse'
 import { listCampaignRaces } from '../../db/repositories/campaignRaces'
+import { listDeitiesByCampaign } from '../../db/repositories/deities'
 import { buildFlaggedNpcFinalPrompt, buildNpcCoreBundlePrompt } from './flaggedNpcPrompts'
-import { formatWorldContextLines } from './prompts'
+import { formatDeityDigestLines, formatWorldContextLines } from './prompts'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
@@ -154,6 +155,20 @@ function assembleGeneratedNpc(
   }
 }
 
+function loadDeityDigestLines(db: Database.Database, campaignId: string): string[] {
+  const deities = listDeitiesByCampaign(db, campaignId)
+  return formatDeityDigestLines(
+    deities.map((deity) => ({
+      name: deity.name,
+      epithet: deity.epithet,
+      domains: deity.domains,
+      tenets: deity.tenets,
+      blurb: deity.blurb,
+      isForgotten: deity.isForgotten
+    }))
+  )
+}
+
 export async function generateFlaggedNpc(
   db: Database.Database,
   provider: Provider,
@@ -176,6 +191,7 @@ export async function generateFlaggedNpc(
           worldHistory: campaign.worldHistory
         })
       : []
+  const deityDigestLines = loadDeityDigestLines(db, input.campaignId)
   const bundle = await generateNpcCoreBundle(provider, {
     regionName: input.regionName,
     regionDescription: input.regionDescription,
@@ -192,6 +208,7 @@ export async function generateFlaggedNpc(
     existingNpcNames: input.existingNpcNames,
     bundle,
     worldContextLines: worldLines,
+    deityDigestLines,
     ...raceContext,
     ...resolveBundleBlurbs(bundle)
   })

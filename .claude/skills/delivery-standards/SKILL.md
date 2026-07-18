@@ -2,7 +2,7 @@
 name: delivery-standards
 description: >-
   Enforces TDD-first implementation, lint/unit-test/build verification, and
-  /board ticket or epic updates for all code work in AI TTRPG Matrix. Use for
+  /board ticket or epic updates for all code work in AI-TTRPG. Use for
   every feature, bug fix, refactor, or follow-up unless the user explicitly
   asks for a read-only answer with no code changes.
 ---

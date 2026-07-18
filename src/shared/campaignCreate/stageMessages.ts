@@ -6,6 +6,22 @@ import {
 } from './types'
 
 export const CREATE_STAGE_GOOFY_MESSAGES: Record<CreateCampaignStage, readonly string[]> = {
+  canon: [
+    'Checking if this world already has a map…',
+    'Asking the lore librarians for names…',
+    'Rummaging the known-places drawer…',
+    'Matching the premise to remembered kingdoms…',
+    'Looking up famous locals (politely)…',
+    'Consulting the setting concordance…'
+  ],
+  pantheon: [
+    'Counting temple seats for quarrelsome gods…',
+    'Negotiating with forgotten deities…',
+    'Sorting major and minor miracles…',
+    'Naming powers the maps forgot…',
+    'Arguing about domains over tea…',
+    'Dusting off lost cults…'
+  ],
   world: [
     'Arguing with the geography committee…',
     'Teaching dragons which way is north…',
@@ -65,6 +81,10 @@ export function buildCreateProgress(stage: CreateCampaignStage): CreateCampaignP
 
 export function mapCreateStageToPlayerMessage(stage: CreateCampaignStage | null): string {
   switch (stage) {
+    case 'canon':
+      return 'Recalling known places and people'
+    case 'pantheon':
+      return 'Assembling the pantheon'
     case 'world':
       return 'Imagining your world'
     case 'regions':
@@ -82,6 +102,10 @@ export function mapCreateStageToPlayerMessage(stage: CreateCampaignStage | null)
 
 export function mapCreateStageTraceLabel(stage: CreateCampaignStage): string {
   switch (stage) {
+    case 'canon':
+      return 'Canon'
+    case 'pantheon':
+      return 'Pantheon'
     case 'world':
       return 'World'
     case 'regions':

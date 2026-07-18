@@ -7,7 +7,8 @@ export const RACE_ROSTER: RaceRosterEntry[] = [
     key: 'human',
     label: 'Human',
     category: 'common_folk',
-    seedPrompt: 'Adaptable, short-lived, and ambitious; the most widespread and varied ancestry.'
+    seedPrompt:
+      'Ordinary people of this land — short-lived, varied in look and culture, with no innate magic or shared birthright.'
   },
   {
     key: 'elf',

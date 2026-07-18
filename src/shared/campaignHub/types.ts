@@ -3,6 +3,7 @@ import type { Character } from '../../db/repositories/characters'
 import type { Npc } from '../../db/repositories/npcs'
 import type { Region } from '../../db/repositories/regions'
 import type { StoryThread } from '../../db/repositories/storyThreads'
+import type { Deity } from '../../db/repositories/deities'
 import type { RegionExtras } from '../campaign/regionExtras'
 
 /** Durable life status on player character rows (engine/main authority). */
@@ -72,6 +73,7 @@ export interface PlayAwareHubSnapshot {
   regionExtras: RegionExtras[]
   storyThreads: StoryThread[]
   characters: Character[]
+  deities: Deity[]
   currentStateSummary: string
   recentEvents: HubRecentEvent[]
   cast: HubCastMember[]

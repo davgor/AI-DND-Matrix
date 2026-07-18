@@ -86,6 +86,37 @@ export interface GeneratedWorld {
   worldHistory: string
 }
 
+/** Known places/characters/deities recalled from a recognizable premise setting. Empty when original. */
+export interface CanonRecall {
+  recognizedSetting: boolean
+  settingLabel: string
+  knownPlaces: string[]
+  knownCharacters: string[]
+  knownDeities: string[]
+}
+
+export const EMPTY_CANON_RECALL: CanonRecall = {
+  recognizedSetting: false,
+  settingLabel: '',
+  knownPlaces: [],
+  knownCharacters: [],
+  knownDeities: []
+}
+
+export interface GeneratedDeity {
+  name: string
+  epithet: string
+  domains: string[]
+  tenets: string[]
+  blurb: string
+  isForgotten: boolean
+}
+
+export interface GeneratedPantheon {
+  pantheonSummary: string
+  deities: GeneratedDeity[]
+}
+
 export interface WorldContext {
   worldName: string
   worldSummary: string
@@ -94,6 +125,7 @@ export interface WorldContext {
 
 export interface CampaignGenerationResult {
   world: GeneratedWorld
+  pantheon: GeneratedPantheon
   regions: GeneratedRegion[]
   npcs: GeneratedNpc[]
   storyThread: GeneratedStoryThread
@@ -123,6 +155,7 @@ export interface AdditionalRegionRequest {
   npcCount?: number
   history?: CampaignHistoryContext
   availableRaces?: AvailableRaceOption[]
+  deities?: GeneratedDeity[]
 }
 
 export interface PersistRegionWithNpcsInput {

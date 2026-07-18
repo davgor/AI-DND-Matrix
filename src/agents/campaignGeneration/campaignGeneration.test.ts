@@ -14,8 +14,12 @@ import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
   buildAdditionalRegionPrompt,
+  buildCanonRecallPrompt,
   buildGenerationPrompt,
+  buildPantheonGenerationPrompt,
+  buildRegionsGenerationPrompt,
   buildWorldGenerationPrompt,
+  formatDeityDigest,
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
@@ -27,6 +31,7 @@ import {
   hasValidNpcClass,
   normalizeAdditionalRegion,
   normalizeCampaignGeneration,
+  normalizeCanonRecall,
   persistRegionWithNpcs,
   resolveInitialGenerationCounts
 } from '.'
@@ -37,7 +42,10 @@ import {
   LEGACY_CAMPAIGN_SEED_PAYLOAD,
   REALISTIC_LLM_WORLD,
   VALID_WORLD,
+  EMPTY_CANON_RESPONSE,
+  VALID_PANTHEON_RESPONSE,
   buildCascadingSeedResponses,
+  buildShieldHeroCascadingSeedResponses,
   makeNpcs,
   makeRegion,
   npcReviewResponses,
@@ -48,7 +56,7 @@ import {
 } from './fixtures'
 import type { GeneratedNpc, GeneratedRegion } from '.'
 import type { CreateCampaignStage } from '../../shared/campaignCreate/types'
-import { countParagraphs, coerceNpcTemperament, hasRepeatedSentences, isValidGeneratedWorld, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster } from './normalize'
+import { countParagraphs, coerceNpcTemperament, hasRepeatedSentences, isValidGeneratedPantheon, isValidGeneratedWorld, normalizeGeneratedPantheon, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster } from './normalize'
 import { findProseJargonViolations } from './proseJargonGuard'
 
 const VORATH_STACKED_SUMMARY =
@@ -136,6 +144,8 @@ describe('generateCampaignSeed NPC slot retries', () => {
     const duplicateNpc = { ...firstNpc }
     const uniqueNpc = { ...firstNpc, name: 'Bob' }
     const provider = createScriptedProvider([
+      EMPTY_CANON_RESPONSE,
+      VALID_PANTHEON_RESPONSE,
       JSON.stringify(VALID_WORLD),
       JSON.stringify({ regions }),
       JSON.stringify({ npc: firstNpc }),
@@ -167,11 +177,45 @@ describe('generateCampaignSeed progress', () => {
         stages.push(stage)
       }
     })
-    expect(stages[0]).toBe('world')
+    expect(stages[0]).toBe('canon')
+    expect(stages).toContain('pantheon')
+    expect(stages).toContain('world')
+    expect(stages.indexOf('pantheon')).toBeGreaterThan(stages.indexOf('canon'))
+    expect(stages.indexOf('world')).toBeGreaterThan(stages.indexOf('pantheon'))
+    expect(stages.indexOf('regions')).toBeGreaterThan(stages.indexOf('world'))
     expect(stages).toContain('regions')
     expect(stages.filter((stage) => stage === 'npcs').length).toBeGreaterThanOrEqual(2)
     expect(stages).toContain('story')
     expect(stages.indexOf('story')).toBeGreaterThan(stages.lastIndexOf('npcs'))
+  })
+})
+
+describe('fandom canon-recall seeding (070)', () => {
+  it('prefers Melromarc and Raphtalia when premise and canon list them', async () => {
+    const provider = createScriptedProvider(
+      buildShieldHeroCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 1 })
+    )
+    const result = await generateCampaignSeed(
+      provider,
+      'Campaign set in the world of the shield hero',
+      { regionCount: 2, npcsPerRegion: 1, availableRaces: buildAvailableRaceOptions([]) }
+    )
+    expect(result.regions.map((region) => region.name)).toContain('Melromarc')
+    expect(result.npcs.map((npc) => npc.name)).toContain('Raphtalia')
+  })
+
+  it('prefers known setting deities in the pantheon roster', async () => {
+    const provider = createScriptedProvider(
+      buildShieldHeroCascadingSeedResponses({ regionCount: 1, npcsPerRegion: 1 })
+    )
+    const result = await generateCampaignSeed(
+      provider,
+      'Campaign set in the world of the shield hero',
+      { regionCount: 1, npcsPerRegion: 1, availableRaces: buildAvailableRaceOptions([]) }
+    )
+    const names = result.pantheon.deities.map((deity) => deity.name)
+    expect(names).toContain('The Three Heroes')
+    expect(names).toContain('Ost Hero')
   })
 })
 
@@ -325,6 +369,138 @@ describe('buildWorldGenerationPrompt', () => {
     expect(prompt).not.toContain('storm-priests')
     expect(prompt).not.toContain('fog-veiled')
     expect(prompt).not.toContain('storm-wracked')
+  })
+})
+
+describe('buildCanonRecallPrompt (070)', () => {
+  it('asks for known places, characters, and deities', () => {
+    const prompt = buildCanonRecallPrompt('world of the shield hero')
+    expect(prompt).toContain('knownPlaces')
+    expect(prompt).toContain('knownCharacters')
+    expect(prompt).toContain('knownDeities')
+    expect(prompt).toContain('Melromarc')
+    expect(prompt).toContain('Raphtalia')
+    expect(prompt).toContain('Do NOT invent fake')
+  })
+})
+
+describe('buildRegionsGenerationPrompt canon context (070)', () => {
+  it('includes known places when canon is present', () => {
+    const prompt = buildRegionsGenerationPrompt(
+      'world of the shield hero',
+      VALID_WORLD,
+      { regionCount: 2, npcsPerRegion: 1 },
+      {
+        recognizedSetting: true,
+        settingLabel: 'The Rising of the Shield Hero',
+        knownPlaces: ['Melromarc', 'Siltvelt'],
+        knownCharacters: ['Raphtalia'],
+        knownDeities: ['The Three Heroes']
+      }
+    )
+    expect(prompt).toContain('Melromarc')
+    expect(prompt).toContain('prefer those exact names')
+  })
+})
+
+describe('normalizeCanonRecall (070)', () => {
+  it('accepts snake_case and empty unrecognized payloads', () => {
+    expect(
+      normalizeCanonRecall({
+        recognized_setting: true,
+        setting_label: 'Shield Hero',
+        known_places: ['Melromarc', 'melromarc', 'Siltvelt'],
+        known_characters: ['Raphtalia'],
+        known_deities: ['The Three Heroes', 'Ost Hero']
+      })
+    ).toEqual({
+      recognizedSetting: true,
+      settingLabel: 'Shield Hero',
+      knownPlaces: ['Melromarc', 'Siltvelt'],
+      knownCharacters: ['Raphtalia'],
+      knownDeities: ['The Three Heroes', 'Ost Hero']
+    })
+    expect(normalizeCanonRecall(null)).toEqual({
+      recognizedSetting: false,
+      settingLabel: '',
+      knownPlaces: [],
+      knownCharacters: [],
+      knownDeities: []
+    })
+  })
+})
+
+describe('normalizeGeneratedPantheon (059)', () => {
+  it('tolerates snake_case and comma-joined domains', () => {
+    const normalized = normalizeGeneratedPantheon({
+      pantheon_summary: 'Faith is a bargain.\n\nTemples argue.\n\nSome names are lost.',
+      deities: Array.from({ length: 8 }, (_, index) => ({
+        name: `God ${index + 1}`,
+        epithet: index === 0 ? 'the First' : undefined,
+        domains: index % 2 === 0 ? 'war, sea' : ['harvest'],
+        tenets: 'Keep vigil, Speak truth',
+        blurb: `Blurb for god ${index + 1}.`,
+        is_forgotten: index < 2 ? 'true' : 'false'
+      }))
+    })
+    expect(normalized?.deities).toHaveLength(8)
+    expect(normalized?.deities[0]?.domains).toEqual(['war', 'sea'])
+    expect(normalized?.deities[0]?.tenets).toEqual(['Keep vigil', 'Speak truth'])
+    expect(normalized?.deities.filter((d) => d.isForgotten)).toHaveLength(2)
+    expect(isValidGeneratedPantheon(normalized)).toBe(true)
+  })
+})
+
+describe('buildPantheonGenerationPrompt (059)', () => {
+  it('prefers known deities when canon lists them', () => {
+    const prompt = buildPantheonGenerationPrompt('world of the shield hero', {
+      recognizedSetting: true,
+      settingLabel: 'Shield Hero',
+      knownPlaces: [],
+      knownCharacters: [],
+      knownDeities: ['The Three Heroes', 'Ost Hero']
+    })
+    expect(prompt).toContain('The Three Heroes')
+    expect(prompt).toContain('Prefer the known deity')
+    expect(prompt).toContain('8–12')
+  })
+})
+
+describe('buildWorldGenerationPrompt pantheon context (059)', () => {
+  it('includes pantheon deity names', () => {
+    const prompt = buildWorldGenerationPrompt('A marsh kingdom', {
+      pantheonSummary: 'Tide faiths rule the harbors.',
+      deities: [
+        {
+          name: 'Vhalor',
+          epithet: 'the Drowned Judge',
+          domains: ['tides'],
+          tenets: ['Keep oaths', 'Fear the deep'],
+          blurb: 'Tide judge.',
+          isForgotten: false
+        }
+      ]
+    })
+    expect(prompt).toContain('Vhalor')
+    expect(prompt).toContain('consistent with the pantheon')
+  })
+})
+
+describe('formatDeityDigest (059)', () => {
+  it('is compact without tenets or blurbs', () => {
+    const digest = formatDeityDigest([
+      {
+        name: 'Vhalor',
+        epithet: 'the Drowned Judge',
+        domains: ['tides', 'oaths'],
+        tenets: ['Keep oaths', 'Fear the deep'],
+        blurb: 'Secret blurb text.',
+        isForgotten: true
+      }
+    ])
+    expect(digest).toContain('Vhalor, the Drowned Judge — tides, oaths (forgotten)')
+    expect(digest).not.toContain('Keep oaths')
+    expect(digest).not.toContain('Secret blurb')
   })
 })
 
@@ -668,6 +844,8 @@ function shortfallNpcPayload(regionName: string, name: string): string {
 /** World + one region + all initial NPC slots failing + story, so the shortfall fill owns every slot. */
 function buildShortfallSeedPrelude(region: ReturnType<typeof makeRegion>, npcsPerRegion: number): string[] {
   return [
+    EMPTY_CANON_RESPONSE,
+    VALID_PANTHEON_RESPONSE,
     JSON.stringify(VALID_WORLD),
     JSON.stringify({ regions: [region] }),
     ...Array.from({ length: npcsPerRegion * MAX_GENERATION_ATTEMPTS }, () => 'invalid npc slot response'),
@@ -731,8 +909,8 @@ describe('one-shot NPC generation call-count guards (040.13)', () => {
     const provider = createScriptedProvider(responses)
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 2, npcsPerRegion: 3 })
     expect(result.npcs).toHaveLength(6)
-    // world + regions + one call per NPC (6) + story thread = 9
-    expect(provider.calls).toHaveLength(9)
+    // canon + pantheon + world + regions + one call per NPC (6) + story thread = 11
+    expect(provider.calls).toHaveLength(11)
     expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
   })
 

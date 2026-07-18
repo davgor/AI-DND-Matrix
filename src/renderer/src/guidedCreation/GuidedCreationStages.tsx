@@ -1,5 +1,6 @@
 import type { Character } from '../../../db/repositories/characters'
 import { GuidedConversationShell } from '../guidedCreation/GuidedConversationShell'
+import { OpeningSceneAutoEnterEffect } from './OpeningSceneAutoEnterEffect'
 
 export interface GuidedIdentityStageProps {
   campaignId: string
@@ -39,6 +40,10 @@ export function GuidedOpeningSceneStage(props: GuidedOpeningSceneStageProps): JS
 
   return (
     <div className="guided-opening-scene-stage">
+      <OpeningSceneAutoEnterEffect
+        phase={props.character.guidedCreationPhase}
+        onEnterPlay={props.onEnterPlay}
+      />
       {props.enterPlayBlockerMessage ? (
         <p className="guided-play-blocker panel-card" role="alert">
           {props.enterPlayBlockerMessage}

@@ -6,7 +6,7 @@ Inventory of D&D-specific user-facing wording and approved neutral replacements.
 
 | Old phrase | Approved replacement | Notes |
 |------------|---------------------|-------|
-| `AI D&D Matrix` | `AI TTRPG Matrix` | App display name, window title, packaged `.exe` |
+| `AI D&D Matrix` / `AI TTRPG Matrix` | `AI-TTRPG` | App display name, window title, packaged `.exe` (079) |
 | `D&D desktop app` | `TTRPG desktop app` | README / marketing copy |
 | `D&D` (standalone brand reference) | `TTRPG` | User-facing prose only |
 | `5E-like` | `tabletop RPG-inspired` | Rules engine description |
@@ -47,7 +47,7 @@ These strings stay unchanged to preserve npm installs, Electron identity, save c
 
 ## Final report (022.10)
 
-**Scrubbed:** app display name (`AI TTRPG Matrix`), README/runbooks, smoke-script exe paths, research/smoke prompt copy (`game master`), `package.json` `productName` and `description`.
+**Scrubbed:** app display name (`AI-TTRPG`; formerly `AI TTRPG Matrix`), README/runbooks, smoke-script exe paths, research/smoke prompt copy (`game master`), `package.json` `productName` and `description`.
 
 **Waived (intentional):**
 - npm package `name` `ai-dnd-matrix` and Electron `appId` `com.davgor.aidndmatrix` — install/save identity
