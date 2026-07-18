@@ -1,11 +1,8 @@
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { IdentityFoundationsStatus } from '../shared/guidedCreation/types'
 import { IDENTITY_FOUNDATIONS } from '../shared/guidedCreation/types'
 import type { RaceLore } from '../shared/raceSelection/types'
-
-export { MAX_SCHEMA_ATTEMPTS as MAX_IDENTITY_ATTEMPTS }
 
 // Interview turns only see the most recent transcript entries; anything older
 // is represented by the locked foundation summaries carried in the prompt.
@@ -216,14 +213,16 @@ export async function runIdentityInterviewKickoff(
     systemPrompt: buildIdentityKickoffSystemPrompt(context),
     maxTokens: IDENTITY_REPLY_MAX_TOKENS
   }
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(IDENTITY_KICKOFF_PROMPT, generateContext)
-    const parsed = tryParseJson(raw)
-    if (isIdentityKickoffResponse(parsed)) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    IDENTITY_KICKOFF_PROMPT,
+    (parsed) => (isIdentityKickoffResponse(parsed) ? parsed : undefined),
+    {
+      context: generateContext,
+      exhaustedError: () =>
+        new Error('Identity interview kickoff did not return a valid schema after retries')
     }
-  }
-  throw new Error('Identity interview kickoff did not return a valid schema after retries')
+  )
 }
 
 function buildIdentityInterviewSystemPrompt(
@@ -260,17 +259,19 @@ export async function runIdentityInterviewTurn(
     maxTokens: IDENTITY_REPLY_MAX_TOKENS
   }
   const prompt = buildIdentityInterviewPrompt(context, playerMessage)
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, generateContext)
-    const parsed = tryParseJson(raw)
-    if (
-      isIdentityInterviewResponse(parsed) &&
-      whereStartingRegionIsValid(parsed, context.regions)
-    ) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) =>
+      isIdentityInterviewResponse(parsed) && whereStartingRegionIsValid(parsed, context.regions)
+        ? parsed
+        : undefined,
+    {
+      context: generateContext,
+      exhaustedError: () =>
+        new Error('Identity interview agent did not return a valid schema after retries')
     }
-  }
-  throw new Error('Identity interview agent did not return a valid schema after retries')
+  )
 }
 
 export function mergeFoundationStatus(

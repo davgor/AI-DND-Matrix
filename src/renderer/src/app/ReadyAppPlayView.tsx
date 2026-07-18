@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
+import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
 import { PlayView } from '../playView/PlayView'
 import type { useSidebarController } from '../sidebar/useSidebarController'
 import type { useReadyAppBodyState } from './useReadyAppBody'
@@ -11,7 +12,7 @@ export function ReadyAppPlayView(props: {
   campaignCallbacks: {
     onCampaignSelected: (next: CampaignDetail) => void
     onOpenNewCampaign: () => void
-    onRequestDelete: (campaignId: string) => void
+    onRequestDelete: (campaign: CampaignWithLastPlayed) => void
   }
 }): JSX.Element {
   return (

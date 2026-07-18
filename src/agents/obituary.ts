@@ -8,8 +8,7 @@ import { getNpcById } from '../db/repositories/npcs'
 import type { CharacterObituary, DeathCause } from '../shared/campaignHub/types'
 import { takeRecent } from './contextWindow'
 import { PROSE_CLARITY_RULES } from './campaignGeneration/prompts'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 
 export class ObituarySchemaError extends Error {}
@@ -199,17 +198,20 @@ export async function generateObituary(
   provider: Provider,
   context: ObituaryContext
 ): Promise<CharacterObituary> {
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildObituaryPrompt(context), OBITUARY_GENERATE_CONTEXT)
-    const parsed = parseGeneratedObituary(tryParseJson(raw))
-    if (parsed) {
-      return {
-        generatedAt: new Date().toISOString(),
-        ...parsed
-      }
+  const parsed = await generateJsonWithRetry(
+    provider,
+    () => buildObituaryPrompt(context),
+    (value) => parseGeneratedObituary(value) ?? undefined,
+    {
+      context: OBITUARY_GENERATE_CONTEXT,
+      exhaustedError: () =>
+        new ObituarySchemaError('Obituary agent did not return a valid schema after retries')
     }
+  )
+  return {
+    generatedAt: new Date().toISOString(),
+    ...parsed
   }
-  throw new ObituarySchemaError('Obituary agent did not return a valid schema after retries')
 }
 
 export function enrichObituaryNpcNames(

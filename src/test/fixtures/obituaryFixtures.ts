@@ -1,11 +1,11 @@
-import type { createTestDb } from '../db/testUtils'
-import { createCampaign, updateCampaignStateSummary } from '../db/repositories/campaigns'
-import { createCharacter } from '../db/repositories/characters'
-import { createCharacterJournalEntry } from '../db/repositories/characterJournalEntries'
-import { createLogEntry } from '../db/repositories/logEntries'
-import { appendNpcMemory } from '../db/repositories/npcMemories'
-import { createNpc } from '../db/repositories/npcs'
-import { createRegion } from '../db/repositories/regions'
+import type { createTestDb } from '../../db/testUtils'
+import { createCampaign, updateCampaignStateSummary } from '../../db/repositories/campaigns'
+import { createCharacter } from '../../db/repositories/characters'
+import { createCharacterJournalEntry } from '../../db/repositories/characterJournalEntries'
+import { createLogEntry } from '../../db/repositories/logEntries'
+import { appendNpcMemory } from '../../db/repositories/npcMemories'
+import { createNpc } from '../../db/repositories/npcs'
+import { createRegion } from '../../db/repositories/regions'
 
 export function seedObituaryFixture(db: ReturnType<typeof createTestDb>) {
   const campaign = createCampaign(db, {

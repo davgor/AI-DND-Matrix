@@ -1,4 +1,4 @@
-import type { DamageRoll, DamageType } from '../../engine/damage'
+import { DAMAGE_TYPES, type DamageRoll, type DamageType } from '../../engine/damage'
 
 export const ITEM_MODIFICATION_KINDS = [
   'addDamageComponent',
@@ -73,13 +73,12 @@ export interface ItemModificationAgentResponse {
   modification: ItemModificationProposal
 }
 
-const DAMAGE_TYPES: DamageType[] = ['physical', 'fire', 'cold', 'poison', 'arcane']
 
-export function isItemModificationKind(value: unknown): value is ItemModificationKind {
+function isItemModificationKind(value: unknown): value is ItemModificationKind {
   return typeof value === 'string' && (ITEM_MODIFICATION_KINDS as readonly string[]).includes(value)
 }
 
-export function isDamageType(value: unknown): value is DamageType {
+function isDamageType(value: unknown): value is DamageType {
   return typeof value === 'string' && DAMAGE_TYPES.includes(value as DamageType)
 }
 

@@ -145,23 +145,6 @@
   margin-top: 0.5rem;
 }
 
-.equipment-selection-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
-}
-
-.equipment-selection-back-arrow {
-  font-size: 1.1rem;
-  line-height: 1;
-  transition: transform 150ms ease;
-}
-
-.equipment-selection-back:hover:not(:disabled) .equipment-selection-back-arrow {
-  transform: translateX(-2px);
-}
-
 .equipment-selection-loading,
 .equipment-selection-error {
   display: flex;

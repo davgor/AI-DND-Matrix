@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import { clampItemRarity, deriveMechanicalProperties } from '../../engine/itemTemplate'
 import type { CatalogItem, EquipSlot, ItemType } from '../../shared/items/types'
-import { findCatalogItemByName, getCatalogItemById, upsertCatalogItemByName } from './items'
+import { getCatalogItemById, upsertCatalogItemByName } from './items'
 
 export interface ProposedCatalogItemInput {
   name: string
@@ -44,8 +44,4 @@ export function resolveCatalogItemReference(
   catalogItemId: string
 ): CatalogItem | undefined {
   return getCatalogItemById(db, catalogItemId)
-}
-
-export function findCanonicalItemByName(db: Database.Database, name: string): CatalogItem | undefined {
-  return findCatalogItemByName(db, name)
 }

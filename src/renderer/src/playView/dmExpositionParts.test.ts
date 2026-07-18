@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AlignmentShiftWarningBanner, renderFeedLine, renderNpcLine } from './dmExpositionParts'
-import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
+import { hasEmphasisTypes } from '../test/formattedTextTestUtils'
 
 describe('AlignmentShiftWarningBanner', () => {
   it('renders alert role and warning copy when a shift is pending', () => {
@@ -27,7 +27,9 @@ describe('renderFeedLine', () => {
     const action = renderFeedLine({
       speaker: 'player',
       playerLineKind: 'actionExpression',
-      text: 'Kael draws his sword.'
+      text: 'Kael draws his sword.',
+      id: '1',
+      timestamp: 't'
     })
     expect(action.type).toBe('strong')
     expect(action.props.children).toBe('Kael draws his sword.')

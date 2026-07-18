@@ -5,6 +5,7 @@ import type { GuidedRefresh } from './guidedIdentityKickoff'
 function startIdentityKickoff(input: {
   campaignId: string
   characterId: string
+  phase: GuidedMessagePhase
   kickoffStartedRef: { current: boolean }
   refresh: GuidedRefresh
   setKickingOff: (value: boolean) => void

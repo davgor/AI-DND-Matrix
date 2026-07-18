@@ -15,12 +15,9 @@ import { buildAvailableRaceOptions } from '../agents/raceLore'
 import { createNpcWithCombatReview } from '../db/repositories/npcCombatHydration'
 import {
   getCampaignById,
-  updateCampaignDeathMode,
   updateCampaignWorldHistory,
   updateCampaignWorldSummary,
-  updateCampaignPantheonSummary,
-  type DeathMode,
-  type RespawnRules
+  updateCampaignPantheonSummary
 } from '../db/repositories/campaigns'
 import { deleteNpcCascade } from '../db/repositories/deleteNpc'
 import { deleteRegionCascade } from '../db/repositories/deleteRegion'
@@ -34,20 +31,6 @@ import {
 } from '../shared/campaignCreate/types'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
-
-export interface SetDeathModeInput {
-  campaignId: string
-  deathMode: DeathMode
-  respawnRules?: RespawnRules | null
-}
-
-export function setCampaignDeathMode(db: Database.Database, input: SetDeathModeInput): CampaignDetail {
-  updateCampaignDeathMode(db, input.campaignId, {
-    deathMode: input.deathMode,
-    respawnRules: input.respawnRules
-  })
-  return getCampaignDetail(db, input.campaignId)
-}
 
 export interface EditRegionDescriptionInput {
   campaignId: string

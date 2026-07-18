@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { generateFlaggedNpc } from '../agents/campaignGeneration/flaggedNpc'
-import { RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
+import { RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from '../main/turnIpc'
 import { attackRng, initiativeRng } from './combatEncounterSmokeFixtures'

@@ -3,7 +3,7 @@ import { createTestDb } from './testUtils'
 import { listNpcsByRegion } from './repositories/npcs'
 import { listRegionsByCampaign } from './repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
+import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { generateAndPersistCampaign } from '../agents/campaignGeneration'
 
 describe('npc background bulk persistence (051.7)', () => {

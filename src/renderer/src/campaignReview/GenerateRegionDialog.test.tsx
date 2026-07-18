@@ -11,6 +11,9 @@ function isJsxElement(node: unknown): node is JSX.Element {
 }
 
 function expandNode(node: unknown): unknown {
+  if (Array.isArray(node)) {
+    return node.map((child) => expandNode(child))
+  }
   if (typeof node === 'function') {
     return expandNode(node({}))
   }
@@ -32,6 +35,9 @@ function expandNode(node: unknown): unknown {
 
 function collectElements(node: unknown): JSX.Element[] {
   const expanded = expandNode(node)
+  if (Array.isArray(expanded)) {
+    return expanded.flatMap((child) => collectElements(child))
+  }
   if (!isJsxElement(expanded)) {
     return []
   }

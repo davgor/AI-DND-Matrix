@@ -12,9 +12,7 @@ import {
   setPendingAlignmentShift
 } from '../db/repositories/characterAlignment'
 import { clampDC } from '../engine/checks'
-import type { DamageType } from '../engine/damage'
-import type { EmergentDirectionCandidate } from '../engine/emergentDirection'
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry, tryParseJson } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 import { NARRATIVE_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
@@ -53,8 +51,6 @@ import { isAttackLethality, type AttackLethality } from '../shared/npcCombat/typ
 import { getActiveEncounter } from '../db/repositories/combatEncounters'
 
 export class DmSchemaError extends Error {}
-
-export const MAX_SCHEMA_ATTEMPTS = 3
 
 const VALID_ABILITIES: Ability[] = ['body', 'agility', 'mind', 'presence']
 
@@ -294,20 +290,25 @@ export async function interpretIntent(
   playerInput: string,
   combatContext?: CombatIntentContext
 ): Promise<IntentInterpretation> {
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(
-      buildIntentPrompt(playerInput, combatContext),
-      INTENT_GENERATE_CONTEXT
-    )
-    const parsed = tryParseJson(raw)
-    if (isValidIntent(parsed)) {
-      const intent = clampIntentDC(parsed)
-      if (!combatContext || validateCombatIntent(intent, combatContext)) {
-        return intent
+  return generateJsonWithRetry(
+    provider,
+    () => buildIntentPrompt(playerInput, combatContext),
+    (parsed) => {
+      if (!isValidIntent(parsed)) {
+        return undefined
       }
+      const intent = clampIntentDC(parsed)
+      if (combatContext && !validateCombatIntent(intent, combatContext)) {
+        return undefined
+      }
+      return intent
+    },
+    {
+      context: INTENT_GENERATE_CONTEXT,
+      exhaustedError: () =>
+        new DmSchemaError('DM agent did not return a valid intent schema after retries')
     }
-  }
-  throw new DmSchemaError('DM agent did not return a valid intent schema after retries')
+  )
 }
 
 // === 006.3: narration call, given the engine's actual resolution + fresh DB context ===
@@ -631,60 +632,4 @@ function persistLogBookDeletions(
   for (const entryId of entryIds) {
     deleteLogEntryForCharacter(db, characterId, entryId)
   }
-}
-
-// === 006.8: homebrew flavor proposal, constrained to flavor-only fields ===
-
-export interface HomebrewFlavorProposal {
-  name: string
-  description: string
-  damageType: DamageType
-}
-
-const VALID_DAMAGE_TYPES: DamageType[] = ['physical', 'fire', 'cold', 'poison', 'arcane']
-
-function isValidFlavorProposal(value: unknown): value is HomebrewFlavorProposal {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-  const candidate = value as Record<string, unknown>
-  return (
-    typeof candidate['name'] === 'string' &&
-    typeof candidate['description'] === 'string' &&
-    VALID_DAMAGE_TYPES.includes(candidate['damageType'] as DamageType)
-  )
-}
-
-// 040.9: flavor schema + constraints ride in systemPrompt.
-// 040.1: 256 — a name, one short description, and a damage type.
-const HOMEBREW_GENERATE_CONTEXT: GenerateContext = {
-  systemPrompt: buildAgentSystemPrompt({
-    schemaFragment: '{"name":string,"description":string,"damageType":"physical|fire|cold|poison|arcane"}',
-    guidanceLines: [
-      'Propose flavor for a new feature: a name, a short description, and a damage type.',
-      'Do not include any numeric game values — those are computed by the engine, not you.'
-    ]
-  }),
-  maxTokens: 256
-}
-
-function buildHomebrewPrompt(candidate: EmergentDirectionCandidate): string {
-  return `The character has repeatedly attempted "${candidate.tag}"-flavored actions outside their normal kit (${candidate.count} times recently).`
-}
-
-export async function proposeHomebrewFlavor(
-  provider: Provider,
-  candidate: EmergentDirectionCandidate | null
-): Promise<HomebrewFlavorProposal | null> {
-  if (!candidate) {
-    return null
-  }
-  const raw = await provider.generate(buildHomebrewPrompt(candidate), HOMEBREW_GENERATE_CONTEXT)
-  const parsed = tryParseJson(raw)
-  if (!isValidFlavorProposal(parsed)) {
-    throw new DmSchemaError('DM agent did not return a valid homebrew flavor schema')
-  }
-  // Only flavor/text fields are carried forward — any numeric fields the agent
-  // smuggled into the response (e.g. an attempted effectDice override) are dropped here.
-  return { name: parsed.name, description: parsed.description, damageType: parsed.damageType }
 }

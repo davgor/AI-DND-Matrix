@@ -1,13 +1,10 @@
 import type { Npc } from '../db/repositories/npcs'
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import {
   parseRetiredAdventurerReview,
   type RetiredAdventurerReviewResult
 } from '../shared/npcCombat/types'
-
-export class RetiredAdventurerReviewError extends Error {}
 
 // 040.1: 128 — a boolean, an optional profile word, and an optional short
 // reason; the smallest structured response in the codebase.
@@ -35,12 +32,14 @@ export async function reviewRetiredAdventurer(
   provider: Provider,
   npc: Npc
 ): Promise<RetiredAdventurerReviewResult> {
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildReviewPrompt(npc), RETIRED_REVIEW_GENERATE_CONTEXT)
-    const parsed = tryParseJson(raw)
-    return parseRetiredAdventurerReview(parsed)
-  }
-  return { upgrade: false }
+  return generateJsonWithRetry<RetiredAdventurerReviewResult>(
+    provider,
+    () => buildReviewPrompt(npc),
+    (parsed) => (parsed === undefined ? undefined : parseRetiredAdventurerReview(parsed)),
+    {
+      context: RETIRED_REVIEW_GENERATE_CONTEXT,
+      fallback: () => ({ upgrade: false })
+    }
+  )
 }
 
-export { buildReviewPrompt }

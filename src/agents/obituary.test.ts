@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { getCharacterById } from '../db/repositories/characters'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import { MAX_SCHEMA_ATTEMPTS } from './jsonResponse'
 import {
   assembleObituaryContext,
   enrichObituaryNpcNames,
@@ -9,7 +9,7 @@ import {
   persistObituaryOnDeath
 } from './obituary'
 import { createScriptedProvider } from './providers/mockHarness'
-import { seedObituaryFixture } from './obituary.fixtures'
+import { seedObituaryFixture } from '../test/fixtures/obituaryFixtures'
 
 const validObituaryJson = JSON.stringify({
   deathCause: 'legendary_dying',

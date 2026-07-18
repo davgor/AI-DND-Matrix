@@ -8,9 +8,9 @@ import {
   LorePanel,
   RacePickButton,
   RosterGroup
-} from './RaceSelectionForm'
+} from './RaceSelectionParts'
 import { RaceSelectionActions } from './RaceSelectionBody'
-import { RaceBackButton } from './RaceBackButton'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import {
   applyLorePreview,
   initialRaceSelectionState,
@@ -148,9 +148,9 @@ describe('RaceSelectionForm actions', () => {
       onBack
     })
 
-    const backSlot = findComponent(tree, RaceBackButton)
+    const backSlot = findComponent(tree, OnboardingBackButton)
     expect(backSlot).toBeDefined()
-    RaceBackButton({ onBack: backSlot!.props.onBack }).props.onClick()
+    OnboardingBackButton({ onBack: backSlot!.props.onBack }).props.onClick()
     expect(onBack).toHaveBeenCalledOnce()
   })
 })

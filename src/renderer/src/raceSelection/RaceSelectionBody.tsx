@@ -1,10 +1,9 @@
 import type { RaceRosterGroup } from '../../../main/raceIpc'
 import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { ProceedButton } from '../onboarding/ProceedButton'
-import { RaceBackButton } from './RaceBackButton'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import { CustomRacePanel } from './RaceSelectionCustomPanel'
-import { RaceSelectionCustomSection } from './RaceSelectionCustomSection'
-import { LorePanel, RosterGroup } from './RaceSelectionParts'
+import { LorePanel, RacePickButton, RosterGroup } from './RaceSelectionParts'
 import { lorePanelTitle } from './raceSelectionTitles'
 import {
   canConfirmRaceSelection,
@@ -23,7 +22,7 @@ export function RaceSelectionActions(props: {
 }): JSX.Element {
   return (
     <div className="race-selection-actions">
-      <RaceBackButton onBack={props.onBack} />
+      <OnboardingBackButton onBack={props.onBack} />
       <ProceedButton
         disabled={
           props.submitting || props.previewLoading || !canConfirmRaceSelection(props.state)
@@ -36,6 +35,32 @@ export function RaceSelectionActions(props: {
   )
 }
 
+function RaceLoreSection(props: {
+  roster: RaceRosterGroup[]
+  state: RaceSelectionState
+  setState: (next: RaceSelectionState) => void
+  previewLoading: boolean
+  onPreviewLore: () => void
+}): JSX.Element | null {
+  if (props.state.lore) {
+    return (
+      <LorePanel
+        title={lorePanelTitle(props.state, props.roster)}
+        lore={props.state.lore}
+        editable={isLoreEditable(props.state)}
+        previewLoading={props.previewLoading}
+        showRegenerate={showRegenerateControl(props.state)}
+        onRegenerate={props.onPreviewLore}
+        onLoreChange={(field, value) => props.setState(updateLoreField(props.state, field, value))}
+      />
+    )
+  }
+  if (props.state.kind === 'preset' && props.previewLoading) {
+    return <p className="race-selection-preview-loading">Generating lore for this land...</p>
+  }
+  return null
+}
+
 export function RaceSelectionBody(props: {
   roster: RaceRosterGroup[]
   campaignRaces: CampaignRace[]
@@ -46,7 +71,6 @@ export function RaceSelectionBody(props: {
   onPickCustom: () => void
   onPreviewLore: () => void
 }): JSX.Element {
-  const editable = isLoreEditable(props.state)
   return (
     <>
       {props.roster.map((group) => (
@@ -58,32 +82,29 @@ export function RaceSelectionBody(props: {
           onSelect={props.onPickPreset}
         />
       ))}
-
-      <RaceSelectionCustomSection
-        selected={props.state.kind === 'custom'}
-        onPickCustom={props.onPickCustom}
-      />
-
+      <section className="race-selection-group">
+        <h2>Custom</h2>
+        <div className="race-selection-options">
+          <RacePickButton
+            label="Custom race ✎"
+            selected={props.state.kind === 'custom'}
+            onSelect={props.onPickCustom}
+          />
+        </div>
+      </section>
       <CustomRacePanel
         state={props.state}
         previewLoading={props.previewLoading}
         onStateChange={props.setState}
         onGenerate={props.onPreviewLore}
       />
-
-      {props.state.lore ? (
-        <LorePanel
-          title={lorePanelTitle(props.state, props.roster)}
-          lore={props.state.lore}
-          editable={editable}
-          previewLoading={props.previewLoading}
-          showRegenerate={showRegenerateControl(props.state)}
-          onRegenerate={props.onPreviewLore}
-          onLoreChange={(field, value) => props.setState(updateLoreField(props.state, field, value))}
-        />
-      ) : props.state.kind === 'preset' && props.previewLoading ? (
-        <p className="race-selection-preview-loading">Generating lore for this land...</p>
-      ) : null}
+      <RaceLoreSection
+        roster={props.roster}
+        state={props.state}
+        setState={props.setState}
+        previewLoading={props.previewLoading}
+        onPreviewLore={props.onPreviewLore}
+      />
     </>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
+import { MAX_SCHEMA_ATTEMPTS } from './jsonResponse'
 import { runOpeningSceneKickoff, runOpeningSceneTurn } from './guidedOpeningScene'
 import { createScriptedProvider } from './providers/mockHarness'
 

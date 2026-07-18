@@ -67,9 +67,12 @@ Run and fix until clean. **Do not report completion with failing checks.**
 npm test
 npm run lint
 npm run build
+npm run deadcode
 ```
 
 Also run `npm run typecheck` when types/TS config changed or build errors are ambiguous.
+
+**Deadcode (`npm run deadcode`):** compares `ts-prune` output to `.tsprune-ignore` (also CI via `.github/workflows/deadcode.yml`). After intentional export moves/deletes, prefer unexporting truly unused symbols; if the ignore baseline drifts on known intentional exports, refresh with `npm run deadcode:refresh` and keep the diff reviewable. Do not skip this gate.
 
 **Targeted tests during iteration** are fine (`npx vitest run path/to/foo.test.ts`), but **finish with full `npm test`** unless the user scoped a subset.
 
@@ -98,5 +101,6 @@ Delivery:
 - [ ] npm test — pass
 - [ ] npm run lint — pass
 - [ ] npm run build — pass
+- [ ] npm run deadcode — pass
 - [ ] Acceptance criteria checked off only when verified
 ```

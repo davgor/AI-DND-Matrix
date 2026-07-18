@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses, RACE_LORE_RESPONSE, buildCascadingSeedResponses } from '../agents/campaignGeneration/fixtures'
+import { npcReviewResponses, RACE_LORE_RESPONSE, buildCascadingSeedResponses } from '../test/fixtures/campaignGenerationFixtures'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 

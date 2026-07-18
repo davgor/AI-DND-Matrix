@@ -166,10 +166,6 @@ export function endEncounter(
   return rowToEncounter(row)
 }
 
-export function deleteEncountersForCampaign(db: Database.Database, campaignId: string): void {
-  db.prepare('DELETE FROM combat_encounters WHERE campaign_id = ?').run(campaignId)
-}
-
 export function getActiveCombatant(encounter: CombatEncounter): CombatantRef {
   const entry = encounter.initiativeOrder[encounter.activeTurnIndex]
   if (!entry) {
@@ -186,27 +182,4 @@ export function isPlayerCombatTurn(encounter: CombatEncounter, playerId: string)
 export function hasCombatantExited(encounter: CombatEncounter, ref: CombatantRef): boolean {
   const key = combatantRefKey(ref)
   return encounter.exitedCombatantIds.some((entry) => combatantRefKey(entry) === key)
-}
-
-export function advanceEncounterTurnIndex(
-  encounter: CombatEncounter,
-  skipKeys: Set<string>
-): { activeTurnIndex: number; round: number } {
-  const count = encounter.initiativeOrder.length
-  if (count === 0) {
-    return { activeTurnIndex: 0, round: encounter.round }
-  }
-  let index = encounter.activeTurnIndex
-  let round = encounter.round
-  for (let step = 0; step < count; step += 1) {
-    index = (index + 1) % count
-    if (index === 0) {
-      round += 1
-    }
-    const ref = encounter.initiativeOrder[index]?.combatant
-    if (ref && !skipKeys.has(combatantRefKey(ref))) {
-      return { activeTurnIndex: index, round }
-    }
-  }
-  return { activeTurnIndex: encounter.activeTurnIndex, round: encounter.round }
 }

@@ -25,7 +25,7 @@ import {
 } from './combatOrchestration'
 import { buildCombatStateSnapshot, summarizeHostilesInEncounter } from './combatSnapshot'
 import { enrichTurnWithEncounterRewards } from './progressionPipeline'
-import { encounterEligibleForLoot } from './lootPipeline'
+import { encounterEligibleForRewards } from './encounterRewards'
 import type { TurnResult } from './turnIpc'
 
 const DEFAULT_AGILITY_SCORE = 10
@@ -92,7 +92,7 @@ export function rollFleeDisengageCheck(character: Character, hostile: Threatenin
   })
 }
 
-export interface FleeResultInput {
+interface FleeResultInput {
   db: Database.Database
   characterId: string
   encounter: CombatEncounter
@@ -100,7 +100,7 @@ export interface FleeResultInput {
   catchUp: Pick<TurnResult, 'npcReactions' | 'partyMemberActions'>
 }
 
-export function buildFleeResult(input: FleeResultInput): TurnResult {
+function buildFleeResult(input: FleeResultInput): TurnResult {
   const { db, characterId, encounter, fleeOutcome, catchUp } = input
   const character = getCharacterById(db, characterId)
   const combatState =
@@ -128,7 +128,7 @@ export async function resolveFailedFleeTurn(input: {
   const { db, campaignId, characterId, hostile, check, runCatchUp } = input
   let encounter = input.encounter
   setEncounterPursuitState(db, encounter.id, 'engaged')
-  encounter = advanceEncounterTurn(db, encounter, encounter.participantIds)
+  encounter = advanceEncounterTurn(db, encounter)
   appendCombatTurnAdvanced(db, encounter)
   const catchUp = await runCatchUp(encounter)
   encounter = getActiveEncounter(db, campaignId) ?? encounter
@@ -143,7 +143,7 @@ export async function resolveFailedFleeTurn(input: {
   }
 }
 
-export async function resolveEscapedFleeTurn(input: {
+async function resolveEscapedFleeTurn(input: {
   db: Database.Database
   provider: Provider
   campaignId: string
@@ -166,7 +166,7 @@ export async function resolveEscapedFleeTurn(input: {
   }
   const fleeOutcome: FleeTurnOutcome = { phase: 'escaped', disengageCheck: check, narrationText }
   let result = buildFleeResult({ db, characterId, encounter, fleeOutcome, catchUp })
-  if (encounterEligibleForLoot(encounter)) {
+  if (encounterEligibleForRewards(encounter)) {
     const character = getCharacterById(db, characterId)
     const regionId =
       (character?.stats as { currentRegionId?: string } | undefined)?.currentRegionId ?? ''
@@ -183,7 +183,7 @@ export async function resolveEscapedFleeTurn(input: {
   return { encounter, result }
 }
 
-export async function judgeFleeEscape(input: {
+async function judgeFleeEscape(input: {
   provider: Provider
   check: ReturnType<typeof resolveFleeDisengage>
   regionId: string

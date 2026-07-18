@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../../db/testUtils'
-import { listCampaigns, getCampaignById } from '../../db/repositories/campaigns'
+import { getCampaignById } from '../../db/repositories/campaigns'
 import { listNpcsByRegion } from '../../db/repositories/npcs'
 import { listRegionsByCampaign } from '../../db/repositories/regions'
 import { listRegionHistoryByRegion } from '../../db/repositories/regionHistory'
@@ -13,33 +13,32 @@ import { buildAvailableRaceOptions } from '../raceLore'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
-  buildAdditionalRegionPrompt,
-  buildCanonRecallPrompt,
-  buildGenerationPrompt,
-  buildPantheonGenerationPrompt,
-  buildRegionsGenerationPrompt,
-  buildWorldGenerationPrompt,
-  formatDeityDigest,
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
   generateCampaignWorld,
   generateSingleNpc,
+  resolveInitialGenerationCounts
+} from '.'
+import {
+  buildAdditionalRegionPrompt,
+  buildCanonRecallPrompt,
+  buildPantheonGenerationPrompt,
+  buildRegionsGenerationPrompt,
+  buildWorldGenerationPrompt,
+  formatDeityDigest
+} from './prompts'
+import { normalizeAdditionalRegion, normalizeCanonRecall } from './normalize'
+import { persistRegionWithNpcs } from './persist'
+import {
   hasValidNpcRace,
   hasValidNpcBackground,
   hasValidNpcGender,
-  hasValidNpcClass,
-  normalizeAdditionalRegion,
-  normalizeCampaignGeneration,
-  normalizeCanonRecall,
-  persistRegionWithNpcs,
-  resolveInitialGenerationCounts
-} from '.'
+  hasValidNpcClass
+} from './normalize'
 
 import {
   ADDITIONAL_REGION,
-  LEGACY_NORMALIZE_PAYLOAD,
-  LEGACY_CAMPAIGN_SEED_PAYLOAD,
   REALISTIC_LLM_WORLD,
   VALID_WORLD,
   EMPTY_CANON_RESPONSE,
@@ -50,14 +49,12 @@ import {
   makeRegion,
   npcReviewResponses,
   RACE_LORE_RESPONSE,
-  PRE_EXPANSION_CAMPAIGN_PAYLOAD,
-  SETUP_INPUT,
-  TRIM_NPCS_PAYLOAD
-} from './fixtures'
+  SETUP_INPUT
+} from '../../test/fixtures/campaignGenerationFixtures'
 import type { GeneratedNpc, GeneratedRegion } from '.'
 import type { CreateCampaignStage } from '../../shared/campaignCreate/types'
 import { countParagraphs, coerceNpcTemperament, hasRepeatedSentences, isValidGeneratedPantheon, isValidGeneratedWorld, normalizeGeneratedPantheon, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster } from './normalize'
-import { findProseJargonViolations } from './proseJargonGuard'
+import { meetsProseJargonStandards } from './proseJargonGuard'
 
 const VORATH_STACKED_SUMMARY =
   'Vorath endures as a land of towering evergreens, fog-veiled vales, and shattered ziggurats where the wind carries howls from forgotten barrows. Sorcerer-kings once ruled from obsidian thrones, their spells binding elementals to forge eternal citadels. Now wilds reclaim those halls, and lanterns flicker in ward-posts manned by rune-scribed watchmen. Dwarven forge-clans hammer blades in mountain delves while elven wardens weave illusions over sacred groves.\n\nHarbor towns tax moorings twice while salvage cults argue over wreck rights. Farmers watch refugee columns pass each autumn.\n\nPower is fragmented today — harbor councils, company charters, and free captains all claim legitimacy. The weather still decides who eats when the squall season arrives.'
@@ -216,86 +213,6 @@ describe('fandom canon-recall seeding (070)', () => {
     const names = result.pantheon.deities.map((deity) => deity.name)
     expect(names).toContain('The Three Heroes')
     expect(names).toContain('Ost Hero')
-  })
-})
-
-describe('normalizeCampaignGeneration', () => {
-  it('accepts legacy region fields and fills recent history plus quest hooks', () => {
-    const normalized = normalizeCampaignGeneration(LEGACY_NORMALIZE_PAYLOAD)
-
-    expect(normalized?.regions[0]?.recentHistory).toContain('Azure Expanse')
-    expect(normalized?.regions[0]?.potentialQuests.length).toBeGreaterThanOrEqual(2)
-    expect(normalized?.npcs).toHaveLength(6)
-  })
-
-  it('trims extra NPCs per region and ignores unknown region tags', () => {
-    const normalized = normalizeCampaignGeneration(TRIM_NPCS_PAYLOAD)
-
-    expect(normalized?.npcs.filter((npc) => npc.regionName === 'Azure Expanse')).toHaveLength(3)
-    expect(normalized?.npcs.some((npc) => npc.name === 'Stray')).toBe(false)
-  })
-
-  it('accepts the pre-expansion campaign shape with two regions and one NPC each', () => {
-    const normalized = normalizeCampaignGeneration(PRE_EXPANSION_CAMPAIGN_PAYLOAD, {
-      regionCount: 2,
-      npcsPerRegion: 1
-    })
-
-    expect(normalized?.regions).toHaveLength(2)
-    expect(normalized?.npcs).toHaveLength(2)
-    expect(normalized?.storyThread.title).toBe('Ventures on the New Ocean')
-  })
-
-  it('trims extra regions when the model over-delivers', () => {
-    const payload = {
-      regions: [
-        makeRegion('First', 'a'),
-        makeRegion('Second', 'b'),
-        makeRegion('Third', 'c')
-      ],
-      npcs: [...makeNpcs('First', 'F'), ...makeNpcs('Second', 'S')],
-      storyThread: { title: 'Arc', state: 'starting', summary: 'Summary.' }
-    }
-    const normalized = normalizeCampaignGeneration(payload, { regionCount: 2, npcsPerRegion: 3 })
-
-    expect(normalized?.regions).toHaveLength(2)
-    expect(normalized?.regions.map((region) => region.name)).toEqual(['First', 'Second'])
-  })
-
-  it('accepts fewer than requested NPCs per region when at least one is present', () => {
-    const payload = {
-      regions: [makeRegion('Oakhollow', 'old'), makeRegion('The Sunken Crown', 'ruin')],
-      npcs: [
-        ...makeNpcs('Oakhollow', 'Oak').slice(0, 2),
-        ...makeNpcs('The Sunken Crown', 'Crown').slice(0, 2)
-      ],
-      storyThread: { title: 'Partial Cast', state: 'starting', summary: 'A start.' }
-    }
-    const normalized = normalizeCampaignGeneration(payload, { regionCount: 2, npcsPerRegion: 3 })
-
-    expect(normalized?.npcs).toHaveLength(4)
-    expect(normalized?.npcs.filter((npc) => npc.regionName === 'Oakhollow')).toHaveLength(2)
-  })
-})
-
-describe('generateCampaignSeed legacy compatibility', () => {
-  it('accepts older-shaped region payloads in the regions stage', async () => {
-    const regions = LEGACY_CAMPAIGN_SEED_PAYLOAD.regions.map((region) => makeRegion(region.name, 'legacy'))
-    const responses = buildCascadingSeedResponses({
-      regionCount: 2,
-      npcsPerRegion: 1,
-      regions,
-      storyThread: LEGACY_CAMPAIGN_SEED_PAYLOAD.story_thread
-    })
-    const provider = createScriptedProvider(responses)
-    const result = await generateCampaignSeed(
-      provider,
-      'A new oceanic region has been discovered and explorers are venturing out',
-      { regionCount: 2, npcsPerRegion: 1 }
-    )
-    expect(result.regions).toHaveLength(2)
-    expect(result.storyThread.title).toBe('Ventures on the New Ocean')
-    expect(result.world.worldName).toBe(VALID_WORLD.worldName)
   })
 })
 
@@ -522,22 +439,7 @@ describe('generateCampaignWorld prose guard', () => {
     }
     const provider = createScriptedProvider([JSON.stringify(badWorld), JSON.stringify(VALID_WORLD)])
     const world = await generateCampaignWorld(provider, 'A quiet farming valley')
-    expect(findProseJargonViolations(world.worldSummary)).toHaveLength(0)
-  })
-})
-
-describe('buildGenerationPrompt', () => {
-  it('asks for exact counts from the request', () => {
-    const availableRaces = buildAvailableRaceOptions([])
-    const prompt = buildGenerationPrompt('A marsh', { regionCount: 1, npcsPerRegion: 1 }, availableRaces)
-    expect(prompt).toContain('exactly 1 starting region')
-    expect(prompt).toContain('exactly 1 key NPC')
-    expect(prompt).toContain('human')
-  })
-
-  it('allows zero regions in the prompt', () => {
-    const prompt = buildGenerationPrompt('A marsh', { regionCount: 0, npcsPerRegion: 3 }, buildAvailableRaceOptions([]))
-    expect(prompt).toContain('no starting regions')
+    expect(meetsProseJargonStandards(world.worldSummary)).toBe(true)
   })
 })
 
@@ -700,15 +602,6 @@ describe('hasValidNpcBackground', () => {
   })
 })
 
-describe('buildGenerationPrompt background roster (051.2)', () => {
-  it('includes BACKGROUND_ROSTER keys in the generation prompt', () => {
-    const prompt = buildGenerationPrompt('A flooded kingdom.', { regionCount: 1, npcsPerRegion: 1 }, [])
-    expect(prompt).toContain('Available backgrounds')
-    expect(prompt).toContain('soldier: Soldier')
-    expect(prompt).toContain('folk_hero: Folk Hero')
-  })
-})
-
 describe('hasValidNpcGender', () => {
   it('requires gender for speaking NPCs and omits it for non-speaking NPCs', () => {
     expect(hasValidNpcGender({ canSpeak: true, gender: 'woman' })).toBe(true)
@@ -722,15 +615,6 @@ describe('hasValidNpcClass', () => {
     expect(hasValidNpcClass({ canSpeak: true, class: 'commoner' })).toBe(true)
     expect(hasValidNpcClass({ canSpeak: true })).toBe(false)
     expect(hasValidNpcClass({ canSpeak: false })).toBe(true)
-  })
-})
-
-describe('buildGenerationPrompt gender/class rosters (052.3)', () => {
-  it('includes gender and class rosters in the generation prompt', () => {
-    const prompt = buildGenerationPrompt('A flooded kingdom.', { regionCount: 1, npcsPerRegion: 1 }, [])
-    expect(prompt).toContain('Available genders')
-    expect(prompt).toContain('woman: Woman')
-    expect(prompt).toContain('commoner: Commoner')
   })
 })
 
@@ -947,8 +831,9 @@ describe('generateAndPersistCampaign atomicity (007.4, persistence half)', () =>
 
     await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 
-    expect(listCampaigns(db)).toHaveLength(1)
-    const [campaign] = listCampaigns(db)
+    const campaigns = db.prepare('SELECT id FROM campaigns').all() as Array<{ id: string }>
+    expect(campaigns).toHaveLength(1)
+    const campaign = getCampaignById(db, campaigns[0]!.id)
     expect(listRegionsByCampaign(db, campaign!.id)).toHaveLength(2)
     expect(listStoryThreadsByCampaign(db, campaign!.id)).toHaveLength(1)
   })

@@ -5,10 +5,11 @@ import { appendEvent } from '../db/repositories/events'
 import { getCharacterById, updateCharacter } from '../db/repositories/characters'
 import { applyPerk, PERK_HP_BONUS, type CharacterPerkStats } from '../engine/perks'
 import type { CombatEncounter } from '../shared/combat/types'
-import type { PendingLevelUpCeremony, PerkProposal } from '../shared/progression/types'
-import { assembleEncounterXpContext, encounterEligibleForXp } from './encounterXpContext'
+import type { PendingLevelUpCeremony } from '../shared/progression/types'
+import { assembleEncounterXpContext } from './encounterXpContext'
+import { encounterEligibleForRewards } from './encounterRewards'
 import { assembleQuestXpContext } from './questXpContext'
-import { enrichTurnWithEncounterLoot, shouldSkipQuestLoot } from './lootPipeline'
+import { enrichTurnWithEncounterLoot } from './lootPipeline'
 import type { TurnResult } from './turnIpc'
 import { executeXpPass } from './xpAwardPersistence'
 import {
@@ -49,7 +50,7 @@ export async function runEncounterXpPass(input: {
   playerCharacterId: string
   regionId: string
 }): Promise<XpPassResult | null> {
-  if (!encounterEligibleForXp(input.encounter)) {
+  if (!encounterEligibleForRewards(input.encounter)) {
     return null
   }
   const context = assembleEncounterXpContext(input.db, {
@@ -75,7 +76,7 @@ export async function runQuestXpPass(input: {
   playerLevel: number
   encounterXpRanThisTurn?: boolean
 }): Promise<XpPassResult | null> {
-  if (shouldSkipQuestLoot(input.encounterXpRanThisTurn === true)) {
+  if (input.encounterXpRanThisTurn === true) {
     return null
   }
   const context = assembleQuestXpContext({
@@ -193,5 +194,3 @@ export function assertNoPendingLevelUp(db: Database.Database, characterId: strin
     throw new LevelUpPendingError()
   }
 }
-
-export type { PerkProposal, PendingLevelUpCeremony }

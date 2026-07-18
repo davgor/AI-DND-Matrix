@@ -14,7 +14,6 @@ import { listEventsByCampaign } from '../db/repositories/events'
 import { listNpcsByRegion } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
-import { listCampaignsByLastPlayed } from '../db/repositories/campaigns'
 import { getMainQuestByCampaign, listCharacterQuests, listQuestsByCampaign } from '../db/repositories/quests'
 import { buildRegionExtras, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
@@ -122,12 +121,6 @@ export function buildHubSnapshot(db: Database.Database, campaignId: string): Pla
     questSummariesByCharacterId: buildQuestSummaries(db, campaignId),
     regionQuestAvailability: buildRegionQuestAvailability(db, campaignId, regions)
   }
-}
-
-export function getCampaignLastPlayed(db: Database.Database, campaignId: string): string {
-  const campaign = getCampaignById(db, campaignId)
-  const row = listCampaignsByLastPlayed(db).find((entry) => entry.id === campaignId)
-  return row?.lastPlayedAt ?? campaign?.createdAt ?? ''
 }
 
 export function registerCampaignHubHandlers(): void {

@@ -59,7 +59,3 @@ export function addModification(
     createdAt
   }
 }
-
-export function removeModification(db: Database.Database, modificationId: string): void {
-  db.prepare('DELETE FROM character_item_modifications WHERE id = ?').run(modificationId)
-}

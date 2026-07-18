@@ -69,7 +69,7 @@ export function resolveEndBranch(
 
 export async function resolveAttackBranch(
   input: CombatTurnInput,
-  encounter: CombatEncounter
+  _encounter: CombatEncounter
 ): Promise<{ encounter: CombatEncounter; lastAttack: CombatAttackResult; npcYieldOutcome?: NpcYieldOutcome; yieldNarrationHint?: string }> {
   const syncResult = resolvePlayerAttack({
     db: input.db,
@@ -77,14 +77,12 @@ export async function resolveAttackBranch(
     targetNpcId: input.intent.targetNpcId,
     rng: input.rng,
     lethality: input.intent.lethality,
-    offerMercy: input.intent.offerMercy,
-    acceptSurrender: input.intent.acceptSurrender
+    offerMercy: input.intent.offerMercy
   })
   const yieldResult = await resolveYieldReview(input.db, input.provider, input.campaignId, syncResult)
   const updated = advanceEncounterTurn(
     input.db,
-    reloadEncounter(input.db, input.campaignId),
-    encounter.participantIds
+    reloadEncounter(input.db, input.campaignId)
   )
   appendCombatTurnAdvanced(input.db, updated)
   return { encounter: updated, lastAttack: syncResult.attackResult, ...yieldResult }

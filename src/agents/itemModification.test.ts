@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createScriptedProvider } from './providers/mockHarness'
-import { fallbackFireEnchantResponse, resolveItemModification } from './itemModification'
+import { resolveItemModification } from './itemModification'
 import type { WeaponDamageProfile } from '../shared/weaponModifications/types'
 import type { CharacterItemView } from '../shared/items/types'
 
@@ -77,9 +77,5 @@ describe('resolveItemModification validation', () => {
         equippedWeapon: equippedProfile
       })
     ).rejects.toThrow(/valid schema/)
-  })
-
-  it('fallbackFireEnchantResponse provides deterministic fire add', () => {
-    expect(fallbackFireEnchantResponse('ci-1').modification.damageType).toBe('fire')
   })
 })

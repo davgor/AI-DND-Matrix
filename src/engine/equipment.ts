@@ -1,5 +1,4 @@
 import type { EquipSlot } from '../shared/items/types'
-import { ACCESSORY_EQUIP_SLOTS } from '../shared/items/types'
 import type { CatalogItem, CharacterItemView, WeaponHandedness } from '../shared/items/types'
 
 export type EquipFailureReason =
@@ -132,8 +131,4 @@ export function slotsToClearOnEquip(
         row.id !== exceptCharacterItemId
     )
     .map((row) => row.id)
-}
-
-export function listAccessorySlots(): readonly EquipSlot[] {
-  return ACCESSORY_EQUIP_SLOTS
 }

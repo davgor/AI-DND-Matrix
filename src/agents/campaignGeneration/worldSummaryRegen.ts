@@ -1,4 +1,4 @@
-import { tryParseJson } from '../jsonResponse'
+import { generateJsonWithRetry } from '../jsonResponse'
 import type { Provider } from '../providers/types'
 import { FANTASY_TROPE_DIVERSITY_RULES, PROSE_CLARITY_RULES, WORLD_FANTASY_TONE_RULES } from './prompts'
 import { meetsWorldSummaryProseStandards } from './normalize'
@@ -60,15 +60,17 @@ export async function generateWorldSummaryFromHistory(
   provider: Provider,
   input: { premisePrompt: string; worldName: string; worldHistory: string }
 ): Promise<string> {
-  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildWorldSummaryFromHistoryPrompt(input), { maxTokens: 2048 })
-    const parsed = tryParseJson(raw)
-    const summary = normalizeSummaryPayloadWithPremise(parsed, input.premisePrompt)
-    if (summary) {
-      return summary
+  return generateJsonWithRetry(
+    provider,
+    () => buildWorldSummaryFromHistoryPrompt(input),
+    (parsed) => normalizeSummaryPayloadWithPremise(parsed, input.premisePrompt) ?? undefined,
+    {
+      attempts: MAX_GENERATION_ATTEMPTS,
+      context: { maxTokens: 2048 },
+      exhaustedError: () =>
+        new CampaignGenerationSchemaError(
+          'DM agent did not return a valid world summary schema after retries'
+        )
     }
-  }
-  throw new CampaignGenerationSchemaError(
-    'DM agent did not return a valid world summary schema after retries'
   )
 }

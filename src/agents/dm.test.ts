@@ -15,13 +15,12 @@ import { createScriptedProvider } from './providers/mockHarness'
 import { NARRATIVE_EMPHASIS_GUIDANCE } from '../shared/textEmphasis'
 import {
   DmSchemaError,
-  MAX_SCHEMA_ATTEMPTS,
   assembleNarrationContext,
   interpretIntent,
   narrate,
-  persistNarrationSideEffects,
-  proposeHomebrewFlavor
+  persistNarrationSideEffects
 } from './dm'
+import { MAX_SCHEMA_ATTEMPTS } from './jsonResponse'
 
 function seedCampaignWithRegion() {
   const db = createTestDb()
@@ -418,50 +417,5 @@ describe('persistNarrationSideEffects journal entry (027.2)', () => {
     )
 
     expect(listCharacterJournalEntries(db, character.id)).toHaveLength(0)
-  })
-})
-
-describe('proposeHomebrewFlavor (006.8)', () => {
-  it('calls the DM agent and returns flavor-only fields when a candidate exists', async () => {
-    const provider = createScriptedProvider([
-      '{"name":"Arcane Backlash","description":"A burst of unstable arcane energy.","damageType":"arcane"}'
-    ])
-    const result = await proposeHomebrewFlavor(provider, { tag: 'arcane', count: 3 })
-    expect(result).toEqual({
-      name: 'Arcane Backlash',
-      description: 'A burst of unstable arcane energy.',
-      damageType: 'arcane'
-    })
-  })
-
-  it('never calls the provider when no emergent-direction candidate exists', async () => {
-    const provider = createScriptedProvider([])
-    const result = await proposeHomebrewFlavor(provider, null)
-    expect(result).toBeNull()
-    expect(provider.calls).toHaveLength(0)
-  })
-
-  it('rejects a response that smuggles in numeric fields instead of flavor-only ones', async () => {
-    const provider = createScriptedProvider(['{"name":"x","description":"y","damageType":"fire","effectDice":99}'])
-    // effectDice is ignored by the schema check below since it only validates flavor fields are present and
-    // correctly typed; the absence of any *required* numeric field is what matters here.
-    const result = await proposeHomebrewFlavor(provider, { tag: 'fire', count: 5 })
-    expect(result).not.toHaveProperty('effectDice')
-  })
-
-  it('moves the flavor schema into systemPrompt — user prompt keeps the emergent-direction facts (040.9)', async () => {
-    const provider = createScriptedProvider([
-      '{"name":"Ember Step","description":"A flickering dash.","damageType":"fire"}'
-    ])
-
-    await proposeHomebrewFlavor(provider, { tag: 'fire', count: 4 })
-
-    const call = provider.calls[0]!
-    expect(call.prompt).toContain('"fire"-flavored actions')
-    expect(call.prompt).not.toContain('Respond ONLY with JSON')
-    const system = call.context?.systemPrompt ?? ''
-    expect(system).toContain('Respond ONLY with JSON: {"name":string')
-    expect(system).toContain('Do not include any numeric game values')
-    expect(call.context?.maxTokens).toBe(256)
   })
 })

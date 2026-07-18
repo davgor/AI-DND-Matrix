@@ -13,6 +13,7 @@ export function failedTurnSubmission(characterRefreshToken: number): {
   xpNarration: null
   lootNarration: null
   playerImprisoned: false
+  dyingResolution?: undefined
 } {
   return {
     expositionStatus: failedExposition('Could not update the scene. Check your connection and try again.'),
@@ -25,6 +26,7 @@ export function failedTurnSubmission(characterRefreshToken: number): {
     defeatDispositionNarration: null,
     xpNarration: null,
     lootNarration: null,
-    playerImprisoned: false
+    playerImprisoned: false,
+    dyingResolution: undefined
   }
 }

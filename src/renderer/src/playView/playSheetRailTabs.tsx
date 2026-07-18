@@ -195,7 +195,6 @@ export function PlaySheetTabPanel(props: {
   onOpenInventory: () => void
   onOpenJournal: () => void
   onOpenSpellbook: () => void
-  onOpenLogBook: () => void
 }): JSX.Element {
   if (props.activeTab === 'inventory') {
     return <PlaySheetInventoryTab character={props.character} onOpenInventory={props.onOpenInventory} />

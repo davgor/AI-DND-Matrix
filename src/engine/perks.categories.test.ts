@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyPerk, characterHasExtraAttack, PERK_AC_STACK_CAP, readPerkAcBonus } from './perks'
+import { applyPerk, PERK_AC_STACK_CAP } from './perks'
 import type { PerkProposal } from '../shared/progression/types'
 
 const alwaysValid = (): boolean => true
@@ -23,7 +23,7 @@ describe('applyPerk martial categories', () => {
       stats: {},
       validateSpellKey: alwaysValid
     })
-    expect(readPerkAcBonus(result.stats)).toBe(1)
+    expect((result.stats as { perkAcBonus?: number }).perkAcBonus).toBe(1)
   })
 
   it('caps ac_bonus stacks', () => {
@@ -33,7 +33,7 @@ describe('applyPerk martial categories', () => {
       stats: { perkAcBonus: PERK_AC_STACK_CAP },
       validateSpellKey: alwaysValid
     })
-    expect(readPerkAcBonus(result.stats)).toBe(PERK_AC_STACK_CAP)
+    expect((result.stats as { perkAcBonus?: number }).perkAcBonus).toBe(PERK_AC_STACK_CAP)
   })
 
   it('sets extra_attack flag', () => {
@@ -43,7 +43,7 @@ describe('applyPerk martial categories', () => {
       stats: {},
       validateSpellKey: alwaysValid
     })
-    expect(characterHasExtraAttack(result.stats)).toBe(true)
+    expect((result.stats as { hasExtraAttack?: boolean }).hasExtraAttack).toBe(true)
   })
 })
 

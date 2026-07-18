@@ -1,9 +1,8 @@
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 import {
   DmSchemaError,
-  MAX_SCHEMA_ATTEMPTS,
   INTENT_SCHEMA_FIELDS,
   INTENT_GUIDANCE_LINES,
   buildCombatIntentSection,
@@ -145,12 +144,11 @@ function resolveRoutingPlan(
   return null
 }
 
-function parseIntentAndRoute(
-  raw: string,
+function parseIntentAndRouteRecord(
+  parsed: unknown,
   combat: CombatIntentContext | undefined,
   validNpcIds: string[]
 ): IntentAndRouteResult | null {
-  const parsed = tryParseJson(raw)
   if (typeof parsed !== 'object' || parsed === null) {
     return null
   }
@@ -172,14 +170,16 @@ export async function interpretIntentAndRoute(
 ): Promise<IntentAndRouteResult> {
   const validNpcIds = context.presentNpcs.map((npc) => npc.id)
   const prompt = buildIntentAndRoutePrompt(context)
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, INTENT_AND_ROUTE_GENERATE_CONTEXT)
-    const result = parseIntentAndRoute(raw, context.combat, validNpcIds)
-    if (result) {
-      return result
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) => parseIntentAndRouteRecord(parsed, context.combat, validNpcIds) ?? undefined,
+    {
+      context: INTENT_AND_ROUTE_GENERATE_CONTEXT,
+      exhaustedError: () =>
+        new DmSchemaError(
+          'DM agent did not return a valid intent + routing plan schema after retries'
+        )
     }
-  }
-  throw new DmSchemaError(
-    'DM agent did not return a valid intent + routing plan schema after retries'
   )
 }

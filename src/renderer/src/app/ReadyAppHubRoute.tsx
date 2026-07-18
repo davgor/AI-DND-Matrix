@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
+import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
 import type { OnboardingStage } from '../../../shared/guidedCreation/stageRouting'
 import type { useSidebarController } from '../sidebar/useSidebarController'
 import { ReadyAppHubView } from './ReadyAppHubView'
@@ -15,7 +16,7 @@ export function ReadyAppHubRoute(props: {
   campaignCallbacks: {
     onCampaignSelected: (next: CampaignDetail) => void
     onOpenNewCampaign: () => void
-    onRequestDelete: (campaignId: string) => void
+    onRequestDelete: (campaign: CampaignWithLastPlayed) => void
   }
   onCharacterSetupComplete: () => void
 }): JSX.Element {

@@ -183,23 +183,6 @@
   margin-top: 0.5rem;
 }
 
-.race-selection-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-shrink: 0;
-}
-
-.race-selection-back-arrow {
-  font-size: 1.1rem;
-  line-height: 1;
-  transition: transform 150ms ease;
-}
-
-.race-selection-back:hover:not(:disabled) .race-selection-back-arrow {
-  transform: translateX(-2px);
-}
-
 .race-selection-loading,
 .race-selection-error {
   display: flex;

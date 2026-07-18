@@ -7,7 +7,7 @@ import { createCampaign } from './campaigns'
 import { createCharacter } from './characters'
 import { findCatalogItemByName } from './items'
 import { addItemToCharacter } from './characterItems'
-import { addModification, listModifications, removeModification } from './characterItemModifications'
+import { addModification, listModifications } from './characterItemModifications'
 import { deleteCampaignCascade } from './deleteCampaign'
 import { seedStarterItemCatalog } from '../seedStarterItems'
 
@@ -98,18 +98,12 @@ describe('character item modifications cascade', () => {
     db = createTestDb()
     runMigrations(db, migrations)
     const { campaignId, characterItemId } = seedCharacterWithLongsword(db)
-    const mod = addModification(db, characterItemId, 'addDamageComponent', {
-      damageType: 'fire',
-      diceCount: 1,
-      diceSize: 6
-    })
-    removeModification(db, mod.id)
-    expect(listModifications(db, characterItemId)).toHaveLength(0)
     addModification(db, characterItemId, 'addDamageComponent', {
       damageType: 'fire',
       diceCount: 1,
       diceSize: 6
     })
+    expect(listModifications(db, characterItemId)).toHaveLength(1)
     deleteCampaignCascade(db, campaignId)
     expect(
       db.prepare('SELECT COUNT(*) AS count FROM character_items').get() as { count: number }

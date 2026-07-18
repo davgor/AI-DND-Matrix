@@ -6,7 +6,7 @@ import {
   buildRealisticLlmCascadingSeedResponses,
   npcReviewResponses,
   RACE_LORE_RESPONSE
-} from '../agents/campaignGeneration/fixtures'
+} from '../test/fixtures/campaignGenerationFixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 
 const GENERATION_FAILURE_MESSAGE =

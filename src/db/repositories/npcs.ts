@@ -360,10 +360,6 @@ export function applyNpcDamage(db: Database.Database, id: string, damage: number
   return hpAfter
 }
 
-export function setNpcConditions(db: Database.Database, id: string, conditions: Condition[]): void {
-  db.prepare('UPDATE npcs SET conditions = ? WHERE id = ?').run(JSON.stringify(conditions), id)
-}
-
 export function setNpcEncounterOutcome(
   db: Database.Database,
   id: string,

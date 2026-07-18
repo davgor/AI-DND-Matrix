@@ -1,6 +1,5 @@
 import type Database from 'better-sqlite3'
 import { inferArchetypeFromClassOrRole } from '../../engine/archetypeInference'
-import { isTwoHandWeapon } from '../../engine/equipment'
 import { getStartingLoadoutPackage } from '../../engine/startingLoadout/packages'
 import {
   validateStartingLoadout,
@@ -75,11 +74,6 @@ export function applyStartingLoadout(
     }
     throw error
   }
-}
-
-export function isWeaponTwoHandedByName(db: Database.Database, weaponName: string): boolean {
-  const item = findCatalogItemByName(db, weaponName)
-  return item !== undefined && isTwoHandWeapon(item)
 }
 
 export function listEquippedAfterLoadout(db: Database.Database, characterId: string) {

@@ -7,7 +7,7 @@ import { createRegion } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listGuidedCreationMessagesByCharacter } from '../db/repositories/guidedCreationMessages'
 import { readGuidedCreationFields } from '../db/repositories/guidedCreation'
-import { kickoffGuidedCreationOpeningScene, readyToEnterPlay, sendGuidedCreationMessage } from './guidedCreationIpc'
+import { kickoffGuidedCreationOpeningScene, sendGuidedCreationMessage } from './guidedCreationIpc'
 
 function seedOpeningSceneCampaign(db: ReturnType<typeof createTestDb>) {
   const campaign = createCampaign(db, {
@@ -147,24 +147,5 @@ describe('sendGuidedCreationMessage opening scene phase', () => {
     const fields = readGuidedCreationFields(db, player.id)
     expect(fields?.guidedCreationPhase).toBe('complete')
     expect(fields?.openingScene).toContain('Melromarc')
-  })
-})
-
-describe('readyToEnterPlay', () => {
-  it('finalizes opening scene and marks phase complete', () => {
-    const db = createTestDb()
-    const { campaign, player } = seedOpeningSceneCampaign(db)
-    db.prepare(`UPDATE characters SET opening_scene = ? WHERE id = ?`).run(
-      'Rain drums on the tavern roof.',
-      player.id
-    )
-
-    const result = readyToEnterPlay(db, {
-      campaignId: campaign.id,
-      characterId: player.id
-    })
-
-    expect(result).toEqual({ ok: true })
-    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('complete')
   })
 })

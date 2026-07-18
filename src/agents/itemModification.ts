@@ -1,6 +1,5 @@
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { ItemModificationAgentResponse, ItemModificationProposal } from '../shared/weaponModifications/types'
 import { parseItemModificationAgentResponse } from '../shared/weaponModifications/types'
 import type { WeaponDamageProfile } from '../shared/weaponModifications/types'
@@ -45,31 +44,24 @@ export async function resolveItemModification(
   ctx: ItemModificationContext
 ): Promise<ItemModificationAgentResponse> {
   const prompt = buildItemModificationPrompt(ctx)
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, ITEM_MODIFICATION_GENERATE_CONTEXT)
-    const parsed = parseItemModificationAgentResponse(tryParseJson(raw))
-    if (parsed && isOwnedTarget(ctx, parsed.modification)) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) => {
+      const result = parseItemModificationAgentResponse(parsed)
+      if (result && isOwnedTarget(ctx, result.modification)) {
+        return result
+      }
+      return undefined
+    },
+    {
+      context: ITEM_MODIFICATION_GENERATE_CONTEXT,
+      exhaustedError: () =>
+        new Error('Item modification agent did not return a valid schema after retries')
     }
-  }
-  throw new Error('Item modification agent did not return a valid schema after retries')
+  )
 }
 
 function isOwnedTarget(ctx: ItemModificationContext, proposal: ItemModificationProposal): boolean {
   return ctx.ownedWeapons.some((row) => row.id === proposal.targetCharacterItemId)
-}
-
-export function fallbackFireEnchantResponse(
-  targetCharacterItemId: string
-): ItemModificationAgentResponse {
-  return {
-    narrationText: 'Heat crawls along the steel as embers wreath the blade.',
-    modification: {
-      targetCharacterItemId,
-      kind: 'addDamageComponent',
-      damageType: 'fire',
-      diceCount: 1,
-      diceSize: 6
-    }
-  }
 }

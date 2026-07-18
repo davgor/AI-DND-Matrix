@@ -1,6 +1,5 @@
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 import {
   evaluateYieldRules,
@@ -70,15 +69,18 @@ export async function proposeYieldOutcome(
     return { outcome: decision.outcome, narrationText: decision.narrationText }
   }
   const permitted = permittedYieldOutcomes(input)
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildYieldReviewPrompt(input), YIELD_GENERATE_CONTEXT)
-    const parsed = parseYieldReviewResult(tryParseJson(raw), permitted)
-    if (parsed) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    () => buildYieldReviewPrompt(input),
+    (value) => parseYieldReviewResult(value, permitted) ?? undefined,
+    {
+      context: YIELD_GENERATE_CONTEXT,
+      fallback: () => {
+        const outcome = fallbackYieldOutcome(input)
+        return { outcome, narrationText: yieldNarrationTemplate(input.npcName, outcome) }
+      }
     }
-  }
-  const outcome = fallbackYieldOutcome(input)
-  return { outcome, narrationText: yieldNarrationTemplate(input.npcName, outcome) }
+  )
 }
 
 export function buildYieldReviewInput(params: {

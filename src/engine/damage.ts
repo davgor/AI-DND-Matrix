@@ -2,6 +2,14 @@ import type { RandomFn } from './abilities'
 
 export type DamageType = 'physical' | 'fire' | 'cold' | 'poison' | 'arcane'
 
+export const DAMAGE_TYPES: readonly DamageType[] = [
+  'physical',
+  'fire',
+  'cold',
+  'poison',
+  'arcane'
+]
+
 export type ResistanceStatus = 'resistant' | 'vulnerable'
 
 export type ResistanceProfile = Partial<Record<DamageType, ResistanceStatus>>

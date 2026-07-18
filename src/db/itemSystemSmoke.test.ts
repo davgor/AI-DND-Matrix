@@ -4,7 +4,6 @@ import { join } from 'node:path'
 import type Database from 'better-sqlite3'
 import { afterEach, describe, expect, it } from 'vitest'
 import { computeAC } from '../engine/armorClass'
-import { resolvePlayerEquippedAttackDamage } from '../main/turnIpc'
 import { closeFileTestDb, openFileTestDb, reopenFileTestDb } from './fileDbTestUtils'
 import { createTestDb } from './testUtils'
 import { createCampaign } from './repositories/campaigns'
@@ -59,7 +58,7 @@ describe('item system end-to-end smoke', () => {
     const bow = findCatalogItemByName(db, 'Glimmering Shortbow')!
     const bowRow = listCharacterItems(db, character.id).find((row) => row.itemId === bow.id)!
     equipCharacterItem(db, character.id, bowRow.id, 'mainHand')
-    expect(resolvePlayerEquippedAttackDamage(db, character.id, () => 0.99, 15)).toBeGreaterThan(0)
+    expect(getEquippedWeaponDamageRoll(db, character.id)).not.toBeNull()
 
     const chain = findCatalogItemByName(db, 'Chain Hauberk')!
     equipCharacterItem(db, character.id, addItemToCharacter(db, character.id, chain.id).id, 'armor')

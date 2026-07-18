@@ -1,23 +1,9 @@
 import type Database from 'better-sqlite3'
 import { isLootCompletedState } from '../shared/loot/types'
-import type { LootContext, QuestScale } from '../shared/loot/types'
-import type { StoryThread } from '../db/repositories/storyThreads'
-import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
+import type { LootContext } from '../shared/loot/types'
+import { inferQuestScaleFromTitleSummary } from '../engine/quests'
 import { assembleQuestLootContextFromQuest } from './questLootFromQuest'
-
-const MAJOR_TITLE_KEYWORDS = [
-  'quest',
-  'mission',
-  'dragon',
-  'cult',
-  'ritual',
-  'dungeon',
-  'rescue',
-  'ancient',
-  'prophecy'
-] as const
-
-const MAJOR_SUMMARY_THRESHOLD = 200
+import { findThreadById } from './questThreadLookup'
 
 export function shouldTriggerQuestLoot(
   previousState: string,
@@ -26,24 +12,6 @@ export function shouldTriggerQuestLoot(
   const wasCompleted = isLootCompletedState(previousState)
   const isNowCompleted = isLootCompletedState(newState)
   return !wasCompleted && isNowCompleted
-}
-
-export function inferQuestScale(thread: StoryThread): QuestScale {
-  if (thread.summary.length > MAJOR_SUMMARY_THRESHOLD) {
-    return 'major'
-  }
-  const lowerTitle = thread.title.toLowerCase()
-  const hasMajorKeyword = MAJOR_TITLE_KEYWORDS.some((kw) => lowerTitle.includes(kw))
-  return hasMajorKeyword ? 'major' : 'minor'
-}
-
-function findThreadById(
-  db: Database.Database,
-  campaignId: string,
-  threadId: string
-): StoryThread | undefined {
-  const threads = listStoryThreadsByCampaign(db, campaignId)
-  return threads.find((t) => t.id === threadId)
 }
 
 export function assembleQuestLootContext(params: {
@@ -76,7 +44,7 @@ export function assembleQuestLootContext(params: {
   if (!thread) return null
   if (!isLootCompletedState(thread.state)) return null
 
-  const questScale = inferQuestScale(thread)
+  const questScale = inferQuestScaleFromTitleSummary(thread.title, thread.summary)
 
   return {
     source: 'quest_complete',

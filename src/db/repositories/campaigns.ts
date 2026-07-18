@@ -213,13 +213,6 @@ export function getCampaignById(db: Database.Database, id: string): Campaign | u
   return row ? rowToCampaign(row) : undefined
 }
 
-export function listCampaigns(db: Database.Database): Campaign[] {
-  const rows = db
-    .prepare('SELECT * FROM campaigns ORDER BY created_at DESC')
-    .all() as CampaignRow[]
-  return rows.map(rowToCampaign)
-}
-
 export interface CampaignWithLastPlayed extends Campaign {
   lastPlayedAt: string | null
 }

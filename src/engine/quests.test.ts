@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canTransitionQuestStatus,
   inferQuestScale,
-  isQuestComplete,
+  inferQuestScaleFromTitleSummary,
   isQuestRewardEligibleStatus,
   objectiveTextsToChecklist,
   storyThreadStateToQuestStatus,
@@ -41,12 +41,11 @@ describe('validateObjectiveUpdate', () => {
   })
 })
 
-describe('isQuestComplete', () => {
+describe('isQuestRewardEligibleStatus', () => {
   it('matches loot completed semantics for quest status', () => {
-    expect(isQuestComplete('completed')).toBe(true)
     expect(isQuestRewardEligibleStatus('completed')).toBe(true)
-    expect(isQuestComplete('active')).toBe(false)
-    expect(isQuestComplete('failed')).toBe(false)
+    expect(isQuestRewardEligibleStatus('active')).toBe(false)
+    expect(isQuestRewardEligibleStatus('failed')).toBe(false)
   })
 })
 
@@ -64,6 +63,11 @@ describe('inferQuestScale', () => {
     expect(
       inferQuestScale({ kind: 'side', title: 'Herb run', summary: 'Gather herbs.' })
     ).toBe('minor')
+  })
+
+  it('shares title heuristics with thread-based loot and XP paths', () => {
+    expect(inferQuestScaleFromTitleSummary('Rescue the villagers', 'Help them.')).toBe('major')
+    expect(inferQuestScaleFromTitleSummary('Herb run', 'Gather herbs.')).toBe('minor')
   })
 })
 

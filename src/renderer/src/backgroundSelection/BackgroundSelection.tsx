@@ -1,12 +1,11 @@
 import { BackgroundSelectionForm } from './BackgroundSelectionForm'
-import { BackgroundBackButton } from './BackgroundBackButton'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import { useBackgroundSelection } from './useBackgroundSelection'
 import './backgroundSelection.css'
 
 export interface BackgroundSelectionProps {
   campaignId: string
   characterId: string
-  characterName: string
   savedBackgroundKey?: string | null
   savedBackgroundStory?: string | null
   onComplete: () => void
@@ -25,7 +24,7 @@ export function BackgroundSelection(props: BackgroundSelectionProps): JSX.Elemen
     return (
       <div className="background-selection background-selection-loading">
         <p>Loading backgrounds...</p>
-        <BackgroundBackButton onBack={props.onBack} />
+        <OnboardingBackButton className="background-selection-back" onBack={props.onBack} />
       </div>
     )
   }
@@ -33,7 +32,7 @@ export function BackgroundSelection(props: BackgroundSelectionProps): JSX.Elemen
     return (
       <div className="background-selection background-selection-error">
         <p>{selection.error ?? 'No background roster available.'}</p>
-        <BackgroundBackButton onBack={props.onBack} />
+        <OnboardingBackButton className="background-selection-back" onBack={props.onBack} />
       </div>
     )
   }

@@ -3,11 +3,12 @@ import type { RegionExtras } from '../../../main/campaignIpc'
 import { CampaignReviewRegionExtras } from './CampaignReviewRegionExtras'
 import { EditableFieldEditView, EditableFieldReadView } from './editableFieldViews'
 import { RecapModalBody } from '../playView/RecapModalPanel'
-import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
+import { hasEmphasisTypes } from '../test/formattedTextTestUtils'
 
 describe('CampaignReviewRegionExtras emphasis rendering', () => {
   it('renders emphasis in backstory, recent history, and quest hooks', () => {
     const extras: RegionExtras = {
+      regionId: 'r1',
       backstory: 'Founded in *ancient* times.',
       recentHistory: 'A **fire** swept the docks.',
       questHooks: ['Find the _lost_ relic']

@@ -145,7 +145,3 @@ export function validateStartingLoadout(
     }
   }
 }
-
-export function isOffHandDisabledForWeapon(weaponItem: CatalogItem | undefined): boolean {
-  return weaponItem !== undefined && isTwoHandWeapon(weaponItem)
-}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { shouldTriggerQuestLoot, inferQuestScale } from './questLootContext'
+import { inferQuestScale, inferQuestScaleFromTitleSummary } from '../engine/quests'
+import { shouldTriggerQuestLoot } from './questLootContext'
 
 describe('shouldTriggerQuestLoot', () => {
   it('returns true when transitioning from active to a completed state', () => {
@@ -15,46 +16,21 @@ describe('shouldTriggerQuestLoot', () => {
   })
 })
 
-describe('inferQuestScale', () => {
+describe('inferQuestScaleFromTitleSummary', () => {
   it('returns minor for plain short hooks', () => {
-    expect(
-      inferQuestScale({
-        id: 'x',
-        campaignId: 'c',
-        title: 'Village Trouble',
-        state: 'completed',
-        summary: 'Short summary.'
-      })
-    ).toBe('minor')
+    expect(inferQuestScaleFromTitleSummary('Village Trouble', 'Short summary.')).toBe('minor')
   })
 
   it('returns major for long summaries or major keywords', () => {
-    expect(
-      inferQuestScale({
-        id: 'x',
-        campaignId: 'c',
-        title: 'Village Trouble',
-        state: 'completed',
-        summary: 'a'.repeat(201)
-      })
-    ).toBe('major')
-    expect(
-      inferQuestScale({
-        id: 'x',
-        campaignId: 'c',
-        title: 'The Main Quest',
-        state: 'completed',
-        summary: 'Short.'
-      })
-    ).toBe('major')
-    expect(
-      inferQuestScale({
-        id: 'x',
-        campaignId: 'c',
-        title: 'Stop the Ritual',
-        state: 'completed',
-        summary: 'Short.'
-      })
-    ).toBe('major')
+    expect(inferQuestScaleFromTitleSummary('Village Trouble', 'a'.repeat(201))).toBe('major')
+    expect(inferQuestScaleFromTitleSummary('The Main Quest', 'Short.')).toBe('major')
+    expect(inferQuestScaleFromTitleSummary('Stop the Ritual', 'Short.')).toBe('major')
+  })
+})
+
+describe('quest scale semantics by path', () => {
+  it('uses kind=main for quest records and title heuristics for story threads', () => {
+    expect(inferQuestScale({ kind: 'main', title: 'Herb run', summary: 'Short.' })).toBe('major')
+    expect(inferQuestScaleFromTitleSummary('Herb run', 'Short.')).toBe('minor')
   })
 })

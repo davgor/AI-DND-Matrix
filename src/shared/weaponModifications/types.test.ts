@@ -1,16 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
-  isItemModificationKind,
   parseItemModificationAgentResponse,
   parseItemModificationPayload,
   parseItemModificationProposal
 } from './types'
 
 describe('weapon modification shared type guards', () => {
-  it('isItemModificationKind accepts valid kinds', () => {
-    expect(isItemModificationKind('addDamageComponent')).toBe(true)
-    expect(isItemModificationKind('setDisplayName')).toBe(true)
-    expect(isItemModificationKind('transmute')).toBe(false)
+  it('parseItemModificationProposal rejects invalid kinds', () => {
+    expect(parseItemModificationProposal({ targetCharacterItemId: 'x', kind: 'bad' })).toBeNull()
   })
 
   it('parseItemModificationPayload validates addDamageComponent JSON', () => {

@@ -5,7 +5,7 @@ import { createRegion } from '../db/repositories/regions'
 import { createNpc } from '../db/repositories/npcs'
 import { createPlayerCharacter } from '../main/characterCreationIpc'
 import { createScriptedProvider } from './providers/mockHarness'
-import { buildDefeatPrompt, proposeDefeatDisposition } from './defeatDisposition'
+import { proposeDefeatDisposition } from './defeatDisposition'
 import type { Alignment } from '../shared/alignment/types'
 
 function seedVictor(input: { role: string; backstory: string; alignment: Alignment }) {
@@ -197,23 +197,24 @@ describe('proposeDefeatDisposition: shared systemPrompt (040.9)', () => {
   })
 })
 
-describe('buildDefeatPrompt', () => {
-  it('includes death mode and stored backstory', () => {
-    const prompt = buildDefeatPrompt({
-      victor: {
-        name: 'Mara',
-        role: 'guard',
-        alignment: 'lawful_good',
-        disposition: 'hostile',
-        backstory: 'Retired guard captain.',
-        canSpeak: true
-      } as Parameters<typeof buildDefeatPrompt>[0]['victor'],
-      player: { name: 'Kael' } as Parameters<typeof buildDefeatPrompt>[0]['player'],
+describe('proposeDefeatDisposition LLM prompt', () => {
+  it('includes death mode and stored backstory when rules are ambiguous', async () => {
+    const { player, victor } = seedVictor({
+      role: 'merchant',
+      backstory: 'Retired guard captain.',
+      alignment: 'neutral_evil'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({ disposition: 'ransom', narrationText: 'Priced.' })
+    ])
+    await proposeDefeatDisposition(provider, {
+      victor,
+      player,
       deathMode: 'standard',
       encounterSummary: 'A duel.'
     })
-    expect(prompt).toContain('death mode: standard')
-    expect(prompt).toContain('Retired guard captain')
-    expect(prompt).toContain('do not contradict')
+    expect(provider.calls[0]?.prompt).toContain('death mode: standard')
+    expect(provider.calls[0]?.prompt).toContain('Retired guard captain')
+    expect(provider.calls[0]?.prompt).toContain('do not contradict')
   })
 })

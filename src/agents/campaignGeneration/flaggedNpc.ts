@@ -5,7 +5,7 @@ import { GENDER_ROSTER, type GenderRosterEntry } from '../../shared/npcGender/ty
 import { NPC_CLASS_ROSTER, type NpcClassRosterEntry } from '../../shared/npcClass/types'
 import type { AvailableRaceOption, RaceLore } from '../../shared/raceSelection/types'
 import type { Temperament } from '../../shared/alignment/types'
-import { tryParseJson } from '../jsonResponse'
+import { generateJsonWithRetry } from '../jsonResponse'
 import type { GenerateContext, Provider } from '../providers/types'
 import { buildAgentSystemPrompt } from '../sharedSystemPrompts'
 import { buildAvailableRaceOptions, resolveOrRealizeCampaignRace } from '../raceLore'
@@ -81,17 +81,22 @@ export async function generateNpcCoreBundle(
   const availableGenders = input.availableGenders ?? GENDER_ROSTER
   const availableClasses = input.availableClasses ?? NPC_CLASS_ROSTER
   const prompt = buildNpcCoreBundlePrompt({ ...input, availableGenders, availableClasses })
-  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, CORE_BUNDLE_GENERATE_CONTEXT)
-    const parsed = tryParseJson(raw)
-    if (typeof parsed === 'object' && parsed !== null) {
-      const bundle = parseNpcCoreBundleRecord(parsed as Record<string, unknown>, input.availableRaces)
-      if (bundle) {
-        return bundle
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) => {
+      if (typeof parsed !== 'object' || parsed === null) {
+        return undefined
       }
+      return parseNpcCoreBundleRecord(parsed as Record<string, unknown>, input.availableRaces) ?? undefined
+    },
+    {
+      attempts: MAX_GENERATION_ATTEMPTS,
+      context: CORE_BUNDLE_GENERATE_CONTEXT,
+      exhaustedError: () =>
+        new CampaignGenerationSchemaError('DM agent did not return a valid NPC core bundle after retries')
     }
-  }
-  throw new CampaignGenerationSchemaError('DM agent did not return a valid NPC core bundle after retries')
+  )
 }
 
 export async function generateFlaggedNpcDetails(
@@ -102,17 +107,24 @@ export async function generateFlaggedNpcDetails(
   const context = input.bundle.canSpeak
     ? FINAL_SPEAKING_GENERATE_CONTEXT
     : FINAL_NON_SPEAKING_GENERATE_CONTEXT
-  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, context)
-    const parsed = tryParseJson(raw)
-    if (typeof parsed === 'object' && parsed !== null) {
-      const details = parseFlaggedNpcDetailsRecord(parsed as Record<string, unknown>, input.bundle)
-      if (details) {
-        return details
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) => {
+      if (typeof parsed !== 'object' || parsed === null) {
+        return undefined
       }
+      return (
+        parseFlaggedNpcDetailsRecord(parsed as Record<string, unknown>, input.bundle) ?? undefined
+      )
+    },
+    {
+      attempts: MAX_GENERATION_ATTEMPTS,
+      context,
+      exhaustedError: () =>
+        new CampaignGenerationSchemaError('DM agent did not return valid flagged NPC details after retries')
     }
-  }
-  throw new CampaignGenerationSchemaError('DM agent did not return valid flagged NPC details after retries')
+  )
 }
 
 async function resolveRaceContext(

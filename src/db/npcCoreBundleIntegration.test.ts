@@ -4,7 +4,7 @@ import { createCampaign } from './repositories/campaigns'
 import { listNpcsByRegion } from './repositories/npcs'
 import { createRegion } from './repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
+import { RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { getCampaignRaceByKey, listCampaignRaces } from './repositories/campaignRaces'
 import { generateNpcForCampaign } from '../main/campaignEditIpc'
 import {

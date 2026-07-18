@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
+import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import {
   generateCampaignFromPrompt,
   getCampaignDetail,

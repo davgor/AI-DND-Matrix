@@ -5,7 +5,7 @@ import {
   meetsRegionTropeDiversity,
   meetsWorldTropeDiversity
 } from './tropeGuard'
-import { makeRegion } from './fixtures'
+import { makeRegion } from '../../test/fixtures/campaignGenerationFixtures'
 
 const PREMISE = 'Mercenaries arrive in a river kingdom as drowned ruins surface.'
 

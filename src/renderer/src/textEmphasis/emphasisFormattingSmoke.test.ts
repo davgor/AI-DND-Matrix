@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { tokenizeTextEmphasis } from '../../../shared/textEmphasis'
 import { FormattedText } from '../shared/FormattedText'
-import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
+import { hasEmphasisTypes } from '../test/formattedTextTestUtils'
 import { CampaignReviewRegionExtras } from '../campaignReview/CampaignReviewRegionExtras'
 import { EditableFieldReadView } from '../campaignReview/editableFieldViews'
 import { CharacterLogBookSections } from '../characterSheet/CharacterLogBookSections'
@@ -61,6 +61,7 @@ describe('emphasis formatting smoke: journal and log book', () => {
 describe('emphasis formatting smoke: review and recap', () => {
   it('renders campaign review and editable read surfaces with emphasis markers', () => {
     const extras: RegionExtras = {
+      regionId: 'r1',
       backstory: 'Founded in *ancient* times.',
       recentHistory: 'A **fire** swept the docks.',
       questHooks: ['Find the _lost_ relic']

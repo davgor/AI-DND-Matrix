@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LogEntry } from '../../../shared/logBook/types'
 import { FormattedText } from '../shared/FormattedText'
-import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
+import { hasEmphasisTypes } from '../test/formattedTextTestUtils'
 import { CharacterLogBookSections } from './CharacterLogBookSections'
 
 describe('CharacterJournalSection emphasis rendering', () => {

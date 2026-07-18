@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ReactElement, ReactNode } from 'react'
 import { EquipmentSelectionForm } from './EquipmentSelectionForm'
-import { EquipmentBackButton } from './EquipmentBackButton'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import { initialEquipmentSelectionState } from './equipmentSelectionLogic'
 import type { StartingLoadoutOffer } from '../../../shared/startingLoadout/types'
 import { STARTING_OFF_HAND_EMPTY } from '../../../engine/startingLoadout/packages'
@@ -85,10 +85,10 @@ describe('EquipmentSelectionForm', () => {
       onBack
     })
 
-    const backSlot = findComponent(tree, EquipmentBackButton)
+    const backSlot = findComponent(tree, OnboardingBackButton)
     expect(backSlot).toBeDefined()
-    const backButton = EquipmentBackButton({ onBack: backSlot!.props.onBack })
-    expect(findByClassName(backButton, 'equipment-selection-back-arrow')).toBeDefined()
+    const backButton = OnboardingBackButton({ onBack: backSlot!.props.onBack })
+    expect(findByClassName(backButton, 'onboarding-back-arrow')).toBeDefined()
     backButton.props.onClick()
     expect(onBack).toHaveBeenCalledOnce()
   })

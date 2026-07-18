@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FormattedText } from './FormattedText'
-import { hasEmphasisTypes } from './formattedTextTestUtils'
+import { hasEmphasisTypes } from '../test/formattedTextTestUtils'
 
 describe('FormattedText', () => {
   it('renders plain text unchanged when there are no emphasis markers', () => {

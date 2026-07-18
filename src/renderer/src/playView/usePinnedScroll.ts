@@ -11,14 +11,15 @@ export function usePinnedScroll<T extends HTMLElement>(entryCount: number): {
     if (!element) {
       return
     }
+    const target = element
 
     function handleScroll(): void {
-      const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight
+      const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight
       pinnedRef.current = distanceFromBottom < 48
     }
 
-    element.addEventListener('scroll', handleScroll)
-    return () => element.removeEventListener('scroll', handleScroll)
+    target.addEventListener('scroll', handleScroll)
+    return () => target.removeEventListener('scroll', handleScroll)
   }, [])
 
   useEffect(() => {

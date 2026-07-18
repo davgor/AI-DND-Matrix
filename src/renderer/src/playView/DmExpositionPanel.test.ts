@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { pickSceneSummary } from '../../../shared/inCampaignLayout/sceneContext'
 import { FormattedText } from '../shared/FormattedText'
-import { hasEmphasisTypes } from '../shared/formattedTextTestUtils'
+import { hasEmphasisTypes } from '../test/formattedTextTestUtils'
 import { renderFeedLine } from './dmExpositionParts'
 
 describe('DmExpositionPanel scene states', () => {
@@ -41,8 +41,9 @@ describe('DmExpositionPanel scene states', () => {
     })
     expect(line.type).toBeDefined()
     const children = line.props.children as unknown[]
-    expect(children[0].props.className).toBe('dm-feed-speaker')
-    expect(children[0].props.children).toEqual(['Mira', ':'])
+    const speaker = children[0] as { props: { className: string; children: unknown } }
+    expect(speaker.props.className).toBe('dm-feed-speaker')
+    expect(speaker.props.children).toEqual(['Mira', ':'])
     const dialogueBody = children[2] as JSX.Element
     expect(dialogueBody.type).toBe('em')
   })

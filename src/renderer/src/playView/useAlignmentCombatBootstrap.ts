@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
 import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
-import { refreshPlayerAlignmentState } from './turnSubmissionActions'
+import { refreshPlayerAlignmentState } from './refreshPlayerAlignmentState'
 
 export function useAlignmentCombatBootstrap(campaignId: string, characterId: string, characterRefreshToken: number) {
   const [pendingAlignmentShift, setPendingAlignmentShift] = useState<PendingAlignmentShift | null>(null)

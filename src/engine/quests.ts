@@ -40,24 +40,24 @@ export function validateObjectiveUpdate(
   )
 }
 
-export function isQuestComplete(status: QuestStatus): boolean {
+export function isQuestRewardEligibleStatus(status: QuestStatus): boolean {
   return status === 'completed'
 }
 
-export function isQuestRewardEligibleStatus(status: QuestStatus): boolean {
-  return isQuestComplete(status)
+export function inferQuestScaleFromTitleSummary(title: string, summary: string): QuestScale {
+  if (summary.length > MAJOR_SUMMARY_THRESHOLD) {
+    return 'major'
+  }
+  const lowerTitle = title.toLowerCase()
+  const hasMajorKeyword = MAJOR_TITLE_KEYWORDS.some((keyword) => lowerTitle.includes(keyword))
+  return hasMajorKeyword ? 'major' : 'minor'
 }
 
 export function inferQuestScale(quest: Pick<Quest, 'title' | 'summary' | 'kind'>): QuestScale {
   if (quest.kind === 'main') {
     return 'major'
   }
-  if (quest.summary.length > MAJOR_SUMMARY_THRESHOLD) {
-    return 'major'
-  }
-  const lowerTitle = quest.title.toLowerCase()
-  const hasMajorKeyword = MAJOR_TITLE_KEYWORDS.some((keyword) => lowerTitle.includes(keyword))
-  return hasMajorKeyword ? 'major' : 'minor'
+  return inferQuestScaleFromTitleSummary(quest.title, quest.summary)
 }
 
 export function storyThreadStateToQuestStatus(state: string): QuestStatus | null {

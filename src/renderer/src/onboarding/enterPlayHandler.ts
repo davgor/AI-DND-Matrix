@@ -1,9 +1,5 @@
 import type { CampaignDetail } from '../../../main/campaignIpc'
-import {
-  campaignPlayBlockerMessage,
-  canEnterCampaignPlay,
-  getCampaignPlayBlockers
-} from '../../../shared/campaignPlay/campaignPlayReady'
+import { guardPlayEntry } from '../../../shared/campaignPlay/campaignPlayReady'
 import {
   findIncompletePlayerCharacter,
   findPlayerCharacter
@@ -18,9 +14,7 @@ export function createEnterPlayHandler(input: {
     if (!input.detail) {
       return
     }
-    const blockers = getCampaignPlayBlockers(input.detail)
-    if (!canEnterCampaignPlay(input.detail)) {
-      input.setEnterPlayBlockerMessage(campaignPlayBlockerMessage(blockers))
+    if (!guardPlayEntry(input.detail, input.setEnterPlayBlockerMessage)) {
       return
     }
     const player =

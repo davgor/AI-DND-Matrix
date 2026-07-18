@@ -9,7 +9,7 @@ export const LOG_CATEGORY_LABELS: Record<LogCategory, string> = {
 }
 
 export function groupLogEntriesByCategory(entries: LogEntry[]): Record<LogCategory, LogEntry[]> {
-  const grouped = Object.fromEntries(LOG_CATEGORIES.map((category) => [category, []])) as Record<
+  const grouped = Object.fromEntries(LOG_CATEGORIES.map((category) => [category, []])) as unknown as Record<
     LogCategory,
     LogEntry[]
   >

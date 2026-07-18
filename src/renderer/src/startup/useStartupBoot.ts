@@ -23,7 +23,7 @@ function applyEvent(
   event: StartupEventPayload,
   setState: (updater: (prev: StartupBootState) => StartupBootState) => void
 ): void {
-  if (event.phase === 'failed') {
+  if (event.phase === 'failed' && 'category' in event) {
     setState((prev) => ({
       ...prev,
       phase: 'failed',
