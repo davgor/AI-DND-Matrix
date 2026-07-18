@@ -83,7 +83,10 @@ describe('runIdentityInterviewKickoff', () => {
     expect(systemPrompt).toContain('lawful_good')
     expect(systemPrompt).toContain('Oakhollow')
     expect(systemPrompt).toContain('Blackmire')
-    expect(provider.calls[0]?.context?.maxTokens).toBe(768)
+    expect(systemPrompt).toContain('concise')
+    expect(systemPrompt.toLowerCase()).toContain('do not restate')
+    expect(provider.calls[0]?.prompt).toContain('concise')
+    expect(provider.calls[0]?.context?.maxTokens).toBe(384)
   })
 })
 
@@ -133,7 +136,11 @@ describe('runIdentityInterviewTurn', () => {
     expect(systemPrompt).toContain('lawful_good')
     expect(systemPrompt).toContain('Oakhollow')
     expect(systemPrompt).toContain('which of these generated regions')
-    expect(provider.calls[0]?.context?.maxTokens).toBe(768)
+    expect(systemPrompt).toContain('concise')
+    expect(systemPrompt.toLowerCase()).toContain('do not restate')
+    expect(systemPrompt.toLowerCase()).toContain('short distinguishing phrase')
+    expect(systemPrompt).toMatch(/never recite score numbers/i)
+    expect(provider.calls[0]?.context?.maxTokens).toBe(384)
   })
 
   it('sends the static identity block via systemPrompt, not the user prompt', async () => {

@@ -14,6 +14,14 @@ export const CREATE_STAGE_GOOFY_MESSAGES: Record<CreateCampaignStage, readonly s
     'Convincing tectonic plates to cooperate…',
     'Asking the stars to pick a theme…'
   ],
+  canon: [
+    'Checking if this world already has a map…',
+    'Asking the lore librarians for names…',
+    'Rummaging the known-places drawer…',
+    'Matching the premise to remembered kingdoms…',
+    'Looking up famous locals (politely)…',
+    'Consulting the setting concordance…'
+  ],
   regions: [
     'Drawing borders nobody will respect…',
     'Naming a tavern in every hamlet…',
@@ -67,6 +75,8 @@ export function mapCreateStageToPlayerMessage(stage: CreateCampaignStage | null)
   switch (stage) {
     case 'world':
       return 'Imagining your world'
+    case 'canon':
+      return 'Recalling known places and people'
     case 'regions':
       return 'Shaping regions'
     case 'npcs':
@@ -84,6 +94,8 @@ export function mapCreateStageTraceLabel(stage: CreateCampaignStage): string {
   switch (stage) {
     case 'world':
       return 'World'
+    case 'canon':
+      return 'Canon'
     case 'regions':
       return 'Regions'
     case 'npcs':

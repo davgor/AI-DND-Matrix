@@ -86,6 +86,21 @@ export interface GeneratedWorld {
   worldHistory: string
 }
 
+/** Known places/characters recalled from a recognizable premise setting. Empty when original. */
+export interface CanonRecall {
+  recognizedSetting: boolean
+  settingLabel: string
+  knownPlaces: string[]
+  knownCharacters: string[]
+}
+
+export const EMPTY_CANON_RECALL: CanonRecall = {
+  recognizedSetting: false,
+  settingLabel: '',
+  knownPlaces: [],
+  knownCharacters: []
+}
+
 export interface WorldContext {
   worldName: string
   worldSummary: string

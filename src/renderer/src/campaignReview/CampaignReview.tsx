@@ -9,6 +9,7 @@ import { CampaignReviewModals } from './CampaignReviewModals'
 import { CampaignReviewFooter, CampaignReviewStory } from './CampaignReviewSections'
 import { CampaignReviewWorldSection } from './CampaignReviewWorldSection'
 import { createCampaignReviewSavers } from './campaignReviewSavers'
+import { useCampaignRaces } from './useCampaignRaces'
 import './campaignReview.css'
 
 export interface CampaignReviewProps {
@@ -23,6 +24,7 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
   const regionBlocks = buildRegionBlocks(detail)
   const [generateOpen, setGenerateOpen] = useState(false)
   const [generateNpcRegionId, setGenerateNpcRegionId] = useState<string | null>(null)
+  const campaignRaces = useCampaignRaces(campaignId, detail.npcs)
   const generateNpcRegion = regionBlocks.find((block) => block.region.id === generateNpcRegionId)
   const savers = createCampaignReviewSavers(campaignId, props.onDetailChange)
 
@@ -42,6 +44,7 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
       <CampaignReviewStory storyThreads={detail.storyThreads} />
       <CampaignReviewRegions
         regionBlocks={regionBlocks}
+        campaignRaces={campaignRaces}
         onDeleteNpc={savers.deleteNpc}
         onDeleteRegion={savers.deleteRegion}
         onGenerateNpc={setGenerateNpcRegionId}

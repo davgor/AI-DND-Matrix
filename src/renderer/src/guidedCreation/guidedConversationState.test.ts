@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { GuidedCreationMessage } from '../../../shared/guidedCreation/types'
 import {
   dmThinkingStatusLabel,
+  generatingStatusLabel,
   messagesWithPendingPlayer,
   shouldDisableGuidedInput
 } from './guidedConversationState'
@@ -43,6 +44,17 @@ describe('dmThinkingStatusLabel', () => {
     expect(dmThinkingStatusLabel(3)).toBe('The DM is thinking....')
     expect(dmThinkingStatusLabel(4)).toBe('The DM is thinking.')
     expect(dmThinkingStatusLabel(7)).toBe('The DM is thinking....')
+  })
+})
+
+describe('generatingStatusLabel', () => {
+  it('cycles the same ellipsis pattern for the Generate button', () => {
+    expect(generatingStatusLabel(0)).toBe('Generating.')
+    expect(generatingStatusLabel(1)).toBe('Generating..')
+    expect(generatingStatusLabel(2)).toBe('Generating...')
+    expect(generatingStatusLabel(3)).toBe('Generating....')
+    expect(generatingStatusLabel(4)).toBe('Generating.')
+    expect(generatingStatusLabel(7)).toBe('Generating....')
   })
 })
 

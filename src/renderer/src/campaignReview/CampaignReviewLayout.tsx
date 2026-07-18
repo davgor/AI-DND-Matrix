@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
+import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { CampaignReviewRegionCard } from './CampaignReviewRegionCard'
 
 export function CampaignReviewHeader(props: { campaignName: string | undefined }): JSX.Element {
@@ -25,6 +26,7 @@ export function buildRegionBlocks(detail: CampaignDetail) {
 
 export function CampaignReviewRegions(props: {
   regionBlocks: ReturnType<typeof buildRegionBlocks>
+  campaignRaces?: CampaignRace[]
   onDeleteNpc: (npcId: string) => void
   onDeleteRegion: (regionId: string) => void
   onGenerateNpc: (regionId: string) => void
@@ -38,6 +40,7 @@ export function CampaignReviewRegions(props: {
             region={region}
             extras={extras}
             npcs={npcs}
+            campaignRaces={props.campaignRaces}
             onDeleteNpc={props.onDeleteNpc}
             onDeleteRegion={() => props.onDeleteRegion(region.id)}
             onGenerateNpc={() => props.onGenerateNpc(region.id)}

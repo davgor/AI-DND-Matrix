@@ -14,7 +14,9 @@ import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
   buildAdditionalRegionPrompt,
+  buildCanonRecallPrompt,
   buildGenerationPrompt,
+  buildRegionsGenerationPrompt,
   buildWorldGenerationPrompt,
   generateAdditionalRegion,
   generateAndPersistCampaign,
@@ -27,6 +29,7 @@ import {
   hasValidNpcClass,
   normalizeAdditionalRegion,
   normalizeCampaignGeneration,
+  normalizeCanonRecall,
   persistRegionWithNpcs,
   resolveInitialGenerationCounts
 } from '.'
@@ -37,7 +40,9 @@ import {
   LEGACY_CAMPAIGN_SEED_PAYLOAD,
   REALISTIC_LLM_WORLD,
   VALID_WORLD,
+  EMPTY_CANON_RESPONSE,
   buildCascadingSeedResponses,
+  buildShieldHeroCascadingSeedResponses,
   makeNpcs,
   makeRegion,
   npcReviewResponses,
@@ -137,6 +142,7 @@ describe('generateCampaignSeed NPC slot retries', () => {
     const uniqueNpc = { ...firstNpc, name: 'Bob' }
     const provider = createScriptedProvider([
       JSON.stringify(VALID_WORLD),
+      EMPTY_CANON_RESPONSE,
       JSON.stringify({ regions }),
       JSON.stringify({ npc: firstNpc }),
       JSON.stringify({ npc: duplicateNpc }),
@@ -168,10 +174,28 @@ describe('generateCampaignSeed progress', () => {
       }
     })
     expect(stages[0]).toBe('world')
+    expect(stages).toContain('canon')
+    expect(stages.indexOf('canon')).toBeGreaterThan(stages.indexOf('world'))
+    expect(stages.indexOf('regions')).toBeGreaterThan(stages.indexOf('canon'))
     expect(stages).toContain('regions')
     expect(stages.filter((stage) => stage === 'npcs').length).toBeGreaterThanOrEqual(2)
     expect(stages).toContain('story')
     expect(stages.indexOf('story')).toBeGreaterThan(stages.lastIndexOf('npcs'))
+  })
+})
+
+describe('fandom canon-recall seeding (070)', () => {
+  it('prefers Melromarc and Raphtalia when premise and canon list them', async () => {
+    const provider = createScriptedProvider(
+      buildShieldHeroCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 1 })
+    )
+    const result = await generateCampaignSeed(
+      provider,
+      'Campaign set in the world of the shield hero',
+      { regionCount: 2, npcsPerRegion: 1, availableRaces: buildAvailableRaceOptions([]) }
+    )
+    expect(result.regions.map((region) => region.name)).toContain('Melromarc')
+    expect(result.npcs.map((npc) => npc.name)).toContain('Raphtalia')
   })
 })
 
@@ -325,6 +349,55 @@ describe('buildWorldGenerationPrompt', () => {
     expect(prompt).not.toContain('storm-priests')
     expect(prompt).not.toContain('fog-veiled')
     expect(prompt).not.toContain('storm-wracked')
+  })
+})
+
+describe('canon recall prompts and normalize (070)', () => {
+  it('buildCanonRecallPrompt asks for known places and characters', () => {
+    const prompt = buildCanonRecallPrompt('world of the shield hero', VALID_WORLD)
+    expect(prompt).toContain('knownPlaces')
+    expect(prompt).toContain('knownCharacters')
+    expect(prompt).toContain('Melromarc')
+    expect(prompt).toContain('Raphtalia')
+    expect(prompt).toContain('Do NOT invent fake')
+  })
+
+  it('buildRegionsGenerationPrompt includes known places when canon is present', () => {
+    const prompt = buildRegionsGenerationPrompt(
+      'world of the shield hero',
+      VALID_WORLD,
+      { regionCount: 2, npcsPerRegion: 1 },
+      {
+        recognizedSetting: true,
+        settingLabel: 'The Rising of the Shield Hero',
+        knownPlaces: ['Melromarc', 'Siltvelt'],
+        knownCharacters: ['Raphtalia']
+      }
+    )
+    expect(prompt).toContain('Melromarc')
+    expect(prompt).toContain('prefer those exact names')
+  })
+
+  it('normalizeCanonRecall accepts snake_case and empty unrecognized payloads', () => {
+    expect(
+      normalizeCanonRecall({
+        recognized_setting: true,
+        setting_label: 'Shield Hero',
+        known_places: ['Melromarc', 'melromarc', 'Siltvelt'],
+        known_characters: ['Raphtalia']
+      })
+    ).toEqual({
+      recognizedSetting: true,
+      settingLabel: 'Shield Hero',
+      knownPlaces: ['Melromarc', 'Siltvelt'],
+      knownCharacters: ['Raphtalia']
+    })
+    expect(normalizeCanonRecall(null)).toEqual({
+      recognizedSetting: false,
+      settingLabel: '',
+      knownPlaces: [],
+      knownCharacters: []
+    })
   })
 })
 
@@ -669,6 +742,7 @@ function shortfallNpcPayload(regionName: string, name: string): string {
 function buildShortfallSeedPrelude(region: ReturnType<typeof makeRegion>, npcsPerRegion: number): string[] {
   return [
     JSON.stringify(VALID_WORLD),
+    EMPTY_CANON_RESPONSE,
     JSON.stringify({ regions: [region] }),
     ...Array.from({ length: npcsPerRegion * MAX_GENERATION_ATTEMPTS }, () => 'invalid npc slot response'),
     JSON.stringify({ storyThread: { title: 'Shortfall Arc', state: 'starting', summary: 'Fill the cast.' } })
@@ -731,8 +805,8 @@ describe('one-shot NPC generation call-count guards (040.13)', () => {
     const provider = createScriptedProvider(responses)
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 2, npcsPerRegion: 3 })
     expect(result.npcs).toHaveLength(6)
-    // world + regions + one call per NPC (6) + story thread = 9
-    expect(provider.calls).toHaveLength(9)
+    // world + canon + regions + one call per NPC (6) + story thread = 10
+    expect(provider.calls).toHaveLength(10)
     expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
   })
 

@@ -39,4 +39,13 @@ describe('RACE_ROSTER', () => {
     expect(RACE_ROSTER.some((entry) => entry.key === CUSTOM_RACE_KEY)).toBe(false)
     expect(CUSTOM_RACE_KEY).toBe('custom')
   })
+
+  it('frames humans as ordinary folk, not a majestic ancestry (069)', () => {
+    const human = RACE_ROSTER.find((entry) => entry.key === 'human')
+    expect(human).toBeDefined()
+    const seed = human!.seedPrompt.toLowerCase()
+    expect(seed).toMatch(/ordinary|plain|everyday|commonplace/)
+    expect(seed).not.toMatch(/ambitious|most widespread|majestic|chosen/)
+    expect(seed).not.toMatch(/\bdestiny\b/)
+  })
 })

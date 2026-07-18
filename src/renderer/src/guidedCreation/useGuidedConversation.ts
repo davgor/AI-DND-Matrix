@@ -3,20 +3,21 @@ import type {
   GuidedCreationSendMessageResult,
   GuidedMessagePhase
 } from '../../../shared/guidedCreation/types'
-import { useGuidedIdentityKickoff } from './useGuidedIdentityKickoff'
+import { useGuidedConversationActions } from './useGuidedConversationActions'
 import { useGuidedRefresh } from './useGuidedRefresh'
-import { useGuidedSendMessage } from './useGuidedSendMessage'
 
 export interface GuidedConversationController {
   state: ReturnType<typeof useGuidedRefresh>['state']
   loading: boolean
   kickingOff: boolean
   sending: boolean
+  generating: boolean
   error: string | null
   inputValue: string
   pendingPlayerMessage: string | null
   setInputValue: (value: string) => void
   sendMessage: () => Promise<GuidedCreationSendMessageResult | null>
+  generateReply: () => Promise<void>
 }
 
 function useGuidedTurnFlags(): {
@@ -24,6 +25,8 @@ function useGuidedTurnFlags(): {
   setKickingOff: (value: boolean) => void
   sending: boolean
   setSending: (value: boolean) => void
+  generating: boolean
+  setGenerating: (value: boolean) => void
   error: string | null
   setError: (value: string | null) => void
   inputValue: string
@@ -33,6 +36,7 @@ function useGuidedTurnFlags(): {
 } {
   const [kickingOff, setKickingOff] = useState(false)
   const [sending, setSending] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [pendingPlayerMessage, setPendingPlayerMessage] = useState<string | null>(null)
@@ -41,6 +45,8 @@ function useGuidedTurnFlags(): {
     setKickingOff,
     sending,
     setSending,
+    generating,
+    setGenerating,
     error,
     setError,
     inputValue,
@@ -63,31 +69,14 @@ export function useGuidedConversation(
     void refresh()
   }, [refresh])
 
-  useGuidedIdentityKickoff({
+  const actions = useGuidedConversationActions({
     campaignId,
     characterId,
     phase,
     loading,
-    kickingOff: flags.kickingOff,
-    sending: flags.sending,
     state,
     refresh,
-    setKickingOff: flags.setKickingOff,
-    setError: flags.setError,
-    onStateChange
-  })
-
-  const sendMessage = useGuidedSendMessage({
-    campaignId,
-    characterId,
-    phase,
-    inputValue: flags.inputValue,
-    sending: flags.sending,
-    setSending: flags.setSending,
-    setError: flags.setError,
-    setInputValue: flags.setInputValue,
-    setPendingPlayerMessage: flags.setPendingPlayerMessage,
-    refresh,
+    ...flags,
     onStateChange
   })
 
@@ -96,10 +85,11 @@ export function useGuidedConversation(
     loading,
     kickingOff: flags.kickingOff,
     sending: flags.sending,
+    generating: flags.generating,
     error: flags.error,
     inputValue: flags.inputValue,
     pendingPlayerMessage: flags.pendingPlayerMessage,
     setInputValue: flags.setInputValue,
-    sendMessage
+    ...actions
   }
 }

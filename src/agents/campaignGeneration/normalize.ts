@@ -7,6 +7,7 @@ import { DEFAULT_ADDITIONAL_REGION_NPC_COUNT } from '../../shared/campaignCreate
 import type {
   AdditionalRegionResult,
   CampaignGenerationResult,
+  CanonRecall,
   GeneratedNpc,
   GeneratedRegion,
   GeneratedSingleNpcResult,
@@ -14,7 +15,7 @@ import type {
   GeneratedWorld,
   GenerationCounts
 } from './types'
-import { resolveInitialGenerationCounts } from './types'
+import { EMPTY_CANON_RECALL, resolveInitialGenerationCounts } from './types'
 
 const MIN_NPCS_PER_REGION_WHEN_NONZERO = 1
 const MIN_QUEST_HOOKS = 1
@@ -102,6 +103,88 @@ export function meetsWorldSummaryProseStandards(worldSummary: string): boolean {
   return paragraphs.every(
     (paragraph) => countSentences(paragraph) >= MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH
   )
+}
+
+const MAX_CANON_NAMES = 24
+
+function dedupeCanonNames(names: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const name of names) {
+    const key = name.toLowerCase()
+    if (seen.has(key)) {
+      continue
+    }
+    seen.add(key)
+    result.push(name)
+    if (result.length >= MAX_CANON_NAMES) {
+      break
+    }
+  }
+  return result
+}
+
+function readRecognizedSetting(record: Record<string, unknown>): boolean {
+  const raw = record.recognizedSetting ?? record.recognized_setting
+  if (typeof raw === 'boolean') {
+    return raw
+  }
+  if (typeof raw === 'string') {
+    const lowered = raw.trim().toLowerCase()
+    if (lowered === 'true' || lowered === 'yes') {
+      return true
+    }
+    if (lowered === 'false' || lowered === 'no') {
+      return false
+    }
+  }
+  return false
+}
+
+/**
+ * Always returns a CanonRecall (never undefined). Invalid payloads become EMPTY_CANON_RECALL
+ * so an unrecognized or malformed recall never aborts campaign create.
+ */
+export function normalizeCanonRecall(value: unknown): CanonRecall {
+  if (typeof value !== 'object' || value === null) {
+    return EMPTY_CANON_RECALL
+  }
+  const record = value as Record<string, unknown>
+  const knownPlaces = dedupeCanonNames(readStringArray(record, 'knownPlaces', 'known_places', 'places'))
+  const knownCharacters = dedupeCanonNames(
+    readStringArray(record, 'knownCharacters', 'known_characters', 'characters')
+  )
+  const settingLabel = readString(record, 'settingLabel', 'setting_label', 'setting') ?? ''
+  const recognizedSetting =
+    readRecognizedSetting(record) || knownPlaces.length > 0 || knownCharacters.length > 0
+  if (!recognizedSetting && knownPlaces.length === 0 && knownCharacters.length === 0) {
+    return EMPTY_CANON_RECALL
+  }
+  return {
+    recognizedSetting,
+    settingLabel,
+    knownPlaces,
+    knownCharacters
+  }
+}
+
+export function isValidCanonRecall(value: CanonRecall): boolean {
+  return (
+    typeof value.recognizedSetting === 'boolean' &&
+    typeof value.settingLabel === 'string' &&
+    Array.isArray(value.knownPlaces) &&
+    Array.isArray(value.knownCharacters) &&
+    value.knownPlaces.every((name) => typeof name === 'string') &&
+    value.knownCharacters.every((name) => typeof name === 'string')
+  )
+}
+
+export function nextPreferredCanonName(
+  knownCharacters: string[],
+  existingNpcNames: string[]
+): string | undefined {
+  const used = new Set(existingNpcNames.map((name) => name.trim().toLowerCase()))
+  return knownCharacters.find((name) => !used.has(name.trim().toLowerCase()))
 }
 
 export function normalizeRaceKeyForRoster(raw: string): string {

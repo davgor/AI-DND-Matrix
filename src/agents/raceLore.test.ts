@@ -50,6 +50,31 @@ describe('buildRaceLorePrompt', () => {
   })
 })
 
+describe('buildRaceLorePrompt human tone (069)', () => {
+  it('keeps human lore prompts mundane and avoids majestic framing', () => {
+    const human = RACE_ROSTER.find((entry) => entry.key === 'human')!
+    const prompt = buildRaceLorePrompt('Premise.', 'Summary.', {
+      kind: 'preset',
+      raceKey: human.key,
+      label: human.label,
+      seedPrompt: human.seedPrompt
+    })
+    expect(prompt.toLowerCase()).toMatch(/mundane|ordinary|commonplace/)
+    expect(prompt.toLowerCase()).toMatch(/not.*(majestic|chosen|destiny)/)
+  })
+
+  it('does not apply human-only mundane guidance to other races', () => {
+    const elf = RACE_ROSTER.find((entry) => entry.key === 'elf')!
+    const prompt = buildRaceLorePrompt('Premise.', 'Summary.', {
+      kind: 'preset',
+      raceKey: elf.key,
+      label: elf.label,
+      seedPrompt: elf.seedPrompt
+    })
+    expect(prompt).not.toMatch(/Humans are ordinary/i)
+  })
+})
+
 describe('generateRaceLore', () => {
   it('parses valid lore JSON and retries malformed output', async () => {
     const provider = createScriptedProvider(['not json', JSON.stringify(VALID_LORE)])

@@ -24,17 +24,21 @@ export function createReadyToEnterPlayHandler(input: {
       return
     }
 
-    const result = await window.guidedCreation.readyToEnterPlay({
-      campaignId: input.campaignId,
-      characterId: input.characterId
-    })
-    if (!result.ok) {
-      input.setEnterPlayBlockerMessage('Could not enter play. Try again.')
-      return
-    }
+    try {
+      const result = await window.guidedCreation.readyToEnterPlay({
+        campaignId: input.campaignId,
+        characterId: input.characterId
+      })
+      if (!result.ok) {
+        input.setEnterPlayBlockerMessage('Could not enter play. Try again.')
+        return
+      }
 
-    await input.refreshDetail()
-    input.setEnterPlayBlockerMessage(null)
-    input.onEnterPlay(input.characterId)
+      await input.refreshDetail()
+      input.setEnterPlayBlockerMessage(null)
+      input.onEnterPlay(input.characterId)
+    } catch {
+      input.setEnterPlayBlockerMessage('Could not enter play. Try again.')
+    }
   }
 }

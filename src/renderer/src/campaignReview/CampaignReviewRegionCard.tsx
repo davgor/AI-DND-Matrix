@@ -2,6 +2,7 @@ import { Fragment } from 'react'
 import type { RegionExtras } from '../../../main/campaignIpc'
 import type { Npc } from '../../../db/repositories/npcs'
 import type { Region } from '../../../db/repositories/regions'
+import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { FormattedText } from '../shared/FormattedText'
 import { CampaignReviewNpcCard } from './CampaignReviewNpcCard'
 import { CampaignReviewPanel } from './CampaignReviewPanel'
@@ -35,11 +36,12 @@ export function CampaignReviewRegionCard(props: {
   region: Region
   extras: RegionExtras | undefined
   npcs: Npc[]
+  campaignRaces?: CampaignRace[]
   onDeleteNpc: (npcId: string) => void
   onDeleteRegion: () => void
   onGenerateNpc: () => void
 }): JSX.Element {
-  const { region, extras, npcs } = props
+  const { region, extras, npcs, campaignRaces } = props
 
   return (
     <article className="campaign-review-region-card">
@@ -59,6 +61,7 @@ export function CampaignReviewRegionCard(props: {
           <Fragment key={npc.id}>
             <CampaignReviewNpcCard
               npc={npc}
+              campaignRaces={campaignRaces}
               onDeleteNpc={() => props.onDeleteNpc(npc.id)}
             />
             {index < npcs.length - 1 ? (

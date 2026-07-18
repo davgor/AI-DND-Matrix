@@ -21,10 +21,11 @@ export interface RespawnRules {
   limit: number | null
 }
 
-export type CreateCampaignStage = 'world' | 'regions' | 'npcs' | 'story' | 'persist'
+export type CreateCampaignStage = 'world' | 'canon' | 'regions' | 'npcs' | 'story' | 'persist'
 
 export const CREATE_CAMPAIGN_STAGE_ORDER: readonly CreateCampaignStage[] = [
   'world',
+  'canon',
   'regions',
   'npcs',
   'story',

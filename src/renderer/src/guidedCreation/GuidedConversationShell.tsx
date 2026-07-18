@@ -5,7 +5,7 @@ import { GuidedConversationComposer } from './GuidedConversationComposer'
 import { GuidedConversationThread } from './GuidedConversationThread'
 import { shouldDisableGuidedInput } from './guidedConversationState'
 import { phaseDisplayMessages } from './phaseDisplayMessages'
-import { useGuidedConversation } from './useGuidedConversation'
+import { useGuidedConversation, type GuidedConversationController } from './useGuidedConversation'
 import './guidedConversation.css'
 
 interface GuidedConversationShellProps {
@@ -19,6 +19,32 @@ interface GuidedConversationShellProps {
   advanceLabel?: string
   onAdvance?: () => void
   onStateChange?: () => void
+}
+
+function GuidedConversationComposerSlot(props: {
+  conversation: GuidedConversationController
+  phaseComplete: boolean
+  advanceLabel?: string
+  onAdvance?: () => void
+}): JSX.Element {
+  const { conversation } = props
+  return (
+    <GuidedConversationComposer
+      inputValue={conversation.inputValue}
+      inputDisabled={shouldDisableGuidedInput(
+        conversation.sending || conversation.kickingOff || conversation.generating,
+        props.phaseComplete
+      )}
+      sending={conversation.sending}
+      generating={conversation.generating}
+      phaseComplete={props.phaseComplete}
+      advanceLabel={props.advanceLabel}
+      onInputChange={conversation.setInputValue}
+      onSend={() => void conversation.sendMessage()}
+      onGenerate={() => void conversation.generateReply()}
+      onAdvance={props.onAdvance}
+    />
+  )
 }
 
 export function GuidedConversationShell(props: GuidedConversationShellProps): JSX.Element {
@@ -38,7 +64,7 @@ export function GuidedConversationShell(props: GuidedConversationShellProps): JS
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight })
-  }, [displayMessages.length, conversation.sending, conversation.kickingOff])
+  }, [displayMessages.length, conversation.sending, conversation.kickingOff, conversation.generating])
 
   return (
     <div className="guided-conversation">
@@ -56,17 +82,10 @@ export function GuidedConversationShell(props: GuidedConversationShellProps): JS
         sending={conversation.sending}
         error={conversation.error}
       />
-      <GuidedConversationComposer
-        inputValue={conversation.inputValue}
-        inputDisabled={shouldDisableGuidedInput(
-          conversation.sending || conversation.kickingOff,
-          props.phaseComplete
-        )}
-        sending={conversation.sending}
+      <GuidedConversationComposerSlot
+        conversation={conversation}
         phaseComplete={props.phaseComplete}
         advanceLabel={props.advanceLabel}
-        onInputChange={conversation.setInputValue}
-        onSend={() => void conversation.sendMessage()}
         onAdvance={props.onAdvance}
       />
     </div>

@@ -1,4 +1,5 @@
 import type { PlayAwareHubSnapshot } from '../../../shared/campaignHub/types'
+import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
 import { CampaignReviewWorldContent } from '../campaignReview/CampaignReviewWorldContent'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
@@ -43,8 +44,31 @@ function formatEventDate(iso: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function HubRegionsSection(props: {
+  regionBlocks: ReturnType<typeof buildHubRegionBlocks>
+  campaignRaces?: CampaignRace[]
+  availabilityByRegion: Map<string, number>
+}): JSX.Element {
+  return (
+    <section className="campaign-hub-section campaign-hub-regions">
+      <h2>Regions</h2>
+      {props.regionBlocks.map(({ region, extras, npcs }) => (
+        <CampaignReviewReadOnlyRegionCard
+          key={region.id}
+          region={region}
+          extras={extras}
+          npcs={npcs}
+          campaignRaces={props.campaignRaces}
+          questAvailableCount={props.availabilityByRegion.get(region.id) ?? 0}
+        />
+      ))}
+    </section>
+  )
+}
+
 export interface CampaignHubWorldPreviewProps {
   snapshot: PlayAwareHubSnapshot
+  campaignRaces?: CampaignRace[]
   focusCharacterId?: string | null
   onViewWorldHistory?: () => void
 }
@@ -76,18 +100,11 @@ export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JS
       ) : null}
       {snapshot.currentStateSummary ? <HubCurrentStateSection summary={snapshot.currentStateSummary} /> : null}
       <CampaignReviewStory storyThreads={snapshot.storyThreads} playAware />
-      <section className="campaign-hub-section campaign-hub-regions">
-        <h2>Regions</h2>
-        {regionBlocks.map(({ region, extras, npcs }) => (
-          <CampaignReviewReadOnlyRegionCard
-            key={region.id}
-            region={region}
-            extras={extras}
-            npcs={npcs}
-            questAvailableCount={availabilityByRegion.get(region.id) ?? 0}
-          />
-        ))}
-      </section>
+      <HubRegionsSection
+        regionBlocks={regionBlocks}
+        campaignRaces={props.campaignRaces}
+        availabilityByRegion={availabilityByRegion}
+      />
       <HubRecentEventsSection events={snapshot.recentEvents} />
     </div>
   )

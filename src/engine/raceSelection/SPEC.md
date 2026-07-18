@@ -13,7 +13,7 @@ Twenty predefined ancestries grouped into four categories:
 | Monstrous & Feral | `monstrous_feral` |
 | Uncanny & Otherworldly | `uncanny_otherworldly` |
 
-Each predefined race has a stable `key` (lower_snake_case), a display `label`, and a fixed **seed prompt** describing what that ancestry normally is in generic fantasy terms. Seeds are authored data in `roster.ts`, not LLM-generated.
+Each predefined race has a stable `key` (lower_snake_case), a display `label`, and a fixed **seed prompt** describing what that ancestry normally is in generic fantasy terms. Seeds are authored data in `roster.ts`, not LLM-generated. Humans are framed as ordinary folk (no innate magic or shared birthright); their lore prompt also steers away from majestic / chosen-people tone.
 
 ## Custom races
 

@@ -1,4 +1,5 @@
 import type { Npc } from '../../../db/repositories/npcs'
+import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { FormattedText } from '../shared/FormattedText'
 import { CampaignReviewNpcTraits } from './CampaignReviewNpcTraits'
 
@@ -12,8 +13,11 @@ function combatTierBadge(npc: Npc): string | null {
   return null
 }
 
-export function CampaignReviewReadOnlyNpcCard(props: { npc: Npc }): JSX.Element {
-  const { npc } = props
+export function CampaignReviewReadOnlyNpcCard(props: {
+  npc: Npc
+  campaignRaces?: CampaignRace[]
+}): JSX.Element {
+  const { npc, campaignRaces } = props
   const tierLabel = combatTierBadge(npc)
   return (
     <div className="campaign-review-npc-card">
@@ -30,7 +34,7 @@ export function CampaignReviewReadOnlyNpcCard(props: { npc: Npc }): JSX.Element 
           {tierLabel ? <p className="campaign-review-npc-tier">{tierLabel}</p> : null}
         </div>
       ) : null}
-      <CampaignReviewNpcTraits npc={npc} />
+      <CampaignReviewNpcTraits npc={npc} campaignRaces={campaignRaces} />
     </div>
   )
 }

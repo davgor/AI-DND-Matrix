@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_SCHEMA_ATTEMPTS } from './dm'
-import { runOpeningSceneTurn } from './guidedOpeningScene'
+import { runOpeningSceneKickoff, runOpeningSceneTurn } from './guidedOpeningScene'
 import { createScriptedProvider } from './providers/mockHarness'
 
 const context = {
@@ -10,6 +10,7 @@ const context = {
     identityWhy: 'To find the sunken crown.',
     identityWhere: 'Oakhollow village.',
     identityWhat: 'A steadfast fighter.',
+    abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
     raceName: 'Elf',
     raceLore: {
       summary: 'Reclusive forest folk.',
@@ -29,6 +30,40 @@ const context = {
   currentOpeningScene: null
 }
 
+describe('runOpeningSceneKickoff', () => {
+  it('proposes a scene and asks the player to confirm before they speak', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'You wake in Oakhollow under a dripping eaves. Does this look good to you?',
+        proposedOpeningScene: 'You wake in Oakhollow under a dripping eaves.',
+        sceneReady: false
+      })
+    ])
+    const result = await runOpeningSceneKickoff(provider, context)
+    expect(result.sceneReady).toBe(false)
+    expect(result.proposedOpeningScene).toContain('Oakhollow')
+    expect(result.dmReply.toLowerCase()).toContain('look good')
+    const prompt = [provider.calls[0]?.context?.systemPrompt, provider.calls[0]?.prompt].join('\n')
+    expect(prompt).toContain('Does this look good to you')
+    expect(prompt).toContain('player has not spoken yet')
+    expect(prompt).toContain('Kael')
+  })
+
+  it('retries invalid schema responses', async () => {
+    const provider = createScriptedProvider([
+      'oops',
+      JSON.stringify({
+        dmReply: 'Start at the dock. Does this look good to you?',
+        proposedOpeningScene: 'Mist hugs the dock.',
+        sceneReady: false
+      })
+    ])
+    const result = await runOpeningSceneKickoff(provider, context)
+    expect(result.dmReply).toContain('dock')
+    expect(provider.calls).toHaveLength(2)
+  })
+})
+
 describe('runOpeningSceneTurn', () => {
   it('returns scene-not-ready negotiation replies', async () => {
     const provider = createScriptedProvider([
@@ -46,6 +81,15 @@ describe('runOpeningSceneTurn', () => {
     expect(provider.calls[0]?.prompt).toContain('Soldier')
     expect(provider.calls[0]?.prompt).toContain('Years on the march.')
     expect(provider.calls[0]?.context?.maxTokens).toBe(768)
+    const prompt = provider.calls[0]?.prompt ?? ''
+    expect(prompt).toContain('Does this look good to you')
+    expect(prompt).toMatch(/confirm|sceneReady true/i)
+    expect(prompt).toMatch(/decline|revise|negotiate/i)
+    expect(prompt).toMatch(/proposedOpeningScene/i)
+    expect(prompt).toMatch(/do not (begin|start) (in-play|play) narration/i)
+    expect(prompt).toMatch(/ability scores|abilityScores/i)
+    expect(prompt).toMatch(/never recite score numbers/i)
+    expect(prompt).toContain('14')
   })
 
   it('returns scene-ready when converged', async () => {

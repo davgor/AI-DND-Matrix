@@ -17,6 +17,7 @@ import { Titlebar } from './titlebar/Titlebar'
 import { LoadingScreen } from './startup/LoadingScreen'
 import { useStartupBoot } from './startup/useStartupBoot'
 import { UpdateBanner } from './autoUpdate/UpdateBanner'
+import { useSpellcheckOnEditableFields } from './spellcheck/useSpellcheckOnEditableFields'
 
 interface ReadyAppShellProps {
   campaignStart: ReturnType<typeof useCampaignStartFlow>
@@ -78,7 +79,13 @@ function renderOnboarding(props: ReadyAppShellProps, body: ReturnType<typeof use
       onEquipmentSelectionComplete={() => void handleEquipmentSelectionComplete(props)}
       onEquipmentSelectionBack={() => void handleEquipmentSelectionBack(props)}
       onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
-      onEnterPlay={body.handleEnterPlay}
+      onEnterPlay={() => {
+        const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
+        if (!player) {
+          return
+        }
+        void body.createHandleReadyToEnterPlay(player.id)()
+      }}
       enterPlayBlockerMessage={body.enterPlayBlockerMessage}
       onRefreshDetail={body.refreshDetail}
     />
@@ -191,6 +198,7 @@ function ReadyAppShell(props: ReadyAppShellProps): JSX.Element {
 }
 
 export function App(): JSX.Element {
+  useSpellcheckOnEditableFields()
   const boot = useStartupBoot()
   const campaignStart = useCampaignStartFlow()
   const sidebarRef = useRef<ReturnType<typeof useSidebarController> | null>(null)

@@ -1,4 +1,5 @@
 import type { Npc } from '../../../db/repositories/npcs'
+import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { CampaignReviewPanel } from './CampaignReviewPanel'
 import { CampaignReviewNpcTraits } from './CampaignReviewNpcTraits'
 import { FormattedText } from '../shared/FormattedText'
@@ -17,9 +18,10 @@ const DELETE_NPC_TOOLTIP = 'Delete this NPC permanently'
 
 export function CampaignReviewNpcCard(props: {
   npc: Npc
+  campaignRaces?: CampaignRace[]
   onDeleteNpc: () => void
 }): JSX.Element {
-  const { npc } = props
+  const { npc, campaignRaces } = props
   const tierLabel = combatTierBadge(npc)
   return (
     <div className="campaign-review-npc-card">
@@ -50,7 +52,7 @@ export function CampaignReviewNpcCard(props: {
           </div>
         </CampaignReviewPanel>
       ) : null}
-      <CampaignReviewNpcTraits npc={npc} />
+      <CampaignReviewNpcTraits npc={npc} campaignRaces={campaignRaces} />
     </div>
   )
 }
