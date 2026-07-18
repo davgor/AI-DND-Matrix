@@ -1,11 +1,10 @@
 import { RaceSelectionForm } from './RaceSelectionForm'
-import { RaceBackButton } from './RaceBackButton'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import { useRaceSelection } from './useRaceSelection'
 
 export interface RaceSelectionProps {
   campaignId: string
   characterId: string
-  characterName: string
   savedRaceKey?: string | null
   onComplete: () => void
   onBack: () => void
@@ -18,7 +17,7 @@ export function RaceSelection(props: RaceSelectionProps): JSX.Element {
     return (
       <div className="race-selection race-selection-loading">
         <p>Loading race options...</p>
-        <RaceBackButton onBack={props.onBack} />
+        <OnboardingBackButton onBack={props.onBack} />
       </div>
     )
   }
@@ -26,7 +25,7 @@ export function RaceSelection(props: RaceSelectionProps): JSX.Element {
     return (
       <div className="race-selection race-selection-error">
         <p>{selection.error ?? 'No race roster available.'}</p>
-        <RaceBackButton onBack={props.onBack} />
+        <OnboardingBackButton onBack={props.onBack} />
       </div>
     )
   }

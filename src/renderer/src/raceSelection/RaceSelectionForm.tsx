@@ -1,13 +1,9 @@
 import './raceSelection.css'
 
 import type { RaceRosterGroup } from '../../../main/raceIpc'
-import { CUSTOM_RACE_KEY } from '../../../engine/raceSelection/roster'
 import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { RaceSelectionActions, RaceSelectionBody } from './RaceSelectionBody'
 import type { RaceSelectionState } from './raceSelectionLogic'
-
-export { LoreField, LorePanel, RacePickButton, RosterGroup } from './RaceSelectionParts'
-export { CustomRacePanel } from './RaceSelectionCustomPanel'
 
 export function RaceSelectionForm(props: {
   roster: RaceRosterGroup[]
@@ -48,5 +44,3 @@ export function RaceSelectionForm(props: {
     </div>
   )
 }
-
-export { CUSTOM_RACE_KEY }

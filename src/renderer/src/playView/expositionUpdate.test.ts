@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 
-function transitionExposition(current: ExpositionStatus, event: 'submit' | 'success' | 'failure'): ExpositionStatus {
+function transitionExposition(_current: ExpositionStatus, event: 'submit' | 'success' | 'failure'): ExpositionStatus {
   if (event === 'submit') {
     return { state: 'loading', errorMessage: null }
   }

@@ -1,4 +1,7 @@
-import { type RandomSource, createSeededRandomSource } from '../campaignCreate/randomFill'
+import { pickRandom, resolveRandomSource, type RandomSource } from '../randomSource'
+
+export type { RandomSource }
+export { createSeededRandomSource } from '../randomSource'
 
 const CUSTOM_RACE_TRAITS = [
   'scaled skin and slit-pupil eyes',
@@ -33,21 +36,10 @@ const CUSTOM_RACE_ROLES = [
   'hermits who guard a sleeping god'
 ] as const
 
-function resolveSource(source?: RandomSource): RandomSource {
-  return source ?? { next: () => Math.random() }
-}
-
-function pick<T>(source: RandomSource, items: readonly T[]): T {
-  const index = Math.floor(source.next() * items.length)
-  return items[Math.min(index, items.length - 1)]!
-}
-
 export function randomCustomRaceSeed(source?: RandomSource): string {
-  const rng = resolveSource(source)
-  const trait = pick(rng, CUSTOM_RACE_TRAITS)
-  const origin = pick(rng, CUSTOM_RACE_ORIGINS)
-  const role = pick(rng, CUSTOM_RACE_ROLES)
+  const rng = resolveRandomSource(source)
+  const trait = pickRandom(rng, CUSTOM_RACE_TRAITS)
+  const origin = pickRandom(rng, CUSTOM_RACE_ORIGINS)
+  const role = pickRandom(rng, CUSTOM_RACE_ROLES)
   return `A people with ${trait}, ${origin}, known as ${role}.`
 }
-
-export { createSeededRandomSource }

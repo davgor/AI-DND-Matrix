@@ -7,7 +7,7 @@ interface GuidedConversationThreadProps {
   messages: GuidedCreationMessage[]
   sending: boolean
   error: string | null
-  threadRef: React.RefObject<HTMLDivElement | null>
+  threadRef: React.Ref<HTMLDivElement>
 }
 
 export function GuidedConversationThread(props: GuidedConversationThreadProps): JSX.Element {

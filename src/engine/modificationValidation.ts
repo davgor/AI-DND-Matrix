@@ -1,4 +1,4 @@
-import type { DamageType } from './damage'
+import { DAMAGE_TYPES, type DamageType } from './damage'
 import type {
   DamageComponent,
   ItemModification,
@@ -12,7 +12,6 @@ export const ENCHANT_MAX_DICE_SIZE = 8
 export const ENCHANT_MIN_DICE_COUNT = 1
 export const FLAVOR_TEXT_MAX_LENGTH = 240
 
-const ALLOWED_DAMAGE_TYPES: DamageType[] = ['physical', 'fire', 'cold', 'poison', 'arcane']
 
 export type ValidationRejection = { ok: false; reason: string }
 export type ValidatedModification = { ok: true; proposal: ItemModificationProposal }
@@ -50,7 +49,7 @@ function validateAddDamageComponent(
   const damageType = proposal.damageType
   const diceCount = proposal.diceCount
   const diceSize = proposal.diceSize
-  if (!damageType || !ALLOWED_DAMAGE_TYPES.includes(damageType)) {
+  if (!damageType || !(DAMAGE_TYPES as readonly DamageType[]).includes(damageType)) {
     return { ok: false, reason: 'Invalid damage type' }
   }
   if (diceCount === undefined || diceSize === undefined) {

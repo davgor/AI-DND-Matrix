@@ -4,8 +4,8 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses, RACE_LORE_RESPONSE } from '../agents/campaignGeneration/fixtures'
-import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign, setCampaignDeathMode } from './campaignEditIpc'
+import { npcReviewResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 
 function makeRegion(name: string) {
   return {
@@ -330,20 +330,5 @@ describe('generateNpcForCampaign', () => {
         seedPrompt: '   '
       })
     ).rejects.toThrow(/seed/i)
-  })
-})
-
-describe('setCampaignDeathMode', () => {
-  it('switches the campaign to respawn mode with rules persisted', () => {
-    const { db, campaign } = seedCampaignWithRegionAndNpc()
-
-    const detail = setCampaignDeathMode(db, {
-      campaignId: campaign.id,
-      deathMode: 'respawn',
-      respawnRules: { location: 'Last Shrine', cost: 50, limit: 3 }
-    })
-
-    expect(detail.campaign?.deathMode).toBe('respawn')
-    expect(detail.campaign?.respawnRules).toEqual({ location: 'Last Shrine', cost: 50, limit: 3 })
   })
 })

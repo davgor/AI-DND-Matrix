@@ -9,8 +9,7 @@ import { getCatalogItemById } from '../db/repositories/items'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import {
   runEncounterLootPass,
-  runQuestLootPass,
-  shouldSkipQuestLoot
+  runQuestLootPass
 } from './lootPipeline'
 import type { CombatEncounter } from '../shared/combat/types'
 import { createStoryThread } from '../db/repositories/storyThreads'
@@ -189,7 +188,6 @@ describe('quest loot pipeline', () => {
   })
 
   it('skips quest loot when encounter loot already ran same turn', async () => {
-    expect(shouldSkipQuestLoot(true)).toBe(true)
     const { db, campaign, region, player } = seedBanditFixture()
     const thread = createStoryThread(db, {
       campaignId: campaign.id,

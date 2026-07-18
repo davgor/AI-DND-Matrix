@@ -4,7 +4,8 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createRegion } from '../db/repositories/regions'
 import { createNpc, getNpcById } from '../db/repositories/npcs'
 import { createScriptedProvider } from './providers/mockHarness'
-import { buildReviewPrompt, reviewRetiredAdventurer } from './retiredAdventurerReview'
+import { MAX_SCHEMA_ATTEMPTS } from './jsonResponse'
+import { reviewRetiredAdventurer } from './retiredAdventurerReview'
 
 function seedSpeakingNpc(backstory: string) {
   const db = createTestDb()
@@ -37,6 +38,15 @@ describe('reviewRetiredAdventurer', () => {
     const provider = createScriptedProvider(['not json', '{"upgrade":false}'])
     const result = await reviewRetiredAdventurer(provider, getNpcById(db, npc.id) as typeof npc)
     expect(result).toEqual({ upgrade: false })
+    expect(provider.calls).toHaveLength(2)
+  })
+
+  it('retries through invalid JSON then falls back to upgrade false', async () => {
+    const { db, npc } = seedSpeakingNpc('Tom has baked bread in Oakhollow for thirty years.')
+    const provider = createScriptedProvider(['not json', 'not json', 'not json'])
+    const result = await reviewRetiredAdventurer(provider, getNpcById(db, npc.id) as typeof npc)
+    expect(result).toEqual({ upgrade: false })
+    expect(provider.calls).toHaveLength(MAX_SCHEMA_ATTEMPTS)
   })
 
   it('can upgrade retired guard captain backstory', async () => {
@@ -49,16 +59,11 @@ describe('reviewRetiredAdventurer', () => {
     expect(provider.calls[0]?.context?.maxTokens).toBe(128)
   })
 
-  it('prompt forbids inventing new history', () => {
-    const npc = {
-      name: 'Edda',
-      role: 'farmer',
-      alignment: 'true_neutral' as const,
-      disposition: 'wary',
-      temperament: 'cautious' as const,
-      backstory: 'Edda tends sheep on the moor.'
-    }
-    const prompt = buildReviewPrompt(npc as Parameters<typeof buildReviewPrompt>[0])
+  it('prompt forbids inventing new history', async () => {
+    const { db, npc } = seedSpeakingNpc('Edda tends sheep on the moor.')
+    const provider = createScriptedProvider(['{"upgrade":false}'])
+    await reviewRetiredAdventurer(provider, getNpcById(db, npc.id) as typeof npc)
+    const prompt = provider.calls[0]?.prompt ?? ''
     expect(prompt).toContain('do not invent')
     expect(prompt).toContain('Persisted backstory')
     expect(prompt).not.toContain('invent a new past')

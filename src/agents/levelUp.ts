@@ -1,6 +1,5 @@
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { LevelSpanContext } from '../shared/progression/types'
 import { parseLevelUpAgentResponse } from '../shared/progression/types'
 
@@ -37,14 +36,15 @@ export async function resolveLevelUpPerks(
   ctx: LevelSpanContext
 ): Promise<LevelUpAgentResult> {
   const prompt = buildLevelUpPrompt(ctx)
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, LEVEL_UP_GENERATE_CONTEXT)
-    const parsed = parseLevelUpAgentResponse(tryParseJson(raw))
-    if (parsed) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) => parseLevelUpAgentResponse(parsed) ?? undefined,
+    {
+      context: LEVEL_UP_GENERATE_CONTEXT,
+      fallback: () => fallbackLevelUpOptions(ctx)
     }
-  }
-  return fallbackLevelUpOptions(ctx)
+  )
 }
 
 function fallbackLevelUpOptions(ctx: LevelSpanContext): LevelUpAgentResult {

@@ -307,11 +307,7 @@ const guidedCreation = {
     ipcRenderer.invoke('guidedCreation:generateReply', input),
   revertPhase: (input: import('../shared/guidedCreation/types').GuidedCreationRevertPhaseInput): Promise<
     import('../shared/guidedCreation/types').GuidedCreationRevertPhaseResult
-  > => ipcRenderer.invoke('guidedCreation:revertPhase', input),
-  readyToEnterPlay: (
-    input: import('../shared/guidedCreation/types').GuidedCreationReadyToEnterPlayInput
-  ): Promise<import('../shared/guidedCreation/types').GuidedCreationReadyToEnterPlayResult> =>
-    ipcRenderer.invoke('guidedCreation:readyToEnterPlay', input)
+  > => ipcRenderer.invoke('guidedCreation:revertPhase', input)
 }
 
 const settings = {

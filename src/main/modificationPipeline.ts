@@ -88,15 +88,3 @@ function proposalToPayload(
   }
   return null
 }
-
-export function catalogItemMechanicalEquals(
-  db: Database.Database,
-  itemId: string,
-  snapshot: unknown
-): boolean {
-  const item = getCatalogItemById(db, itemId)
-  if (!item) {
-    return false
-  }
-  return JSON.stringify(item.mechanicalProperties) === JSON.stringify(snapshot)
-}

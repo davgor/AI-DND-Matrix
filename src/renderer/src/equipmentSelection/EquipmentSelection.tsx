@@ -1,21 +1,31 @@
 import { EquipmentSelectionForm } from './EquipmentSelectionForm'
-import { EquipmentBackButton } from './EquipmentBackButton'
-import { useEquipmentSelection } from './useEquipmentSelection'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
+import { useLoadoutOffer } from './useLoadoutOffer'
+import { useSubmitLoadout } from './useSubmitLoadout'
 export interface EquipmentSelectionProps {
   characterId: string
-  characterName: string
   onComplete: () => void
   onBack: () => void
 }
 
 export function EquipmentSelection(props: EquipmentSelectionProps): JSX.Element {
-  const selection = useEquipmentSelection(props.characterId)
+  const loaded = useLoadoutOffer(props.characterId)
+  const submit = useSubmitLoadout(props.characterId, loaded.offer, loaded.state, loaded.setError)
+  const selection = {
+    offer: loaded.offer,
+    state: loaded.state,
+    setState: loaded.setState,
+    loading: loaded.loading,
+    submitting: submit.submitting,
+    error: loaded.error,
+    confirm: submit.submitLoadout
+  }
 
   if (selection.loading) {
     return (
       <div className="equipment-selection equipment-selection-loading">
         <p>Loading gear options...</p>
-        <EquipmentBackButton onBack={props.onBack} />
+        <OnboardingBackButton onBack={props.onBack} />
       </div>
     )
   }
@@ -23,7 +33,7 @@ export function EquipmentSelection(props: EquipmentSelectionProps): JSX.Element 
     return (
       <div className="equipment-selection equipment-selection-error">
         <p>{selection.error ?? 'No loadout available.'}</p>
-        <EquipmentBackButton onBack={props.onBack} />
+        <OnboardingBackButton onBack={props.onBack} />
       </div>
     )
   }

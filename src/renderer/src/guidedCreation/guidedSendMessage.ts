@@ -1,4 +1,8 @@
-import type { GuidedCreationSendMessageResult, GuidedMessagePhase } from '../../../shared/guidedCreation/types'
+import type {
+  GuidedCreationFailureReason,
+  GuidedCreationSendMessageResult,
+  GuidedMessagePhase
+} from '../../../shared/guidedCreation/types'
 import type { GuidedRefresh } from './guidedIdentityKickoff'
 
 export async function sendGuidedMessage(input: {
@@ -22,13 +26,11 @@ export async function sendGuidedMessage(input: {
   return result
 }
 
-export function guidedSendErrorMessage(reason: GuidedCreationSendMessageResult['reason']): string {
+export function guidedSendErrorMessage(reason: GuidedCreationFailureReason): string {
   return reason === 'schema_error' ? 'The DM could not respond. Try again.' : 'Unable to send message.'
 }
 
-export function guidedGenerateErrorMessage(
-  reason: import('../../../shared/guidedCreation/types').GuidedCreationFailureReason
-): string {
+export function guidedGenerateErrorMessage(reason: GuidedCreationFailureReason): string {
   if (reason === 'provider_error' || reason === 'schema_error') {
     return 'Unable to generate a reply. Try again.'
   }

@@ -8,7 +8,6 @@ import { RaceSelection } from '../raceSelection/RaceSelection'
 import { BackgroundSelection } from '../backgroundSelection/BackgroundSelection'
 import { GuidedIdentityStage, GuidedOpeningSceneStage } from '../guidedCreation/GuidedCreationStages'
 import { MainPanel } from '../mainPanel/MainPanel'
-import type { CampaignDetail } from '../../../main/campaignIpc'
 import type { OnboardingStageContentProps } from './OnboardingStageContent'
 
 function ReviewStage(props: OnboardingStageContentProps): JSX.Element {
@@ -53,12 +52,9 @@ function CharacterSetupStage(props: OnboardingStageContentProps): JSX.Element {
   )
 }
 
-function guidedCreationPlayer(characters: CampaignDetail['characters']): ReturnType<typeof findGuidedCreationPlayer> {
-  return findGuidedCreationPlayer(characters)
-}
 
 function RaceSelectionStage(props: OnboardingStageContentProps): JSX.Element {
-  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
   if (!props.detail?.campaign || !player) {
     return <MainPanel detail={props.detail} />
   }
@@ -66,7 +62,6 @@ function RaceSelectionStage(props: OnboardingStageContentProps): JSX.Element {
     <RaceSelection
       campaignId={props.detail.campaign.id}
       characterId={player.id}
-      characterName={player.name}
       savedRaceKey={player.raceKey}
       onComplete={props.onRaceSelectionComplete}
       onBack={props.onRaceSelectionBack}
@@ -75,7 +70,7 @@ function RaceSelectionStage(props: OnboardingStageContentProps): JSX.Element {
 }
 
 function BackgroundSelectionStage(props: OnboardingStageContentProps): JSX.Element {
-  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
   if (!props.detail?.campaign || !player) {
     return <MainPanel detail={props.detail} />
   }
@@ -83,7 +78,6 @@ function BackgroundSelectionStage(props: OnboardingStageContentProps): JSX.Eleme
     <BackgroundSelection
       campaignId={props.detail.campaign.id}
       characterId={player.id}
-      characterName={player.name}
       savedBackgroundKey={player.backgroundKey}
       savedBackgroundStory={player.backgroundStory}
       onComplete={props.onBackgroundSelectionComplete}
@@ -93,14 +87,13 @@ function BackgroundSelectionStage(props: OnboardingStageContentProps): JSX.Eleme
 }
 
 function EquipmentSelectionStage(props: OnboardingStageContentProps): JSX.Element {
-  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
   if (!player) {
     return <MainPanel detail={props.detail} />
   }
   return (
     <EquipmentSelection
       characterId={player.id}
-      characterName={player.name}
       onComplete={props.onEquipmentSelectionComplete}
       onBack={props.onEquipmentSelectionBack}
     />
@@ -108,7 +101,7 @@ function EquipmentSelectionStage(props: OnboardingStageContentProps): JSX.Elemen
 }
 
 function GuidedIdentityRoute(props: OnboardingStageContentProps): JSX.Element {
-  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
   if (!props.detail?.campaign || !player) {
     return <MainPanel detail={props.detail} />
   }
@@ -123,7 +116,7 @@ function GuidedIdentityRoute(props: OnboardingStageContentProps): JSX.Element {
 }
 
 function GuidedOpeningSceneRoute(props: OnboardingStageContentProps): JSX.Element {
-  const player = guidedCreationPlayer(props.detail?.characters ?? [])
+  const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
   if (!props.detail?.campaign || !player) {
     return <MainPanel detail={props.detail} />
   }

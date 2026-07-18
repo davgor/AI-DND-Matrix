@@ -28,10 +28,8 @@ import {
 } from '../agents/turnRoutingHeuristic'
 import type { TurnBeat, TurnRoutingPlan } from '../shared/turnRouting/types'
 import type { Provider } from '../agents/providers/types'
-import { getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
 import { computeCharacterTotalAc, type CommerceSideEffect } from '../db/repositories/itemCommerce'
 import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damage'
-import { resolveWeaponDamage } from '../engine/weaponDamage'
 import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
 import { resolveModificationTurn } from './modificationTurn'
 import { capSceneContextForPrompt } from './sceneContextCap'
@@ -66,7 +64,7 @@ import {
 } from './dyingResolution'
 import { getActiveEncounter } from '../db/repositories/combatEncounters'
 import { getDb } from './db'
-import { CombatTurnError, resolveCombatTurn, shouldRouteToCombat } from './combatTurn'
+import { resolveCombatTurn, shouldRouteToCombat } from './combatTurn'
 import { generateObituaryForDeath, type GenerateObituaryInput } from './obituaryIpc'
 import type { CombatAttackResult, CombatStateSnapshot } from '../shared/combat/types'
 import type { FleeTurnOutcome } from '../shared/combat/flee/types'
@@ -307,16 +305,6 @@ function resolveOutcome(character: Character, intent: IntentInterpretation, rng:
 
 const NPC_ATTACK_BONUS = 2
 const NPC_DAMAGE_ROLL: DamageRoll = { diceCount: 1, diceSize: 6, modifier: 0 }
-
-export function resolvePlayerEquippedAttackDamage(
-  db: Database.Database,
-  characterId: string,
-  rng: RandomFn,
-  attackRoll: number
-): number {
-  const profile = getEquippedWeaponDamageProfile(db, characterId)
-  return resolveWeaponDamage(profile.components, rng, isNaturalTwenty(attackRoll)).total
-}
 
 function resolveNpcAttackAgainstPlayer(
   db: Database.Database,
@@ -1181,14 +1169,7 @@ export async function resolvePlayerTurn(
   )
 
   if (shouldRouteToCombat(db, turnInput.campaignId, character.id, intent)) {
-    try {
-      return await resolveCombatPlayerTurn({ db, provider, turnInput, character, intent, rng })
-    } catch (error) {
-      if (error instanceof CombatTurnError) {
-        throw error
-      }
-      throw error
-    }
+    return resolveCombatPlayerTurn({ db, provider, turnInput, character, intent, rng })
   }
 
   return resolveIntentRoutedTurn({

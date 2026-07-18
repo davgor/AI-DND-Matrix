@@ -1,4 +1,3 @@
-import type { LogEntry } from '../shared/logBook/types'
 import type { Quest } from '../shared/quests/types'
 import { MAX_ACTIVE_QUESTS_IN_CONTEXT } from '../shared/quests/types'
 import type { CharacterQuest } from '../shared/quests/types'
@@ -53,5 +52,3 @@ export function buildActiveQuestsPromptSection(activeQuests: ActiveQuestContext[
     'Use questProposals for new side jobs, questUpdates to mark objective progress, questCompletions when a quest resolves.'
   ].join('\n')
 }
-
-export type { LogEntry }

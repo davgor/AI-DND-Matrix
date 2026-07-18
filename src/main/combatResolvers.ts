@@ -10,7 +10,6 @@ import { computeCharacterTotalAc } from '../db/repositories/itemCommerce'
 import { resolveNpcResistanceProfile } from '../db/repositories/npcResistances'
 import {
   getActiveCombatant,
-  getActiveEncounter,
   type CombatEncounter
 } from '../db/repositories/combatEncounters'
 import {
@@ -39,6 +38,7 @@ import {
 } from './combatFlavorTemplates'
 import type { TurnResult } from './turnIpc'
 import { CombatTurnError } from './combatErrors'
+import { reloadEncounter } from './combatTurnPhases'
 
 export interface CatchUpInput {
   db: Database.Database
@@ -55,16 +55,7 @@ export interface PlayerAttackInput {
   targetNpcId: string | undefined
   rng: RandomFn
   lethality?: AttackLethality
-  acceptSurrender?: boolean
   offerMercy?: boolean
-}
-
-function reloadEncounter(db: Database.Database, campaignId: string): CombatEncounter {
-  const encounter = getActiveEncounter(db, campaignId)
-  if (!encounter) {
-    throw new CombatTurnError('No active encounter')
-  }
-  return encounter
 }
 
 export interface PlayerAttackSyncResult {
@@ -315,8 +306,7 @@ export async function resolveNonPlayerCatchUp(input: CatchUpInput): Promise<{
     }
     current = advanceEncounterTurn(
       input.db,
-      reloadEncounter(input.db, input.campaignId),
-      current.participantIds
+      reloadEncounter(input.db, input.campaignId)
     )
     appendCombatTurnAdvanced(input.db, current)
     if (allHostilesDefeated(input.db, current)) {

@@ -63,14 +63,6 @@ export function applyPerk(input: ApplyPerkInput): ApplyPerkResult {
   return { stats: { ...input.stats, ...stats, perks: [...(stats.perks ?? []), applied] }, applied }
 }
 
-export function readPerkAcBonus(stats: Record<string, unknown>): number {
-  return Math.min(readPerkStats(stats).perkAcBonus ?? 0, PERK_AC_STACK_CAP)
-}
-
-export function characterHasExtraAttack(stats: Record<string, unknown>): boolean {
-  return readPerkStats(stats).hasExtraAttack === true
-}
-
 export function archetypeKitTags(archetype: string): string[] {
   const kits: Record<Archetype, string[]> = {
     fighter: ['melee', 'martial'],

@@ -18,8 +18,6 @@ import type {
   GuidedCreationGenerateReplyResult,
   GuidedCreationKickoffInput,
   GuidedCreationKickoffResult,
-  GuidedCreationReadyToEnterPlayInput,
-  GuidedCreationReadyToEnterPlayResult,
   GuidedCreationRevertPhaseInput,
   GuidedCreationRevertPhaseResult,
   GuidedCreationSendMessageInput,
@@ -37,7 +35,6 @@ import {
   kickoffOpeningSceneIfNeeded,
   persistOpeningSceneTurn
 } from './guidedCreationOpeningScene'
-import { finalizeOpeningSceneForPlay } from './guidedCreationPlayHandoff'
 
 function failure(reason: GuidedCreationFailureReason): GuidedCreationSendMessageResult {
   return { ok: false, reason }
@@ -266,13 +263,6 @@ export function revertGuidedCreationPhase(
   return { ok: true }
 }
 
-export function readyToEnterPlay(
-  db: Database.Database,
-  input: GuidedCreationReadyToEnterPlayInput
-): GuidedCreationReadyToEnterPlayResult {
-  return finalizeOpeningSceneForPlay(db, input.campaignId, input.characterId)
-}
-
 export function registerGuidedCreationHandlers(): void {
   ipcMain.handle('guidedCreation:getState', (_event, characterId: string) =>
     getGuidedCreationState(getDb(), characterId)
@@ -302,9 +292,5 @@ export function registerGuidedCreationHandlers(): void {
   )
   ipcMain.handle('guidedCreation:revertPhase', (_event, input: GuidedCreationRevertPhaseInput) =>
     revertGuidedCreationPhase(getDb(), input)
-  )
-  ipcMain.handle(
-    'guidedCreation:readyToEnterPlay',
-    (_event, input: GuidedCreationReadyToEnterPlayInput) => readyToEnterPlay(getDb(), input)
   )
 }

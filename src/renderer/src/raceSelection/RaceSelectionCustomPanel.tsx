@@ -1,4 +1,3 @@
-import { CUSTOM_RACE_KEY } from '../../../engine/raceSelection/roster'
 import { randomCustomRaceSeed } from '../../../shared/raceSelection/randomFill'
 import { FieldWithRandomInputRow } from '../components/FieldRandomDiceButton'
 import {
@@ -55,5 +54,3 @@ export function CustomRacePanel(props: {
     </div>
   )
 }
-
-export { CUSTOM_RACE_KEY }

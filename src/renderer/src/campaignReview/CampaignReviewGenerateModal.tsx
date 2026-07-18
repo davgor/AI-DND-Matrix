@@ -1,10 +1,10 @@
-import type { CampaignDetail } from '../../../main/campaignIpc'
+import { GenerateModalOverlay } from './GenerateModalOverlay'
 import { GenerateRegionDialog } from './GenerateRegionDialog'
 import { useGenerateRegion } from './useGenerateRegion'
 
 export interface CampaignReviewGenerateModalProps {
   campaignId: string
-  onDetailChange: (detail: CampaignDetail) => void
+  onDetailChange: (detail: import('../../../main/campaignIpc').CampaignDetail) => void
   onClose: () => void
   initialNpcCount?: number
 }
@@ -13,15 +13,7 @@ export function CampaignReviewGenerateModal(props: CampaignReviewGenerateModalPr
   const generate = useGenerateRegion(props)
 
   return (
-    <div
-      className="campaign-review-overlay"
-      role="presentation"
-      onClick={() => {
-        if (!generate.generating) {
-          props.onClose()
-        }
-      }}
-    >
+    <GenerateModalOverlay generating={generate.generating} onClose={props.onClose}>
       <GenerateRegionDialog
         seedPrompt={generate.seedPrompt}
         npcCount={generate.npcCount}
@@ -33,6 +25,6 @@ export function CampaignReviewGenerateModal(props: CampaignReviewGenerateModalPr
         onClose={props.onClose}
         onSubmit={() => void generate.submit()}
       />
-    </div>
+    </GenerateModalOverlay>
   )
 }

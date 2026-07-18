@@ -12,7 +12,7 @@ export interface CampaignCreateSetters {
   setFieldError: (value: string | null) => void
   setFlowError: (value: string | null) => void
   setSubmitting: (value: boolean) => void
-  setProgressStage: () => void
+  setProgressStage: (value: null) => void
   setProgressLabel: (value: string) => void
   transition: (to: CampaignStartView) => void
   resetForm: () => void

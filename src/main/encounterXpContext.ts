@@ -80,7 +80,3 @@ export function assembleEncounterXpContext(
     roundCount: encounter.round
   }
 }
-
-export function encounterEligibleForXp(encounter: CombatEncounter): boolean {
-  return encounter.phase === 'resolved' && encounter.outcome === 'defeated'
-}

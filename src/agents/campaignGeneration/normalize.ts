@@ -294,32 +294,6 @@ export function normalizeStoryThreadGeneration(value: unknown): GeneratedStoryTh
   )
 }
 
-function defaultLegacyWorld(): GeneratedWorld {
-  return {
-    worldName: 'Unnamed World',
-    worldSummary:
-      'The frontier still holds scattered freeholds where river trade and old oaths overlap. Farmers bargain with ferry crews while ruin-scouts sell maps that may be lies.\n\nGuild charters and temple courts both claim the same toll roads, so every caravan pays twice or learns to travel by night. No single banner rules the heartland, and that vacuum keeps mercenary companies employed.\n\nStorm seasons and border feuds have sharpened lately, and rumor says something woke under the oldest barrows. Locals watch strangers closely until they prove which side of the toll ledger they stand on.',
-    worldHistory:
-      'In the first age the lowlands flooded when the river gods quarreled, drowning crown cities and leaving only hill forts above the mud. Survivors rebuilt as river clans who still swear oaths on the same cracked stones.\n\nA league of mason-kings later raised the high roads and taxed every bridge until revolt burned their seal-houses. The roads remain, but each province now posts its own toll and its own story about who betrayed whom.\n\nWar between temple orders and mining companies scarred the northern passes for two generations. Both sides hired the same mercenary companies, and veterans settled the border towns they once looted.\n\nTwenty years ago a red drought withered the central grain belt and sent refugee columns into coastal cities. Harbor councils opened granaries late, and the riots that followed reshaped who may vote in port law.\n\nToday the heartland looks stable only from a distance. River levels shift without season, old barrows glow on foggy nights, and every faction hires adventurers before it admits it is afraid.'
-  }
-}
-
-function defaultLegacyPantheon(): GeneratedPantheon {
-  const deities: GeneratedDeity[] = Array.from({ length: 8 }, (_, index) => ({
-    name: `Legacy Power ${index + 1}`,
-    epithet: '',
-    domains: ['fate'],
-    tenets: ['Keep the old rites', 'Speak carefully of lost names'],
-    blurb: 'A quiet power retained only for legacy campaign payloads.',
-    isForgotten: index < 2
-  }))
-  return {
-    pantheonSummary:
-      'Faith here is local and half-remembered. Shrines keep older names the maps forgot.\n\nMajor temples argue quietly.\n\nAt least two powers are already lost to time.',
-    deities
-  }
-}
-
 // ---------------------------------------------------------------------------
 
 function readString(record: Record<string, unknown>, ...keys: string[]): string | undefined {
@@ -592,21 +566,6 @@ function normalizeNpcList(
   return sliceNpcsPerRegion(regionNames, grouped, npcsPerRegion)
 }
 
-function parseGenerationNpcs(
-  candidate: Record<string, unknown>,
-  regionNames: string[],
-  npcsPerRegion: number
-): GeneratedNpc[] | undefined {
-  const rawNpcs = candidate['npcs']
-  if (!Array.isArray(rawNpcs)) {
-    return undefined
-  }
-  const parsedNpcs = rawNpcs
-    .map((npc) => normalizeGeneratedNpc(npc))
-    .filter((npc): npc is GeneratedNpc => npc !== undefined)
-  return normalizeNpcList(parsedNpcs, regionNames, npcsPerRegion)
-}
-
 // ---------------------------------------------------------------------------
 // Top-level normalizers (exported)
 // ---------------------------------------------------------------------------
@@ -632,58 +591,6 @@ function resolveRegions(
     regions = regions.slice(0, counts.regionCount)
   }
   return regions
-}
-
-function parseCampaignGenerationStoryThread(
-  candidate: Record<string, unknown>
-): GeneratedStoryThread | undefined {
-  return normalizeGeneratedStoryThread(
-    candidate['storyThread'] ?? candidate['story_thread'] ?? candidate['mainStoryThread']
-  )
-}
-
-function assembleCampaignGenerationResult(input: {
-  candidate: Record<string, unknown>
-  regions: GeneratedRegion[]
-  npcs: GeneratedNpc[]
-  storyThread: GeneratedStoryThread
-}): CampaignGenerationResult {
-  const world = normalizeGeneratedWorld(input.candidate['world']) ?? defaultLegacyWorld()
-  const pantheon = normalizeGeneratedPantheon(input.candidate['pantheon']) ?? defaultLegacyPantheon()
-  return {
-    world,
-    pantheon,
-    regions: input.regions,
-    npcs: input.npcs,
-    storyThread: input.storyThread
-  }
-}
-
-export function normalizeCampaignGeneration(
-  value: unknown,
-  counts: GenerationCounts = resolveInitialGenerationCounts()
-): CampaignGenerationResult | undefined {
-  if (typeof value !== 'object' || value === null) {
-    return undefined
-  }
-  const candidate = value as Record<string, unknown>
-  const regions = resolveRegions(candidate, counts)
-  if (!regions) {
-    return undefined
-  }
-
-  const regionNames = regions.map((region) => region.name)
-  const npcs = parseGenerationNpcs(candidate, regionNames, counts.npcsPerRegion)
-  if (!npcs) {
-    return undefined
-  }
-
-  const storyThread = parseCampaignGenerationStoryThread(candidate)
-  if (!storyThread) {
-    return undefined
-  }
-
-  return assembleCampaignGenerationResult({ candidate, regions, npcs, storyThread })
 }
 
 /** @internal test hook */

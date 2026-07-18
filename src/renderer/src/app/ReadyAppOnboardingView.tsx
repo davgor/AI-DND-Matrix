@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
+import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
 import type { OnboardingStage } from '../../../shared/guidedCreation/stageRouting'
 import { OnboardingStageContent } from '../onboarding/OnboardingStageContent'
 import { Sidebar } from '../sidebar/Sidebar'
@@ -12,7 +13,7 @@ export function ReadyAppOnboardingView(props: {
   campaignCallbacks: {
     onCampaignSelected: (next: CampaignDetail) => void
     onOpenNewCampaign: () => void
-    onRequestDelete: (campaignId: string) => void
+    onRequestDelete: (campaign: CampaignWithLastPlayed) => void
   }
   onDetailChange: (detail: CampaignDetail) => void
   onReviewContinue: () => void

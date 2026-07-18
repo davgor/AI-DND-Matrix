@@ -1,4 +1,4 @@
-import type { CampaignSetupFormValues, DeathMode } from './types'
+import type { DeathMode } from './types'
 import {
   MAX_ADDITIONAL_REGION_NPC_COUNT,
   MAX_NPCS_PER_REGION,
@@ -7,36 +7,17 @@ import {
   MIN_NPCS_PER_REGION,
   MIN_REGION_COUNT
 } from './types'
-import { clampNpcsPerRegion, clampRegionCount, normalizeFormValues } from './validation'
+import { clampNpcsPerRegion, clampRegionCount } from './validation'
+import {
+  createSeededRandomSource,
+  pickRandom,
+  pickRandomInt,
+  resolveRandomSource,
+  type RandomSource
+} from '../randomSource'
 
-export interface RandomSource {
-  next(): number
-}
-
-export function createSeededRandomSource(seed: number): RandomSource {
-  let state = seed >>> 0
-  return {
-    next(): number {
-      state = (state * 1_664_525 + 1_013_904_223) >>> 0
-      return state / 0x1_0000_0000
-    }
-  }
-}
-
-const defaultRandomSource: RandomSource = { next: () => Math.random() }
-
-function resolveSource(source?: RandomSource): RandomSource {
-  return source ?? defaultRandomSource
-}
-
-function pick<T>(source: RandomSource, items: readonly T[]): T {
-  const index = Math.floor(source.next() * items.length)
-  return items[Math.min(index, items.length - 1)]!
-}
-
-function pickInt(source: RandomSource, min: number, max: number): number {
-  return min + Math.floor(source.next() * (max - min + 1))
-}
+export type { RandomSource }
+export { createSeededRandomSource }
 
 const CAMPAIGN_NAME_ADJECTIVES = [
   'Crimson',
@@ -182,92 +163,63 @@ function fillTemplate(template: string, slots: Record<string, string>): string {
 }
 
 export function randomCampaignName(source?: RandomSource): string {
-  const rng = resolveSource(source)
+  const rng = resolveRandomSource(source)
   if (rng.next() < 0.35) {
     return ''
   }
   if (rng.next() < 0.5) {
-    return `${pick(rng, CAMPAIGN_NAME_ADJECTIVES)} ${pick(rng, CAMPAIGN_NAME_NOUNS)}`
+    return `${pickRandom(rng, CAMPAIGN_NAME_ADJECTIVES)} ${pickRandom(rng, CAMPAIGN_NAME_NOUNS)}`
   }
-  return `${pick(rng, CAMPAIGN_NAME_EPITHETS)} ${pick(rng, CAMPAIGN_NAME_ADJECTIVES)} ${pick(rng, CAMPAIGN_NAME_NOUNS)}`
+  return `${pickRandom(rng, CAMPAIGN_NAME_EPITHETS)} ${pickRandom(rng, CAMPAIGN_NAME_ADJECTIVES)} ${pickRandom(rng, CAMPAIGN_NAME_NOUNS)}`
 }
 
 export function randomPremisePrompt(source?: RandomSource): string {
-  const rng = resolveSource(source)
-  const template = pick(rng, PREMISE_TEMPLATES)
+  const rng = resolveRandomSource(source)
+  const template = pickRandom(rng, PREMISE_TEMPLATES)
   return fillTemplate(template, {
-    tone: pick(rng, PREMISE_TONES),
-    setting: pick(rng, PREMISE_SETTINGS),
-    hook: pick(rng, PREMISE_HOOKS),
-    faction: pick(rng, PREMISE_FACTIONS),
-    event: pick(rng, PREMISE_EVENTS)
+    tone: pickRandom(rng, PREMISE_TONES),
+    setting: pickRandom(rng, PREMISE_SETTINGS),
+    hook: pickRandom(rng, PREMISE_HOOKS),
+    faction: pickRandom(rng, PREMISE_FACTIONS),
+    event: pickRandom(rng, PREMISE_EVENTS)
   })
 }
 
 export function randomRespawnLocation(source?: RandomSource): string {
-  return pick(resolveSource(source), RESPAWN_LOCATIONS)
+  return pickRandom(resolveRandomSource(source), RESPAWN_LOCATIONS)
 }
 
 export function randomDeathMode(source?: RandomSource): DeathMode {
-  return pick(resolveSource(source), DEATH_MODES)
+  return pickRandom(resolveRandomSource(source), DEATH_MODES)
 }
 
 export function randomRegionCount(source?: RandomSource): number {
-  return clampRegionCount(pickInt(resolveSource(source), MIN_REGION_COUNT, MAX_REGION_COUNT))
+  return clampRegionCount(pickRandomInt(resolveRandomSource(source), MIN_REGION_COUNT, MAX_REGION_COUNT))
 }
 
 export function randomNpcsPerRegion(source?: RandomSource): number {
-  return clampNpcsPerRegion(pickInt(resolveSource(source), MIN_NPCS_PER_REGION, MAX_NPCS_PER_REGION))
-}
-
-export function randomRespawnCost(source?: RandomSource): number {
-  return pickInt(resolveSource(source), 0, 500)
-}
-
-export function randomRespawnLimit(source?: RandomSource): number | '' {
-  const rng = resolveSource(source)
-  if (rng.next() < 0.5) {
-    return ''
-  }
-  return pickInt(rng, 1, 5)
+  return clampNpcsPerRegion(pickRandomInt(resolveRandomSource(source), MIN_NPCS_PER_REGION, MAX_NPCS_PER_REGION))
 }
 
 export function randomRegionSeedPrompt(source?: RandomSource): string {
-  const rng = resolveSource(source)
-  const place = pick(rng, REGION_SEED_PLACES)
-  const mood = pick(rng, REGION_SEED_MOODS)
-  const conflict = pick(rng, REGION_SEED_CONFLICTS)
+  const rng = resolveRandomSource(source)
+  const place = pickRandom(rng, REGION_SEED_PLACES)
+  const mood = pickRandom(rng, REGION_SEED_MOODS)
+  const conflict = pickRandom(rng, REGION_SEED_CONFLICTS)
   return `A ${place} under ${mood}, centered on ${conflict}.`
 }
 
 export function randomNpcSeedPrompt(regionName: string, source?: RandomSource): string {
-  const rng = resolveSource(source)
-  const role = pick(rng, NPC_ROLES)
-  const mood = pick(rng, NPC_MOODS)
+  const rng = resolveRandomSource(source)
+  const role = pickRandom(rng, NPC_ROLES)
+  const mood = pickRandom(rng, NPC_MOODS)
   return `A ${role} in ${regionName}, ${mood}, with a personal stake in local troubles.`
 }
 
 export function randomAdditionalRegionNpcCount(source?: RandomSource): number {
-  return pickInt(
-    resolveSource(source),
+  return pickRandomInt(
+    resolveRandomSource(source),
     MIN_ADDITIONAL_REGION_NPC_COUNT,
     MAX_ADDITIONAL_REGION_NPC_COUNT
   )
-}
-
-/** Composes all campaign-start fields — for tests; not wired to a single UI control. */
-export function randomCampaignSetupForm(source?: RandomSource): CampaignSetupFormValues {
-  const rng = resolveSource(source)
-  const deathMode = randomDeathMode(rng)
-  const form: CampaignSetupFormValues = {
-    name: randomCampaignName(rng),
-    premisePrompt: randomPremisePrompt(rng),
-    deathMode,
-    respawnLocation: deathMode === 'respawn' ? randomRespawnLocation(rng) : '',
-    respawnCost: deathMode === 'respawn' ? randomRespawnCost(rng) : 0,
-    respawnLimit: deathMode === 'respawn' ? randomRespawnLimit(rng) : '',
-    regionCount: randomRegionCount(rng),
-    npcsPerRegion: randomNpcsPerRegion(rng)
-  }
-  return normalizeFormValues(form)
 }

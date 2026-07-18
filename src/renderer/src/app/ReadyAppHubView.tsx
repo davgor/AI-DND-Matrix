@@ -1,9 +1,10 @@
 import type { CampaignDetail } from '../../../main/campaignIpc'
+import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
 import type { PlayAwareHubSnapshot } from '../../../shared/campaignHub/types'
 import { Sidebar } from '../sidebar/Sidebar'
 import type { useSidebarController } from '../sidebar/useSidebarController'
 import { OnboardingStageContent } from '../onboarding/OnboardingStageContent'
-import { CampaignHubGenerateModal } from '../campaignHub/CampaignHubGenerateModal'
+import { CampaignReviewGenerateModal } from '../campaignReview/CampaignReviewGenerateModal'
 import type { RefObject } from 'react'
 
 export interface ReadyAppHubViewProps {
@@ -16,7 +17,7 @@ export interface ReadyAppHubViewProps {
   campaignCallbacks: {
     onCampaignSelected: (next: CampaignDetail) => void
     onOpenNewCampaign: () => void
-    onRequestDelete: (campaignId: string) => void
+    onRequestDelete: (campaign: CampaignWithLastPlayed) => void
   }
   onDetailChange: (detail: CampaignDetail) => void
   onReviewContinue: () => void
@@ -45,6 +46,12 @@ export function ReadyAppHubView(props: ReadyAppHubViewProps): JSX.Element {
         onDetailChange={props.onDetailChange}
         onReviewContinue={props.onReviewContinue}
         onCharacterSetupComplete={props.onCharacterSetupComplete}
+        onRaceSelectionComplete={() => undefined}
+        onRaceSelectionBack={() => undefined}
+        onBackgroundSelectionComplete={() => undefined}
+        onBackgroundSelectionBack={() => undefined}
+        onEquipmentSelectionComplete={() => undefined}
+        onEquipmentSelectionBack={() => undefined}
         onGuidedIdentityAdvance={props.onGuidedIdentityAdvance}
         onEnterPlay={props.onEnterPlay}
         enterPlayBlockerMessage={props.enterPlayBlockerMessage}
@@ -55,14 +62,13 @@ export function ReadyAppHubView(props: ReadyAppHubViewProps): JSX.Element {
         onHubCreateCharacter={props.onHubCreateCharacter}
         onHubGenerateRegion={props.onHubGenerateOpen}
       />
-      {props.detail.campaign && (
-        <CampaignHubGenerateModal
-          open={props.hubGenerateOpen}
+      {props.detail.campaign && props.hubGenerateOpen ? (
+        <CampaignReviewGenerateModal
           campaignId={props.detail.campaign.id}
+          onDetailChange={(detail) => void props.onHubGenerateSuccess(detail)}
           onClose={props.onHubGenerateClose}
-          onSuccess={(detail) => void props.onHubGenerateSuccess(detail)}
         />
-      )}
+      ) : null}
     </>
   )
 }

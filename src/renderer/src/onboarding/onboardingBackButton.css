@@ -1,0 +1,20 @@
+.onboarding-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.onboarding-back-arrow {
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
+.onboarding-back:hover:not(:disabled) .onboarding-back-arrow {
+  transform: translateX(-2px);
+}
+
+.onboarding-back.background-selection-back {
+  margin-bottom: 1rem;
+}

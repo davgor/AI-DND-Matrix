@@ -149,18 +149,3 @@ export function registerRaceHandlers(): void {
     applyRaceSelection(getDb(), input)
   )
 }
-
-export function resolveRaceLabel(
-  db: Database.Database,
-  campaignId: string,
-  raceKey: string | null
-): string | null {
-  if (!raceKey) {
-    return null
-  }
-  const catalog = getCampaignRaceByKey(db, campaignId, raceKey)
-  if (catalog) {
-    return catalog.label
-  }
-  return findRosterEntry(raceKey)?.label ?? null
-}

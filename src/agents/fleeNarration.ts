@@ -1,7 +1,6 @@
 import type { FleeAttemptResult } from '../engine/fleeDisengage'
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import {
   parseDmEscapeJudgment,
   validateDmEscapeJudgment,
@@ -40,17 +39,21 @@ export async function judgeEscapeNarration(
     throw new FleeNarrationSchemaError('Escape narration requires a successful disengage check')
   }
   const prompt = buildFleeNarrationPrompt(context)
-  let lastError: unknown
-  for (let attempt = 0; attempt < MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, FLEE_NARRATION_GENERATE_CONTEXT)
-    const parsed = parseDmEscapeJudgment(tryParseJson(raw))
-    if (!parsed) {
-      lastError = new FleeNarrationSchemaError('Invalid escape judgment JSON')
-      continue
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) => {
+      const judgment = parseDmEscapeJudgment(parsed)
+      if (!judgment) {
+        return undefined
+      }
+      return validateDmEscapeJudgment(judgment, context.checkResult.success)
+    },
+    {
+      context: FLEE_NARRATION_GENERATE_CONTEXT,
+      exhaustedError: () => new FleeNarrationSchemaError('Escape narration parse failed')
     }
-    return validateDmEscapeJudgment(parsed, context.checkResult.success)
-  }
-  throw lastError instanceof Error ? lastError : new FleeNarrationSchemaError('Escape narration parse failed')
+  )
 }
 
 export { validateDmEscapeJudgment }

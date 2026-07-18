@@ -1,9 +1,8 @@
 import type { DeathMode } from '../db/repositories/campaigns'
 import type { Npc } from '../db/repositories/npcs'
 import type { Character } from '../db/repositories/characters'
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 import { evaluateDefeatRules } from './defeatRules'
 import {
@@ -82,17 +81,17 @@ export async function proposeDefeatDisposition(
   if (decision.kind === 'proposal') {
     return decision.proposal
   }
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(buildDefeatPrompt(input), DEFEAT_GENERATE_CONTEXT)
-    const parsed = parseDefeatDispositionProposal(tryParseJson(raw))
-    if (parsed) {
-      return parsed
+  return generateJsonWithRetry<DefeatDispositionProposal>(
+    provider,
+    () => buildDefeatPrompt(input),
+    (parsed) => parseDefeatDispositionProposal(parsed) ?? undefined,
+    {
+      context: DEFEAT_GENERATE_CONTEXT,
+      fallback: () => ({
+        disposition: 'leave_unconscious',
+        narrationText: `${input.victor.name} stands over you as consciousness fades.`
+      })
     }
-  }
-  return {
-    disposition: 'leave_unconscious',
-    narrationText: `${input.victor.name} stands over you as consciousness fades.`
-  }
+  )
 }
 
-export { buildDefeatPrompt }

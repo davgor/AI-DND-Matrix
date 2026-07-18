@@ -1,30 +1,6 @@
 import { randomNpcSeedPrompt } from '../../../shared/campaignCreate/randomFill'
 import { FieldWithRandomInputRow } from '../components/FieldRandomDiceButton'
-import { GenerateModalActions } from './GenerateModalActions'
-
-function GenerateNpcSeedField(props: {
-  regionName: string
-  seedPrompt: string
-  generating: boolean
-  onSeedChange: (value: string) => void
-}): JSX.Element {
-  return (
-    <FieldWithRandomInputRow
-      ariaLabel="Random NPC seed"
-      disabled={props.generating}
-      onRandomize={() => props.onSeedChange(randomNpcSeedPrompt(props.regionName))}
-    >
-      <textarea
-        className="campaign-review-seed-input"
-        value={props.seedPrompt}
-        onChange={(event) => props.onSeedChange(event.target.value)}
-        placeholder="e.g. A retired dock guard who saw something in the fog last night..."
-        rows={5}
-        disabled={props.generating}
-      />
-    </FieldWithRandomInputRow>
-  )
-}
+import { GenerateModalShell } from './GenerateModalShell'
 
 export function GenerateNpcDialog(props: {
   regionName: string
@@ -36,37 +12,32 @@ export function GenerateNpcDialog(props: {
   onSubmit: () => void
 }): JSX.Element {
   return (
-    <div
-      className="campaign-review-generate-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="generate-npc-title"
-      onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !props.generating) {
-          props.onClose()
-        }
-      }}
+    <GenerateModalShell
+      titleId="generate-npc-title"
+      title={`Generate NPC for ${props.regionName}`}
+      description="Seed a new NPC tied to this region — role, mood, hook, or conflict."
+      generating={props.generating}
+      generateError={props.generateError}
+      submitDisabled={!props.seedPrompt.trim()}
+      submitLabel="Generate NPC"
+      generatingLabel="Generating..."
+      onClose={props.onClose}
+      onSubmit={props.onSubmit}
     >
-      <h2 id="generate-npc-title">Generate NPC for {props.regionName}</h2>
-      <p>Seed a new NPC tied to this region — role, mood, hook, or conflict.</p>
-      <GenerateNpcSeedField
-        regionName={props.regionName}
-        seedPrompt={props.seedPrompt}
-        generating={props.generating}
-        onSeedChange={props.onSeedChange}
-      />
-      {props.generateError ? (
-        <p className="campaign-review-error">{props.generateError}</p>
-      ) : null}
-      <GenerateModalActions
-        generating={props.generating}
-        submitDisabled={!props.seedPrompt.trim()}
-        submitLabel="Generate NPC"
-        generatingLabel="Generating..."
-        onClose={props.onClose}
-        onSubmit={props.onSubmit}
-      />
-    </div>
+      <FieldWithRandomInputRow
+        ariaLabel="Random NPC seed"
+        disabled={props.generating}
+        onRandomize={() => props.onSeedChange(randomNpcSeedPrompt(props.regionName))}
+      >
+        <textarea
+          className="campaign-review-seed-input"
+          value={props.seedPrompt}
+          onChange={(event) => props.onSeedChange(event.target.value)}
+          placeholder="e.g. A retired dock guard who saw something in the fog last night..."
+          rows={5}
+          disabled={props.generating}
+        />
+      </FieldWithRandomInputRow>
+    </GenerateModalShell>
   )
 }

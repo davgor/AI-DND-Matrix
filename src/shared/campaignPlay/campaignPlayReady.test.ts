@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   campaignPlayBlockerMessage,
   canEnterCampaignPlay,
-  getCampaignPlayBlockers
+  getCampaignPlayBlockers,
+  guardPlayEntry
 } from './campaignPlayReady'
 
 describe('getCampaignPlayBlockers', () => {
@@ -49,5 +50,33 @@ describe('campaignPlayBlockerMessage', () => {
       { kind: 'empty-region', regionId: 'r2', regionName: 'Mistfen' }
     ])
     expect(message).toMatch(/Mistfen/)
+  })
+})
+
+describe('guardPlayEntry', () => {
+  it('sets blocker message and returns false when play is blocked', () => {
+    const messages: Array<string | null> = []
+    const allowed = guardPlayEntry(
+      {
+        regions: [{ id: 'r1', name: 'A' } as never],
+        npcs: []
+      },
+      (message) => messages.push(message)
+    )
+    expect(allowed).toBe(false)
+    expect(messages[0]).toMatch(/A/)
+  })
+
+  it('returns true when campaign play is ready', () => {
+    const messages: Array<string | null> = []
+    const allowed = guardPlayEntry(
+      {
+        regions: [{ id: 'r1', name: 'A' } as never],
+        npcs: [{ id: 'n1', regionId: 'r1' } as never]
+      },
+      (message) => messages.push(message)
+    )
+    expect(allowed).toBe(true)
+    expect(messages).toEqual([])
   })
 })

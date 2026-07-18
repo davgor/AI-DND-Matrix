@@ -5,13 +5,14 @@ import { resolveLootPolicy } from '../engine/lootPolicy'
 import { appendEvent, listEventsByCampaign } from '../db/repositories/events'
 import type { CombatEncounter } from '../shared/combat/types'
 import type { CatalogItem } from '../shared/items/types'
-import type { LootContext, LootGrantAccepted, LootPolicy, LootResolutionResult } from '../shared/loot/types'
+import type { LootContext, LootPolicy, LootResolutionResult } from '../shared/loot/types'
 import { assembleEncounterLootContext } from './encounterLootContext'
 import { assembleQuestLootContext } from './questLootContext'
 import { filterCatalogCandidatesForPolicy, validateAndPersistLootGrants } from './lootGrants'
 import { buildLootSeedKey, selectLootDeterministic } from './lootSelector'
 import { isRewardNarrationEnrichmentEnabled } from './rewardEnrichment'
 import { lootNarrationTemplate } from './rewardNarrationTemplates'
+import { encounterEligibleForRewards } from './encounterRewards'
 import type { TurnResult } from './turnIpc'
 
 /** How many recent loot_resolved events feed the variety guard's recent-item set. */
@@ -53,15 +54,6 @@ function buildTemplateLootResponse(
     nothingToFind: selection.length === 0
   }
 }
-
-export function shouldSkipQuestLoot(encounterLootRanThisTurn: boolean): boolean {
-  return encounterLootRanThisTurn
-}
-
-export function encounterEligibleForLoot(encounter: CombatEncounter): boolean {
-  return encounter.phase === 'resolved' && encounter.outcome === 'defeated'
-}
-
 async function executeLootPass(input: {
   db: Database.Database
   provider: Provider
@@ -159,7 +151,7 @@ export async function runEncounterLootPass(input: {
   playerCharacterId: string
   regionId: string
 }): Promise<Pick<TurnResult, 'lootNarration' | 'lootGrants'> | null> {
-  if (!encounterEligibleForLoot(input.encounter)) {
+  if (!encounterEligibleForRewards(input.encounter)) {
     return null
   }
   const context = assembleEncounterLootContext(input.db, {
@@ -183,7 +175,7 @@ export async function runQuestLootPass(input: {
   playerLevel: number
   encounterLootRanThisTurn?: boolean
 }): Promise<Pick<TurnResult, 'lootNarration' | 'lootGrants'> | null> {
-  if (shouldSkipQuestLoot(input.encounterLootRanThisTurn === true)) {
+  if (input.encounterLootRanThisTurn === true) {
     return null
   }
   const context = assembleQuestLootContext({
@@ -224,15 +216,3 @@ export async function enrichTurnWithEncounterLoot(input: {
   }
   return { ...input.base, ...loot }
 }
-
-export function mergeLootIntoTurn(
-  base: TurnResult,
-  loot: Pick<TurnResult, 'lootNarration' | 'lootGrants'> | null
-): TurnResult {
-  if (!loot) {
-    return base
-  }
-  return { ...base, ...loot }
-}
-
-export type { LootGrantAccepted }

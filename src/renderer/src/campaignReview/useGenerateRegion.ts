@@ -6,6 +6,7 @@ import {
   MIN_ADDITIONAL_REGION_NPC_COUNT
 } from '../../../shared/campaignCreate/types'
 import { clampNpcsPerRegion } from '../../../shared/campaignCreate/validation'
+import { useGenerateSeedSubmit } from './useGenerateSeedSubmit'
 
 export interface UseGenerateRegionOptions {
   campaignId: string
@@ -15,54 +16,29 @@ export interface UseGenerateRegionOptions {
 }
 
 export function useGenerateRegion(input: UseGenerateRegionOptions) {
-  const [seedPrompt, setSeedPrompt] = useState('')
   const [npcCount, setNpcCount] = useState(
     input.initialNpcCount ?? DEFAULT_ADDITIONAL_REGION_NPC_COUNT
   )
-  const [generating, setGenerating] = useState(false)
-  const [generateError, setGenerateError] = useState<string | null>(null)
-
-  function updateNpcCount(value: number): void {
-    setNpcCount(clampNpcsPerRegion(value))
-  }
-
-  async function submit(): Promise<void> {
-    const trimmed = seedPrompt.trim()
-    if (!trimmed) {
-      setGenerateError('Describe the region you want to add.')
-      return
-    }
-    setGenerating(true)
-    setGenerateError(null)
-    try {
-      const result = await window.campaigns.generateRegion({
+  const generate = useGenerateSeedSubmit({
+    emptyMessage: 'Describe the region you want to add.',
+    onDetailChange: input.onDetailChange,
+    onClose: input.onClose,
+    runGenerate: (trimmed) =>
+      window.campaigns.generateRegion({
         campaignId: input.campaignId,
         seedPrompt: trimmed,
         npcCount
       })
-      if (result.ok) {
-        input.onDetailChange(result.detail)
-        input.onClose()
-      } else {
-        setGenerateError(result.message)
-      }
-    } finally {
-      setGenerating(false)
-    }
-  }
+  })
 
   return {
-    seedPrompt,
-    setSeedPrompt,
+    ...generate,
     npcCount,
-    setNpcCount: updateNpcCount,
+    setNpcCount: (value: number) => setNpcCount(clampNpcsPerRegion(value)),
     npcCountBounds: {
       min: MIN_ADDITIONAL_REGION_NPC_COUNT,
       max: MAX_ADDITIONAL_REGION_NPC_COUNT,
       default: DEFAULT_ADDITIONAL_REGION_NPC_COUNT
-    },
-    generating,
-    generateError,
-    submit
+    }
   }
 }

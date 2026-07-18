@@ -38,3 +38,15 @@ export function campaignPlayBlockerMessage(
   const names = blockers.map((blocker) => blocker.regionName).join(', ')
   return `Every region needs at least one NPC before play. Still empty: ${names}. Return to campaign review to generate NPCs.`
 }
+
+export function guardPlayEntry(
+  detail: CampaignPlaySnapshot,
+  setEnterPlayBlockerMessage: (message: string | null) => void
+): boolean {
+  const blockers = getCampaignPlayBlockers(detail)
+  if (!canEnterCampaignPlay(detail)) {
+    setEnterPlayBlockerMessage(campaignPlayBlockerMessage(blockers))
+    return false
+  }
+  return true
+}

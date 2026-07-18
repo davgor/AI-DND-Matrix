@@ -6,7 +6,8 @@ import { appendEvent } from '../db/repositories/events'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from './providers/mockHarness'
-import { assembleNarrationContext, DmSchemaError, MAX_SCHEMA_ATTEMPTS } from './dm'
+import { assembleNarrationContext, DmSchemaError } from './dm'
+import { MAX_SCHEMA_ATTEMPTS } from './jsonResponse'
 import { reviewTurn } from './turnReview'
 
 // reviewTurn is a deprecated redirect onto the merged intent + routing call

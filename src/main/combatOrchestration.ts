@@ -96,7 +96,7 @@ export function startEncounter(input: StartEncounterInput): CombatEncounter {
     }
   })
 
-  return skipToActiveCombatant(db, encounter, participantRefs)
+  return skipToActiveCombatant(db, encounter)
 }
 
 function resolveAgilityScore(db: Database.Database, ref: CombatantRef, player: Character): number {
@@ -130,8 +130,7 @@ export function isCombatantSkipped(db: Database.Database, ref: CombatantRef, enc
 
 export function advanceEncounterTurn(
   db: Database.Database,
-  encounter: StoredEncounter,
-  _participantRefs: CombatantRef[]
+  encounter: StoredEncounter
 ): StoredEncounter {
   const orderLength = encounter.initiativeOrder.length
   if (orderLength === 0) {
@@ -156,14 +155,13 @@ export function advanceEncounterTurn(
 
 function skipToActiveCombatant(
   db: Database.Database,
-  encounter: StoredEncounter,
-  participantRefs: CombatantRef[]
+  encounter: StoredEncounter
 ): StoredEncounter {
   const active = getActiveCombatant(encounter)
   if (!isCombatantSkipped(db, active, encounter)) {
     return encounter
   }
-  return advanceEncounterTurn(db, encounter, participantRefs)
+  return advanceEncounterTurn(db, encounter)
 }
 
 export function allHostilesDefeated(db: Database.Database, encounter: StoredEncounter): boolean {

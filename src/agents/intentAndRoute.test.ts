@@ -5,7 +5,8 @@ import { createCharacter } from '../db/repositories/characters'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from './providers/mockHarness'
-import { assembleNarrationContext, DmSchemaError, MAX_SCHEMA_ATTEMPTS } from './dm'
+import { assembleNarrationContext, DmSchemaError } from './dm'
+import { MAX_SCHEMA_ATTEMPTS } from './jsonResponse'
 import type { TurnRoutingPlan } from '../shared/turnRouting/types'
 import {
   INTENT_AND_ROUTE_SYSTEM_PROMPT,

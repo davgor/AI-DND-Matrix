@@ -134,13 +134,3 @@ export function computeRetiredAdventurerHp(
   const rng = createSeededRandom(hashStringSeed(`${npcId}:retired:${profile}`))
   return rollMaxHpForLevel(statProfile.archetype, statProfile.level, statProfile.bodyScore, rng)
 }
-
-function averageHitDie(dieSize: number): number {
-  return Math.ceil((dieSize + 1) / 2)
-}
-
-/** @deprecated Average-only estimate kept for reference; use rolled hit dice at runtime. */
-export function computeHPAverage(archetype: Archetype, level: number, bodyScore: number): number {
-  const perLevel = averageHitDie(HIT_DIE_SIZE[archetype]) + abilityModifier(bodyScore)
-  return perLevel * level
-}

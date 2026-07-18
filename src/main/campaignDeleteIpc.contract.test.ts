@@ -5,7 +5,7 @@ import {
   buildRealisticLlmCascadingSeedResponses,
   npcReviewResponses,
   RACE_LORE_RESPONSE
-} from '../agents/campaignGeneration/fixtures'
+} from '../test/fixtures/campaignGenerationFixtures'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { listCampaignRaces } from '../db/repositories/campaignRaces'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'

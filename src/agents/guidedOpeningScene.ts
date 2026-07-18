@@ -1,6 +1,5 @@
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import type { CharacterGuidedCreationFields } from '../shared/guidedCreation/types'
 import type { RaceLore } from '../shared/raceSelection/types'
 
@@ -143,14 +142,21 @@ export async function runOpeningSceneKickoff(
     systemPrompt: buildOpeningSceneKickoffSystemPrompt(context),
     maxTokens: OPENING_SCENE_GENERATE_CONTEXT.maxTokens
   }
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(OPENING_SCENE_KICKOFF_PROMPT, generateContext)
-    const parsed = tryParseJson(raw)
-    if (isOpeningSceneResponse(parsed) && parsed.proposedOpeningScene) {
-      return { ...parsed, sceneReady: false }
+  return generateJsonWithRetry(
+    provider,
+    OPENING_SCENE_KICKOFF_PROMPT,
+    (parsed) => {
+      if (isOpeningSceneResponse(parsed) && parsed.proposedOpeningScene) {
+        return { ...parsed, sceneReady: false }
+      }
+      return undefined
+    },
+    {
+      context: generateContext,
+      exhaustedError: () =>
+        new Error('Opening scene kickoff did not return a valid schema after retries')
     }
-  }
-  throw new Error('Opening scene kickoff did not return a valid schema after retries')
+  )
 }
 
 export async function runOpeningSceneTurn(
@@ -158,15 +164,14 @@ export async function runOpeningSceneTurn(
   context: OpeningSceneContext,
   playerMessage: string
 ): Promise<OpeningSceneResponse> {
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(
-      buildOpeningScenePrompt(context, playerMessage),
-      OPENING_SCENE_GENERATE_CONTEXT
-    )
-    const parsed = tryParseJson(raw)
-    if (isOpeningSceneResponse(parsed)) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    () => buildOpeningScenePrompt(context, playerMessage),
+    (parsed) => (isOpeningSceneResponse(parsed) ? parsed : undefined),
+    {
+      context: OPENING_SCENE_GENERATE_CONTEXT,
+      exhaustedError: () =>
+        new Error('Opening scene agent did not return a valid schema after retries')
     }
-  }
-  throw new Error('Opening scene agent did not return a valid schema after retries')
+  )
 }

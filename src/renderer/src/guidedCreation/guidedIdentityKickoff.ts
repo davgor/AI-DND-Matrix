@@ -1,4 +1,7 @@
-import type { GuidedMessagePhase } from '../../../shared/guidedCreation/types'
+import type {
+  GuidedCreationKickoffResult,
+  GuidedMessagePhase
+} from '../../../shared/guidedCreation/types'
 
 export type GuidedRefresh = (options?: { silent?: boolean }) => Promise<void>
 
@@ -8,7 +11,7 @@ export async function kickoffGuidedIdentity(input: {
   phase?: GuidedMessagePhase
   refresh: GuidedRefresh
   onStateChange?: () => void
-}): Promise<{ ok: boolean; kickedOff: boolean }> {
+}): Promise<GuidedCreationKickoffResult> {
   const result =
     input.phase === 'opening_scene'
       ? await window.guidedCreation.kickoffOpeningScene({

@@ -1,13 +1,8 @@
 import { useState } from 'react'
 import type { CampaignDetail } from '../../../main/campaignIpc'
-import {
-  campaignPlayBlockerMessage,
-  canEnterCampaignPlay,
-  getCampaignPlayBlockers
-} from '../../../shared/campaignPlay/campaignPlayReady'
 import { canEnterPlay, type OnboardingStage } from '../../../shared/guidedCreation/stageRouting'
+import { guardPlayEntry } from '../../../shared/campaignPlay/campaignPlayReady'
 import { createEnterPlayHandler } from '../onboarding/enterPlayHandler'
-import { createReadyToEnterPlayHandler } from '../onboarding/readyToEnterPlayHandler'
 
 type PlayEntryInput = {
   detail: CampaignDetail | null
@@ -26,9 +21,7 @@ function createResumeFromHubHandler(
     if (!input.detail) {
       return
     }
-    const blockers = getCampaignPlayBlockers(input.detail)
-    if (!canEnterCampaignPlay(input.detail)) {
-      setEnterPlayBlockerMessage(campaignPlayBlockerMessage(blockers))
+    if (!guardPlayEntry(input.detail, setEnterPlayBlockerMessage)) {
       return
     }
     const character = input.detail.characters.find((entry) => entry.id === characterId)
@@ -38,25 +31,6 @@ function createResumeFromHubHandler(
     setEnterPlayBlockerMessage(null)
     input.setActiveCharacterId(characterId)
     input.setStage('main')
-  }
-}
-
-function createReadyToEnterPlayFactory(input: PlayEntryInput, setEnterPlayBlockerMessage: (message: string | null) => void) {
-  return (characterId: string): () => Promise<void> => {
-    if (!input.detail?.campaign) {
-      return async () => {}
-    }
-    return createReadyToEnterPlayHandler({
-      detail: input.detail,
-      campaignId: input.detail.campaign.id,
-      characterId,
-      refreshDetail: input.refreshDetail,
-      setEnterPlayBlockerMessage,
-      onEnterPlay: (id) => {
-        input.setActiveCharacterId(id)
-        input.setStage('main')
-      }
-    })
   }
 }
 
@@ -86,7 +60,6 @@ export function usePlayEntryState(input: PlayEntryInput) {
     inCampaign,
     enterPlayBlockerMessage,
     handleResumeFromHub: createResumeFromHubHandler(input, setEnterPlayBlockerMessage),
-    handleEnterPlay,
-    createHandleReadyToEnterPlay: createReadyToEnterPlayFactory(input, setEnterPlayBlockerMessage)
+    handleEnterPlay
   }
 }

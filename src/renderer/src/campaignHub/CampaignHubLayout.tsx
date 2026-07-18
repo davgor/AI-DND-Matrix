@@ -31,7 +31,7 @@ export function CampaignHubLayout(props: CampaignHubLayoutProps): JSX.Element {
       {props.sidebar ? <div className="campaign-hub-sidebar">{props.sidebar}</div> : null}
       <div className="campaign-hub-body">
         <main className="campaign-hub-center">
-          <CampaignHubHeader campaign={campaign} lastPlayed={props.lastPlayed} />
+          <CampaignHubHeader campaign={campaign ?? null} lastPlayed={props.lastPlayed} />
           <CampaignHubWorldPreview
             snapshot={props.snapshot}
             onViewWorldHistory={props.onViewWorldHistory}

@@ -1,7 +1,6 @@
 import type { ItemGrantProposal } from './dm'
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 import { listLootExemplarsForPolicy } from '../engine/lootProfiles'
 import type { CatalogItem } from '../shared/items/types'
@@ -123,16 +122,17 @@ export async function resolveLoot(
   candidates: CatalogItem[]
 ): Promise<LootAgentResponse> {
   const prompt = buildLootPrompt(ctx, policy, candidates)
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(prompt, LOOT_GENERATE_CONTEXT)
-    const parsed = parseLootAgentResponse(tryParseJson(raw), policy.maxGrantCount)
-    if (parsed) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    prompt,
+    (parsed) => parseLootAgentResponse(parsed, policy.maxGrantCount) ?? undefined,
+    {
+      context: LOOT_GENERATE_CONTEXT,
+      fallback: () => ({
+        narrationText: 'You search the scene but find nothing of value.',
+        itemGrants: [],
+        nothingToFind: true
+      })
     }
-  }
-  return {
-    narrationText: 'You search the scene but find nothing of value.',
-    itemGrants: [],
-    nothingToFind: true
-  }
+  )
 }

@@ -30,11 +30,38 @@ interface ReadyAppShellProps {
   onCampaignCreated: (detail: CampaignDetail) => Promise<void>
 }
 
-async function handleEquipmentSelectionComplete(props: ReadyAppShellProps): Promise<void> {
+async function refreshCampaignDetail(props: ReadyAppShellProps): Promise<void> {
   if (props.detail?.campaign) {
     props.setDetail(await window.campaigns.select(props.detail.campaign.id))
   }
-  props.setStage('guidedIdentity')
+}
+
+function createRefreshAndAdvanceHandler(
+  props: ReadyAppShellProps,
+  nextStage: OnboardingStage
+): () => Promise<void> {
+  return async () => {
+    await refreshCampaignDetail(props)
+    props.setStage(nextStage)
+  }
+}
+
+function createRevertRefreshAndAdvanceHandler(
+  props: ReadyAppShellProps,
+  targetPhase: 'race' | 'background',
+  nextStage: OnboardingStage
+): () => Promise<void> {
+  return async () => {
+    if (props.detail?.characters) {
+      await revertOnboardingPhase(props.detail.characters, targetPhase)
+    }
+    await refreshCampaignDetail(props)
+    props.setStage(nextStage)
+  }
+}
+
+async function handleEquipmentSelectionComplete(props: ReadyAppShellProps): Promise<void> {
+  await createRefreshAndAdvanceHandler(props, 'guidedIdentity')()
 }
 
 async function revertOnboardingPhase(
@@ -48,13 +75,7 @@ async function revertOnboardingPhase(
 }
 
 async function handleEquipmentSelectionBack(props: ReadyAppShellProps): Promise<void> {
-  if (props.detail?.characters) {
-    await revertOnboardingPhase(props.detail.characters, 'background')
-  }
-  if (props.detail?.campaign) {
-    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
-  }
-  props.setStage('backgroundSelection')
+  await createRevertRefreshAndAdvanceHandler(props, 'background', 'backgroundSelection')()
 }
 
 function renderOnboarding(props: ReadyAppShellProps, body: ReturnType<typeof useReadyAppBodyState>): JSX.Element {
@@ -71,21 +92,15 @@ function renderOnboarding(props: ReadyAppShellProps, body: ReturnType<typeof use
       campaignCallbacks={campaignCallbacks}
       onDetailChange={props.setDetail}
       onReviewContinue={() => props.setStage('characterSetup')}
-      onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
-      onRaceSelectionComplete={() => void handleRaceSelectionComplete(props)}
-      onRaceSelectionBack={() => void handleRaceSelectionBack(props)}
-      onBackgroundSelectionComplete={() => void handleBackgroundSelectionComplete(props)}
-      onBackgroundSelectionBack={() => void handleBackgroundSelectionBack(props)}
+      onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)()}
+      onRaceSelectionComplete={() => void handleRaceSelectionComplete(props)()}
+      onRaceSelectionBack={() => void handleRaceSelectionBack(props)()}
+      onBackgroundSelectionComplete={() => void handleBackgroundSelectionComplete(props)()}
+      onBackgroundSelectionBack={() => void handleBackgroundSelectionBack(props)()}
       onEquipmentSelectionComplete={() => void handleEquipmentSelectionComplete(props)}
       onEquipmentSelectionBack={() => void handleEquipmentSelectionBack(props)}
       onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
-      onEnterPlay={() => {
-        const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
-        if (!player) {
-          return
-        }
-        void body.createHandleReadyToEnterPlay(player.id)()
-      }}
+      onEnterPlay={() => body.handleEnterPlay()}
       enterPlayBlockerMessage={body.enterPlayBlockerMessage}
       onRefreshDetail={body.refreshDetail}
     />
@@ -121,7 +136,7 @@ function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
         setStage={props.setStage}
         body={body}
         campaignCallbacks={campaignCallbacks}
-        onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)}
+        onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)()}
       />
     )
   }
@@ -129,43 +144,16 @@ function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
   return renderOnboarding(props, body)
 }
 
-async function handleCharacterSetupComplete(props: ReadyAppShellProps): Promise<void> {
-  if (props.detail?.campaign) {
-    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
-  }
-  props.setStage('raceSelection')
-}
-
-async function handleRaceSelectionComplete(props: ReadyAppShellProps): Promise<void> {
-  if (props.detail?.campaign) {
-    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
-  }
-  props.setStage('backgroundSelection')
-}
-
-async function handleBackgroundSelectionComplete(props: ReadyAppShellProps): Promise<void> {
-  if (props.detail?.campaign) {
-    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
-  }
-  props.setStage('equipmentSelection')
-}
-
-async function handleBackgroundSelectionBack(props: ReadyAppShellProps): Promise<void> {
-  if (props.detail?.characters) {
-    await revertOnboardingPhase(props.detail.characters, 'race')
-  }
-  if (props.detail?.campaign) {
-    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
-  }
-  props.setStage('raceSelection')
-}
-
-async function handleRaceSelectionBack(props: ReadyAppShellProps): Promise<void> {
-  if (props.detail?.campaign) {
-    props.setDetail(await window.campaigns.select(props.detail.campaign.id))
-  }
-  props.setStage('characterSetup')
-}
+const handleCharacterSetupComplete = (props: ReadyAppShellProps) =>
+  createRefreshAndAdvanceHandler(props, 'raceSelection')
+const handleRaceSelectionComplete = (props: ReadyAppShellProps) =>
+  createRefreshAndAdvanceHandler(props, 'backgroundSelection')
+const handleBackgroundSelectionComplete = (props: ReadyAppShellProps) =>
+  createRefreshAndAdvanceHandler(props, 'equipmentSelection')
+const handleBackgroundSelectionBack = (props: ReadyAppShellProps) =>
+  createRevertRefreshAndAdvanceHandler(props, 'race', 'raceSelection')
+const handleRaceSelectionBack = (props: ReadyAppShellProps) =>
+  createRefreshAndAdvanceHandler(props, 'characterSetup')
 
 function ReadyAppShell(props: ReadyAppShellProps): JSX.Element {
   const [settingsOpen, setSettingsOpen] = useState(false)

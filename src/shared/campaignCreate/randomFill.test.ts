@@ -12,7 +12,6 @@ import {
   createSeededRandomSource,
   randomAdditionalRegionNpcCount,
   randomCampaignName,
-  randomCampaignSetupForm,
   randomDeathMode,
   randomNpcSeedPrompt,
   randomNpcsPerRegion,
@@ -21,6 +20,7 @@ import {
   randomRegionSeedPrompt,
   randomRespawnLocation
 } from './randomFill'
+import { randomCampaignSetupForm } from './randomFill.testSupport'
 
 describe('randomFill text generators', () => {
   const seed = createSeededRandomSource(42)

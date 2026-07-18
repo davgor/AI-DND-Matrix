@@ -127,13 +127,6 @@ export function findOwnedCharacterItem(
   return listCharacterItemRows(db, characterId).find((row) => row.id === characterItemId)
 }
 
-export function getEquippedWeaponRow(
-  db: Database.Database,
-  characterId: string
-): CharacterItemView | undefined {
-  return listCharacterItemRows(db, characterId).find((row) => row.equippedSlot === 'mainHand')
-}
-
 export function summarizeWeaponProfile(profile: WeaponDamageProfile): string {
   const name = profile.displayName ?? profile.catalogName
   const parts = profile.components.map(

@@ -36,10 +36,10 @@ Fix the script (e.g. `tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsco
 
 #### Acceptance Criteria
 
-- [ ] `npm run typecheck` fails if a type error is introduced anywhere in `src/renderer` (verified by temporarily breaking a file)
-- [ ] All pre-existing renderer type errors resolved (fixed, or deleted under 061.2/061.5 scope) — `npm run typecheck` passes
-- [ ] CI runs the corrected typecheck (add to `pr-checks.yml` if not already implied by build)
-- [ ] `docs`/skill references to `npm run typecheck` remain accurate
+- [x] `npm run typecheck` fails if a type error is introduced anywhere in `src/renderer` (verified by temporarily breaking a file)
+- [x] All pre-existing renderer type errors resolved (fixed, or deleted under 061.2/061.5 scope) — `npm run typecheck` passes
+- [x] CI runs the corrected typecheck (add to `pr-checks.yml` if not already implied by build)
+- [x] `docs`/skill references to `npm run typecheck` remain accurate
 
 ---
 
@@ -59,11 +59,11 @@ Other verified renderer orphans:
 
 #### Acceptance Criteria
 
-- [ ] Legacy character-sheet component tree, its CSS file, and orphaned `playerSheetRail.css` rules deleted; live play rail (`playView/PlaySheetRail.tsx`, `PlaySheetModals.tsx`, `playSheetRailTabs.tsx`) untouched and its tests pass
-- [ ] Tests that exist only to cover deleted components are removed with them; no live-path test deleted
-- [ ] `scrollStreamItem.ts`, `buildHubSnapshotFromDetail`, `abilityScoreMethod.ts` shim, `characterName` prop, and dead `CUSTOM_RACE_KEY` re-exports removed
-- [ ] `npm run typecheck` (post-061.1), `npm test`, `npm run lint`, `npm run build` pass
-- [ ] Manual smoke: play view renders sheet rail, tabs, and overlay modals as before
+- [x] Legacy character-sheet component tree, its CSS file, and orphaned `playerSheetRail.css` rules deleted; live play rail (`playView/PlaySheetRail.tsx`, `PlaySheetModals.tsx`, `playSheetRailTabs.tsx`) untouched and its tests pass
+- [x] Tests that exist only to cover deleted components are removed with them; no live-path test deleted
+- [x] `scrollStreamItem.ts`, `buildHubSnapshotFromDetail`, `abilityScoreMethod.ts` shim, `characterName` prop, and dead `CUSTOM_RACE_KEY` re-exports removed
+- [x] `npm run typecheck` (post-061.1), `npm test`, `npm run lint`, `npm run build` pass
+- [x] Manual smoke: play view renders sheet rail, tabs, and overlay modals as before
 
 ---
 
@@ -81,10 +81,10 @@ Dead repository exports: `db/repositories/sessions.ts` `startSession`/`listSessi
 
 #### Acceptance Criteria
 
-- [ ] All listed modules/exports deleted (or, where a symbol has private in-file callers, unexported and trimmed); each deletion re-verified with a repo-wide grep before removal
-- [ ] Tests covering only deleted code removed with it; conditions/perks/combat tests keep coverage of the surviving functions (`canAct`, `applyPerk`, `rollInitiative`)
-- [ ] `/engine` still has no Electron/DB/LLM imports
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
+- [x] All listed modules/exports deleted (or, where a symbol has private in-file callers, unexported and trimmed); each deletion re-verified with a repo-wide grep before removal
+- [x] Tests covering only deleted code removed with it; conditions/perks/combat tests keep coverage of the surviving functions (`canAct`, `applyPerk`, `rollInitiative`)
+- [x] `/engine` still has no Electron/DB/LLM imports
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
 
 ---
 
@@ -103,10 +103,10 @@ Legacy pre-054 monolithic generation path (production code, test-only consumers)
 
 #### Acceptance Criteria
 
-- [ ] Unwired agent modules and dead symbols deleted; repo-wide grep re-verified per symbol before removal
-- [ ] Legacy monolithic generation path removed; live cascade behavior proven unchanged (existing cascade contract tests pass unmodified; checklist followed)
-- [ ] `MAX_SCHEMA_ATTEMPTS` consumers unaffected (constant ownership moves in 061.6, not here)
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
+- [x] Unwired agent modules and dead symbols deleted; repo-wide grep re-verified per symbol before removal
+- [x] Legacy monolithic generation path removed; live cascade behavior proven unchanged (existing cascade contract tests pass unmodified; checklist followed)
+- [x] `MAX_SCHEMA_ATTEMPTS` consumers unaffected (constant ownership moves in 061.6, not here)
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
 
 ---
 
@@ -128,11 +128,14 @@ Other verified main-process dead code:
 
 #### Acceptance Criteria
 
-- [ ] `readyToEnterPlay` chain resolved end-to-end (renderer handler, phantom window call, `guidedCreationPlayHandoff.ts`) — wired with preload + IPC + consumer, or fully deleted; no phantom `window.*` API calls remain (061.1's typecheck enforces this)
-- [ ] `setCampaignDeathMode` and `acceptSurrender` dispositions decided and implemented; a one-line note in this ticket records the choice
-- [ ] Listed dead exports, no-op try/catch, identity wrapper, and unused parameter removed
-- [ ] README no longer claims unshipped behavior (region-history compression, ability lockout) unless the feature was wired instead
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
+- [x] `readyToEnterPlay` chain resolved end-to-end (renderer handler, phantom window call, `guidedCreationPlayHandoff.ts`) — wired with preload + IPC + consumer, or fully deleted; no phantom `window.*` API calls remain (061.1's typecheck enforces this)
+- [x] `setCampaignDeathMode` and `acceptSurrender` dispositions decided and implemented; a one-line note in this ticket records the choice
+
+**Dispositions (061.5):** `readyToEnterPlay` DELETE (all three sides); `setCampaignDeathMode` DELETE (never registered); `acceptSurrender` threading DELETE (DM intent parsing retained).
+
+- [x] Listed dead exports, no-op try/catch, identity wrapper, and unused parameter removed
+- [x] README no longer claims unshipped behavior (region-history compression, ability lockout) unless the feature was wired instead
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
 
 ---
 
@@ -148,12 +151,12 @@ Add one helper (e.g. `generateJsonWithRetry(provider, prompt, parse, { attempts,
 
 #### Acceptance Criteria
 
-- [ ] Single shared retry helper; zero hand-rolled schema loops left in `src/agents` (grep for `MAX_SCHEMA_ATTEMPTS` shows only the helper + tests)
-- [ ] Per-module fallback behavior preserved and covered by existing tests (throw paths still throw `DmSchemaError` etc.; default paths still default) — net diff is negative
-- [ ] `retiredAdventurerReview` retry fixed with a test proving retry-then-default behavior
-- [ ] `MAX_SCHEMA_ATTEMPTS` no longer lives in `dm.ts`
-- [ ] Helper accepts an optional per-call context object so 040.9 can adopt it without touching call sites again
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
+- [x] Single shared retry helper; zero hand-rolled schema loops left in `src/agents` (grep for `MAX_SCHEMA_ATTEMPTS` shows only the helper + tests)
+- [x] Per-module fallback behavior preserved and covered by existing tests (throw paths still throw `DmSchemaError` etc.; default paths still default) — net diff is negative
+- [x] `retiredAdventurerReview` retry fixed with a test proving retry-then-default behavior
+- [x] `MAX_SCHEMA_ATTEMPTS` no longer lives in `dm.ts`
+- [x] Helper accepts an optional per-call context object so 040.9 can adopt it without touching call sites again
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
 
 ---
 
@@ -176,10 +179,10 @@ Explicitly **not** in scope: repository CRUD boilerplate (`rowToX` mappers etc.)
 
 #### Acceptance Criteria
 
-- [ ] Each listed pair collapsed to one definition; call sites updated; net diff negative per item
-- [ ] Quest-scale unification has an explicit test pinning the chosen semantics for both XP and loot paths
-- [ ] Engine boundary intact (no new imports into `/engine` from db/agents/electron)
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
+- [x] Each listed pair collapsed to one definition; call sites updated; net diff negative per item
+- [x] Quest-scale unification has an explicit test pinning the chosen semantics for both XP and loot paths
+- [x] Engine boundary intact (no new imports into `/engine` from db/agents/electron)
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
 
 ---
 
@@ -199,10 +202,13 @@ Verified copy-paste in the renderer where consolidation is mechanical:
 
 #### Acceptance Criteria
 
-- [ ] Back button, App handlers, play-blocker guard, and generate dialog/hook dedupes landed; each net-negative in lines
-- [ ] Onboarding flows (race → background → equipment, back navigation) verified by existing tests + manual pass through character creation
-- [ ] Selection-hook extraction either skipped with a note, or landed with a demonstrated net-negative diff
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
+- [x] Back button, App handlers, play-blocker guard, and generate dialog/hook dedupes landed; each net-negative in lines
+- [x] Onboarding flows (race → background → equipment, back navigation) verified by existing tests + manual pass through character creation
+- [x] Selection-hook extraction either skipped with a note, or landed with a demonstrated net-negative diff
+
+**061.8 note:** Did not extract generic `useIpcRoster` / `useSelectionDraft` — race/background hooks differ enough that a shared abstraction would add indirection without a clear readability or line-count win.
+
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
 
 ---
 
@@ -222,7 +228,7 @@ Also: delete the empty placeholder barrels `engine/index.ts` and `shared/index.t
 
 #### Acceptance Criteria
 
-- [ ] No test fixtures/support modules remain in production `src/` paths; all moved with imports updated, zero test deletions
-- [ ] Listed test-only exports unexported (tests adjusted to import directly or assert behavior); `export *` barrels narrowed to actual consumers
-- [ ] Empty placeholder barrels deleted
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass
+- [x] No test fixtures/support modules remain in production `src/` paths; all moved with imports updated, zero test deletions
+- [x] Listed test-only exports unexported (tests adjusted to import directly or assert behavior); `export *` barrels narrowed to actual consumers
+- [x] Empty placeholder barrels deleted
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run typecheck` pass

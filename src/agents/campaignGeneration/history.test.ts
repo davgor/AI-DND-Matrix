@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAdditionalRegionPrompt } from '.'
+import { buildAdditionalRegionPrompt } from './prompts'
 import { buildAvailableRaceOptions } from '../raceLore'
 
 describe('history-aware additional region prompt (038.16)', () => {

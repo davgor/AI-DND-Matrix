@@ -1,5 +1,7 @@
 import type { QuestScale } from '../loot/types'
 
+export type { QuestScale }
+
 export const QUEST_KINDS = ['main', 'side'] as const
 export type QuestKind = (typeof QUEST_KINDS)[number]
 

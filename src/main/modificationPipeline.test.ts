@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { findCatalogItemByName, getCatalogItemById } from '../db/repositories/items'
 import { equipCharacterItem } from '../db/repositories/characterItems'
 import { listModifications } from '../db/repositories/characterItemModifications'
-import { catalogItemMechanicalEquals, persistValidatedModification } from './modificationPipeline'
+import { persistValidatedModification } from './modificationPipeline'
 import { seedPipelineCampaign } from './modificationPipelineFixtures'
 
 describe('modification persist success', () => {
@@ -27,7 +27,9 @@ describe('modification persist success', () => {
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(listModifications(db, row.id)).toHaveLength(1)
-      expect(catalogItemMechanicalEquals(db, longsword.id, catalogSnapshot)).toBe(true)
+      expect(JSON.stringify(getCatalogItemById(db, longsword.id)!.mechanicalProperties)).toBe(
+        JSON.stringify(catalogSnapshot)
+      )
     }
     db.close()
   })

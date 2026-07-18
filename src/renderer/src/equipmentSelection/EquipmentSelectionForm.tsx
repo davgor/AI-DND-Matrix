@@ -11,7 +11,7 @@ import {
   toggleSpellSelection,
   type EquipmentSelectionState
 } from './equipmentSelectionLogic'
-import { EquipmentBackButton } from './EquipmentBackButton'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import { ProceedButton } from '../onboarding/ProceedButton'
 
 function OptionGroup(props: { title: string; hint?: string; children: ReactNode }): JSX.Element {
@@ -207,7 +207,7 @@ export function EquipmentSelectionForm(props: {
       <SpellGroup offer={props.offer} state={props.state} setState={props.setState} />
       {props.error ? <p className="equipment-selection-error">{props.error}</p> : null}
       <div className="equipment-selection-actions">
-        <EquipmentBackButton onBack={props.onBack} />
+        <OnboardingBackButton onBack={props.onBack} />
         <ProceedButton
           disabled={props.submitting || !canConfirmEquipmentSelection(props.offer, props.state)}
           onClick={() => void props.onConfirm()}

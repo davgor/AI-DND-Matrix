@@ -23,7 +23,7 @@ import {
   generateFlaggedNpcDetails,
   generateNpcCoreBundle
 } from './flaggedNpc'
-import { RACE_LORE_RESPONSE } from './fixtures'
+import { RACE_LORE_RESPONSE } from '../../test/fixtures/campaignGenerationFixtures'
 import { createScriptedProvider } from '../providers/mockHarness'
 import { CampaignGenerationSchemaError, type NpcCoreBundle } from './types'
 

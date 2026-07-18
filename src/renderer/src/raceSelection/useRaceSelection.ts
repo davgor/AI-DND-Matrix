@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { RaceRosterGroup } from '../../../main/raceIpc'
-import { CUSTOM_RACE_KEY } from '../../../engine/raceSelection/roster'
 import type { CampaignRace } from '../../../shared/raceSelection/types'
 import {
   clearRaceSelectionDraft,
@@ -221,5 +220,3 @@ export function useRaceSelection(
     confirm: submit.applySelection
   }
 }
-
-export { CUSTOM_RACE_KEY }

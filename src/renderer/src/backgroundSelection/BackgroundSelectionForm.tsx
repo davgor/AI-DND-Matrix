@@ -5,14 +5,12 @@ import {
   BackgroundDescriptionField,
   BackgroundStoryField
 } from './BackgroundSelectionFormParts'
-import { BackgroundBackButton } from './BackgroundBackButton'
+import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import {
   canConfirmBackgroundSelection,
   descriptionForSelection,
   type BackgroundSelectionState
 } from './backgroundSelectionLogic'
-
-export { BackgroundDescriptionField, BackgroundStoryField } from './BackgroundSelectionFormParts'
 
 function BackgroundDropdown(props: {
   roster: BackgroundRosterEntry[]
@@ -66,7 +64,7 @@ export function BackgroundSelectionForm(props: {
 
   return (
     <div className="background-selection">
-      <BackgroundBackButton onBack={props.onBack} />
+      <OnboardingBackButton className="background-selection-back" onBack={props.onBack} />
       <h1>Choose your background</h1>
       <BackgroundDropdown
         roster={props.roster}

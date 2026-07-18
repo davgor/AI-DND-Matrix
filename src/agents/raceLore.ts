@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import { randomUUID } from 'node:crypto'
 import { MAX_GENERATION_ATTEMPTS } from './campaignGeneration/types'
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 import { findRosterEntry, RACE_ROSTER } from '../engine/raceSelection/roster'
 import { getCampaignById } from '../db/repositories/campaigns'
@@ -77,17 +77,17 @@ export async function generateRaceLore(
   worldSummary: string,
   input: RaceLoreInput
 ): Promise<RaceLore> {
-  for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await provider.generate(
-      buildRaceLorePrompt(campaignPremise, worldSummary, input),
-      RACE_LORE_GENERATE_CONTEXT
-    )
-    const parsed = tryParseJson(raw)
-    if (isValidRaceLore(parsed)) {
-      return parsed
+  return generateJsonWithRetry(
+    provider,
+    () => buildRaceLorePrompt(campaignPremise, worldSummary, input),
+    (parsed) => (isValidRaceLore(parsed) ? parsed : undefined),
+    {
+      attempts: MAX_GENERATION_ATTEMPTS,
+      context: RACE_LORE_GENERATE_CONTEXT,
+      exhaustedError: () =>
+        new Error('Race lore generation did not return a valid schema after retries')
     }
-  }
-  throw new Error('Race lore generation did not return a valid schema after retries')
+  )
 }
 
 export function buildAvailableRaceOptions(campaignRaces: CampaignRace[]): AvailableRaceOption[] {

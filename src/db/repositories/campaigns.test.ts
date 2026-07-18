@@ -5,7 +5,6 @@ import {
   advanceInGameDate,
   createCampaign,
   getCampaignById,
-  listCampaigns,
   listCampaignsByLastPlayed,
   updateCampaignDeathMode,
   updateCampaignStateSummary,
@@ -56,33 +55,6 @@ describe('campaigns repository: create + getById round-trip', () => {
   it('returns undefined for an unknown id', () => {
     const db = createTestDb()
     expect(getCampaignById(db, 'does-not-exist')).toBeUndefined()
-  })
-})
-
-describe('campaigns repository: listCampaigns', () => {
-  it('orders campaigns most-recently-created first', () => {
-    const db = createTestDb()
-
-    const first = createCampaign(db, {
-      name: 'First',
-      premisePrompt: '...',
-      deathMode: 'legendary',
-      createdAt: '2026-01-01T00:00:00.000Z'
-    })
-    const second = createCampaign(db, {
-      name: 'Second',
-      premisePrompt: '...',
-      deathMode: 'legendary',
-      createdAt: '2026-01-02T00:00:00.000Z'
-    })
-    const third = createCampaign(db, {
-      name: 'Third',
-      premisePrompt: '...',
-      deathMode: 'legendary',
-      createdAt: '2026-01-03T00:00:00.000Z'
-    })
-
-    expect(listCampaigns(db).map((c) => c.id)).toEqual([third.id, second.id, first.id])
   })
 })
 

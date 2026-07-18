@@ -1,36 +1,8 @@
 import { randomAdditionalRegionNpcCount, randomRegionSeedPrompt } from '../../../shared/campaignCreate/randomFill'
 import { FieldWithRandomInputRow } from '../components/FieldRandomDiceButton'
-import { GenerateModalActions } from './GenerateModalActions'
+import { GenerateModalShell } from './GenerateModalShell'
 
-function GenerateNpcCountField(props: {
-  value: number
-  bounds: { min: number; max: number }
-  generating: boolean
-  onChange: (value: number) => void
-}): JSX.Element {
-  return (
-    <label className="campaign-review-field">
-      NPCs to generate
-      <FieldWithRandomInputRow
-        ariaLabel="Random NPC count"
-        disabled={props.generating}
-        centerAlign
-        onRandomize={() => props.onChange(randomAdditionalRegionNpcCount())}
-      >
-        <input
-          type="number"
-          min={props.bounds.min}
-          max={props.bounds.max}
-          value={props.value}
-          disabled={props.generating}
-          onChange={(event) => props.onChange(Number(event.target.value))}
-        />
-      </FieldWithRandomInputRow>
-    </label>
-  )
-}
-
-function GenerateRegionSeedField(props: {
+function RegionSeedField(props: {
   seedPrompt: string
   generating: boolean
   onSeedChange: (value: string) => void
@@ -53,6 +25,34 @@ function GenerateRegionSeedField(props: {
   )
 }
 
+function RegionNpcCountField(props: {
+  npcCount: number
+  npcCountBounds: { min: number; max: number }
+  generating: boolean
+  onNpcCountChange: (value: number) => void
+}): JSX.Element {
+  return (
+    <label className="campaign-review-field">
+      NPCs to generate
+      <FieldWithRandomInputRow
+        ariaLabel="Random NPC count"
+        disabled={props.generating}
+        centerAlign
+        onRandomize={() => props.onNpcCountChange(randomAdditionalRegionNpcCount())}
+      >
+        <input
+          type="number"
+          min={props.npcCountBounds.min}
+          max={props.npcCountBounds.max}
+          value={props.npcCount}
+          disabled={props.generating}
+          onChange={(event) => props.onNpcCountChange(Number(event.target.value))}
+        />
+      </FieldWithRandomInputRow>
+    </label>
+  )
+}
+
 export function GenerateRegionDialog(props: {
   seedPrompt: string
   npcCount: number
@@ -65,40 +65,29 @@ export function GenerateRegionDialog(props: {
   onSubmit: () => void
 }): JSX.Element {
   return (
-    <div
-      className="campaign-review-generate-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="generate-region-title"
-      onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !props.generating) {
-          props.onClose()
-        }
-      }}
+    <GenerateModalShell
+      titleId="generate-region-title"
+      title="Generate another region"
+      description="Seed the next region with a place, mood, conflict, or hook you want in the world."
+      generating={props.generating}
+      generateError={props.generateError}
+      submitDisabled={!props.seedPrompt.trim()}
+      submitLabel="Generate region"
+      generatingLabel="Generating..."
+      onClose={props.onClose}
+      onSubmit={props.onSubmit}
     >
-      <h2 id="generate-region-title">Generate another region</h2>
-      <p>Seed the next region with a place, mood, conflict, or hook you want in the world.</p>
-      <GenerateRegionSeedField
+      <RegionSeedField
         seedPrompt={props.seedPrompt}
         generating={props.generating}
         onSeedChange={props.onSeedChange}
       />
-      <GenerateNpcCountField
-        value={props.npcCount}
-        bounds={props.npcCountBounds}
+      <RegionNpcCountField
+        npcCount={props.npcCount}
+        npcCountBounds={props.npcCountBounds}
         generating={props.generating}
-        onChange={props.onNpcCountChange}
+        onNpcCountChange={props.onNpcCountChange}
       />
-      {props.generateError ? <p className="campaign-review-error">{props.generateError}</p> : null}
-      <GenerateModalActions
-        generating={props.generating}
-        submitDisabled={!props.seedPrompt.trim()}
-        submitLabel="Generate region"
-        generatingLabel="Generating..."
-        onClose={props.onClose}
-        onSubmit={props.onSubmit}
-      />
-    </div>
+    </GenerateModalShell>
   )
 }

@@ -24,8 +24,8 @@ describe('runIdentityKickoffEffect', () => {
   })
 
   it('clears kickingOff after kickoff even when the effect cleanup runs first', async () => {
-    let resolveKickoff!: (value: { ok: boolean; kickedOff: boolean }) => void
-    const kickoffPromise = new Promise<{ ok: boolean; kickedOff: boolean }>((resolve) => {
+    let resolveKickoff!: (value: { ok: true; kickedOff: boolean }) => void
+    const kickoffPromise = new Promise<{ ok: true; kickedOff: boolean }>((resolve) => {
       resolveKickoff = resolve
     })
     vi.spyOn(guidedIdentityKickoff, 'kickoffGuidedIdentity').mockReturnValue(kickoffPromise)

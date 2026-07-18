@@ -66,8 +66,7 @@ import type {
 import { EMPTY_CANON_RECALL } from './types'
 
 export * from './types'
-export * from './normalize'
-export * from './prompts'
+export { assembleCampaignHistoryContext } from './prompts'
 export * from './persist'
 export * from './flaggedNpc'
 export * from './worldSummaryRegen'

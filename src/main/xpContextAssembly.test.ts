@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveDifficultyXP } from '../engine/difficultyXp'
-import { assembleEncounterXpContext, encounterEligibleForXp } from './encounterXpContext'
+import { assembleEncounterXpContext } from './encounterXpContext'
+import { encounterEligibleForRewards } from './encounterRewards'
 import { assembleQuestXpContext } from './questXpContext'
 import {
   makeEncounter,
@@ -67,7 +68,7 @@ describe('assembleEncounterXpContext', () => {
       { kind: 'player', id: player.id },
       { kind: 'npc', id: wolf.id }
     ])
-    expect(encounterEligibleForXp(encounter)).toBe(true)
+    expect(encounterEligibleForRewards(encounter)).toBe(true)
     expect(
       assembleEncounterXpContext(db, {
         encounter,

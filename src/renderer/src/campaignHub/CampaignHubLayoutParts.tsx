@@ -1,7 +1,7 @@
 import type { Campaign } from '../../../db/repositories/campaigns'
 import type { HubCastMember } from '../../../shared/campaignHub/types'
+import { CampaignReviewWorldHistoryModal } from '../campaignReview/CampaignReviewWorldHistoryModal'
 import { CampaignHubObituaryModal } from './CampaignHubObituaryModal'
-import { CampaignHubWorldHistoryModal } from './CampaignHubWorldHistoryModal'
 import { hubPremiseSnippet } from './hubUtils'
 
 export function CampaignHubModals(props: {
@@ -15,9 +15,11 @@ export function CampaignHubModals(props: {
   return (
     <>
       {props.worldHistoryOpen && props.worldHistory ? (
-        <CampaignHubWorldHistoryModal
-          worldHistory={props.worldHistory}
+        <CampaignReviewWorldHistoryModal
+          initialValue={props.worldHistory}
+          onSave={async () => {}}
           onClose={props.onCloseWorldHistory}
+          readOnly
         />
       ) : null}
       {props.obituaryCharacterId ? (

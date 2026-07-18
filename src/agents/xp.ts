@@ -1,6 +1,5 @@
-import { tryParseJson } from './jsonResponse'
+import { generateJsonWithRetry } from './jsonResponse'
 import type { Provider } from './providers/types'
-import { MAX_SCHEMA_ATTEMPTS } from './dm'
 import {
   difficultyXpNarration,
   fallbackDifficulty,
@@ -44,11 +43,15 @@ export function buildXpPrompt(ctx: XPContext): string {
 
 export async function resolveXpAward(provider: Provider, ctx: XPContext): Promise<XpAwardResolution> {
   const prompt = buildXpPrompt(ctx)
-  let difficulty: EncounterDifficulty | null = null
-  for (let attempt = 1; attempt <= MAX_SCHEMA_ATTEMPTS && difficulty === null; attempt += 1) {
-    const raw = await provider.generate(prompt, { maxTokens: XP_DIFFICULTY_MAX_TOKENS })
-    difficulty = parseXpDifficultyAgentResponse(tryParseJson(raw))?.difficulty ?? null
-  }
+  const difficulty = await generateJsonWithRetry<EncounterDifficulty | null>(
+    provider,
+    prompt,
+    (parsed) => parseXpDifficultyAgentResponse(parsed)?.difficulty ?? undefined,
+    {
+      context: { maxTokens: XP_DIFFICULTY_MAX_TOKENS },
+      fallback: () => null
+    }
+  )
   const rated = difficulty ?? fallbackDifficulty(ctx)
   return {
     difficulty: rated,

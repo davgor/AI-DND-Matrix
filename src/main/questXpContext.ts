@@ -1,24 +1,14 @@
 import type Database from 'better-sqlite3'
-import { inferQuestScale as inferQuestScaleFromQuest } from '../engine/quests'
-import { isQuestRewardEligibleStatus } from '../engine/quests'
+import {
+  inferQuestScale as inferQuestScaleFromQuest,
+  inferQuestScaleFromTitleSummary,
+  isQuestRewardEligibleStatus
+} from '../engine/quests'
 import { isLootCompletedState } from '../shared/loot/types'
 import type { XPContext } from '../shared/progression/types'
-import { inferQuestScale, shouldTriggerQuestLoot } from './questLootContext'
-import { summarizePartyMembers } from './encounterXpContext'
-import type { StoryThread } from '../db/repositories/storyThreads'
-import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { getCharacterQuest, getQuestById } from '../db/repositories/quests'
-
-export { shouldTriggerQuestLoot as shouldTriggerQuestXp }
-
-function findThreadById(
-  db: Database.Database,
-  campaignId: string,
-  threadId: string
-): StoryThread | undefined {
-  const threads = listStoryThreadsByCampaign(db, campaignId)
-  return threads.find((t) => t.id === threadId)
-}
+import { summarizePartyMembers } from './encounterXpContext'
+import { findThreadById } from './questThreadLookup'
 
 function assembleQuestIdXpContext(
   params: {
@@ -87,6 +77,6 @@ export function assembleQuestXpContext(params: {
     partyMembers: summarizePartyMembers(db, playerCharacterId),
     questThreadId: thread.id,
     questHookText: thread.summary,
-    questScale: inferQuestScale(thread)
+    questScale: inferQuestScaleFromTitleSummary(thread.title, thread.summary)
   }
 }
