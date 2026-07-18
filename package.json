@@ -22,6 +22,7 @@
     "test": "vitest run",
     "terminology:check": "node scripts/terminology-check.mjs",
     "deadcode": "node scripts/deadcode-check.mjs",
+    "deadcode:refresh": "node scripts/deadcode-refresh.mjs",
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
     "rebuild:node": "npm rebuild better-sqlite3"
   },

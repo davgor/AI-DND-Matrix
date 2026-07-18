@@ -14,6 +14,7 @@ Any implementation work in this repo must follow `.cursor/skills/delivery-standa
    - `npm test`
    - `npm run lint`
    - `npm run build`
+   - `npm run deadcode` (ts-prune vs `.tsprune-ignore`; if export moves/deletes drift the baseline, run `npm run deadcode:refresh` after confirming the new findings are intentional)
 3. **Board traceability** — create a ticket in `/board/backlog/` or update the related epic/ticket before or as you start. If the user named a ticket id, use `complete-ticket` skill.
 
 ## Also required
