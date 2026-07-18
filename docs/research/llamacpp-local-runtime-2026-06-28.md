@@ -18,7 +18,7 @@ Define the fastest safe path to run local LLM inference inside this Electron app
 - Do not run inference from renderer.
 - Integrate as a new provider adapter selected by config in existing provider registry flow.
 - Use a separate local process (`llama-server`) managed by the app lifecycle manager.
-- **Do not bundle** `llama-server` or model weights in the portable `.exe` for v1.
+- **Do not embed** multi-GB model weights (or a fat runtime) in the portable/installer `.exe`. Epic 020 (rescoped) downloads weights on demand into `userData` from Settings; runtime is discovered on PATH or acquired into `userData` — not shipped inside the game installer.
 
 ## Verified llama.cpp server facts
 - Windows binary: `llama-server.exe`.
@@ -75,19 +75,23 @@ Settings UI (016) mirrors these fields; persisted settings override `.env` at ru
 - On stop, attempt graceful termination first, then force-kill fallback (force-kill not yet implemented).
 
 ## Packaging recommendations
-- Hybrid strategy:
-  - **managed** mode if executable path is configured and valid
-  - **attach** mode if user already runs server externally
+- Primary UX (epic 020 rescoped): Settings catalog → in-app GGUF download → runtime discover/acquire → Apply → managed lifecycle.
+- Hybrid strategy still applies:
+  - **managed** mode when server + model paths resolve (downloaded `userData` assets or advanced BYO paths)
+  - **attach** mode if the user already runs a server externally
 - Keep loopback bind default for security.
-- Document user prerequisites clearly (runtime binary + model file) — see Settings install hint (`winget install llama.cpp`).
+- Keep the installer lean; store downloaded models/runtime under Electron `userData`.
+- Manual `winget install llama.cpp` / GitHub binary remains an advanced fallback, not the happy path.
 
 ## Risks and mitigations
 - Model load latency can be high:
   - mitigate with startup progress messaging and health polling (015 loading screen).
 - VRAM mismatch by model size:
-  - mitigate with profile-based config and explicit typed config errors; document reference quant.
-- Runtime missing in packaged install:
-  - mitigate with actionable setup guidance and attach-mode fallback — not by embedding the binary.
+  - mitigate with catalog size/VRAM hints, profile-based config, and typed config errors; pin reference quant for smoke.
+- Runtime or model missing in packaged install:
+  - mitigate with in-app acquire/download + Settings recovery; attach-mode and BYO paths as escape hatches — not by embedding multi-GB weights in the `.exe`.
+- Download failures / partial files:
+  - mitigate with progress IPC, cancel, checksum, and never marking partial files ready (020.18).
 - Weaker JSON adherence on small local models:
   - mitigate with existing agent retry/normalize paths; smoke tests check integration integrity, not prose quality.
 - Player2 adapter scaffold hides llama-specific errors:
