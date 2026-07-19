@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses, RACE_LORE_RESPONSE, buildCascadingSeedResponses } from '../test/fixtures/campaignGenerationFixtures'
+import { persistNpcEnrichmentResponses, buildCascadingSeedResponses } from '../test/fixtures/campaignGenerationFixtures'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 
@@ -43,8 +43,7 @@ describe('createCampaignFromRequest success', () => {
     const db = createTestDb()
     const provider = createScriptedProvider([
       ...buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 }),
-      RACE_LORE_RESPONSE,
-      ...npcReviewResponses(6)
+      ...persistNpcEnrichmentResponses(6)
     ])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'session-1',
@@ -67,7 +66,7 @@ describe('createCampaignFromRequest success', () => {
       regions: [makeRegion('Lonely Reach')],
       storyThread: { title: 'Solo Arc', state: 'starting', summary: 'A small start.' }
     })
-    const provider = createScriptedProvider([...oneRegionResponses, RACE_LORE_RESPONSE, ...npcReviewResponses(1)])
+    const provider = createScriptedProvider([...oneRegionResponses, ...persistNpcEnrichmentResponses(1)])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'session-counts',
       premisePrompt: 'A sparse frontier',

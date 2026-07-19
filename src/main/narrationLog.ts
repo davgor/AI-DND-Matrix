@@ -30,6 +30,15 @@ function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
     return []
   }
   const entries: PlayLogEntry[] = []
+  if (payload.playerInput) {
+    entries.push({
+      id: `${event.id}-player`,
+      timestamp: event.timestamp,
+      speaker: 'player',
+      text: payload.playerInput,
+      playerLineKind: 'raw'
+    })
+  }
   if (payload.actionDescription) {
     entries.push({
       id: `${event.id}-action`,
@@ -38,14 +47,6 @@ function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
       text: stripActionMarkers(payload.actionDescription),
       playerLineKind: 'actionExpression',
       reactionKind: 'action'
-    })
-  } else if (payload.playerInput) {
-    entries.push({
-      id: `${event.id}-player`,
-      timestamp: event.timestamp,
-      speaker: 'player',
-      text: payload.playerInput,
-      playerLineKind: 'raw'
     })
   }
   if (payload.narrationText) {

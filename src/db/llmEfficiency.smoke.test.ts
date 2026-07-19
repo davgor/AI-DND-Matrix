@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { generateFlaggedNpc } from '../agents/campaignGeneration/flaggedNpc'
-import { RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { NPC_SPEAKING_STYLE_RESPONSE, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from '../main/turnIpc'
 import { attackRng, initiativeRng } from './combatEncounterSmokeFixtures'
@@ -167,20 +167,25 @@ describe('efficiency smoke: encounter end rewards with enrichment off (040.7 + 0
 })
 
 describe('efficiency smoke: flagged NPC generation ceilings (040.13)', () => {
-  it('spends exactly 2 provider calls when the chosen race is already realized', async () => {
+  it('spends exactly 3 provider calls when the chosen race is already realized', async () => {
     const { db, campaign, region } = seedFlaggedNpcCampaign()
     seedRealizedElfRace(db, campaign.id)
-    const provider = createScriptedProvider([ELF_SCOUT_CORE, ELF_SCOUT_FINAL])
+    const provider = createScriptedProvider([ELF_SCOUT_CORE, ELF_SCOUT_FINAL, NPC_SPEAKING_STYLE_RESPONSE])
     const result = await generateFlaggedNpc(db, provider, buildFlaggedNpcInput(campaign.id, region))
-    expect(provider.calls, 'flagged NPC budget (race realized): core bundle + details').toHaveLength(2)
+    expect(provider.calls, 'flagged NPC budget (race realized): core + details + speaking style').toHaveLength(3)
     expect(result.npc.name).toBe('Sylwen')
   })
 
-  it('spends exactly 3 provider calls when the chosen race is not yet realized', async () => {
+  it('spends exactly 4 provider calls when the chosen race is not yet realized', async () => {
     const { db, campaign, region } = seedFlaggedNpcCampaign()
-    const provider = createScriptedProvider([ELF_SCOUT_CORE, RACE_LORE_RESPONSE, ELF_SCOUT_FINAL])
+    const provider = createScriptedProvider([
+      ELF_SCOUT_CORE,
+      RACE_LORE_RESPONSE,
+      ELF_SCOUT_FINAL,
+      NPC_SPEAKING_STYLE_RESPONSE
+    ])
     const result = await generateFlaggedNpc(db, provider, buildFlaggedNpcInput(campaign.id, region))
-    expect(provider.calls, 'flagged NPC budget (new race): core bundle + race lore + details').toHaveLength(3)
+    expect(provider.calls, 'flagged NPC budget (new race): core + race lore + details + speaking style').toHaveLength(4)
     expect(result.npc.raceKey).toBe('elf')
   })
 })

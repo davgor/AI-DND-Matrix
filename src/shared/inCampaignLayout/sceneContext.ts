@@ -40,12 +40,23 @@ export function pickCurrentSceneText(entries: PlayLogEntry[]): string | null {
   return null
 }
 
-export function filterDmExpositionEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
-  return entries.filter(
-    (entry) => entry.speaker !== 'player' || entry.playerLineKind === 'actionExpression'
-  )
+/**
+ * Chat-style Social column: player typed lines + NPC/party lines (dialogue or action).
+ * Player actionExpression restatements (e.g. “X says …”) stay out of both columns —
+ * Scene is DM flavor only; Social shows the player's own words via `raw` lines.
+ */
+function isSocialLogEntry(entry: PlayLogEntry): boolean {
+  if (entry.speaker === 'player') {
+    return entry.playerLineKind !== 'actionExpression'
+  }
+  return entry.speaker === 'npc' || entry.speaker === 'partyMember'
 }
 
-export function filterPlayerInteractionEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
-  return entries.filter((entry) => entry.speaker === 'player' && entry.playerLineKind !== 'actionExpression')
+/** Scene feed: DM flavor / narration only — never player words. */
+export function filterDmExpositionEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
+  return entries.filter((entry) => entry.speaker === 'dm')
+}
+
+export function filterSocialEntries(entries: PlayLogEntry[]): PlayLogEntry[] {
+  return entries.filter(isSocialLogEntry)
 }

@@ -22,7 +22,6 @@ async function applyTurnOutcome(
   outcome: Awaited<ReturnType<typeof runTurnSubmission>> | ReturnType<typeof failedTurnSubmission>
 ): Promise<void> {
   const { state, alignmentCombat } = input
-  state.setInputValue('')
   state.setLastCheck(outcome.lastCheck)
   state.setCharacterRefreshToken(outcome.characterRefreshToken)
   state.setExpositionStatus(outcome.expositionStatus)
@@ -50,6 +49,9 @@ export function createSubmitAction(input: SubmitInput) {
   return async function submitAction(): Promise<void> {
     const { state } = input
     if (!state.inputValue.trim() || state.submitting) return
+    const playerInput = state.inputValue
+    input.playLog.appendOptimisticPlayerInput(playerInput)
+    state.setInputValue('')
     state.setSubmitting(true)
     state.setExpositionStatus(loadingExposition())
     let outcome
@@ -59,7 +61,7 @@ export function createSubmitAction(input: SubmitInput) {
         characterId: input.characterId,
         playLog: input.playLog,
         promotion: input.promotion,
-        playerInput: state.inputValue,
+        playerInput,
         characterRefreshToken: state.characterRefreshToken
       })
     } catch {

@@ -116,6 +116,78 @@ describe('assembleNpcContext world-fact budget window (040.14)', () => {
   })
 })
 
+describe('generateNpcReaction speaking style — prompt injection', () => {
+  it('includes specimen and examples in speaking NPC prompts when present', async () => {
+    const db = createTestDb()
+    const { campaign, region } = seedTwoNpcs(db)
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mara',
+      role: 'tavern keeper',
+      disposition: 'friendly',
+      speakingStyleSpecimen:
+        "I keep the mugs full and the gossip fresher. People yap, I listen — that's the job, innit?",
+      speakingStyleExamples: [
+        'Two ales and shut the door on your way out.',
+        "You're staring. Buy something or ask nicely."
+      ]
+    })
+    const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
+    await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'The player arrives.')
+
+    const prompt = provider.calls[0]?.prompt ?? ''
+    expect(prompt).toContain('Established speaking style')
+    expect(prompt).toContain('match this voice for your reply')
+    expect(prompt).toContain('do not paste the samples verbatim')
+    expect(prompt).toContain("I keep the mugs full and the gossip fresher")
+    expect(prompt).toContain('Two ales and shut the door on your way out.')
+    expect(prompt).toContain("You're staring. Buy something or ask nicely.")
+  })
+})
+
+describe('generateNpcReaction speaking style — legacy NPCs', () => {
+  it('omits speaking style block for legacy NPCs with null fields', async () => {
+    const db = createTestDb()
+    const { npcA } = seedTwoNpcs(db)
+    const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
+    await generateNpcReaction(provider, npcA, assembleNpcContext(db, npcA), 'The player arrives.')
+
+    const prompt = provider.calls[0]?.prompt ?? ''
+    expect(prompt).not.toContain('Established speaking style')
+    expect(prompt).not.toContain('Speaking style:')
+  })
+})
+
+describe('generateNpcReaction speaking style — example cap', () => {
+  it('caps injected examples to the first three stored lines', async () => {
+    const db = createTestDb()
+    const { campaign, region } = seedTwoNpcs(db)
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Verbose',
+      role: 'herald',
+      disposition: 'neutral',
+      speakingStyleSpecimen: 'I speak in numbered decrees.',
+      speakingStyleExamples: ['Line one.', 'Line two.', 'Line three.', 'Line four.', 'Line five.']
+    })
+    const provider = createScriptedProvider(['{"dialogue":"Hear ye."}'])
+    await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'The player arrives.')
+
+    const prompt = provider.calls[0]?.prompt ?? ''
+    expect(prompt).toContain('Line one.')
+    expect(prompt).toContain('Line two.')
+    expect(prompt).toContain('Line three.')
+    expect(prompt).not.toContain('Line four.')
+    expect(prompt).not.toContain('Line five.')
+    const examplesMatch = prompt.match(/Examples: (\[[^\]]+\])/)
+    expect(examplesMatch?.[1]).toBeDefined()
+    const parsed = JSON.parse(examplesMatch![1]!) as string[]
+    expect(parsed).toHaveLength(3)
+  })
+})
+
 describe('generateNpcReaction backstory', () => {
   it('includes persisted backstory in speaking NPC prompts', async () => {
     const db = createTestDb()

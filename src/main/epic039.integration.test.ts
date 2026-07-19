@@ -4,12 +4,22 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { buildCascadingSeedResponses, NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 import { generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 import { canContinueCampaignReview, getCampaignReviewContinueBlockers } from '../shared/campaignReview/campaignReviewValidation'
 import { canEnterCampaignPlay, getCampaignPlayBlockers } from '../shared/campaignPlay/campaignPlayReady'
 import { makeNpcs, makeRegion, SINGLE_NPC_CORE_BUNDLE, SINGLE_NPC_FINAL } from './epic039.integration.fixtures'
+
+function epic039PlayGateNpcProvider() {
+  return createScriptedProvider([
+    SINGLE_NPC_CORE_BUNDLE,
+    RACE_LORE_RESPONSE,
+    SINGLE_NPC_FINAL,
+    NPC_SPEAKING_STYLE_RESPONSE,
+    '{"upgrade":false}'
+  ])
+}
 
 describe('epic 039 create handoff', () => {
   it('honors custom initial counts through create → review', async () => {
@@ -22,8 +32,7 @@ describe('epic 039 create handoff', () => {
         regions: [makeRegion('Lonely Reach')],
         storyThread: { title: 'Solo Arc', state: 'starting', summary: 'A small start.' }
       }),
-      RACE_LORE_RESPONSE,
-      ...npcReviewResponses(1)
+      ...persistNpcEnrichmentResponses(1)
     ])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'epic-039-create',
@@ -69,7 +78,7 @@ describe('epic 039 review gates', () => {
       region: makeRegion('Mistfen Crossing'),
       npcs: makeNpcs('Mistfen Crossing', 'Mist')
     })
-    const regionProvider = createScriptedProvider([regionPayload, RACE_LORE_RESPONSE, ...npcReviewResponses(1)])
+    const regionProvider = createScriptedProvider([regionPayload, ...persistNpcEnrichmentResponses(1)])
     const afterRegion = await generateRegionForCampaign(db, regionProvider, {
       campaignId: campaign.id,
       seedPrompt: 'A foggy crossing',
@@ -116,13 +125,7 @@ describe('epic 039 play gate', () => {
     expect(getCampaignPlayBlockers(blocked)).toHaveLength(1)
     expect(canEnterCampaignPlay(blocked)).toBe(false)
 
-    const provider = createScriptedProvider([
-      SINGLE_NPC_CORE_BUNDLE,
-      RACE_LORE_RESPONSE,
-      SINGLE_NPC_FINAL,
-      '{"upgrade":false}'
-    ])
-    const afterNpc = await generateNpcForCampaign(db, provider, {
+    const afterNpc = await generateNpcForCampaign(db, epic039PlayGateNpcProvider(), {
       campaignId: campaign.id,
       regionId: regionB.id,
       seedPrompt: 'A hermit'

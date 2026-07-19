@@ -18,34 +18,44 @@ function weapon(name: string) {
   return findCatalogItemByName(db, name)!
 }
 
-describe('validateStartingLoadout fighter', () => {
+function validateFighterLoadout(
+  weaponName: string,
+  offHandChoice: string,
+  spellKeys: string[] = ['rallying-strike']
+) {
+  return validateStartingLoadout(
+    'fighter',
+    {
+      weaponName,
+      armorName: 'Chain Hauberk',
+      offHandChoice,
+      spellKeys
+    },
+    weapon(weaponName),
+    meta
+  )
+}
+
+describe('validateStartingLoadout fighter — valid loadouts', () => {
   it('accepts a valid loadout', () => {
-    const result = validateStartingLoadout(
-      'fighter',
-      {
-        weaponName: 'Longsword',
-        armorName: 'Chain Hauberk',
-        offHandChoice: 'Wooden Shield',
-        spellKeys: ['rallying-strike']
-      },
-      weapon('Longsword'),
-      meta
-    )
+    const result = validateFighterLoadout('Longsword', 'Wooden Shield')
     expect(result.ok).toBe(true)
   })
 
+  it('accepts greatsword with empty off-hand', () => {
+    const result = validateFighterLoadout('Greatsword', STARTING_OFF_HAND_EMPTY)
+    expect(result.ok).toBe(true)
+  })
+})
+
+describe('validateStartingLoadout fighter — off-hand conflicts', () => {
   it('rejects greataxe with shield off-hand', () => {
-    const result = validateStartingLoadout(
-      'fighter',
-      {
-        weaponName: 'Greataxe',
-        armorName: 'Chain Hauberk',
-        offHandChoice: 'Wooden Shield',
-        spellKeys: ['rallying-strike']
-      },
-      weapon('Greataxe'),
-      meta
-    )
+    const result = validateFighterLoadout('Greataxe', 'Wooden Shield')
+    expect(result).toEqual({ ok: false, reason: 'two_hand_blocks_off_hand' })
+  })
+
+  it('rejects greatsword with shield off-hand', () => {
+    const result = validateFighterLoadout('Greatsword', 'Wooden Shield')
     expect(result).toEqual({ ok: false, reason: 'two_hand_blocks_off_hand' })
   })
 })

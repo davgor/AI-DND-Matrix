@@ -19,11 +19,16 @@ describe('quest log smoke rewards', () => {
   it('seeds main quest, accepts side quest, and completes with XP', async () => {
     const db = createTestDb()
     const provider = createScriptedProvider([JSON.stringify({ difficulty: 'medium' })])
-    const campaign = await persistGeneratedCampaign(db, provider, {
-      name: 'Smoke',
-      premisePrompt: 'You arrive in Millbrook with unanswered questions.',
-      deathMode: 'legendary'
-    }, QUEST_SMOKE_GENERATION)
+    const campaign = await persistGeneratedCampaign({
+      db,
+      provider,
+      input: {
+        name: 'Smoke',
+        premisePrompt: 'You arrive in Millbrook with unanswered questions.',
+        deathMode: 'legendary'
+      },
+      generation: QUEST_SMOKE_GENERATION
+    })
     const hero = createCharacter(db, {
       campaignId: campaign.id,
       name: 'Hero',

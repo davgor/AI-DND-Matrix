@@ -4,6 +4,7 @@
   bottom: 1rem;
   z-index: 40;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   max-width: min(28rem, calc(100vw - 2rem));
@@ -16,6 +17,10 @@
   font-size: 0.88rem;
 }
 
+.update-banner-ready {
+  justify-content: space-between;
+}
+
 .update-banner-text {
   line-height: 1.4;
 }
@@ -24,4 +29,31 @@
   flex-shrink: 0;
   padding: 0.35rem 0.65rem;
   font-size: 0.82rem;
+}
+
+.update-banner-restart:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.update-banner-progress {
+  flex: 1 1 10rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+  overflow: hidden;
+}
+
+.update-banner-progress-bar {
+  height: 100%;
+  background: var(--accent, #4db3e0);
+  transition: width 160ms ease;
+}
+
+.update-banner-error {
+  color: var(--danger, #c45c5c);
+}
+
+.update-banner.update-banner-error {
+  border-color: color-mix(in srgb, var(--danger, #c45c5c) 45%, var(--border-medium));
 }

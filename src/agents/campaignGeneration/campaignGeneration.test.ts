@@ -47,7 +47,6 @@ import {
   buildShieldHeroCascadingSeedResponses,
   makeNpcs,
   makeRegion,
-  npcReviewResponses,
   RACE_LORE_RESPONSE,
   SETUP_INPUT
 } from '../../test/fixtures/campaignGenerationFixtures'
@@ -55,6 +54,30 @@ import type { GeneratedNpc, GeneratedRegion } from '.'
 import type { CreateCampaignStage } from '../../shared/campaignCreate/types'
 import { countParagraphs, coerceNpcTemperament, hasRepeatedSentences, isValidGeneratedPantheon, isValidGeneratedWorld, normalizeGeneratedPantheon, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster } from './normalize'
 import { meetsProseJargonStandards } from './proseJargonGuard'
+
+const SPEAKING_STYLE_FIXTURE_RESPONSE = JSON.stringify({
+  specimen: "I keep my voice low and my bargains lower — that's how you survive here.",
+  examples: ['Coin first, questions later.', 'You want trouble? Try the next stall.']
+})
+
+/** Persist-time LLM queue: one race realize (first unique race) + style + combat review per NPC. */
+function persistSpeakingNpcResponses(npcCount: number, uniqueRaceCount = 1): string[] {
+  return [
+    ...Array.from({ length: uniqueRaceCount }, () => RACE_LORE_RESPONSE),
+    ...Array.from({ length: npcCount }, () => [
+      SPEAKING_STYLE_FIXTURE_RESPONSE,
+      '{"upgrade":false}'
+    ]).flat()
+  ]
+}
+
+/** When race lore is already realized (e.g. additional region in existing campaign). */
+function persistSpeakingNpcResponsesRaceReady(npcCount: number): string[] {
+  return Array.from({ length: npcCount }, () => [
+    SPEAKING_STYLE_FIXTURE_RESPONSE,
+    '{"upgrade":false}'
+  ]).flat()
+}
 
 const VORATH_STACKED_SUMMARY =
   'Vorath endures as a land of towering evergreens, fog-veiled vales, and shattered ziggurats where the wind carries howls from forgotten barrows. Sorcerer-kings once ruled from obsidian thrones, their spells binding elementals to forge eternal citadels. Now wilds reclaim those halls, and lanterns flicker in ward-posts manned by rune-scribed watchmen. Dwarven forge-clans hammer blades in mountain delves while elven wardens weave illusions over sacred groves.\n\nHarbor towns tax moorings twice while salvage cults argue over wreck rights. Farmers watch refugee columns pass each autumn.\n\nPower is fragmented today — harbor councils, company charters, and free captains all claim legitimacy. The weather still decides who eats when the squall season arrives.'
@@ -577,7 +600,7 @@ describe('generateSingleNpc', () => {
         class: 'commoner'
       }
     })
-    const provider = createScriptedProvider([payload])
+    const provider = createScriptedProvider([payload, SPEAKING_STYLE_FIXTURE_RESPONSE])
     const result = await generateSingleNpc(provider, {
       campaignPremise: 'A flooded kingdom.',
       regionName: 'Oakhollow',
@@ -630,7 +653,7 @@ describe('generateAndPersistCampaign persistence (007.2 regions/history + 007.3 
   it('writes world fields, regions (with history and quest hooks), NPCs, and the story thread', async () => {
     const db = createTestDb()
     const seedResponses = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
-    const provider = createScriptedProvider([...seedResponses, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
+    const provider = createScriptedProvider([...seedResponses, ...persistSpeakingNpcResponses(6)])
 
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 
@@ -663,15 +686,13 @@ describe('persistRegionWithNpcs', () => {
   it('appends a region with history, quests, and three NPCs', async () => {
     const db = createTestDb()
     const seedResponses = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
-    const provider = createScriptedProvider([...seedResponses, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
+    const provider = createScriptedProvider([...seedResponses, ...persistSpeakingNpcResponses(6)])
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
     const additional = JSON.parse(ADDITIONAL_REGION) as {
       region: GeneratedRegion
       npcs: GeneratedNpc[]
     }
-    const reviewProvider = createScriptedProvider(
-      [RACE_LORE_RESPONSE, ...additional.npcs.map(() => '{"upgrade":false}')]
-    )
+    const reviewProvider = createScriptedProvider([...persistSpeakingNpcResponsesRaceReady(3)])
     await persistRegionWithNpcs({
       db,
       provider: reviewProvider,
@@ -827,7 +848,7 @@ describe('generateAndPersistCampaign atomicity (007.4, persistence half)', () =>
   it('leaves no partial rows from a malformed attempt — exactly one complete campaign after malformed-then-valid', async () => {
     const db = createTestDb()
     const valid = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
-    const provider = createScriptedProvider(['not json', ...valid, RACE_LORE_RESPONSE, ...npcReviewResponses(6)])
+    const provider = createScriptedProvider(['not json', ...valid, ...persistSpeakingNpcResponses(6)])
 
     await generateAndPersistCampaign(db, provider, SETUP_INPUT)
 

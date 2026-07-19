@@ -7,7 +7,8 @@ Renderer-only UX contract for the in-campaign four-column play shell. Turn resol
 - No turn-loop or LLM routing changes (**029**, **040**)
 - No campaign hub layout redesign (**038**)
 - No new gameplay mechanics (quests, map UI, image generation)
-- No changes to `filterDmExpositionEntries` / `filterPlayerInteractionEntries` split (**029**)
+
+**Log split (updated by 091):** Scene = **DM only** (flavor / narration). Social = player **raw** input + NPC/party dialogue and actions. Player `actionExpression` restatements (e.g. “X says …”) are excluded from both columns — the typed line is what persists in Social. See `filterDmExpositionEntries` / `filterSocialEntries`.
 
 ## Layout hierarchy
 
@@ -15,10 +16,10 @@ Renderer-only UX contract for the in-campaign four-column play shell. Turn resol
 ┌─────────────────────────────────────────────────────────────────┐
 │ Play session chrome (all layout modes)                          │
 ├──────┬──────────────────────────────┬─────────────┬─────────────┤
-│ Camp │ Scene summary                │ Speech log  │ Sheet tabs  │
-│ rail │ Combat strip (collapsible)   │             │ Combat/Char │
-│      │ Status alerts (max 2 + more) │ Composer ▼  │ Gear/Journal│
-│      │ Story feed (auto-scroll)     │             │             │
+│ Camp │ Scene summary                │ Social      │ Sheet tabs  │
+│ rail │ Combat strip (collapsible)   │ chat stream │ Combat/Char │
+│      │ Status alerts (max 2 + more) │             │ Gear/Journal│
+│      │ Story feed (auto-scroll)     │ Composer ▼  │             │
 └──────┴──────────────────────────────┴─────────────┴─────────────┘
 ```
 
@@ -43,9 +44,9 @@ Optional: campaign name when campaigns rail is collapsed.
   1. Latest DM log entry with `sceneSetting: true`
   2. Else region description blurb passed from campaign state
   3. Empty: `The scene is quiet…` (append region name when known)
-- **Feed**: full `filterDmExpositionEntries` history including the latest DM line; speaker labels on each line.
+- **Feed**: DM-only history from `filterDmExpositionEntries` (never player words); speaker labels on each line.
 
-Log-split contract from **029** is preserved; only the scene header selection changes.
+Social column uses `filterSocialEntries` (player raw + NPC/party lines) as a chat stream with avatar bubbles (**085** / **091**). Typed player input is always projected into the log (**087**) and remains after turn resolve (**088**). Social renders a sliding window of the newest **100** messages; scrolling near the top streams in the previous page of 100 (`socialStreamWindow` / `useSocialStreamWindow`).
 
 ## Play sheet tabs
 

@@ -4,7 +4,7 @@ import { createCampaign } from './repositories/campaigns'
 import { listNpcsByRegion } from './repositories/npcs'
 import { createRegion } from './repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { NPC_SPEAKING_STYLE_RESPONSE, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { getCampaignRaceByKey, listCampaignRaces } from './repositories/campaignRaces'
 import { generateNpcForCampaign } from '../main/campaignEditIpc'
 import {
@@ -31,9 +31,11 @@ describe('npc core bundle race reuse (052.7)', () => {
       ELF_SCOUT_CORE,
       RACE_LORE_RESPONSE,
       ELF_SCOUT_FINAL,
+      NPC_SPEAKING_STYLE_RESPONSE,
       '{"upgrade":false}',
       ELF_LOREKEEPER_CORE,
       ELF_LOREKEEPER_FINAL,
+      NPC_SPEAKING_STYLE_RESPONSE,
       '{"upgrade":false}'
     ])
 
@@ -50,7 +52,8 @@ describe('npc core bundle race reuse (052.7)', () => {
 
     expect(listCampaignRaces(db, campaign.id).filter((race) => race.raceKey === 'elf')).toHaveLength(1)
     expect(provider.calls.filter((call) => call.prompt.includes('Generate campaign-specific lore'))).toHaveLength(1)
-    expect(provider.calls[5]?.prompt).toContain(getCampaignRaceByKey(db, campaign.id, 'elf')!.lore.roleInThisLand)
+    // Second flagged NPC: core(5) + final(6) — final prompt is grounded in locked race lore.
+    expect(provider.calls[6]?.prompt).toContain(getCampaignRaceByKey(db, campaign.id, 'elf')!.lore.roleInThisLand)
   })
 })
 

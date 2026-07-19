@@ -15,7 +15,7 @@ export interface StartingLoadoutPackage {
 export const STARTING_LOADOUT_PACKAGES: Record<Archetype, StartingLoadoutPackage> = {
   fighter: {
     archetype: 'fighter',
-    weapons: ['Longsword', 'Handaxe', 'Greataxe'],
+    weapons: ['Longsword', 'Handaxe', 'Greataxe', 'Greatsword'],
     armors: ['Chain Hauberk', "Traveler's Leathers", 'Unarmored Garb'],
     offHand: ['Wooden Shield', 'Handaxe', STARTING_OFF_HAND_EMPTY],
     spellPickCount: 1,

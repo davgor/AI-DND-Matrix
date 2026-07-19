@@ -128,6 +128,9 @@ jobs:
           merge-multiple: true
           path: release
 
+      - name: Sanitize and verify updater metadata
+        run: node scripts/verify-release-artifacts.mjs release
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

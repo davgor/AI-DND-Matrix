@@ -4,7 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { npcReviewResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 
 function makeRegion(name: string) {
@@ -226,7 +226,7 @@ describe('deleteRegionForCampaign', () => {
 describe('generateRegionForCampaign', () => {
   it('adds a generated region with extras and three NPCs by default', async () => {
     const { db, campaign } = seedCampaignWithRegionAndNpc()
-    const provider = createScriptedProvider([ADDITIONAL_REGION, RACE_LORE_RESPONSE, ...npcReviewResponses(3)])
+    const provider = createScriptedProvider([ADDITIONAL_REGION, ...persistNpcEnrichmentResponses(3)])
 
     const detail = await generateRegionForCampaign(db, provider, {
       campaignId: campaign.id,
@@ -309,7 +309,13 @@ describe('generateNpcForCampaign', () => {
       backstory: 'Rook keeps to the fog.',
       disposition: 'gruff'
     })
-    const provider = createScriptedProvider([coreBundle, RACE_LORE_RESPONSE, finalNpc, '{"upgrade":false}'])
+    const provider = createScriptedProvider([
+      coreBundle,
+      RACE_LORE_RESPONSE,
+      finalNpc,
+      NPC_SPEAKING_STYLE_RESPONSE,
+      '{"upgrade":false}'
+    ])
 
     const detail = await generateNpcForCampaign(db, provider, {
       campaignId: campaign.id,

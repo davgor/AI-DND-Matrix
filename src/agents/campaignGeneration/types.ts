@@ -62,6 +62,10 @@ export interface GeneratedNpc {
   backgroundKey?: string
   genderKey?: string
   classKey?: string
+  /** Voice specimen — set by post-pass speaking-style generation for speakers (092). */
+  speakingStyleSpecimen?: string | null
+  /** 2–3 example lines — set by post-pass speaking-style generation for speakers (092). */
+  speakingStyleExamples?: string[] | null
 }
 
 export interface NpcCoreBundle {
@@ -164,6 +168,14 @@ export interface PersistRegionWithNpcsInput {
   campaignId: string
   generatedRegion: GeneratedRegion
   generatedNpcs: GeneratedNpc[]
+  /** When set, NPC names matched case-insensitively receive a fandom speaking-style hint. */
+  knownCharacters?: string[]
+  settingLabel?: string
+}
+
+export interface PersistGeneratedCampaignOptions {
+  knownCharacters?: string[]
+  settingLabel?: string
 }
 
 export interface CampaignSetupInput {

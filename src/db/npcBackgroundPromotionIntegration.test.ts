@@ -6,7 +6,7 @@ import { listNpcsByRegion } from './repositories/npcs'
 import { createRegion } from './repositories/regions'
 import { createRegionHistoryEntry } from './repositories/regionHistory'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { NPC_SPEAKING_STYLE_RESPONSE, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { confirmNpcPromotion } from '../main/promotionIpc'
 import { generateNpcForCampaign } from '../main/campaignEditIpc'
 
@@ -43,6 +43,7 @@ describe('npc background promotion integration (051.7)', () => {
         backstory: 'Garrick still polishes his old campaign medals behind the bar.',
         disposition: 'Gruff but fair to fellow veterans.'
       }),
+      NPC_SPEAKING_STYLE_RESPONSE,
       '{"upgrade":false}'
     ])
     await generateNpcForCampaign(db, provider, {
