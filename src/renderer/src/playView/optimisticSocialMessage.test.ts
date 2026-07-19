@@ -5,6 +5,7 @@ import { appendOptimisticPlayerMessage, mergeOptimisticIntoLog } from './optimis
 describe('appendOptimisticPlayerMessage', () => {
   it('builds a raw player social entry from typed input', () => {
     const entry = appendOptimisticPlayerMessage('I wave at Filo')
+    expect(entry).not.toBeNull()
     expect(entry).toEqual(
       expect.objectContaining({
         speaker: 'player',
@@ -12,7 +13,7 @@ describe('appendOptimisticPlayerMessage', () => {
         playerLineKind: 'raw'
       })
     )
-    expect(entry.id).toMatch(/^optimistic-/)
+    expect(entry!.id).toMatch(/^optimistic-/)
   })
 
   it('returns null for blank input', () => {

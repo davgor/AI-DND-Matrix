@@ -1,3 +1,5 @@
+import type { GeneratedNpc } from '../../agents/campaignGeneration/types'
+
 export function makeRegion(name: string, suffix: string) {
   return {
     name,
@@ -8,7 +10,7 @@ export function makeRegion(name: string, suffix: string) {
   }
 }
 
-export function makeNpcs(regionName: string, prefix: string) {
+export function makeNpcs(regionName: string, prefix: string): GeneratedNpc[] {
   return [
     {
       name: `${prefix} One`,

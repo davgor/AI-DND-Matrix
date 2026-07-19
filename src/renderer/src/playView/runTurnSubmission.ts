@@ -65,6 +65,7 @@ async function resolveTurnWithClientTrace(input: {
 async function finalizeTurnSubmission(
   input: {
     campaignId: string
+    characterId: string
     playLog: PlayLogController
     promotion: PromotionPromptController
     characterRefreshToken: number

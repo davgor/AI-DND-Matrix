@@ -19,11 +19,13 @@ Read `README.md` for architecture boundaries. For board tickets already in scope
 
 Every implementation task must be traceable on `/board`:
 
+**ALWAYS write the ticket yourself. Never ask the user** whether to create one, which id to use, or whether to skip tracking — including for tiny CI/type fixes. Pick the next free `NNN` (highest under `board/` + 1) unless the user already named an id.
+
 | Situation | Action |
 |-----------|--------|
 | User named a ticket/epic id | Use [complete-ticket](../complete-ticket/SKILL.md): move to `in-progress`, check off criteria when verified |
 | Work extends an existing epic | Add or update a sub-ticket under that epic (`NNN.M`), update the epic index file, move to `in-progress` when starting |
-| Standalone bug/feature/refactor | Create a new epic or sub-ticket in `/board/backlog/` with Description + checkable Acceptance Criteria |
+| Standalone bug/feature/refactor | Create a new epic or sub-ticket in `/board/backlog/` (move to `in-progress` when starting) with Description + checkable Acceptance Criteria |
 | Exploratory spike with no code | Ticket optional; say so in the report |
 
 **Ticket format** (match existing files):
