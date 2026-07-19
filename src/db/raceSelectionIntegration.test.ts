@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { NPC_SPEAKING_STYLE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
 import { buildAvailableRaceOptions } from '../agents/raceLore'
 import { createPartyMembers } from '../main/characterCreationIpc'
 import { generateNpcForCampaign } from '../main/campaignEditIpc'
@@ -41,6 +42,44 @@ function seedCampaign() {
   return { db, campaign }
 }
 
+async function mintStarfolkRace(
+  db: ReturnType<typeof createTestDb>,
+  campaignId: string,
+  characterId: string
+): Promise<string> {
+  await applyRaceSelection(db, {
+    campaignId,
+    characterId,
+    kind: 'custom',
+    label: 'Starfolk',
+    seedPrompt: 'People of falling stars.',
+    finalLore: CUSTOM_LORE
+  })
+  return getCharacterById(db, characterId)!.raceKey!
+}
+
+function flaggedNpcWithRaceProvider(raceKey: string) {
+  return createScriptedProvider([
+    JSON.stringify({
+      canSpeak: true,
+      temperament: 'curious',
+      race: raceKey,
+      gender: 'woman',
+      alignment: 'neutral_good',
+      class: 'mage',
+      background: 'sage'
+    }),
+    JSON.stringify({
+      name: 'Lira',
+      role: 'seer',
+      backstory: 'Lira reads the sky.',
+      disposition: 'quiet'
+    }),
+    NPC_SPEAKING_STYLE_RESPONSE,
+    '{"upgrade":false}'
+  ])
+}
+
 describe('race selection integration — locked reuse', () => {
   it('locks elf lore on first pick and reuses it read-only for a second character', async () => {
     const { db, campaign } = seedCampaign()
@@ -60,7 +99,6 @@ describe('race selection integration — locked reuse', () => {
       seedPrompt: 'Long-lived.',
       finalLore: ELF_LORE
     })
-
     const second = createCharacter(db, {
       campaignId: campaign.id,
       name: 'Alt',
@@ -75,7 +113,6 @@ describe('race selection integration — locked reuse', () => {
     })
     expect(preview.locked).toBe(true)
     expect(provider.calls).toHaveLength(0)
-
     await applyRaceSelection(db, {
       campaignId: campaign.id,
       characterId: second.id,
@@ -103,40 +140,15 @@ describe('race selection integration — custom NPC pick', () => {
       characterClass: 'mage',
       kind: 'player'
     })
-    await applyRaceSelection(db, {
-      campaignId: campaign.id,
-      characterId: hero.id,
-      kind: 'custom',
-      label: 'Starfolk',
-      seedPrompt: 'People of falling stars.',
-      finalLore: CUSTOM_LORE
-    })
-    const playerRaceKey = getCharacterById(db, hero.id)?.raceKey
+    const raceKey = await mintStarfolkRace(db, campaign.id, hero.id)
     const available = buildAvailableRaceOptions(listCampaignRaces(db, campaign.id))
-    expect(available.some((option) => option.key === playerRaceKey)).toBe(true)
-
-    const coreBundle = JSON.stringify({
-      canSpeak: true,
-      temperament: 'curious',
-      race: playerRaceKey,
-      gender: 'woman',
-      alignment: 'neutral_good',
-      class: 'mage',
-      background: 'sage'
-    })
-    const finalNpc = JSON.stringify({
-      name: 'Lira',
-      role: 'seer',
-      backstory: 'Lira reads the sky.',
-      disposition: 'quiet'
-    })
-    const provider = createScriptedProvider([coreBundle, finalNpc, '{"upgrade":false}'])
-    await generateNpcForCampaign(db, provider, {
+    expect(available.some((option) => option.key === raceKey)).toBe(true)
+    await generateNpcForCampaign(db, flaggedNpcWithRaceProvider(raceKey), {
       campaignId: campaign.id,
       regionId: region.id,
       seedPrompt: 'A sky-watching seer.'
     })
-    expect(listNpcsByRegion(db, region.id)[0]?.raceKey).toBe(playerRaceKey)
+    expect(listNpcsByRegion(db, region.id)[0]?.raceKey).toBe(raceKey)
   })
 })
 

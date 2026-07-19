@@ -1,12 +1,14 @@
+import { readFileSync } from 'node:fs'
 import Database from 'better-sqlite3'
 
 /**
  * On-disk SQLite helpers for persistence smoke tests.
  *
- * Windows CI flakes when a file DB is closed and immediately reopened: WAL
- * sidecars / delayed handle release can leave `new Database(path)` blocked
- * until vitest's testTimeout fires. DELETE journal mode avoids WAL files, and
- * reopen retries briefly instead of hanging on a single long busy wait.
+ * Windows CI flakes when a file DB is closed and immediately reopened on the
+ * *same path*: opportunistic locks can leave `new Database(path)` blocked until
+ * vitest's testTimeout (rather than throwing SQLITE_BUSY). DELETE journal mode
+ * avoids WAL sidecars; reopen reads durable bytes after close and opens them as
+ * a Buffer DB so we never re-lock the original path.
  */
 
 const OPEN_BUSY_TIMEOUT_MS = 1_000
@@ -27,7 +29,10 @@ export function openFileTestDb(filePath: string): Database.Database {
   return db
 }
 
-/** Close `db` and reopen the same file path, retrying through brief lock windows. */
+/**
+ * Close `db` and reopen from the on-disk bytes (proves durable write) without
+ * opening the original path again.
+ */
 export function reopenFileTestDb(db: Database.Database): Database.Database {
   const filePath = db.name
   db.close()
@@ -35,7 +40,10 @@ export function reopenFileTestDb(db: Database.Database): Database.Database {
   let lastError: unknown
   while (Date.now() < deadline) {
     try {
-      return openFileTestDb(filePath)
+      const bytes = readFileSync(filePath)
+      const reopened = new Database(bytes, { timeout: OPEN_BUSY_TIMEOUT_MS })
+      reopened.pragma('journal_mode = DELETE')
+      return reopened
     } catch (error) {
       lastError = error
       sleepSync(REOPEN_RETRY_DELAY_MS)

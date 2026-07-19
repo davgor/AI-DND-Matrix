@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
 import { resolveOrRealizeCampaignRace } from '../raceLore'
+import { generateNpcSpeakingStyle } from '../npcSpeakingStyle'
 import { createCampaign, type Campaign } from '../../db/repositories/campaigns'
 import { createDeity } from '../../db/repositories/deities'
 import { createNpcWithCombatReview } from '../../db/repositories/npcCombatHydration'
@@ -18,10 +19,91 @@ import type {
   GeneratedNpc,
   GeneratedPantheon,
   GeneratedRegion,
+  PersistGeneratedCampaignOptions,
   PersistRegionWithNpcsInput
 } from './types'
 import { CampaignGenerationSchemaError } from './types'
 import { resolveGeneratedRegionName } from './normalize'
+
+export interface EnrichNpcSpeakingStyleOptions {
+  fandomCharacterHint?: string
+  settingLabel?: string
+}
+
+function namesMatchCaseInsensitive(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
+function resolveFandomCharacterHint(
+  npcName: string,
+  knownCharacters?: string[]
+): string | undefined {
+  if (!knownCharacters?.length) {
+    return undefined
+  }
+  return knownCharacters.find((character) => namesMatchCaseInsensitive(character, npcName))
+}
+
+function toSpeakingStyleIdentity(
+  npc: GeneratedNpc,
+  opts?: EnrichNpcSpeakingStyleOptions
+): Parameters<typeof generateNpcSpeakingStyle>[1] {
+  return {
+    name: npc.name,
+    role: npc.role,
+    disposition: npc.disposition,
+    temperament: npc.temperament,
+    alignment: npc.alignment ?? null,
+    raceKey: npc.raceKey ?? null,
+    genderKey: npc.genderKey ?? null,
+    classKey: npc.classKey ?? null,
+    backgroundKey: npc.backgroundKey ?? null,
+    backstory: npc.backstory,
+    settingLabel: opts?.settingLabel,
+    fandomCharacterHint: opts?.fandomCharacterHint
+  }
+}
+
+/**
+ * 092.3 design (b): post-pass after one-shot NPC JSON normalize — speaking style is NOT
+ * part of the LLM one-shot schema so create-contract fixtures stay stable for 092.6.
+ */
+export async function enrichNpcWithSpeakingStyle(
+  provider: Provider,
+  npc: GeneratedNpc,
+  opts?: EnrichNpcSpeakingStyleOptions
+): Promise<GeneratedNpc> {
+  if (!npc.canSpeak) {
+    return { ...npc, speakingStyleSpecimen: null, speakingStyleExamples: null }
+  }
+  if (npc.speakingStyleSpecimen?.trim()) {
+    return npc
+  }
+  const sample = await generateNpcSpeakingStyle(provider, toSpeakingStyleIdentity(npc, opts))
+  return {
+    ...npc,
+    speakingStyleSpecimen: sample.specimen,
+    speakingStyleExamples: [...sample.examples]
+  }
+}
+
+interface SpeakingStylePersistContext {
+  knownCharacters?: string[]
+  settingLabel?: string
+}
+
+async function enrichNpcForPersist(
+  provider: Provider,
+  npc: GeneratedNpc,
+  ctx: SpeakingStylePersistContext
+): Promise<GeneratedNpc> {
+  const fandomCharacterHint =
+    resolveFandomCharacterHint(npc.name, ctx.knownCharacters) ?? undefined
+  return enrichNpcWithSpeakingStyle(provider, npc, {
+    fandomCharacterHint,
+    settingLabel: fandomCharacterHint ? ctx.settingLabel : undefined
+  })
+}
 
 async function resolveNpcRaceIfSpeaking(
   db: Database.Database,
@@ -37,8 +119,44 @@ async function resolveNpcRaceIfSpeaking(
   }
 }
 
+interface PersistGeneratedNpcInput {
+  db: Database.Database
+  provider: Provider
+  campaignId: string
+  regionId: string
+  generatedNpc: GeneratedNpc
+  ctx: SpeakingStylePersistContext
+}
+
+async function persistGeneratedNpc(input: PersistGeneratedNpcInput): Promise<void> {
+  const { db, provider, campaignId, regionId, generatedNpc, ctx } = input
+  await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
+  const enriched = await enrichNpcForPersist(provider, generatedNpc, ctx)
+  await createNpcWithCombatReview(db, provider, {
+    campaignId,
+    regionId,
+    name: enriched.name,
+    role: enriched.role,
+    disposition: enriched.disposition,
+    alignment: enriched.alignment ?? null,
+    temperament: enriched.temperament,
+    canSpeak: enriched.canSpeak,
+    backstory: enriched.backstory ?? '',
+    raceKey: enriched.raceKey ?? null,
+    backgroundKey: enriched.backgroundKey ?? null,
+    genderKey: enriched.genderKey ?? null,
+    classKey: enriched.classKey ?? null,
+    speakingStyleSpecimen: enriched.speakingStyleSpecimen ?? null,
+    speakingStyleExamples: enriched.speakingStyleExamples ?? null
+  })
+}
+
 export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): Promise<void> {
   const { db, provider, campaignId, generatedRegion, generatedNpcs } = input
+  const ctx: SpeakingStylePersistContext = {
+    knownCharacters: input.knownCharacters,
+    settingLabel: input.settingLabel
+  }
   const region = createRegion(db, {
     campaignId,
     name: generatedRegion.name,
@@ -71,22 +189,7 @@ export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): 
         `Generated NPC "${generatedNpc.name}" references wrong region "${generatedNpc.regionName}"`
       )
     }
-    await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
-    await createNpcWithCombatReview(db, provider, {
-      campaignId,
-      regionId: region.id,
-      name: generatedNpc.name,
-      role: generatedNpc.role,
-      disposition: generatedNpc.disposition,
-      alignment: generatedNpc.alignment ?? null,
-      temperament: generatedNpc.temperament,
-      canSpeak: generatedNpc.canSpeak,
-      backstory: generatedNpc.backstory ?? '',
-      raceKey: generatedNpc.raceKey ?? null,
-      backgroundKey: generatedNpc.backgroundKey ?? null,
-      genderKey: generatedNpc.genderKey ?? null,
-      classKey: generatedNpc.classKey ?? null
-    })
+    await persistGeneratedNpc({ db, provider, campaignId, regionId: region.id, generatedNpc, ctx })
   }
 }
 
@@ -132,10 +235,16 @@ interface PersistCampaignNpcsInput {
   npcs: GeneratedNpc[]
   regionIdsByName: Map<string, string>
   regionNames: string[]
+  knownCharacters?: string[]
+  settingLabel?: string
 }
 
 async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput): Promise<void> {
   const { db, provider, campaignId, npcs, regionIdsByName, regionNames } = input
+  const ctx: SpeakingStylePersistContext = {
+    knownCharacters: input.knownCharacters,
+    settingLabel: input.settingLabel
+  }
   for (const generatedNpc of npcs) {
     const resolvedRegionName =
       resolveGeneratedRegionName(generatedNpc.regionName, regionNames) ?? generatedNpc.regionName
@@ -145,22 +254,7 @@ async function persistCampaignNpcsFromGeneration(input: PersistCampaignNpcsInput
         `Generated NPC "${generatedNpc.name}" references unknown region "${generatedNpc.regionName}"`
       )
     }
-    await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
-    await createNpcWithCombatReview(db, provider, {
-      campaignId,
-      regionId,
-      name: generatedNpc.name,
-      role: generatedNpc.role,
-      disposition: generatedNpc.disposition,
-      alignment: generatedNpc.alignment ?? null,
-      temperament: generatedNpc.temperament,
-      canSpeak: generatedNpc.canSpeak,
-      backstory: generatedNpc.backstory ?? '',
-      raceKey: generatedNpc.raceKey ?? null,
-      backgroundKey: generatedNpc.backgroundKey ?? null,
-      genderKey: generatedNpc.genderKey ?? null,
-      classKey: generatedNpc.classKey ?? null
-    })
+    await persistGeneratedNpc({ db, provider, campaignId, regionId, generatedNpc, ctx })
   }
 }
 
@@ -183,12 +277,14 @@ function persistGeneratedPantheon(
   }
 }
 
-export async function persistGeneratedCampaign(
-  db: Database.Database,
-  provider: Provider,
-  input: CampaignSetupInput,
+export async function persistGeneratedCampaign(args: {
+  db: Database.Database
+  provider: Provider
+  input: CampaignSetupInput
   generation: CampaignGenerationResult
-): Promise<Campaign> {
+  options?: PersistGeneratedCampaignOptions
+}): Promise<Campaign> {
+  const { db, provider, input, generation, options } = args
   const campaign = createCampaign(db, {
     name: input.name,
     premisePrompt: input.premisePrompt,
@@ -209,7 +305,9 @@ export async function persistGeneratedCampaign(
     campaignId: campaign.id,
     npcs: generation.npcs,
     regionIdsByName,
-    regionNames: generation.regions.map((region) => region.name)
+    regionNames: generation.regions.map((region) => region.name),
+    knownCharacters: options?.knownCharacters,
+    settingLabel: options?.settingLabel
   })
 
   createStoryThread(db, {

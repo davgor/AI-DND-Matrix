@@ -1,9 +1,11 @@
 import type { KeyboardEvent } from 'react'
 import type { PlayLogEntry } from '../../../main/narrationLog'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
-import { usePinnedScroll } from './usePinnedScroll'
+import { SocialMessage } from './socialStreamParts'
+import { sliceSocialWindow } from './socialStreamWindow'
+import { useSocialStreamWindow } from './useSocialStreamWindow'
 
-export interface PlayerActionPanelProps {
+interface PlayerActionPanelProps {
   entries: PlayLogEntry[]
   inputValue: string
   onInputChange: (value: string) => void
@@ -49,7 +51,8 @@ export function handleComposerKeyDown(
 }
 
 export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
-  const { scrollRef } = usePinnedScroll<HTMLDivElement>(props.entries.length)
+  const { scrollRef, renderWindow } = useSocialStreamWindow(props.entries.length)
+  const visibleEntries = sliceSocialWindow(props.entries, renderWindow)
   const disabled = props.submitting || props.inputBlocked === true
   const turnMessage = turnStateMessage(props)
 
@@ -59,12 +62,15 @@ export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
 
   return (
     <div className="play-view-panel play-view-player-panel">
-      <h2>Your Actions</h2>
-      <div ref={scrollRef} className="play-view-log play-view-player-log">
-        {props.entries.map((entry) => (
-          <p key={entry.id} className="play-view-log-entry">
-            {entry.text}
+      <h2>Social</h2>
+      <div ref={scrollRef} className="play-view-log play-view-player-log social-stream" role="log" aria-label="Social stream">
+        {renderWindow.start > 0 ? (
+          <p className="social-stream-history-hint" aria-hidden="true">
+            Scroll up for earlier messages
           </p>
+        ) : null}
+        {visibleEntries.map((entry) => (
+          <SocialMessage key={entry.id} entry={entry} />
         ))}
       </div>
       <footer className="play-view-composer">

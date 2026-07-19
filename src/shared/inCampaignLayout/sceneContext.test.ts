@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
   filterDmExpositionEntries,
-  filterPlayerInteractionEntries,
+  filterSocialEntries,
   pickSceneSummary
 } from './sceneContext'
 
 const ENTRIES = [
   { id: '1', timestamp: 't1', speaker: 'player' as const, text: 'I enter the tavern.' },
   { id: '2', timestamp: 't2', speaker: 'dm' as const, text: 'Smoke hangs in the rafters.' },
-  { id: '3', timestamp: 't3', speaker: 'npc' as const, text: 'Welcome, traveler.' },
+  {
+    id: '3',
+    timestamp: 't3',
+    speaker: 'npc' as const,
+    text: 'Welcome, traveler.',
+    reactionKind: 'dialogue' as const,
+    speakerName: 'Barkeep'
+  },
   {
     id: '4',
     timestamp: 't4',
@@ -56,25 +63,65 @@ describe('pickSceneSummary', () => {
 })
 
 describe('scene feed filters', () => {
-  it('splits exposition and player interaction feeds', () => {
-    expect(filterDmExpositionEntries(ENTRIES)).toHaveLength(3)
-    expect(filterPlayerInteractionEntries(ENTRIES)).toHaveLength(1)
+  it('keeps only DM lines in scene and routes player + NPC dialogue to social', () => {
+    expect(filterDmExpositionEntries(ENTRIES).map((e) => e.id)).toEqual(['2', '4'])
+    expect(filterSocialEntries(ENTRIES).map((e) => e.id)).toEqual(['1', '3'])
   })
 
-  it('includes player action expression in exposition and keeps raw input in player feed', () => {
-    const entries = [
-      { id: '1', timestamp: 't1', speaker: 'player' as const, text: 'I draw my sword', playerLineKind: 'raw' as const },
-      {
-        id: '2',
-        timestamp: 't2',
-        speaker: 'player' as const,
-        text: 'Kael draws his sword.',
-        playerLineKind: 'actionExpression' as const
-      },
-      { id: '3', timestamp: 't3', speaker: 'dm' as const, text: 'Steel flashes.' }
-    ]
-    expect(filterDmExpositionEntries(entries)).toHaveLength(2)
-    expect(filterPlayerInteractionEntries(entries)).toHaveLength(1)
-    expect(filterPlayerInteractionEntries(entries)[0]?.text).toBe('I draw my sword')
+  it('keeps Scene DM-only without player actionExpression restatements', () => {
+    const entries = mixedSceneSocialEntries()
+    expect(filterDmExpositionEntries(entries).map((e) => e.id)).toEqual(['3'])
+    expect(filterDmExpositionEntries(entries).every((e) => e.speaker === 'dm')).toBe(true)
+    expect(filterSocialEntries(entries).some((e) => e.playerLineKind === 'actionExpression')).toBe(false)
+  })
+
+  it('routes player raw + NPC/party lines to Social, including NPC actions', () => {
+    const entries = mixedSceneSocialEntries()
+    expect(filterSocialEntries(entries).map((e) => e.id)).toEqual(['1', '4', '5', '6'])
+    expect(filterSocialEntries(entries)[0]?.text).toBe('I draw my sword')
   })
 })
+
+function mixedSceneSocialEntries() {
+  return [
+    { id: '1', timestamp: 't1', speaker: 'player' as const, text: 'I draw my sword', playerLineKind: 'raw' as const },
+    {
+      id: '2',
+      timestamp: 't2',
+      speaker: 'player' as const,
+      text: 'Kael draws his sword.',
+      playerLineKind: 'actionExpression' as const
+    },
+    {
+      id: '2b',
+      timestamp: 't2b',
+      speaker: 'player' as const,
+      text: "David says, 'Sorry I'm just a bit lost.'",
+      playerLineKind: 'actionExpression' as const
+    },
+    { id: '3', timestamp: 't3', speaker: 'dm' as const, text: 'Steel flashes.' },
+    {
+      id: '4',
+      timestamp: 't4',
+      speaker: 'npc' as const,
+      text: 'Stand down!',
+      reactionKind: 'dialogue' as const,
+      speakerName: 'Guard'
+    },
+    {
+      id: '5',
+      timestamp: 't5',
+      speaker: 'npc' as const,
+      text: 'The wolf lunges.',
+      reactionKind: 'action' as const,
+      speakerName: 'Wolf'
+    },
+    {
+      id: '6',
+      timestamp: 't6',
+      speaker: 'partyMember' as const,
+      text: 'I have your back.',
+      speakerName: 'Ally'
+    }
+  ]
+}

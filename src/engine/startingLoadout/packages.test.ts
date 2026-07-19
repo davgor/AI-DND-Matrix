@@ -20,6 +20,10 @@ describe('STARTING_LOADOUT_PACKAGES', () => {
     }
   })
 
+  it('offers Greatsword as a fighter starting weapon', () => {
+    expect(getStartingLoadoutPackage('fighter').weapons).toContain('Greatsword')
+  })
+
   it('references starter catalog items and valid spell keys', () => {
     const db = createTestDb()
     seedStarterItemCatalog(db)

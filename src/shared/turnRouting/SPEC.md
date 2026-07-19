@@ -13,8 +13,8 @@ Intent interpretation and turn routing arrive from a **single** LLM call — `in
 }
 ```
 
-- The `intent` half keeps the exact schema, DC clamping, and combat-intent validation of the standalone `interpretIntent`; invalid responses retry up to `MAX_SCHEMA_ATTEMPTS` and then throw `DmSchemaError`.
-- The `routingPlan` half is sanitized against present NPC ids (`sanitizeRoutingPlan`) exactly as the old standalone review call was.
+- The `intent` half keeps the exact schema, DC clamping, and combat-intent validation of the standalone `interpretIntent`; invalid intent/JSON retries up to `MAX_SCHEMA_ATTEMPTS` and then throw `DmSchemaError`.
+- The `routingPlan` half is sanitized against present NPC ids (`sanitizeRoutingPlan`) exactly as the old standalone review call was. When the model omits or returns an invalid plan on a routed turn (common on no-check social turns), a conservative fallback is synthesized instead of failing the turn (090): `npcResponse` for NPCs named/addressed in the player input, or all present NPCs only for clear group address (`everyone` / `you all`) or a single present NPC; otherwise `dmNarration`. Check turns still get `ensureDmNarrationBeat`. The routing prompt also instructs the model to pick the smallest relevant respondent set — not every regional NPC by default.
 - Rest/travel/modifyItem and non-`none` combat intents bypass beat execution entirely, so the model may omit `routingPlan` on those turns; when present it is simply unused.
 - `reviewTurn` (`src/agents/turnReview.ts`) remains only as a deprecated redirect onto the merged call for test migration — there is no separate routing LLM call in production.
 
@@ -23,7 +23,11 @@ Intent interpretation and turn routing arrive from a **single** LLM call — `in
 Routing-source precedence:
 
 1. Merged LLM call (`interpretIntentAndRoute`) — default for every routed turn the heuristic cannot prove simple.
-2. Deterministic heuristic plans (epic 040.3, `src/agents/turnRoutingHeuristic.ts`) — evaluated **before** the merged call from raw player input + turn context. When a heuristic row fires, the turn skips the routing half entirely: the merged call is downgraded to the smaller intent-only prompt (`interpretIntent` in `dm.ts` — no routing schema, no scene grounding payloads) and the routing plan is deterministic. Whenever the heuristic returns `null`, the merged call remains the routing source. A dev-only debug log records `heuristic` vs `llm` per turn.
+2. Deterministic heuristic plans (epic 040.3, `src/agents/turnRoutingHeuristic.ts`) — evaluated **before** the merged call from raw player input + turn context. When a heuristic row fires, the turn skips the routing half entirely: the merged call is downgraded to the smaller intent-only prompt (`interpretIntent` in `dm.ts` — no routing schema, no scene grounding payloads) and the routing plan is deterministic. Whenever the heuristic returns `null`, the merged call remains the routing source.
+
+## Dev-only campaign action trace (089)
+
+In DEV builds (`import.meta.env.DEV`), each Play View submit emits a correlated `[campaignAction]` trace spanning renderer `ui_submit` → main `ipc_start` → `intent_route` (includes `heuristic` vs `llm`) → `branch` → `beats` (planned vs executable kinds) → `complete` / `error`. Look in the main-process terminal under `npm run dev`, or in electron-log debug files. Production builds emit nothing. Correlation uses optional `TurnInput.clientTraceId`.
 
 ## Heuristic fast path (epic 040.3)
 
@@ -55,7 +59,7 @@ Each beat in a turn maps to one of three narrative outcomes (party-member beats 
 
 ### NPC response
 
-Invoke the NPC/creature agent for targeted character(s) when the player converses with or provokes someone present in the scene.
+Invoke the NPC/creature agent for targeted character(s) when the player converses with or provokes someone present in the scene. The DM routing step chooses who responds from scene context and the characters involved — not every present NPC on every turn (090).
 
 - Speaking NPCs return italic dialogue.
 - Non-speaking creatures return bold action lines (epic 028 `reactionKind: 'action'`).

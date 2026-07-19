@@ -5,6 +5,7 @@ export async function resolvePlayerTurn(input: {
   campaignId: string
   characterId: string
   playerInput: string
+  clientTraceId?: string
 }): Promise<TurnResult> {
   return window.turn.resolve(input)
 }

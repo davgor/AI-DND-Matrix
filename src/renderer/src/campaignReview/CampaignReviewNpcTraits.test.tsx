@@ -51,6 +51,8 @@ function baseNpc(overrides: Partial<Npc> = {}): Npc {
     backgroundKey: null,
     genderKey: null,
     classKey: null,
+    speakingStyleSpecimen: null,
+    speakingStyleExamples: null,
     ...overrides
   }
 }

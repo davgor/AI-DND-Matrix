@@ -490,7 +490,34 @@ export function normalizeGeneratedNpc(value: unknown): GeneratedNpc | undefined 
   if (!name || !role || !disposition || !regionName || !behavior) {
     return undefined
   }
+  if (!behavior.canSpeak) {
+    return {
+      name,
+      role,
+      disposition,
+      regionName,
+      ...behavior,
+      speakingStyleSpecimen: null,
+      speakingStyleExamples: null
+    }
+  }
   return { name, role, disposition, regionName, ...behavior }
+}
+
+/** Asserts enriched NPCs carry valid speaking-style samples; not wired into one-shot LLM parse (092.3). */
+export function hasValidNpcSpeakingStyle(npc: GeneratedNpc): boolean {
+  if (!npc.canSpeak) {
+    return (
+      (npc.speakingStyleSpecimen == null || npc.speakingStyleSpecimen === undefined) &&
+      (npc.speakingStyleExamples == null || npc.speakingStyleExamples === undefined)
+    )
+  }
+  const specimen = npc.speakingStyleSpecimen?.trim()
+  const examples = npc.speakingStyleExamples
+  if (!specimen || !examples || examples.length < 2 || examples.length > 3) {
+    return false
+  }
+  return examples.every((line) => typeof line === 'string' && line.trim().length > 0)
 }
 
 function normalizeGeneratedStoryThread(value: unknown): GeneratedStoryThread | undefined {

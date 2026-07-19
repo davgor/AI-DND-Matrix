@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createCharacter } from '../db/repositories/characters'
@@ -7,7 +7,8 @@ import { appendNpcMemory } from '../db/repositories/npcMemories'
 import { createRegion } from '../db/repositories/regions'
 import { createQuest, getQuestById, upsertCharacterQuest } from '../db/repositories/quests'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { logger } from './logger'
+import { CAMPAIGN_ACTION_TRACE_PREFIX } from '../shared/debug/campaignActionTrace'
+import { setCampaignActionTraceEnabledForTests } from './campaignActionTrace'
 import { resolvePlayerTurn } from './turnIpc'
 
 // 040.3 integration coverage: the starvation guard's failure mode is silent
@@ -57,7 +58,12 @@ function seedActiveQuest(
   return quest
 }
 
+beforeEach(() => {
+  setCampaignActionTraceEnabledForTests(true)
+})
+
 afterEach(() => {
+  setCampaignActionTraceEnabledForTests(undefined)
   vi.restoreAllMocks()
 })
 
@@ -65,7 +71,7 @@ describe('quest-advancing dialogue falls through to LLM routing (starvation guar
   it('still ticks the quest objective because dmNarration ran', async () => {
     const scene = seedHeuristicScene()
     const quest = seedActiveQuest(scene, 'Ask Mira about the stolen amulet')
-    const debugSpy = vi.spyOn(logger, 'debug')
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined)
     const provider = createScriptedProvider([
       JSON.stringify({
         intent: { checkNeeded: false },
@@ -96,7 +102,8 @@ describe('quest-advancing dialogue falls through to LLM routing (starvation guar
     // (040.9: schemas live in systemPrompt, so distinguish the call there).
     expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('routingPlan')
     expect(debugSpy).toHaveBeenCalledWith(
-      'turn routing source',
+      CAMPAIGN_ACTION_TRACE_PREFIX,
+      'intent_route',
       expect.objectContaining({ source: 'llm' })
     )
     // dmNarration ran, so its quest side-effect write landed.
@@ -109,7 +116,7 @@ describe('inert dialogue takes the heuristic fast path', () => {
   it('uses the intent-only prompt when active quests reference neither the NPC nor the region', async () => {
     const scene = seedHeuristicScene()
     seedActiveQuest(scene, 'Deliver the ledger to the harbormaster in Saltmarsh')
-    const debugSpy = vi.spyOn(logger, 'debug')
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined)
     const provider = createScriptedProvider([
       '{"checkNeeded":false}',
       '{"dialogue":"Well enough, thank you."}'
@@ -132,7 +139,8 @@ describe('inert dialogue takes the heuristic fast path', () => {
     expect(provider.calls[0]?.context?.systemPrompt ?? '').not.toContain('routingPlan')
     expect(provider.calls[0]?.prompt).not.toContain('Recent events')
     expect(debugSpy).toHaveBeenCalledWith(
-      'turn routing source',
+      CAMPAIGN_ACTION_TRACE_PREFIX,
+      'intent_route',
       expect.objectContaining({ source: 'heuristic' })
     )
     expect(result.narrationText).toBe('')

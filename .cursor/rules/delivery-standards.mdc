@@ -15,7 +15,7 @@ Any implementation work in this repo must follow `.cursor/skills/delivery-standa
    - `npm run lint`
    - `npm run build`
    - `npm run deadcode` (ts-prune vs `.tsprune-ignore`; if export moves/deletes drift the baseline, run `npm run deadcode:refresh` after confirming the new findings are intentional)
-3. **Board traceability** — create a ticket in `/board/backlog/` or update the related epic/ticket before or as you start. If the user named a ticket id, use `complete-ticket` skill.
+3. **Board traceability** — **ALWAYS write a ticket yourself.** Never ask the user whether to create one, which number to use, or whether to skip tracking. Create `/board/backlog/` (or move to `in-progress` when starting) with Description + checkable Acceptance Criteria before or as you start. If the user named a ticket id, use `complete-ticket` skill. Next free id: look at highest `NNN` under `board/` and increment.
 
 ## Also required
 
@@ -27,3 +27,4 @@ Any implementation work in this repo must follow `.cursor/skills/delivery-standa
 ## Exceptions
 
 - Read-only answers with no code changes: no ticket or test gate required.
+- Never treat “tiny fix” / CI fluff as an excuse to skip a ticket or to ask the user first.

@@ -122,11 +122,20 @@ jobs:
     permissions:
       contents: write
     steps:
+      # --generate-notes needs .git; verify script needs scripts/ from the repo
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           pattern: '*-release'
           merge-multiple: true
           path: release
+
+      - name: Sanitize and verify updater metadata
+        run: node scripts/verify-release-artifacts.mjs release
 
       - name: Create GitHub Release
         env:
@@ -139,5 +148,6 @@ jobs:
           fi
           printf 'Uploading:\n%s\n' "${assets[@]}"
           gh release create "v${{ needs.prepare.outputs.version }}" "${assets[@]}" \
+            --repo "${{ github.repository }}" \
             --title "AI-TTRPG v${{ needs.prepare.outputs.version }}" \
             --generate-notes

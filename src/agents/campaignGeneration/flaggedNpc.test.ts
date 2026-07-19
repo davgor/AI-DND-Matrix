@@ -225,6 +225,40 @@ const SAMPLE_CAMPAIGN_RACE_LORE = {
   hooks: ['An elven warden seeks a lost heirloom.']
 }
 
+const SPEAKING_STYLE_RESPONSE = JSON.stringify({
+  specimen:
+    "I move quiet through the trees. That's how you stay alive out here — no grand speeches, just work.",
+  examples: ["Tracks don't lie.", "I'll scout ahead.", 'Keep your voice down.']
+})
+
+const NON_SPEAKING_CORE = JSON.stringify({
+  canSpeak: false,
+  temperament: 'aggressive'
+})
+
+const NON_SPEAKING_FINAL = JSON.stringify({
+  name: 'Grayfang',
+  role: 'dire wolf',
+  disposition: 'Snarls at intruders.'
+})
+
+const RAPHTALIA_CORE = JSON.stringify({
+  canSpeak: true,
+  temperament: 'cautious',
+  race: 'demi_human',
+  gender: 'woman',
+  alignment: 'lawful_good',
+  class: 'fighter',
+  background: 'outlander'
+})
+
+const RAPHTALIA_FINAL = JSON.stringify({
+  name: 'Raphtalia',
+  role: 'companion',
+  disposition: 'Loyal and watchful.',
+  backstory: 'A demi-human fighter bound to protect the party.'
+})
+
 function setupFlaggedNpcCampaign() {
   const db = createTestDb()
   const campaign = createCampaign(db, {
@@ -251,8 +285,8 @@ function flaggedNpcInput(campaignId: string, region: { id: string; name: string;
   }
 }
 
-describe('generateFlaggedNpc call-count ceilings (040.13)', () => {
-  it('issues exactly 2 provider calls when the chosen race is already realized', async () => {
+describe('generateFlaggedNpc call-count ceilings (040.13 + 092.4)', () => {
+  it('issues exactly 3 provider calls when the chosen race is already realized', async () => {
     const { db, campaign, region } = setupFlaggedNpcCampaign()
     createCampaignRace(db, {
       campaignId: campaign.id,
@@ -263,18 +297,23 @@ describe('generateFlaggedNpc call-count ceilings (040.13)', () => {
       lore: SAMPLE_CAMPAIGN_RACE_LORE,
       createdByCharacterId: null
     })
-    const provider = createScriptedProvider([ELF_SCOUT_CORE, ELF_SCOUT_FINAL])
+    const provider = createScriptedProvider([ELF_SCOUT_CORE, ELF_SCOUT_FINAL, SPEAKING_STYLE_RESPONSE])
     const result = await generateFlaggedNpc(db, provider, flaggedNpcInput(campaign.id, region))
-    expect(provider.calls).toHaveLength(2)
+    expect(provider.calls).toHaveLength(3)
     expect(result.npc.name).toBe('Sylwen')
     expect(result.npc.raceKey).toBe('elf')
   })
 
-  it('issues exactly 3 provider calls when the chosen race is not yet realized', async () => {
+  it('issues exactly 4 provider calls when the chosen race is not yet realized', async () => {
     const { db, campaign, region } = setupFlaggedNpcCampaign()
-    const provider = createScriptedProvider([ELF_SCOUT_CORE, RACE_LORE_RESPONSE, ELF_SCOUT_FINAL])
+    const provider = createScriptedProvider([
+      ELF_SCOUT_CORE,
+      RACE_LORE_RESPONSE,
+      ELF_SCOUT_FINAL,
+      SPEAKING_STYLE_RESPONSE
+    ])
     const result = await generateFlaggedNpc(db, provider, flaggedNpcInput(campaign.id, region))
-    expect(provider.calls).toHaveLength(3)
+    expect(provider.calls).toHaveLength(4)
     expect(result.npc.name).toBe('Sylwen')
     expect(getCampaignRaceByKey(db, campaign.id, 'elf')).toBeDefined()
   })
@@ -297,12 +336,102 @@ describe('phase-2 failure keeps the realized campaign race (040.13, data-integri
 
     // The orphaned row is intentional: the next NPC of the same race
     // short-circuits the lore call, so the retry costs 2 calls, not 3.
-    const retryProvider = createScriptedProvider([ELF_LOREKEEPER_CORE, ELF_LOREKEEPER_FINAL])
+    const retryProvider = createScriptedProvider([
+      ELF_LOREKEEPER_CORE,
+      ELF_LOREKEEPER_FINAL,
+      SPEAKING_STYLE_RESPONSE
+    ])
     const result = await generateFlaggedNpc(db, retryProvider, {
       ...flaggedNpcInput(campaign.id, region),
       seedPrompt: 'An elven lorekeeper'
     })
-    expect(retryProvider.calls).toHaveLength(2)
+    expect(retryProvider.calls).toHaveLength(3)
     expect(result.npc.name).toBe('Therin')
+  })
+})
+
+describe('generateFlaggedNpc speaking style — speakers', () => {
+  it('attaches specimen and 2–3 examples for speaking NPCs', async () => {
+    const { db, campaign, region } = setupFlaggedNpcCampaign()
+    createCampaignRace(db, {
+      campaignId: campaign.id,
+      raceKey: 'elf',
+      kind: 'preset',
+      label: 'Elf',
+      seedPrompt: 'Forest folk.',
+      lore: SAMPLE_CAMPAIGN_RACE_LORE,
+      createdByCharacterId: null
+    })
+    const provider = createScriptedProvider([ELF_SCOUT_CORE, ELF_SCOUT_FINAL, SPEAKING_STYLE_RESPONSE])
+    const result = await generateFlaggedNpc(db, provider, flaggedNpcInput(campaign.id, region))
+    expect(result.npc.speakingStyleSpecimen).toBeTruthy()
+    expect(result.npc.speakingStyleExamples).toHaveLength(3)
+    expect(result.npc.speakingStyleExamples!.every((line) => line.length > 0)).toBe(true)
+  })
+})
+
+describe('generateFlaggedNpc speaking style — non-speakers', () => {
+  it('leaves speaking style null for non-speaking creatures', async () => {
+    const { db, campaign, region } = setupFlaggedNpcCampaign()
+    const provider = createScriptedProvider([NON_SPEAKING_CORE, NON_SPEAKING_FINAL])
+    const result = await generateFlaggedNpc(db, provider, {
+      ...flaggedNpcInput(campaign.id, region),
+      seedPrompt: 'A hostile dire wolf'
+    })
+    expect(provider.calls).toHaveLength(2)
+    expect(result.npc.canSpeak).toBe(false)
+    expect(result.npc.speakingStyleSpecimen).toBeUndefined()
+    expect(result.npc.speakingStyleExamples).toBeUndefined()
+  })
+})
+
+describe('generateFlaggedNpc speaking style — fandom hints', () => {
+  it('includes fandom-matching instructions when seed names a known character', async () => {
+    const { db, campaign, region } = setupFlaggedNpcCampaign()
+    createCampaignRace(db, {
+      campaignId: campaign.id,
+      raceKey: 'demi_human',
+      kind: 'custom',
+      label: 'Demi-Human',
+      seedPrompt: 'Beastfolk.',
+      lore: SAMPLE_CAMPAIGN_RACE_LORE,
+      createdByCharacterId: null
+    })
+    const provider = createScriptedProvider([
+      RAPHTALIA_CORE,
+      RAPHTALIA_FINAL,
+      SPEAKING_STYLE_RESPONSE
+    ])
+    await generateFlaggedNpc(db, provider, {
+      ...flaggedNpcInput(campaign.id, region),
+      seedPrompt: 'Create Raphtalia as a loyal companion',
+      knownCharacters: ['Raphtalia', 'Naofumi Iwatani'],
+      settingLabel: 'The Rising of the Shield Hero'
+    })
+    const stylePrompt = provider.calls[2]?.prompt ?? ''
+    expect(stylePrompt).toContain('Raphtalia')
+    expect(stylePrompt).toContain('The Rising of the Shield Hero')
+    expect(stylePrompt.toLowerCase()).toMatch(/recognizable speech|fandom|source material/)
+  })
+})
+
+describe('generateFlaggedNpc speaking style — generic seeds', () => {
+  it('uses identity-only grounding for a generic seed without knownCharacters', async () => {
+    const { db, campaign, region } = setupFlaggedNpcCampaign()
+    createCampaignRace(db, {
+      campaignId: campaign.id,
+      raceKey: 'elf',
+      kind: 'preset',
+      label: 'Elf',
+      seedPrompt: 'Forest folk.',
+      lore: SAMPLE_CAMPAIGN_RACE_LORE,
+      createdByCharacterId: null
+    })
+    const provider = createScriptedProvider([ELF_SCOUT_CORE, ELF_SCOUT_FINAL, SPEAKING_STYLE_RESPONSE])
+    await generateFlaggedNpc(db, provider, flaggedNpcInput(campaign.id, region))
+    const stylePrompt = provider.calls[2]?.prompt ?? ''
+    expect(stylePrompt.toLowerCase()).toMatch(/ground.*identity|identity fields/)
+    expect(stylePrompt).not.toMatch(/match.*recognizable speech/i)
+    expect(stylePrompt).toContain('Sylwen')
   })
 })

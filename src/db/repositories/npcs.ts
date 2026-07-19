@@ -45,6 +45,8 @@ export interface Npc {
   backgroundKey: string | null
   genderKey: string | null
   classKey: string | null
+  speakingStyleSpecimen: string | null
+  speakingStyleExamples: string[] | null
 }
 
 export interface CreateNpcInput {
@@ -64,6 +66,8 @@ export interface CreateNpcInput {
   backgroundKey?: string | null
   genderKey?: string | null
   classKey?: string | null
+  speakingStyleSpecimen?: string | null
+  speakingStyleExamples?: string[] | null
 }
 
 interface NpcRow {
@@ -93,6 +97,33 @@ interface NpcRow {
   background_key: string | null
   gender_key: string | null
   class_key: string | null
+  speaking_style_specimen: string | null
+  speaking_style_examples_json: string | null
+}
+
+function parseSpeakingStyleExamples(raw: string | null): string[] | null {
+  if (!raw) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return null
+    }
+    if (!parsed.every((item) => typeof item === 'string' && item.length > 0)) {
+      return null
+    }
+    return parsed as string[]
+  } catch {
+    return null
+  }
+}
+
+function serializeSpeakingStyleExamples(examples: string[] | null): string | null {
+  if (examples === null) {
+    return null
+  }
+  return JSON.stringify(examples)
 }
 
 function parseNpcConditions(raw: string | null): Condition[] {
@@ -104,6 +135,26 @@ function parseNpcConditions(raw: string | null): Condition[] {
     return Array.isArray(parsed) ? (parsed as Condition[]) : []
   } catch {
     return []
+  }
+}
+
+function speakingStyleFieldsFromRow(
+  row: NpcRow
+): Pick<Npc, 'speakingStyleSpecimen' | 'speakingStyleExamples'> {
+  return {
+    speakingStyleSpecimen: row.speaking_style_specimen ?? null,
+    speakingStyleExamples: parseSpeakingStyleExamples(row.speaking_style_examples_json)
+  }
+}
+
+function identityKeyFieldsFromRow(
+  row: NpcRow
+): Pick<Npc, 'raceKey' | 'backgroundKey' | 'genderKey' | 'classKey'> {
+  return {
+    raceKey: row.race_key ?? null,
+    backgroundKey: row.background_key ?? null,
+    genderKey: row.gender_key ?? null,
+    classKey: row.class_key ?? null
   }
 }
 
@@ -133,10 +184,8 @@ function rowToNpc(row: NpcRow): Npc {
     conditions: parseNpcConditions(row.conditions),
     catalogCreatureKey: row.catalog_creature_key,
     encounterOutcome: (row.encounter_outcome as NpcYieldOutcome | null) ?? null,
-    raceKey: row.race_key ?? null,
-    backgroundKey: row.background_key ?? null,
-    genderKey: row.gender_key ?? null,
-    classKey: row.class_key ?? null
+    ...identityKeyFieldsFromRow(row),
+    ...speakingStyleFieldsFromRow(row)
   }
 }
 
@@ -211,7 +260,9 @@ function resolveNpcKeyDefaults(input: CreateNpcInput) {
     raceKey: input.raceKey ?? null,
     backgroundKey: input.backgroundKey ?? null,
     genderKey: input.genderKey ?? null,
-    classKey: input.classKey ?? null
+    classKey: input.classKey ?? null,
+    speakingStyleSpecimen: input.speakingStyleSpecimen ?? null,
+    speakingStyleExamples: input.speakingStyleExamples ?? null
   }
 }
 
@@ -235,11 +286,13 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
     `INSERT INTO npcs (
       id, campaign_id, region_id, name, role, disposition, alignment, temperament,
       can_speak, status, is_party_member, backstory, catalog_creature_key, combat_tier,
-      race_key, background_key, gender_key, class_key
+      race_key, background_key, gender_key, class_key,
+      speaking_style_specimen, speaking_style_examples_json
     ) VALUES (
       @id, @campaignId, @regionId, @name, @role, @disposition, @alignment, @temperament,
       @canSpeak, @status, 0, @backstory, @catalogCreatureKey, 'villager',
-      @raceKey, @backgroundKey, @genderKey, @classKey
+      @raceKey, @backgroundKey, @genderKey, @classKey,
+      @speakingStyleSpecimen, @speakingStyleExamplesJson
     )`
   ).run({
     id,
@@ -257,7 +310,9 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
     raceKey: defaults.raceKey,
     backgroundKey: defaults.backgroundKey,
     genderKey: defaults.genderKey,
-    classKey: defaults.classKey
+    classKey: defaults.classKey,
+    speakingStyleSpecimen: defaults.speakingStyleSpecimen,
+    speakingStyleExamplesJson: serializeSpeakingStyleExamples(defaults.speakingStyleExamples)
   })
 
   if (!input.skipCombatHydration && !input.catalogCreatureKey) {

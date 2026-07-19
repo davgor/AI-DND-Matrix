@@ -6,6 +6,7 @@ import { NPC_CLASS_ROSTER, type NpcClassRosterEntry } from '../../shared/npcClas
 import type { AvailableRaceOption, RaceLore } from '../../shared/raceSelection/types'
 import type { Temperament } from '../../shared/alignment/types'
 import { generateJsonWithRetry } from '../jsonResponse'
+import { generateNpcSpeakingStyle } from '../npcSpeakingStyle'
 import type { GenerateContext, Provider } from '../providers/types'
 import { buildAgentSystemPrompt } from '../sharedSystemPrompts'
 import { buildAvailableRaceOptions, resolveOrRealizeCampaignRace } from '../raceLore'
@@ -147,6 +148,29 @@ async function resolveRaceContext(
   return { raceLabel: campaignRace.label, raceLore: campaignRace.lore }
 }
 
+function resolveFandomCharacterHint(
+  seedPrompt: string,
+  npcName: string,
+  knownCharacters?: string[]
+): string | undefined {
+  if (!knownCharacters?.length) {
+    return undefined
+  }
+  const seedLower = seedPrompt.toLowerCase()
+  const nameLower = npcName.toLowerCase()
+  for (const character of knownCharacters) {
+    const characterLower = character.toLowerCase()
+    if (
+      seedLower.includes(characterLower) ||
+      nameLower === characterLower ||
+      nameLower.includes(characterLower)
+    ) {
+      return character
+    }
+  }
+  return undefined
+}
+
 function assembleGeneratedNpc(
   input: { regionName: string; bundle: NpcCoreBundle },
   details: { name: string; role: string; disposition: string; backstory?: string }
@@ -181,6 +205,53 @@ function loadDeityDigestLines(db: Database.Database, campaignId: string): string
   )
 }
 
+function loadFlaggedWorldContext(
+  db: Database.Database,
+  campaignId: string
+): { worldContextLines: string[]; deityDigestLines: string[] } {
+  const campaign = getCampaignById(db, campaignId)
+  const worldContextLines =
+    campaign && (campaign.worldName || campaign.worldSummary || campaign.worldHistory)
+      ? formatWorldContextLines({
+          worldName: campaign.worldName,
+          worldSummary: campaign.worldSummary,
+          worldHistory: campaign.worldHistory
+        })
+      : []
+  return { worldContextLines, deityDigestLines: loadDeityDigestLines(db, campaignId) }
+}
+
+async function attachSpeakingStyleToGeneratedNpc(
+  provider: Provider,
+  npc: GeneratedNpc,
+  input: { seedPrompt: string; knownCharacters?: string[]; settingLabel?: string }
+): Promise<GeneratedNpc> {
+  const fandomCharacterHint = resolveFandomCharacterHint(
+    input.seedPrompt,
+    npc.name,
+    input.knownCharacters
+  )
+  const speakingStyle = await generateNpcSpeakingStyle(provider, {
+    name: npc.name,
+    role: npc.role,
+    disposition: npc.disposition,
+    temperament: npc.temperament,
+    alignment: npc.alignment,
+    raceKey: npc.raceKey,
+    genderKey: npc.genderKey,
+    classKey: npc.classKey,
+    backgroundKey: npc.backgroundKey,
+    backstory: npc.backstory,
+    settingLabel: input.settingLabel,
+    fandomCharacterHint
+  })
+  return {
+    ...npc,
+    speakingStyleSpecimen: speakingStyle.specimen,
+    speakingStyleExamples: [...speakingStyle.examples]
+  }
+}
+
 export async function generateFlaggedNpc(
   db: Database.Database,
   provider: Provider,
@@ -191,19 +262,12 @@ export async function generateFlaggedNpc(
     regionDescription: string
     seedPrompt: string
     existingNpcNames: string[]
+    knownCharacters?: string[]
+    settingLabel?: string
   }
 ): Promise<GeneratedSingleNpcResult> {
   const availableRaces = buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId))
-  const campaign = getCampaignById(db, input.campaignId)
-  const worldLines =
-    campaign && (campaign.worldName || campaign.worldSummary || campaign.worldHistory)
-      ? formatWorldContextLines({
-          worldName: campaign.worldName,
-          worldSummary: campaign.worldSummary,
-          worldHistory: campaign.worldHistory
-        })
-      : []
-  const deityDigestLines = loadDeityDigestLines(db, input.campaignId)
+  const { worldContextLines, deityDigestLines } = loadFlaggedWorldContext(db, input.campaignId)
   const bundle = await generateNpcCoreBundle(provider, {
     regionName: input.regionName,
     regionDescription: input.regionDescription,
@@ -219,10 +283,14 @@ export async function generateFlaggedNpc(
     seedPrompt: input.seedPrompt,
     existingNpcNames: input.existingNpcNames,
     bundle,
-    worldContextLines: worldLines,
+    worldContextLines,
     deityDigestLines,
     ...raceContext,
     ...resolveBundleBlurbs(bundle)
   })
-  return { npc: assembleGeneratedNpc({ regionName: input.regionName, bundle }, details) }
+  const npc = assembleGeneratedNpc({ regionName: input.regionName, bundle }, details)
+  if (!npc.canSpeak) {
+    return { npc }
+  }
+  return { npc: await attachSpeakingStyleToGeneratedNpc(provider, npc, input) }
 }

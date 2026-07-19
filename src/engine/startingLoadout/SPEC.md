@@ -21,7 +21,7 @@ Engine-owned archetype packages for the onboarding equipment-selection step (epi
 
 | Archetype | Weapons | Armor | Off-hand | Spells (pick N) |
 |-----------|---------|-------|----------|-----------------|
-| fighter | Longsword, Handaxe, Greataxe | Chain Hauberk, Traveler's Leathers, Unarmored Garb | Wooden Shield, Handaxe, empty | 1: rallying-strike, pressing-assault, iron-stance, hamstring, war-cry |
+| fighter | Longsword, Handaxe, Greataxe, Greatsword | Chain Hauberk, Traveler's Leathers, Unarmored Garb | Wooden Shield, Handaxe, empty | 1: rallying-strike, pressing-assault, iron-stance, hamstring, war-cry |
 | rogue | Dagger, Shortsword, Handaxe | Traveler's Leathers, Unarmored Garb | Dagger, empty | 1: sneak-strike, venom-stab, blur-step, dirt-in-eyes, cheap-shot |
 | mage | Dagger, Handaxe | Traveler's Leathers, Unarmored Garb | — | 2: firebolt, arcane-bolt, magic-missile, shocking-grasp, mage-armor, ray-of-frost |
 | cleric | Handaxe, Mace | Chain Hauberk, Traveler's Leathers | Wooden Shield, empty | 2: minor-heal, sacred-flame, bless, bane, shield-of-faith, guiding-bolt |

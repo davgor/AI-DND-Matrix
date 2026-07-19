@@ -20,7 +20,7 @@ import {
   type NarrationContext,
   type NarrationResult
 } from '../agents/dm'
-import { interpretIntentAndRoute } from '../agents/intentAndRoute'
+import { ensureExecutableRoutingPlan, interpretIntentAndRoute } from '../agents/intentAndRoute'
 import {
   canSkipRoutingLlm,
   heuristicRoutingPlan,
@@ -51,7 +51,11 @@ import { appendEvent } from '../db/repositories/events'
 import { appendNpcMemory, listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
 import { getNpcById } from '../db/repositories/npcs'
 import { getRegionById, listRegionsByCampaign } from '../db/repositories/regions'
-import { logger } from './logger'
+import {
+  createCampaignActionTurnId,
+  logCampaignAction,
+  runWithCampaignActionTrace
+} from './campaignActionTrace'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { applyNarrationQuestRewards } from './narrationQuestRewards'
 import { assertNoPendingLevelUp } from './progressionPipeline'
@@ -73,6 +77,8 @@ export interface TurnInput {
   campaignId: string
   characterId: string
   playerInput: string
+  /** Optional DEV correlation id from the renderer (`[campaignAction]` traces). */
+  clientTraceId?: string
 }
 
 export interface NpcAttackOutcome {
@@ -451,6 +457,29 @@ function appendPlayerAuditEvent(
       playerInput: input.playerInput,
       outcome: input.resolved.outcome,
       auditOnly: true
+    }
+  })
+}
+
+/** Visible Social-column line for the player's typed text (088). */
+function appendPlayerUtteranceEvent(
+  db: Database.Database,
+  input: {
+    campaignId: string
+    characterId: string
+    playerInput: string
+  }
+): void {
+  const text = input.playerInput.trim()
+  if (!text) {
+    return
+  }
+  appendEvent(db, {
+    campaignId: input.campaignId,
+    type: 'player_action',
+    payload: {
+      characterId: input.characterId,
+      playerInput: text
     }
   })
 }
@@ -895,8 +924,24 @@ async function resolveRoutedTurn(
   const resolved = resolveOutcome(character, intent, rng)
 
   appendPlayerAuditEvent(db, { campaignId, characterId: character.id, playerInput, resolved })
+  appendPlayerUtteranceEvent(db, { campaignId, characterId: character.id, playerInput })
 
-  const state = await executeRoutingBeats(db, provider, routingPlan, {
+  const executablePlan = ensureExecutableRoutingPlan({
+    plan: routingPlan,
+    intent,
+    presentNpcs: narrationContext.presentNpcs,
+    playerInput
+  })
+
+  logCampaignAction('beats', {
+    disposition: executablePlan.disposition,
+    plannedBeatKinds: routingPlan.beats.map((beat) => beat.kind),
+    executableBeatKinds: executablePlan.beats.map((beat) => beat.kind),
+    plannedBeatCount: routingPlan.beats.length,
+    executableBeatCount: executablePlan.beats.length
+  })
+
+  const state = await executeRoutingBeats(db, provider, executablePlan, {
     campaignId,
     regionId,
     character,
@@ -1090,16 +1135,78 @@ function buildTurnRoutingSignals(
   }
 }
 
-// 040.3: dev-only visibility into which path routed each turn.
-function logTurnRoutingSource(campaignId: string, source: 'heuristic' | 'llm'): void {
-  if (import.meta.env.DEV) {
-    logger.debug('turn routing source', { campaignId, source })
-  }
-}
-
 // Substituted when the heuristic routed an intent that bypasses beat execution
 // (rest/travel/modifyItem/combat) — same inert plan the merged call returns.
 const INERT_ROUTING_PLAN: TurnRoutingPlan = { disposition: 'narrate', beats: [] }
+
+type IntentPlanResult = {
+  intent: IntentInterpretation
+  routingPlan: TurnRoutingPlan
+  regionId: string
+  narrationContext: NarrationContext
+  routingSource: 'heuristic' | 'llm'
+}
+
+function intentBypassesBeatExecution(intent: IntentInterpretation): boolean {
+  return intent.actionType !== undefined || (intent.combatIntent ?? 'none') !== 'none'
+}
+
+async function tryHeuristicIntentPlan(input: {
+  provider: Provider
+  turnInput: TurnInput
+  combat: ReturnType<typeof buildCombatIntentContext>
+  signals: TurnRoutingSignals
+  regionId: string
+  narrationContext: NarrationContext
+}): Promise<IntentPlanResult | null> {
+  if (input.combat.encounterActive || !canSkipRoutingLlm(input.signals)) {
+    return null
+  }
+  const intent = await interpretIntent(input.provider, input.turnInput.playerInput, input.combat)
+  const heuristicPlan = heuristicRoutingPlan(intent, input.signals)
+  if (heuristicPlan) {
+    return {
+      intent,
+      routingPlan: heuristicPlan,
+      regionId: input.regionId,
+      narrationContext: input.narrationContext,
+      routingSource: 'heuristic'
+    }
+  }
+  // Rest/travel/modifyItem/combat intents still use an inert plan; ordinary
+  // turns must never silent-no-op — fall through to the merged LLM call.
+  if (!intentBypassesBeatExecution(intent)) {
+    return null
+  }
+  return {
+    intent,
+    routingPlan: INERT_ROUTING_PLAN,
+    regionId: input.regionId,
+    narrationContext: input.narrationContext,
+    routingSource: 'heuristic'
+  }
+}
+
+function intentBranchName(intent: IntentInterpretation): string {
+  if (intent.actionType === 'restShort' || intent.actionType === 'restLong') {
+    return intent.actionType
+  }
+  if (intent.actionType === 'travel') return 'travel'
+  if (intent.actionType === 'modifyItem') return 'modifyItem'
+  return 'routed'
+}
+
+function summarizeTurnResult(result: TurnResult): Record<string, unknown> {
+  return {
+    narrationChars: result.narrationText.length,
+    hasPlayerActionText: Boolean(result.playerActionText?.trim()),
+    npcReactionCount: result.npcReactions.length,
+    partyMemberCount: result.partyMemberActions.length,
+    inactivePlayerCount: result.inactivePlayerActions?.length ?? 0,
+    checkSuccess: result.check?.success,
+    hasCombatState: result.combatState != null
+  }
+}
 
 // 040.2: one merged LLM call produces intent + routing plan. Combat and
 // rest/travel/modifyItem turns simply never execute the plan half.
@@ -1110,12 +1217,7 @@ async function interpretTurnIntentAndPlan(
   provider: Provider,
   turnInput: TurnInput,
   character: Character
-): Promise<{
-  intent: IntentInterpretation
-  routingPlan: TurnRoutingPlan
-  regionId: string
-  narrationContext: NarrationContext
-}> {
+): Promise<IntentPlanResult> {
   const regionId = getCurrentRegionId(db, turnInput.campaignId, character)
   const narrationContext = assembleNarrationContext({
     db,
@@ -1126,24 +1228,32 @@ async function interpretTurnIntentAndPlan(
   })
   const combat = buildCombatIntentContext(db, turnInput.campaignId, character.id, regionId)
   const signals = buildTurnRoutingSignals(db, character, regionId, narrationContext)
-  // Active encounters bypass beat routing entirely — never fast-path them.
-  const heuristicEligible = !combat.encounterActive
-  if (heuristicEligible && canSkipRoutingLlm(signals)) {
-    const intent = await interpretIntent(provider, turnInput.playerInput, combat)
-    logTurnRoutingSource(turnInput.campaignId, 'heuristic')
-    const routingPlan = heuristicRoutingPlan(intent, signals) ?? INERT_ROUTING_PLAN
-    return { intent, routingPlan, regionId, narrationContext }
+  const heuristicResult = await tryHeuristicIntentPlan({
+    provider,
+    turnInput,
+    combat,
+    signals,
+    regionId,
+    narrationContext
+  })
+  if (heuristicResult) {
+    return heuristicResult
   }
   const { intent, routingPlan } = await interpretIntentAndRoute(provider, {
     ...narrationContext,
     combat
   })
-  const heuristicPlan = heuristicEligible ? heuristicRoutingPlan(intent, signals) : null
-  logTurnRoutingSource(turnInput.campaignId, heuristicPlan ? 'heuristic' : 'llm')
-  return { intent, routingPlan: heuristicPlan ?? routingPlan, regionId, narrationContext }
+  const heuristicPlan = !combat.encounterActive ? heuristicRoutingPlan(intent, signals) : null
+  return {
+    intent,
+    routingPlan: heuristicPlan ?? routingPlan,
+    regionId,
+    narrationContext,
+    routingSource: heuristicPlan ? 'heuristic' : 'llm'
+  }
 }
 
-export async function resolvePlayerTurn(
+async function executeResolvedPlayerTurn(
   db: Database.Database,
   provider: Provider,
   turnInput: TurnInput,
@@ -1158,31 +1268,104 @@ export async function resolvePlayerTurn(
 
   const dyingTurn = resolveDyingTurnIfNeeded(db, turnInput.campaignId, character, rng)
   if (dyingTurn) {
+    logCampaignAction('branch', { branch: 'dying' })
+    logCampaignAction('complete', { branch: 'dying', ...summarizeTurnResult(dyingTurn) })
     return dyingTurn
   }
 
-  const { intent, routingPlan, regionId, narrationContext } = await interpretTurnIntentAndPlan(
-    db,
-    provider,
-    turnInput,
-    character
-  )
+  const plan = await interpretTurnIntentAndPlan(db, provider, turnInput, character)
+  logIntentRoute(plan)
 
-  if (shouldRouteToCombat(db, turnInput.campaignId, character.id, intent)) {
-    return resolveCombatPlayerTurn({ db, provider, turnInput, character, intent, rng })
+  if (shouldRouteToCombat(db, turnInput.campaignId, character.id, plan.intent)) {
+    return resolveTracedCombatTurn({ db, provider, turnInput, character, intent: plan.intent, rng })
   }
 
-  return resolveIntentRoutedTurn({
+  return resolveTracedRoutedTurn({
     db,
     provider,
     turnInput,
     character,
-    intent,
-    routingPlan,
-    regionId,
-    narrationContext,
+    plan,
     rng
   })
+}
+
+function logIntentRoute(plan: IntentPlanResult): void {
+  logCampaignAction('intent_route', {
+    source: plan.routingSource,
+    actionType: plan.intent.actionType ?? null,
+    combatIntent: plan.intent.combatIntent ?? 'none',
+    checkNeeded: plan.intent.checkNeeded,
+    disposition: plan.routingPlan.disposition,
+    beatKinds: plan.routingPlan.beats.map((beat) => beat.kind),
+    beatCount: plan.routingPlan.beats.length
+  })
+}
+
+async function resolveTracedCombatTurn(input: {
+  db: Database.Database
+  provider: Provider
+  turnInput: TurnInput
+  character: Character
+  intent: IntentInterpretation
+  rng: RandomFn
+}): Promise<TurnResult> {
+  logCampaignAction('branch', { branch: 'combat' })
+  const combatResult = await resolveCombatPlayerTurn(input)
+  logCampaignAction('complete', { branch: 'combat', ...summarizeTurnResult(combatResult) })
+  return combatResult
+}
+
+async function resolveTracedRoutedTurn(input: {
+  db: Database.Database
+  provider: Provider
+  turnInput: TurnInput
+  character: Character
+  plan: IntentPlanResult
+  rng: RandomFn
+}): Promise<TurnResult> {
+  const branch = intentBranchName(input.plan.intent)
+  logCampaignAction('branch', { branch })
+  const result = await resolveIntentRoutedTurn({
+    db: input.db,
+    provider: input.provider,
+    turnInput: input.turnInput,
+    character: input.character,
+    intent: input.plan.intent,
+    routingPlan: input.plan.routingPlan,
+    regionId: input.plan.regionId,
+    narrationContext: input.plan.narrationContext,
+    rng: input.rng
+  })
+  logCampaignAction('complete', { branch, ...summarizeTurnResult(result) })
+  return result
+}
+
+export async function resolvePlayerTurn(
+  db: Database.Database,
+  provider: Provider,
+  turnInput: TurnInput,
+  rng: RandomFn
+): Promise<TurnResult> {
+  const turnId = turnInput.clientTraceId?.trim() || createCampaignActionTurnId()
+  return runWithCampaignActionTrace(
+    {
+      turnId,
+      campaignId: turnInput.campaignId,
+      characterId: turnInput.characterId
+    },
+    async () => {
+      logCampaignAction('ipc_start', { playerInput: turnInput.playerInput })
+      try {
+        return await executeResolvedPlayerTurn(db, provider, turnInput, rng)
+      } catch (error) {
+        logCampaignAction('error', {
+          error: error instanceof Error ? error.message : String(error)
+        })
+        throw error
+      }
+    }
+  )
 }
 
 export function registerTurnHandlers(): void {

@@ -1,3 +1,5 @@
+import type { GeneratedNpc } from '../../agents/campaignGeneration/types'
+
 export function makeRegion(name: string, suffix: string) {
   return {
     name,
@@ -8,7 +10,7 @@ export function makeRegion(name: string, suffix: string) {
   }
 }
 
-export function makeNpcs(regionName: string, prefix: string) {
+export function makeNpcs(regionName: string, prefix: string): GeneratedNpc[] {
   return [
     {
       name: `${prefix} One`,
@@ -355,3 +357,30 @@ export const RACE_LORE_RESPONSE = JSON.stringify({
   roleInThisLand: 'Settlers.',
   hooks: ['A frontier town grows.']
 })
+
+/** Scripted speaking-style post-pass (092) for persist / generateSingleNpc tests. */
+export const NPC_SPEAKING_STYLE_RESPONSE = JSON.stringify({
+  specimen: "I keep my voice low and my bargains lower — that's how you survive here.",
+  examples: ['Coin first, questions later.', 'You want trouble? Try the next stall.']
+})
+
+export function npcSpeakingStyleResponses(count: number): string[] {
+  return Array.from({ length: count }, () => NPC_SPEAKING_STYLE_RESPONSE)
+}
+
+/**
+ * Persist-time enrichment queue after campaign seed generation:
+ * unique race lore realizes, then per speaking NPC: speaking-style + combat review.
+ */
+export function persistNpcEnrichmentResponses(
+  npcCount: number,
+  uniqueRaceCount = 1
+): string[] {
+  return [
+    ...Array.from({ length: uniqueRaceCount }, () => RACE_LORE_RESPONSE),
+    ...Array.from({ length: npcCount }, () => [
+      NPC_SPEAKING_STYLE_RESPONSE,
+      '{"upgrade":false}'
+    ]).flat()
+  ]
+}

@@ -33,7 +33,7 @@ import {
   buildStoryThreadGenerationPrompt,
   buildWorldGenerationPrompt
 } from './prompts'
-import { persistGeneratedCampaign } from './persist'
+import { persistGeneratedCampaign, enrichNpcWithSpeakingStyle } from './persist'
 import { mapWithConcurrency } from './concurrency'
 import { buildAvailableRaceOptions } from '../raceLore'
 import type { AvailableRaceOption } from '../../shared/raceSelection/types'
@@ -234,21 +234,26 @@ async function generateShortfallNpc(
 ): Promise<GeneratedNpc | undefined> {
   try {
     const preferredCanonName = nextPreferredCanonName(ctx.canon.knownCharacters, existingNpcNames)
-    const generated = await generateSingleNpc(ctx.provider, {
-      campaignPremise: ctx.premisePrompt,
-      regionName: region.name,
-      regionDescription: region.description,
-      existingNpcNames,
-      seedPrompt: preferredCanonName
-        ? `Create ${preferredCanonName} as a distinct local character in ${region.name}.`
-        : `Create another distinct local character in ${region.name}.`,
-      availableRaces: ctx.availableRaces,
-      worldContext: ctx.worldContext,
-      canon: ctx.canon,
-      preferredCanonName,
-      deities: ctx.deities
-    })
-    return generated.npc
+    for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+      const generated = await attemptGenerateSingleNpc(ctx.provider, {
+        campaignPremise: ctx.premisePrompt,
+        regionName: region.name,
+        regionDescription: region.description,
+        existingNpcNames,
+        seedPrompt: preferredCanonName
+          ? `Create ${preferredCanonName} as a distinct local character in ${region.name}.`
+          : `Create another distinct local character in ${region.name}.`,
+        availableRaces: ctx.availableRaces,
+        worldContext: ctx.worldContext,
+        canon: ctx.canon,
+        preferredCanonName,
+        deities: ctx.deities
+      })
+      if (generated) {
+        return generated.npc
+      }
+    }
+    return undefined
   } catch {
     return undefined
   }
@@ -729,7 +734,11 @@ export async function generateSingleNpc(
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
     const normalized = await attemptGenerateSingleNpc(provider, input)
     if (normalized) {
-      return normalized
+      const npc = await enrichNpcWithSpeakingStyle(provider, normalized.npc, {
+        fandomCharacterHint: input.preferredCanonName,
+        settingLabel: input.canon?.settingLabel
+      })
+      return { npc }
     }
   }
   throw new CampaignGenerationSchemaError(
@@ -746,5 +755,5 @@ export async function generateAndPersistCampaign(
     regionCount: input.regionCount,
     npcsPerRegion: input.npcsPerRegion
   })
-  return persistGeneratedCampaign(db, provider, input, generation)
+  return persistGeneratedCampaign({ db, provider, input, generation })
 }

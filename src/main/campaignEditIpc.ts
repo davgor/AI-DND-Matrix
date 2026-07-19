@@ -262,7 +262,9 @@ async function persistGeneratedNpcForCampaign(input: {
     raceKey: generatedNpc.raceKey ?? null,
     backgroundKey: generatedNpc.backgroundKey ?? null,
     genderKey: generatedNpc.genderKey ?? null,
-    classKey: generatedNpc.classKey ?? null
+    classKey: generatedNpc.classKey ?? null,
+    speakingStyleSpecimen: generatedNpc.speakingStyleSpecimen ?? null,
+    speakingStyleExamples: generatedNpc.speakingStyleExamples ?? null
   })
 }
 

@@ -12,7 +12,9 @@ import {
   INTENT_AND_ROUTE_SYSTEM_PROMPT,
   buildIntentAndRoutePrompt,
   ensureDmNarrationBeat,
-  interpretIntentAndRoute
+  ensureExecutableRoutingPlan,
+  interpretIntentAndRoute,
+  selectFallbackNpcResponders
 } from './intentAndRoute'
 
 function seedRouteContext() {
@@ -107,23 +109,6 @@ describe('interpretIntentAndRoute: schema retries', () => {
     expect(provider.calls).toHaveLength(3)
   })
 
-  it('retries when the routing plan half is invalid or missing on a routed turn', async () => {
-    const { narrationContext } = seedRouteContext()
-    const provider = createScriptedProvider([
-      mergedResponse({ checkNeeded: false }),
-      mergedResponse({ checkNeeded: false }, { disposition: 'nonsense', beats: [] }),
-      mergedResponse({ checkNeeded: false }, { disposition: 'act', beats: [{ kind: 'playerActionExpression', actionDescription: 'Kael waves.' }] })
-    ])
-
-    const result = await interpretIntentAndRoute(provider, narrationContext)
-
-    expect(result.routingPlan.beats[0]).toEqual({
-      kind: 'playerActionExpression',
-      actionDescription: 'Kael waves.'
-    })
-    expect(provider.calls).toHaveLength(3)
-  })
-
   it('throws DmSchemaError after MAX_SCHEMA_ATTEMPTS invalid responses', async () => {
     const { narrationContext } = seedRouteContext()
     const provider = createScriptedProvider(['bad', 'still bad', 'nope'])
@@ -132,6 +117,171 @@ describe('interpretIntentAndRoute: schema retries', () => {
       DmSchemaError
     )
     expect(provider.calls).toHaveLength(MAX_SCHEMA_ATTEMPTS)
+  })
+})
+
+// 084: models often return a valid social intent and omit/botch routingPlan —
+// accept the intent and synthesize a plan rather than exhausting retries.
+describe('interpretIntentAndRoute: routing-plan fallback (084)', () => {
+  it('accepts a no-check social intent with omitted routingPlan, targeting present NPCs', async () => {
+    const { npc, narrationContext } = seedRouteContext()
+    const provider = createScriptedProvider([mergedResponse({ checkNeeded: false })])
+
+    const result = await interpretIntentAndRoute(provider, narrationContext)
+
+    expect(provider.calls).toHaveLength(1)
+    expect(result.intent).toEqual({ checkNeeded: false })
+    expect(result.routingPlan).toEqual({
+      disposition: 'converse',
+      beats: [{ kind: 'npcResponse', npcIds: [npc.id] }]
+    })
+  })
+
+  it('accepts a valid intent with an invalid routingPlan without retrying', async () => {
+    const { npc, narrationContext } = seedRouteContext()
+    const provider = createScriptedProvider([
+      mergedResponse({ checkNeeded: false }, { disposition: 'nonsense', beats: [] })
+    ])
+
+    const result = await interpretIntentAndRoute(provider, narrationContext)
+
+    expect(provider.calls).toHaveLength(1)
+    expect(result.routingPlan.beats).toEqual([{ kind: 'npcResponse', npcIds: [npc.id] }])
+  })
+
+  it('falls back to dmNarration when no NPCs are present', async () => {
+    const { narrationContext } = seedRouteContext()
+    const provider = createScriptedProvider([mergedResponse({ checkNeeded: false })])
+
+    const result = await interpretIntentAndRoute(provider, {
+      ...narrationContext,
+      presentNpcs: []
+    })
+
+    expect(result.routingPlan).toEqual({
+      disposition: 'narrate',
+      beats: [{ kind: 'dmNarration' }]
+    })
+  })
+
+  it('guarantees dmNarration when checkNeeded intent omits the plan', async () => {
+    const { npc, narrationContext } = seedRouteContext()
+    const provider = createScriptedProvider([
+      mergedResponse({ checkNeeded: true, ability: 'mind', dc: 12, proficient: false })
+    ])
+
+    const result = await interpretIntentAndRoute(provider, narrationContext)
+
+    expect(provider.calls).toHaveLength(1)
+    expect(result.routingPlan.beats.map((beat) => beat.kind)).toEqual([
+      'dmNarration',
+      'npcResponse'
+    ])
+    expect(result.routingPlan.beats[1]).toEqual({ kind: 'npcResponse', npcIds: [npc.id] })
+  })
+})
+
+describe('selectFallbackNpcResponders (090)', () => {
+  const mira = { id: 'npc-mira', name: 'Mira' }
+  const filo = { id: 'npc-filo', name: 'Filo' }
+  const naofumi = { id: 'npc-naofumi', name: 'Naofumi' }
+
+  it('returns the sole present NPC', () => {
+    expect(selectFallbackNpcResponders('Hello there', [mira])).toEqual([mira.id])
+  })
+
+  it('returns only NPCs whose names appear in the player input', () => {
+    expect(selectFallbackNpcResponders('Hello Filo', [mira, filo, naofumi])).toEqual([filo.id])
+  })
+
+  it('returns every present NPC for clear group address', () => {
+    expect(selectFallbackNpcResponders('Hello everyone', [mira, filo, naofumi])).toEqual([
+      mira.id,
+      filo.id,
+      naofumi.id
+    ])
+  })
+
+  it('returns no NPC ids when multi-NPC address is unclear (DM narrates instead)', () => {
+    expect(selectFallbackNpcResponders('Hello there', [mira, filo, naofumi])).toEqual([])
+  })
+})
+
+describe('ensureExecutableRoutingPlan empty-plan recovery (088/090)', () => {
+  const noCheck = { checkNeeded: false as const }
+  const mira = { id: 'npc-a', name: 'Mira' }
+  const filo = { id: 'npc-b', name: 'Filo' }
+
+  it('replaces an empty plan with all NPCs only for clear group address', () => {
+    const plan = ensureExecutableRoutingPlan({
+      plan: { disposition: 'converse', beats: [] },
+      intent: noCheck,
+      presentNpcs: [mira, filo],
+      playerInput: 'Hello everyone'
+    })
+    expect(plan).toEqual({
+      disposition: 'converse',
+      beats: [{ kind: 'npcResponse', npcIds: [mira.id, filo.id] }]
+    })
+  })
+
+  it('targets a named NPC instead of the full roster on empty-plan recovery', () => {
+    const plan = ensureExecutableRoutingPlan({
+      plan: { disposition: 'converse', beats: [] },
+      intent: noCheck,
+      presentNpcs: [mira, filo],
+      playerInput: 'Hello Filo'
+    })
+    expect(plan).toEqual({
+      disposition: 'converse',
+      beats: [{ kind: 'npcResponse', npcIds: [filo.id] }]
+    })
+  })
+
+  it('falls back to dmNarration when multi-NPC address is unclear', () => {
+    const plan = ensureExecutableRoutingPlan({
+      plan: { disposition: 'converse', beats: [] },
+      intent: noCheck,
+      presentNpcs: [mira, filo],
+      playerInput: 'Hello there'
+    })
+    expect(plan).toEqual({
+      disposition: 'narrate',
+      beats: [{ kind: 'dmNarration' }]
+    })
+  })
+})
+
+describe('ensureExecutableRoutingPlan act-path guards (088)', () => {
+  const noCheck = { checkNeeded: false as const }
+  const mira = { id: 'npc-a', name: 'Mira' }
+
+  it('appends a reply path when dialogue was mis-routed as act-only', () => {
+    const plan = ensureExecutableRoutingPlan({
+      plan: {
+        disposition: 'act',
+        beats: [{ kind: 'playerActionExpression', actionDescription: 'Kael greets the heroes.' }]
+      },
+      intent: noCheck,
+      presentNpcs: [mira],
+      playerInput: 'Hello everyone'
+    })
+    expect(plan.beats.map((beat) => beat.kind)).toEqual(['playerActionExpression', 'npcResponse'])
+    expect(plan.beats[1]).toEqual({ kind: 'npcResponse', npcIds: [mira.id] })
+  })
+
+  it('leaves a pure physical act alone when NPCs are present', () => {
+    const original = {
+      disposition: 'act' as const,
+      beats: [{ kind: 'playerActionExpression' as const, actionDescription: 'Kael draws their sword.' }]
+    }
+    const plan = ensureExecutableRoutingPlan({
+      plan: original,
+      intent: noCheck,
+      presentNpcs: [mira],
+      playerInput: 'I draw my sword'
+    })
+    expect(plan).toEqual(original)
   })
 })
 
@@ -304,6 +454,11 @@ describe('shared systemPrompt adoption (040.9)', () => {
     expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('"routingPlan":')
     expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('"checkNeeded"')
     expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('before any check is rolled')
+  })
+
+  it('instructs the DM to pick targeted NPC respondents, not the full roster by default (090)', () => {
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('not every present NPC by default')
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('smallest relevant set')
   })
 
   it('sends the systemPrompt via GenerateContext on the merged call', async () => {

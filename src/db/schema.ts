@@ -568,5 +568,12 @@ export const migrations: Migration[] = [
         )
       `)
     }
+  },
+  {
+    version: 36,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'speaking_style_specimen', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'speaking_style_examples_json', 'TEXT')
+    }
   }
 ]

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from '../main/turnIpc'
 import { buildNarrationLog } from '../main/narrationLog'
-import { filterDmExpositionEntries } from '../shared/inCampaignLayout/sceneContext'
+import { filterDmExpositionEntries, filterSocialEntries } from '../shared/inCampaignLayout/sceneContext'
 import { seedGameplayLoopSmokeCampaign } from './gameplayLoopSmokeFixtures'
 
 // 040.2: intent + routing plan arrive from one merged LLM response.
@@ -84,9 +84,16 @@ describe('gameplay loop smoke: narrated check turn', () => {
     expect(check.check).toBeDefined()
 
     const exposition = filterDmExpositionEntries(buildNarrationLog(db, campaign.id))
-    expect(exposition.map((entry) => entry.speaker)).toContain('npc')
-    expect(exposition.some((entry) => entry.playerLineKind === 'actionExpression')).toBe(true)
-    expect(exposition.map((entry) => entry.speaker)).toContain('dm')
+    expect(exposition.every((entry) => entry.speaker === 'dm')).toBe(true)
+    expect(exposition.some((entry) => entry.playerLineKind === 'actionExpression')).toBe(false)
+
+    const social = filterSocialEntries(buildNarrationLog(db, campaign.id))
+    expect(social.map((entry) => entry.speaker)).toContain('npc')
+    expect(social.some((entry) => entry.speaker === 'player' && entry.playerLineKind === 'raw')).toBe(
+      true
+    )
+    expect(social.every((entry) => entry.speaker !== 'dm')).toBe(true)
+    expect(social.every((entry) => entry.playerLineKind !== 'actionExpression')).toBe(true)
   })
 })
 

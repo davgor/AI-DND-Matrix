@@ -3,8 +3,7 @@ import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import {
   buildRealisticLlmCascadingSeedResponses,
-  npcReviewResponses,
-  RACE_LORE_RESPONSE
+  persistNpcEnrichmentResponses
 } from '../test/fixtures/campaignGenerationFixtures'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { listCampaignRaces } from '../db/repositories/campaignRaces'
@@ -52,8 +51,7 @@ function providerForDefaultForm(): ReturnType<typeof createScriptedProvider> {
 function buildCreateResponses(): string[] {
   return [
     ...buildRealisticLlmCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 }),
-    RACE_LORE_RESPONSE,
-    ...npcReviewResponses(6)
+    ...persistNpcEnrichmentResponses(6)
   ]
 }
 

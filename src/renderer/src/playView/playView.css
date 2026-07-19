@@ -316,6 +316,107 @@
   margin-bottom: 8px;
 }
 
+.play-view-player-panel > h2 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.social-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+}
+
+.social-stream-history-hint {
+  margin: 0;
+  padding: 4px 0 2px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--text-muted, var(--text-accent));
+  opacity: 0.7;
+}
+
+.social-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 92%;
+}
+
+.social-message--other {
+  align-self: flex-start;
+}
+
+.social-message--player {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.social-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.social-message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.social-message--player .social-message-body {
+  align-items: flex-end;
+}
+
+.social-message-name {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.social-message-bubble {
+  background: var(--surface-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 8px 11px;
+}
+
+.social-message--player .social-message-bubble {
+  background: rgba(201, 162, 39, 0.12);
+  border-color: rgba(201, 162, 39, 0.35);
+  border-bottom-right-radius: 4px;
+}
+
+.social-message--other .social-message-bubble {
+  border-bottom-left-radius: 4px;
+}
+
+.social-message-text {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  font-size: 14px;
+}
+
 .play-view-log-entry {
   margin-bottom: 8px;
   color: var(--text-secondary);

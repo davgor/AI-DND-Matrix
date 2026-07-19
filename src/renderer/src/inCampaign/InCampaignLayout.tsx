@@ -47,7 +47,7 @@ export function InCampaignLayout(props: InCampaignLayoutProps): JSX.Element {
       <section className="in-campaign-column in-campaign-column--dm" aria-label="DM exposition">
         {props.dmExposition}
       </section>
-      <section className="in-campaign-column in-campaign-column--player" aria-label="Player interaction">
+      <section className="in-campaign-column in-campaign-column--player" aria-label="Social">
         {props.playerInteraction}
       </section>
       <section className="in-campaign-column in-campaign-column--sheet" aria-label="Player sheet">

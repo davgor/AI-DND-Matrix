@@ -69,7 +69,7 @@ export async function createCampaignFromRequest(
       onProgress: (stage) => emitProgress(buildCreateProgress(stage))
     })
     emitProgress(buildCreateProgress('persist'))
-    const campaign = await persistGeneratedCampaign(db, provider, input, generation)
+    const campaign = await persistGeneratedCampaign({ db, provider, input, generation })
     touchLastPlayed(db, campaign.id)
     return { ok: true, detail: getCampaignDetail(db, campaign.id) }
   } catch (error) {

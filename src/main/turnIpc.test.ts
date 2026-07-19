@@ -154,6 +154,156 @@ describe('resolvePlayerTurn: converse-only routing', () => {
   })
 })
 
+describe('resolvePlayerTurn: social utterance persistence (088)', () => {
+  it('persists the typed player line for Social even on converse-only turns', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'shopkeeper',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      mergedTurn({ checkNeeded: false }, { kind: 'npcResponse', npcIds: [npc.id] }),
+      '{"dialogue":"What do you need?"}'
+    ])
+
+    await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
+      fixedRng(0.5)
+    )
+
+    const log = buildNarrationLog(db, campaign.id, player.id)
+    expect(log.some((entry) => entry.speaker === 'player' && entry.text === 'Hello Mira')).toBe(true)
+    expect(log.some((entry) => entry.speaker === 'npc' && entry.text === 'What do you need?')).toBe(true)
+  })
+})
+
+describe('resolvePlayerTurn: group-address empty-plan recovery (088/090)', () => {
+  it('recovers group-address dialogue when the model returns an empty plan', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const filo = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Filo',
+      role: 'companion',
+      disposition: 'friendly'
+    })
+    const naofumi = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Naofumi',
+      role: 'hero',
+      disposition: 'guarded'
+    })
+    const raphtalia = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Raphtalia',
+      role: 'companion',
+      disposition: 'friendly'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        intent: { checkNeeded: false },
+        routingPlan: { disposition: 'converse', beats: [] }
+      }),
+      '{"dialogue":"Fii?"}',
+      '{"dialogue":"Who are you?"}',
+      '{"dialogue":"Are you lost?"}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello everyone' },
+      fixedRng(0.5)
+    )
+
+    expect(result.npcReactions).toHaveLength(3)
+    expect(new Set(result.npcReactions.map((reaction) => reaction.npcId))).toEqual(
+      new Set([filo.id, naofumi.id, raphtalia.id])
+    )
+  })
+})
+
+describe('resolvePlayerTurn: named-addressee empty-plan recovery (090)', () => {
+  it('targets only the named NPC when empty-plan recovery has a specific addressee', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    const filo = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Filo',
+      role: 'companion',
+      disposition: 'friendly'
+    })
+    createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Naofumi',
+      role: 'hero',
+      disposition: 'guarded'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        intent: { checkNeeded: false },
+        routingPlan: { disposition: 'converse', beats: [] }
+      }),
+      '{"dialogue":"Fii?"}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Filo' },
+      fixedRng(0.5)
+    )
+
+    expect(result.npcReactions).toHaveLength(1)
+    expect(result.npcReactions[0]?.npcId).toBe(filo.id)
+  })
+})
+
+describe('resolvePlayerTurn: unclear-address empty-plan recovery (090)', () => {
+  it('uses DM narration instead of a full-roster chorus when address is unclear', async () => {
+    const { db, campaign, region, player } = seedCampaignWithPlayer()
+    createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Filo',
+      role: 'companion',
+      disposition: 'friendly'
+    })
+    createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Naofumi',
+      role: 'hero',
+      disposition: 'guarded'
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        intent: { checkNeeded: false },
+        routingPlan: { disposition: 'converse', beats: [] }
+      }),
+      '{"narrationText":"Faces turn toward you, waiting to see whom you mean."}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello there' },
+      fixedRng(0.5)
+    )
+
+    expect(result.npcReactions).toHaveLength(0)
+    expect(result.narrationText).toContain('Faces turn toward you')
+  })
+})
+
 describe('resolvePlayerTurn: player action expression (040.3 heuristic fast path)', () => {
   it('expresses an obvious physical action deterministically via the intent-only prompt', async () => {
     const { db, campaign, player } = seedCampaignWithPlayer()

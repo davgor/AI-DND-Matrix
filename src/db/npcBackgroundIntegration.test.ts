@@ -3,7 +3,7 @@ import { createTestDb } from './testUtils'
 import { listNpcsByRegion } from './repositories/npcs'
 import { listRegionsByCampaign } from './repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { buildCascadingSeedResponses, persistNpcEnrichmentResponses } from '../test/fixtures/campaignGenerationFixtures'
 import { generateAndPersistCampaign } from '../agents/campaignGeneration'
 
 describe('npc background bulk persistence (051.7)', () => {
@@ -11,8 +11,7 @@ describe('npc background bulk persistence (051.7)', () => {
     const db = createTestDb()
     const provider = createScriptedProvider([
       ...buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 }),
-      RACE_LORE_RESPONSE,
-      ...npcReviewResponses(6)
+      ...persistNpcEnrichmentResponses(6)
     ])
     const campaign = await generateAndPersistCampaign(db, provider, {
       name: 'Background Test',

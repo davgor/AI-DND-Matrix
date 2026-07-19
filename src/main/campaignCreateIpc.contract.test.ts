@@ -4,8 +4,7 @@ import { createScriptedProvider } from '../agents/providers/mockHarness'
 import {
   buildCrimsonReachCascadingResponses,
   buildRealisticLlmCascadingSeedResponses,
-  npcReviewResponses,
-  RACE_LORE_RESPONSE
+  persistNpcEnrichmentResponses
 } from '../test/fixtures/campaignGenerationFixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 
@@ -25,8 +24,7 @@ const DEFAULT_CREATE_REQUEST = {
 function providerForDefaultForm(): ReturnType<typeof createScriptedProvider> {
   return createScriptedProvider([
     ...buildRealisticLlmCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 }),
-    RACE_LORE_RESPONSE,
-    ...npcReviewResponses(6)
+    ...persistNpcEnrichmentResponses(6)
   ])
 }
 
@@ -64,8 +62,7 @@ describe('createCampaignFromRequest contract — default setup form', () => {
     const db = createTestDb()
     const provider = createScriptedProvider([
       ...buildCrimsonReachCascadingResponses({ regionCount: 2, npcsPerRegion: 3 }),
-      RACE_LORE_RESPONSE,
-      ...npcReviewResponses(6)
+      ...persistNpcEnrichmentResponses(6)
     ])
     const result = await createCampaignFromRequest(db, provider, {
       sessionId: 'contract-crimson-reach',

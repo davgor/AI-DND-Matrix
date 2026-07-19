@@ -1,6 +1,6 @@
 import {
   filterDmExpositionEntries,
-  filterPlayerInteractionEntries
+  filterSocialEntries
 } from '../../../shared/inCampaignLayout/sceneContext'
 import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
@@ -14,7 +14,7 @@ import { useObituaryDrafting } from './useObituaryDrafting'
 
 export interface PlayViewController extends RollVisibilityController, PlayLogController {
   dmEntries: ReturnType<typeof filterDmExpositionEntries>
-  playerEntries: ReturnType<typeof filterPlayerInteractionEntries>
+  playerEntries: ReturnType<typeof filterSocialEntries>
   inputValue: string
   setInputValue: (value: string) => void
   submitting: boolean
@@ -49,7 +49,7 @@ export function usePlayViewController(campaignId: string, characterId: string): 
 
   return {
     dmEntries: filterDmExpositionEntries(playLog.log),
-    playerEntries: filterPlayerInteractionEntries(playLog.log),
+    playerEntries: filterSocialEntries(playLog.log),
     ...turn,
     ...rollVisibility,
     ...playLog,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { buildCascadingSeedResponses, npcReviewResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { buildCascadingSeedResponses, persistNpcEnrichmentResponses } from '../test/fixtures/campaignGenerationFixtures'
 import {
   generateCampaignFromPrompt,
   getCampaignDetail,
@@ -31,8 +31,7 @@ function cascadingProviderResponses(input: {
       regions: [makeGenerationRegion(input.primaryRegion), makeGenerationRegion(input.secondaryRegion)],
       storyThread: { title: input.threadTitle, state: 'starting', summary: 'A summary.' }
     }),
-    RACE_LORE_RESPONSE,
-    ...npcReviewResponses(6)
+    ...persistNpcEnrichmentResponses(6)
   ]
 }
 

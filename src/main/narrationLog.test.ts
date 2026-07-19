@@ -43,9 +43,14 @@ describe('buildNarrationLog: player_action mapping', () => {
 })
 
 describe('buildNarrationLog: player action expression', () => {
-  it('maps player_action_expression to bold player lines without raw input', () => {
+  it('maps player_action_expression to the action line (utterance is a separate player_action event)', () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'player_action',
+      payload: { characterId: 'c1', playerInput: 'I draw my sword' }
+    })
     appendEvent(db, {
       campaignId: campaign.id,
       type: 'player_action_expression',
@@ -56,14 +61,40 @@ describe('buildNarrationLog: player action expression', () => {
       }
     })
 
-    const log = buildNarrationLog(db, campaign.id)
-
-    expect(log).toEqual([
+    expect(buildNarrationLog(db, campaign.id)).toEqual([
+      expect.objectContaining({
+        speaker: 'player',
+        text: 'I draw my sword',
+        playerLineKind: 'raw'
+      }),
       expect.objectContaining({
         speaker: 'player',
         text: 'Kael draws his sword.',
         playerLineKind: 'actionExpression',
         reactionKind: 'action'
+      })
+    ])
+  })
+})
+
+describe('buildNarrationLog: expression without utterance', () => {
+  it('maps action expression alone when no separate utterance event exists', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'player_action_expression',
+      payload: {
+        characterId: 'c1',
+        actionDescription: '**Kael draws his sword.**'
+      }
+    })
+
+    expect(buildNarrationLog(db, campaign.id)).toEqual([
+      expect.objectContaining({
+        speaker: 'player',
+        text: 'Kael draws his sword.',
+        playerLineKind: 'actionExpression'
       })
     ])
   })
