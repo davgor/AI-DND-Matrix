@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { join } from 'node:path'
+import { resolveBrowserWindowIconPath } from './appIcon'
 import { registerCampaignEditHandlers } from './campaignEditIpc'
 import { registerCampaignDeleteHandlers } from './campaignDeleteIpc'
 import { registerCampaignCreateHandlers } from './campaignCreateIpc'
@@ -39,6 +40,11 @@ function createMainWindow(): BrowserWindow {
     width: 1280,
     height: 800,
     frame: false,
+    icon: resolveBrowserWindowIconPath({
+      isPackaged: app.isPackaged,
+      appPath: app.getAppPath(),
+      resourcesPath: process.resourcesPath
+    }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

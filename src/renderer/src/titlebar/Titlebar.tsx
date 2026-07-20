@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { APP_DISPLAY_NAME } from '../../../shared/appBranding'
+import { AppBrandLockup } from '../components/AppBrandMark'
 import { AppVersionLabel } from '../autoUpdate/AppVersionLabel'
 import { useAppUpdate } from '../autoUpdate/UpdateBanner'
 import { SettingsView } from '../settings/SettingsView'
@@ -16,7 +16,7 @@ function TitlebarBrand(): JSX.Element {
   const { currentVersion } = useAppUpdate()
   return (
     <div className="titlebar-drag-region">
-      <span className="titlebar-app-name">{APP_DISPLAY_NAME}</span>
+      <AppBrandLockup markSize={16} nameClassName="titlebar-app-name" />
       <AppVersionLabel version={currentVersion} />
     </div>
   )
