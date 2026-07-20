@@ -40,7 +40,7 @@ describe('narrate log book prompt grounding', () => {
       learnedInGameDate: 1
     })
     const provider = createScriptedProvider(['{"narrationText":"You look around."}'])
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     await narrate(provider, { success: true, total: 12, dc: 10 }, context)
     expect(provider.calls[0]?.prompt).toContain('do not contradict')
     expect(provider.calls[0]?.prompt).toContain('Oakhollow')

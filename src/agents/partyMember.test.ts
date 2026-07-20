@@ -28,7 +28,7 @@ function seedPartyMember(db: ReturnType<typeof createTestDb>, campaignId: string
 }
 
 describe('assemblePartyMemberContext', () => {
-  it('includes relationship events from an earlier session alongside a later session', () => {
+  it('includes relationship events from an earlier session alongside a later session', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
     const character = seedPartyMember(db, campaign.id)
@@ -46,7 +46,7 @@ describe('assemblePartyMemberContext', () => {
       timestamp: '2024-06-01T00:00:00.000Z'
     })
 
-    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
 
     expect(context.characterId).toBe(character.id)
     // Slim event shape (040.4): no ids, just type + derived summary in original order.
@@ -56,7 +56,7 @@ describe('assemblePartyMemberContext', () => {
     ])
   })
 
-  it('excludes events tagged to a different characterId', () => {
+  it('excludes events tagged to a different characterId', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
     const character = seedPartyMember(db, campaign.id)
@@ -72,14 +72,14 @@ describe('assemblePartyMemberContext', () => {
       payload: { characterId: character.id, content: "this character's memory" }
     })
 
-    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
 
     expect(context.relationshipEvents.map((e) => e.summary)).toEqual(["this character's memory"])
   })
 })
 
 describe('assemblePartyMemberContext: promotion memory carry-forward (011.4)', () => {
-  it('carries forward pre-promotion npc_memories when sourceNpcId is set', () => {
+  it('carries forward pre-promotion npc_memories when sourceNpcId is set', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
     const region = createRegion(db, { campaignId: campaign.id, name: 'Oakhollow', description: '...' })
@@ -93,18 +93,18 @@ describe('assemblePartyMemberContext: promotion memory carry-forward (011.4)', (
     appendNpcMemory(db, { npcId: npc.id, content: 'Sold the party a healing potion.', tags: [] })
     const character = seedPartyMember(db, campaign.id, npc.id)
 
-    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
 
     expect(context.priorNpcMemories).toHaveLength(1)
     expect(context.priorNpcMemories[0]?.content).toBe('Sold the party a healing potion.')
   })
 
-  it('has no prior memories when the character was not promoted from an NPC', () => {
+  it('has no prior memories when the character was not promoted from an NPC', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
     const character = seedPartyMember(db, campaign.id)
 
-    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
 
     expect(context.priorNpcMemories).toEqual([])
   })
@@ -121,7 +121,7 @@ describe('decidePartyMemberAction', () => {
       kind: 'ai_party_member',
       stats: { personality: 'gruff but loyal' }
     })
-    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
     const provider = createScriptedProvider(['{"actionText":"Brom nocks an arrow and covers the rear."}'])
 
     const action = await decidePartyMemberAction(provider, character, context, 'Goblins ambush the party.')
@@ -133,7 +133,7 @@ describe('decidePartyMemberAction', () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
     const character = seedPartyMember(db, campaign.id)
-    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
     const provider = createScriptedProvider(['{"actionText":"Brom scans the treeline."}'])
 
     await decidePartyMemberAction(provider, character, context, 'A twig snaps nearby.')
@@ -157,7 +157,7 @@ describe('decidePartyMemberAction', () => {
       characterClass: 'ranger',
       kind: 'ai_party_member'
     })
-    const context = assemblePartyMemberContext(db, campaign.id, character)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
     const provider = createScriptedProvider(['Brom just shrugs.'])
 
     const action = await decidePartyMemberAction(provider, character, context, 'Nothing happens.')

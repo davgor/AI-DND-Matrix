@@ -23,6 +23,34 @@ const SAMPLE_RACE_LORE = {
   hooks: ['A frontier town grows.', 'Old bloodlines feud.']
 }
 
+function insertTestRagChunk(
+  db: ReturnType<typeof createTestDb>,
+  campaignId: string,
+  overrides: { id?: string; sourceId?: string } = {}
+): void {
+  const embedding = Buffer.alloc(256 * 4)
+  db.prepare(
+    `INSERT INTO rag_chunks (
+      id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
+      text, content_hash, embedding, updated_at
+    ) VALUES (?, ?, 'world_facts', ?, NULL, NULL, NULL, ?, ?, ?, ?)`
+  ).run(
+    overrides.id ?? `chunk-${campaignId}`,
+    campaignId,
+    overrides.sourceId ?? `fact-${campaignId}`,
+    'Indexed fact chunk.',
+    'hash-test',
+    embedding,
+    '2026-01-01T00:00:00.000Z'
+  )
+}
+
+function insertTestRagBackfillState(db: ReturnType<typeof createTestDb>, campaignId: string): void {
+  db.prepare(
+    `INSERT INTO rag_backfill_state (campaign_id, completed_at, updated_at) VALUES (?, NULL, ?)`
+  ).run(campaignId, '2026-01-01T00:00:00.000Z')
+}
+
 function countForCampaign(db: ReturnType<typeof createTestDb>, table: string, campaignId: string): number {
   if (table === 'region_history') {
     return (
@@ -116,6 +144,8 @@ function seedCampaignFootprint(db: ReturnType<typeof createTestDb>, label: strin
   createStoryThread(db, { campaignId: campaign.id, title: 'Thread', state: 'open' })
   appendEvent(db, { campaignId: campaign.id, type: 'player_action', payload: { test: true } })
   touchLastPlayed(db, campaign.id)
+  insertTestRagChunk(db, campaign.id)
+  insertTestRagBackfillState(db, campaign.id)
   return campaign
 }
 
@@ -138,6 +168,8 @@ function expectCampaignFullyDeleted(db: ReturnType<typeof createTestDb>, campaig
   expect(countForCampaign(db, 'region_history', campaignId)).toBe(0)
   expect(countForCampaign(db, 'npc_memories', campaignId)).toBe(0)
   expect(countForCampaign(db, 'character_items', campaignId)).toBe(0)
+  expect(countForCampaign(db, 'rag_chunks', campaignId)).toBe(0)
+  expect(countForCampaign(db, 'rag_backfill_state', campaignId)).toBe(0)
 }
 
 describe('deleteCampaignCascade', () => {

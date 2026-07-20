@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
+import { resolveEmbedder, upsertRagChunk } from '../rag/upsertChunk'
+import type { Embedder } from '../rag/types'
 
 export interface NpcMemory {
   id: string
@@ -14,6 +16,15 @@ export interface AppendNpcMemoryInput {
   content: string
   tags: string[]
   timestamp?: string
+}
+
+export interface AppendNpcMemoryOptions {
+  embedder?: Embedder
+}
+
+interface NpcIndexContextRow {
+  campaign_id: string
+  region_id: string | null
 }
 
 interface NpcMemoryRow {
@@ -34,7 +45,35 @@ function rowToMemory(row: NpcMemoryRow): NpcMemory {
   }
 }
 
-export function appendNpcMemory(db: Database.Database, input: AppendNpcMemoryInput): NpcMemory {
+function indexNpcMemory(
+  db: Database.Database,
+  memory: NpcMemory,
+  options?: AppendNpcMemoryOptions
+): void {
+  const npc = db
+    .prepare('SELECT campaign_id, region_id FROM npcs WHERE id = ?')
+    .get(memory.npcId) as NpcIndexContextRow | undefined
+  if (!npc) {
+    return
+  }
+
+  void upsertRagChunk({
+    db,
+    campaignId: npc.campaign_id,
+    sourceTable: 'npc_memories',
+    sourceId: memory.id,
+    npcId: memory.npcId,
+    regionId: npc.region_id,
+    text: memory.content,
+    embedder: resolveEmbedder(options?.embedder)
+  }).catch(() => undefined)
+}
+
+export function appendNpcMemory(
+  db: Database.Database,
+  input: AppendNpcMemoryInput,
+  options?: AppendNpcMemoryOptions
+): NpcMemory {
   const id = randomUUID()
   const timestamp = input.timestamp ?? new Date().toISOString()
 
@@ -42,7 +81,15 @@ export function appendNpcMemory(db: Database.Database, input: AppendNpcMemoryInp
     'INSERT INTO npc_memories (id, npc_id, timestamp, content, tags) VALUES (?, ?, ?, ?, ?)'
   ).run(id, input.npcId, timestamp, input.content, JSON.stringify(input.tags))
 
-  return { id, npcId: input.npcId, timestamp, content: input.content, tags: input.tags }
+  const memory: NpcMemory = {
+    id,
+    npcId: input.npcId,
+    timestamp,
+    content: input.content,
+    tags: input.tags
+  }
+  indexNpcMemory(db, memory, options)
+  return memory
 }
 
 export function listNpcMemoriesByNpc(

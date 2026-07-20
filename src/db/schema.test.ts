@@ -30,6 +30,8 @@ const ALL_TABLE_NAMES = [
   'npc_memories',
   'npcs',
   'quests',
+  'rag_backfill_state',
+  'rag_chunks',
   'region_history',
   'regions',
   'saves',

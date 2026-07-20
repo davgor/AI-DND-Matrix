@@ -1,4 +1,8 @@
 import type Database from 'better-sqlite3'
+import { ensureCampaignRagBackfill, retrieveForContext } from '../db/rag'
+import type { RetrievedChunk } from '../db/rag/retrieve'
+import type { Embedder } from '../db/rag/types'
+import { resolveEmbedder } from '../db/rag/upsertChunk'
 import type { Npc } from '../db/repositories/npcs'
 import { listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
 import { listWorldFactsByRegionOrFaction } from '../db/repositories/worldFacts'
@@ -10,6 +14,49 @@ import { tryParseJson } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 
+const DEFAULT_NPC_RAG_QUERY = 'what I know about this scene'
+
+function orderRowsByHits<T extends { id: string }>(hits: RetrievedChunk[], rows: T[]): T[] {
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  return hits
+    .map((hit) => byId.get(hit.sourceId))
+    .filter((row): row is T => row !== undefined)
+}
+
+function memoriesFromHits(
+  db: Database.Database,
+  npcId: string,
+  memoryHits: RetrievedChunk[]
+): SlimNpcMemory[] {
+  if (memoryHits.length === 0) {
+    return windowNpcMemories(listNpcMemoriesByNpc(db, npcId))
+  }
+  const hitIds = new Set(memoryHits.map((hit) => hit.sourceId))
+  const matched = listNpcMemoriesByNpc(db, npcId).filter((memory) => hitIds.has(memory.id))
+  return windowNpcMemories(orderRowsByHits(memoryHits, matched))
+}
+
+function worldFactsFromHits(
+  db: Database.Database,
+  campaignId: string,
+  regionId: string,
+  factHits: RetrievedChunk[]
+): string[] {
+  if (factHits.length === 0) {
+    return slimWorldFacts(listWorldFactsByRegionOrFaction(db, campaignId, regionId))
+  }
+  const hitIds = new Set(factHits.map((hit) => hit.sourceId))
+  const matched = listWorldFactsByRegionOrFaction(db, campaignId, regionId).filter((fact) =>
+    hitIds.has(fact.id)
+  )
+  return slimWorldFacts(orderRowsByHits(factHits, matched))
+}
+
+export interface AssembleNpcContextOptions {
+  embedder?: Embedder
+  query?: string
+}
+
 export interface NpcContext {
   npcId: string
   /** Budget-windowed (NPC_MEMORY_BUDGET) private memories — own rows only. */
@@ -18,9 +65,31 @@ export interface NpcContext {
   worldFacts: string[]
 }
 
-export function assembleNpcContext(db: Database.Database, npc: Npc): NpcContext {
-  const memories = windowNpcMemories(listNpcMemoriesByNpc(db, npc.id))
-  const worldFacts = slimWorldFacts(listWorldFactsByRegionOrFaction(db, npc.campaignId, npc.regionId))
+export async function assembleNpcContext(
+  db: Database.Database,
+  npc: Npc,
+  options?: AssembleNpcContextOptions
+): Promise<NpcContext> {
+  const embedder = resolveEmbedder(options?.embedder)
+  const query = options?.query ?? DEFAULT_NPC_RAG_QUERY
+
+  await ensureCampaignRagBackfill({ db, campaignId: npc.campaignId, embedder })
+
+  const hits = await retrieveForContext({
+    db,
+    campaignId: npc.campaignId,
+    query,
+    scope: 'npc',
+    scopeIds: { npcId: npc.id, regionId: npc.regionId },
+    embedder
+  })
+
+  const memoryHits = hits.filter((hit) => hit.sourceTable === 'npc_memories')
+  const factHits = hits.filter((hit) => hit.sourceTable === 'world_facts')
+
+  const memories = memoriesFromHits(db, npc.id, memoryHits)
+  const worldFacts = worldFactsFromHits(db, npc.campaignId, npc.regionId, factHits)
+
   return { npcId: npc.id, memories, worldFacts }
 }
 

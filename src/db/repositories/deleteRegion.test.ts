@@ -10,6 +10,44 @@ import { createRegion, getRegionById, listRegionsByCampaign } from './regions'
 import { createWorldFact } from './worldFacts'
 import { deleteRegionCascade } from './deleteRegion'
 
+function insertRegionRagChunks(
+  db: ReturnType<typeof createTestDb>,
+  seed: { campaignId: string; regionId: string; npcId: string; label: string }
+): void {
+  const { campaignId, regionId, npcId, label } = seed
+  const embedding = Buffer.alloc(256 * 4)
+  db.prepare(
+    `INSERT INTO rag_chunks (
+      id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
+      text, content_hash, embedding, updated_at
+    ) VALUES (?, ?, 'world_facts', ?, ?, NULL, NULL, ?, ?, ?, ?)`
+  ).run(
+    `${label}-region-chunk`,
+    campaignId,
+    `fact-${label}`,
+    regionId,
+    'Indexed region chunk.',
+    'hash-region',
+    embedding,
+    '2026-01-01T00:00:00.000Z'
+  )
+  db.prepare(
+    `INSERT INTO rag_chunks (
+      id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
+      text, content_hash, embedding, updated_at
+    ) VALUES (?, ?, 'npc_memories', ?, NULL, ?, NULL, ?, ?, ?, ?)`
+  ).run(
+    `${label}-npc-chunk`,
+    campaignId,
+    `memory-${label}`,
+    npcId,
+    'Indexed npc memory chunk.',
+    'hash-npc',
+    embedding,
+    '2026-01-01T00:00:00.000Z'
+  )
+}
+
 function countRows(db: ReturnType<typeof createTestDb>, sql: string, id: string): number {
   return (db.prepare(sql).get(id) as { count: number }).count
 }
@@ -24,6 +62,14 @@ function expectRegionFullyRemoved(db: ReturnType<typeof createTestDb>, regionId:
     countRows(db, 'SELECT COUNT(*) as count FROM world_facts WHERE region_id = ?', regionId)
   ).toBe(0)
   expect(countRows(db, 'SELECT COUNT(*) as count FROM quests WHERE region_id = ?', regionId)).toBe(0)
+  expect(countRows(db, 'SELECT COUNT(*) as count FROM rag_chunks WHERE region_id = ?', regionId)).toBe(0)
+  expect(
+    countRows(
+      db,
+      'SELECT COUNT(*) as count FROM rag_chunks WHERE npc_id IN (SELECT id FROM npcs WHERE region_id = ?)',
+      regionId
+    )
+  ).toBe(0)
 }
 
 function seedRegionFootprint(db: ReturnType<typeof createTestDb>, label: string) {
@@ -61,6 +107,7 @@ function seedRegionFootprint(db: ReturnType<typeof createTestDb>, label: string)
     disposition: 'friendly'
   })
   appendNpcMemory(db, { npcId: npc.id, content: 'Memory', tags: ['test'] })
+  insertRegionRagChunks(db, { campaignId: campaign.id, regionId: region.id, npcId: npc.id, label })
   const character = createCharacter(db, {
     campaignId: campaign.id,
     name: `${label} Hero`,

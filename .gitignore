@@ -142,3 +142,7 @@ dist
 
 # electron-builder packaged output
 release/
+
+# CI Vitest shard timing/report artifacts
+vitest-report-shard-*.json
+shard-timings-*.json

@@ -70,7 +70,7 @@ describe('alignment smoke: setup and shift flow', () => {
 describe('alignment smoke: non-speaking creatures', () => {
   it('renders non-speaking NPC actions as action kind in narration log', async () => {
     const { db, campaign, player, wolfNpc } = seedAlignmentSmokeCampaign()
-    const context = assembleNpcContext(db, wolfNpc)
+    const context = await assembleNpcContext(db, wolfNpc)
     const reaction = await generateNpcReaction(
       createScriptedProvider([
         JSON.stringify({ actionDescription: '**The wolf lunges at your throat.**', attack: true })
@@ -112,7 +112,7 @@ describe('alignment smoke: non-speaking creatures', () => {
 describe('alignment smoke: narration context', () => {
   it('includes alignment and pending shift in narration context', async () => {
     const { db, campaign, region, player } = seedAlignmentSmokeCampaign()
-    const context = assembleNarrationContext({
+    const context = await assembleNarrationContext({
       db,
       campaignId: campaign.id,
       regionId: region.id,
@@ -139,7 +139,7 @@ describe('alignment smoke: narration context', () => {
       regionId: region.id,
       characterId: player.id
     })
-    const refreshed = assembleNarrationContext({
+    const refreshed = await assembleNarrationContext({
       db,
       campaignId: campaign.id,
       regionId: region.id,

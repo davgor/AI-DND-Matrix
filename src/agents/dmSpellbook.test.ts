@@ -60,7 +60,7 @@ describe('persistNarrationSideEffects spellGrants', () => {
 })
 
 describe('assembleNarrationContext known spells', () => {
-  it('includes bounded known spell names when present', () => {
+  it('includes bounded known spell names when present', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Spells', premisePrompt: 'Hook', deathMode: 'legendary' })
     const region = createRegion(db, { campaignId: campaign.id, name: 'Tower', description: 'Arcane' })
@@ -78,7 +78,7 @@ describe('assembleNarrationContext known spells', () => {
     })
     const known = loadKnownSpellsForNarration(db, hero.id)
     expect(known.length).toBeGreaterThan(0)
-    const context = assembleNarrationContext({
+    const context = await assembleNarrationContext({
       db,
       campaignId: campaign.id,
       regionId: region.id,

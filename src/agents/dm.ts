@@ -35,6 +35,8 @@ import type { LogEntryProposal } from '../shared/logBook/types'
 import type { CrossCharacterLogWrite, DeathCause } from '../shared/campaignHub/types'
 import type { SlimEvent, SlimLogEntry } from './contextSlim'
 import { loadNarrationContextFields } from './narrationContextFields'
+import { loadDmRagLoreFields } from './dmRagContext'
+import type { Embedder } from '../db/rag/types'
 import { persistSpellGrants } from './narrationSpellContext'
 import { buildActiveQuestsPromptSection } from './questWindow'
 import { buildKnownSpellsPromptSection } from './spellWindow'
@@ -324,6 +326,10 @@ export interface NarrationContext {
   // Slim shapes (040.4): prompts never see raw event/log rows. Log entries keep
   // `id` — logBookAmendments/logBookDeletions echo entryId back from the prompt.
   recentEvents: SlimEvent[]
+  /** RAG-selected world fact content strings for the current region scope. */
+  worldFacts: string[]
+  /** RAG-selected region history content strings for the current region scope. */
+  regionHistory: string[]
   storyThreadState: { id: string; state: string; summary: string } | null
   presentNpcs: { id: string; name: string }[]
   logBookEntries: SlimLogEntry[]
@@ -376,17 +382,29 @@ export interface NarrationResult {
   spellGrants?: Array<{ catalogSpellKey: string }>
 }
 
-export function assembleNarrationContext(input: {
+export async function assembleNarrationContext(input: {
   db: Database.Database
   campaignId: string
   regionId: string
   characterId: string
   playerInput: string
   lastCombatAttack?: Record<string, unknown>
-}): NarrationContext {
+  embedder?: Embedder
+}): Promise<NarrationContext> {
   const fields = loadNarrationContextFields(input.db, input)
+  const ragLore = await loadDmRagLoreFields({
+    db: input.db,
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    playerInput: input.playerInput,
+    recencyEvents: fields.recentEvents,
+    embedder: input.embedder
+  })
   return {
     ...fields,
+    recentEvents: ragLore.recentEvents,
+    worldFacts: ragLore.worldFacts,
+    regionHistory: ragLore.regionHistory,
     playerInput: input.playerInput,
     lastCombatAttack: input.lastCombatAttack
   }
@@ -472,6 +490,12 @@ function buildNarrationPrompt(outcome: CheckOutcome, context: NarrationContext):
     pendingSection,
     ...buildOptionalNarrationSections(context),
     `Region status: ${JSON.stringify(context.regionStatus)}`,
+    context.worldFacts.length > 0
+      ? `World facts (RAG-selected): ${JSON.stringify(context.worldFacts)}`
+      : 'World facts (RAG-selected): (none indexed for this query)',
+    context.regionHistory.length > 0
+      ? `Region history (RAG-selected): ${JSON.stringify(context.regionHistory)}`
+      : 'Region history (RAG-selected): (none indexed for this query)',
     `Recent events: ${JSON.stringify(context.recentEvents)}`,
     `Story thread: ${JSON.stringify(context.storyThreadState)}`,
     `NPCs present in this region (recruitment proposals only from these exact ids): ${JSON.stringify(context.presentNpcs)}`,

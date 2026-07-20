@@ -7,9 +7,27 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  test-plan:
     if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message || '', '[skip ci]') }}
     runs-on: windows-latest
+    outputs:
+      shards: ${{ steps.plan.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - id: plan
+        run: node scripts/test-plan-ci.mjs --target-ms 60000
+
+  test:
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message || '', '[skip ci]') }}
+    needs: test-plan
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJson(needs.test-plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,7 +35,10 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run rebuild:node
+      - name: Ensure Electron binary is installed
+        run: node node_modules/electron/install.js
+      - run: node scripts/run-test-shard.mjs --index ${{ matrix.shard }} --target-ms 60000 --json-out shard-timings-${{ matrix.shard }}.json
 
   lint:
     if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message || '', '[skip ci]') }}

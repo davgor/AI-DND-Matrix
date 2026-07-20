@@ -346,7 +346,7 @@ async function resolveTargetedNpcReaction(
   if (!npc) {
     return undefined
   }
-  const npcContext = assembleNpcContext(db, npc)
+  const npcContext = await assembleNpcContext(db, npc)
   const reaction = await generateNpcReaction(
     provider,
     npc,
@@ -386,7 +386,7 @@ async function resolvePartyMemberActions(
   const partyMembers = listPartyMembersForPlayer(db, activeCharacterId)
   const results: PartyMemberActionResult[] = []
   for (const member of partyMembers) {
-    const context = assemblePartyMemberContext(db, member.campaignId, member)
+    const context = await assemblePartyMemberContext(db, member.campaignId, member)
     const action = await decidePartyMemberAction(provider, member, context, sceneNarration)
     appendEvent(db, {
       campaignId: member.campaignId,
@@ -667,7 +667,7 @@ async function executeDmNarrationBeat(
     regionId: string
     character: Character
     resolved: ResolvedCheckOutcome
-    narrationContext: ReturnType<typeof assembleNarrationContext>
+    narrationContext: NarrationContext
     state: BeatExecutionState
   }
 ): Promise<void> {
@@ -849,7 +849,7 @@ interface BeatLoopContext {
   character: Character
   playerInput: string
   resolved: ResolvedCheckOutcome
-  narrationContext: ReturnType<typeof assembleNarrationContext>
+  narrationContext: NarrationContext
   rng: RandomFn
   state: BeatExecutionState
 }
@@ -1219,7 +1219,7 @@ async function interpretTurnIntentAndPlan(
   character: Character
 ): Promise<IntentPlanResult> {
   const regionId = getCurrentRegionId(db, turnInput.campaignId, character)
-  const narrationContext = assembleNarrationContext({
+  const narrationContext = await assembleNarrationContext({
     db,
     campaignId: turnInput.campaignId,
     regionId,

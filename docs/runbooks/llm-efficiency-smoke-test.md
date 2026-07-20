@@ -38,6 +38,8 @@ Named constants in `llmEfficiency.smoke.test.ts`, set to measured actual + ~30% 
 | Narration `systemPrompt` (schema + guidance + emphasis, static per call) | 5,454 chars | 7,100 |
 | Guided-identity interview user prompt (5-entry window) | 727 chars | 950 |
 
+RAG lore injection (epic **083**) is capped separately at `RAG_CHUNK_INJECTION_CAP = 12` chunks and `DM_RAG_LORE_SERIALIZED_CHAR_CAP = 4000` — see `docs/runbooks/rag-retrieval-smoke-test.md`. RAG must not push the narration user prompt past the 2,600 ceiling on the 040 slim fixture.
+
 The identity fixture also proves windowing directly: a 10-turn transcript produces a **byte-identical** user prompt to its last-5 window, and the static identity block (race lore + background + mechanical facts, 1,908 chars on the fixture) rides in `systemPrompt` once per call, never in the per-turn user prompt.
 
 ## Opt-in flags (both default off — the budgets above are the defaults)

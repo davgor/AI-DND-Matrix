@@ -7,6 +7,30 @@ import { createNpc, getNpcById } from './npcs'
 import { createRegion } from './regions'
 import { deleteNpcCascade } from './deleteNpc'
 
+function insertNpcRagChunk(
+  db: ReturnType<typeof createTestDb>,
+  campaignId: string,
+  npcId: string,
+  chunkId: string
+): void {
+  const embedding = Buffer.alloc(256 * 4)
+  db.prepare(
+    `INSERT INTO rag_chunks (
+      id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
+      text, content_hash, embedding, updated_at
+    ) VALUES (?, ?, 'npc_memories', ?, NULL, ?, NULL, ?, ?, ?, ?)`
+  ).run(
+    chunkId,
+    campaignId,
+    `memory-${chunkId}`,
+    npcId,
+    'Indexed memory chunk.',
+    'hash-test',
+    embedding,
+    '2026-01-01T00:00:00.000Z'
+  )
+}
+
 function seedNpcFootprint(db: ReturnType<typeof createTestDb>, label: string) {
   const campaign = createCampaign(db, {
     name: `${label} Campaign`,
@@ -26,6 +50,7 @@ function seedNpcFootprint(db: ReturnType<typeof createTestDb>, label: string) {
     disposition: 'friendly'
   })
   appendNpcMemory(db, { npcId: npc.id, content: 'Memory', tags: ['test'] })
+  insertNpcRagChunk(db, campaign.id, npc.id, `${label}-chunk`)
   const character = createCharacter(db, {
     campaignId: campaign.id,
     name: `${label} Hero`,
@@ -53,6 +78,20 @@ describe('deleteNpcCascade', () => {
         }
       ).count
     ).toBe(0)
+    expect(
+      (
+        db.prepare('SELECT COUNT(*) as count FROM rag_chunks WHERE npc_id = ?').get(target.npc.id) as {
+          count: number
+        }
+      ).count
+    ).toBe(0)
+    expect(
+      (
+        db.prepare('SELECT COUNT(*) as count FROM rag_chunks WHERE npc_id = ?').get(other.npc.id) as {
+          count: number
+        }
+      ).count
+    ).toBe(1)
 
     const clearedCharacter = db
       .prepare('SELECT source_npc_id FROM characters WHERE id = ?')

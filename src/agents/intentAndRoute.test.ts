@@ -17,7 +17,7 @@ import {
   selectFallbackNpcResponders
 } from './intentAndRoute'
 
-function seedRouteContext() {
+async function seedRouteContext() {
   const db = createTestDb()
   const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
   const region = createRegion(db, { campaignId: campaign.id, name: 'Oakhollow', description: '...' })
@@ -34,7 +34,7 @@ function seedRouteContext() {
     role: 'shopkeeper',
     disposition: 'friendly'
   })
-  const narrationContext = assembleNarrationContext({
+  const narrationContext = await assembleNarrationContext({
     db,
     campaignId: campaign.id,
     regionId: region.id,
@@ -50,7 +50,7 @@ function mergedResponse(intent: object, routingPlan?: object): string {
 
 describe('interpretIntentAndRoute: single-call merge (040.2)', () => {
   it('returns intent and routing plan from one provider call', async () => {
-    const { npc, narrationContext } = seedRouteContext()
+    const { npc, narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse(
         { checkNeeded: false },
@@ -66,7 +66,7 @@ describe('interpretIntentAndRoute: single-call merge (040.2)', () => {
   })
 
   it('clamps an out-of-range proposed DC exactly like interpretIntent', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse(
         { checkNeeded: true, ability: 'mind', dc: 999, proficient: false },
@@ -80,7 +80,7 @@ describe('interpretIntentAndRoute: single-call merge (040.2)', () => {
   })
 
   it('strips npc ids that are not present in the scene from the plan', async () => {
-    const { npc, narrationContext } = seedRouteContext()
+    const { npc, narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse(
         { checkNeeded: false },
@@ -96,7 +96,7 @@ describe('interpretIntentAndRoute: single-call merge (040.2)', () => {
 
 describe('interpretIntentAndRoute: schema retries', () => {
   it('retries when the intent half is invalid, then succeeds', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       'not json at all',
       mergedResponse({ checkNeeded: true }, { disposition: 'narrate', beats: [{ kind: 'dmNarration' }] }),
@@ -110,7 +110,7 @@ describe('interpretIntentAndRoute: schema retries', () => {
   })
 
   it('throws DmSchemaError after MAX_SCHEMA_ATTEMPTS invalid responses', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider(['bad', 'still bad', 'nope'])
 
     await expect(interpretIntentAndRoute(provider, narrationContext)).rejects.toBeInstanceOf(
@@ -124,7 +124,7 @@ describe('interpretIntentAndRoute: schema retries', () => {
 // accept the intent and synthesize a plan rather than exhausting retries.
 describe('interpretIntentAndRoute: routing-plan fallback (084)', () => {
   it('accepts a no-check social intent with omitted routingPlan, targeting present NPCs', async () => {
-    const { npc, narrationContext } = seedRouteContext()
+    const { npc, narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([mergedResponse({ checkNeeded: false })])
 
     const result = await interpretIntentAndRoute(provider, narrationContext)
@@ -138,7 +138,7 @@ describe('interpretIntentAndRoute: routing-plan fallback (084)', () => {
   })
 
   it('accepts a valid intent with an invalid routingPlan without retrying', async () => {
-    const { npc, narrationContext } = seedRouteContext()
+    const { npc, narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse({ checkNeeded: false }, { disposition: 'nonsense', beats: [] })
     ])
@@ -150,7 +150,7 @@ describe('interpretIntentAndRoute: routing-plan fallback (084)', () => {
   })
 
   it('falls back to dmNarration when no NPCs are present', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([mergedResponse({ checkNeeded: false })])
 
     const result = await interpretIntentAndRoute(provider, {
@@ -165,7 +165,7 @@ describe('interpretIntentAndRoute: routing-plan fallback (084)', () => {
   })
 
   it('guarantees dmNarration when checkNeeded intent omits the plan', async () => {
-    const { npc, narrationContext } = seedRouteContext()
+    const { npc, narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse({ checkNeeded: true, ability: 'mind', dc: 12, proficient: false })
     ])
@@ -294,7 +294,7 @@ describe('interpretIntentAndRoute: combat intent validation', () => {
   }
 
   it('rejects an attack on an invisible target and retries', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse({ checkNeeded: false, combatIntent: 'attack', targetNpcId: 'not-visible' }),
       mergedResponse({ checkNeeded: false, combatIntent: 'attack', targetNpcId: 'goblin-1' })
@@ -307,7 +307,7 @@ describe('interpretIntentAndRoute: combat intent validation', () => {
   })
 
   it('rejects startEncounter while an encounter is already active', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse({ checkNeeded: false, combatIntent: 'startEncounter' }),
       mergedResponse({ checkNeeded: false, combatIntent: 'attack', targetNpcId: 'goblin-1' })
@@ -322,7 +322,7 @@ describe('interpretIntentAndRoute: combat intent validation', () => {
 
 describe('interpretIntentAndRoute: routing-bypass intents may omit the plan', () => {
   it('accepts a rest intent without a routingPlan, returning an inert empty plan', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse({ checkNeeded: false, actionType: 'restShort' })
     ])
@@ -335,7 +335,7 @@ describe('interpretIntentAndRoute: routing-bypass intents may omit the plan', ()
   })
 
   it('accepts a combat intent without a routingPlan', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse({ checkNeeded: false, combatIntent: 'startEncounter' })
     ])
@@ -400,7 +400,7 @@ describe('ensureDmNarrationBeat (check-outcome hole, data-integrity item 2)', ()
 
 describe('interpretIntentAndRoute: checkNeeded responses always carry a narration beat', () => {
   it('forces a dmNarration beat when the merged response omitted one on a check turn', async () => {
-    const { npc, narrationContext } = seedRouteContext()
+    const { npc, narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse(
         { checkNeeded: true, ability: 'agility', dc: 12, proficient: false },
@@ -418,8 +418,8 @@ describe('interpretIntentAndRoute: checkNeeded responses always carry a narratio
 })
 
 describe('buildIntentAndRoutePrompt', () => {
-  it('carries turn-specific scene grounding only — schemas and guidance live in the systemPrompt (040.9)', () => {
-    const { npc, narrationContext } = seedRouteContext()
+  it('carries turn-specific scene grounding only — schemas and guidance live in the systemPrompt (040.9)', async () => {
+    const { npc, narrationContext } = await seedRouteContext()
 
     const prompt = buildIntentAndRoutePrompt({
       ...narrationContext,
@@ -436,8 +436,8 @@ describe('buildIntentAndRoutePrompt', () => {
     expect(prompt).not.toContain('before any check is rolled')
   })
 
-  it('never sends a resolved check outcome — routing happens before the roll', () => {
-    const { narrationContext } = seedRouteContext()
+  it('never sends a resolved check outcome — routing happens before the roll', async () => {
+    const { narrationContext } = await seedRouteContext()
 
     const prompt = buildIntentAndRoutePrompt(narrationContext)
 
@@ -462,7 +462,7 @@ describe('shared systemPrompt adoption (040.9)', () => {
   })
 
   it('sends the systemPrompt via GenerateContext on the merged call', async () => {
-    const { npc, narrationContext } = seedRouteContext()
+    const { npc, narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       mergedResponse(
         { checkNeeded: false },
@@ -478,7 +478,7 @@ describe('shared systemPrompt adoption (040.9)', () => {
   })
 
   it('passes the identical GenerateContext object on every retry attempt (data-integrity item 11)', async () => {
-    const { narrationContext } = seedRouteContext()
+    const { narrationContext } = await seedRouteContext()
     const provider = createScriptedProvider([
       'bad',
       'still bad',

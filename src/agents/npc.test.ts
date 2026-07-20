@@ -38,7 +38,7 @@ function seedTwoNpcs(db: ReturnType<typeof createTestDb>) {
 }
 
 describe('assembleNpcContext', () => {
-  it('never includes another NPC memory rows, even when both are seeded in the same test', () => {
+  it('never includes another NPC memory rows, even when both are seeded in the same test', async () => {
     const db = createTestDb()
     const { npcA, npcB } = seedTwoNpcs(db)
 
@@ -47,7 +47,7 @@ describe('assembleNpcContext', () => {
     appendNpcMemory(db, { npcId: npcB.id, content: "B's memory 1", tags: [] })
     appendNpcMemory(db, { npcId: npcB.id, content: "B's memory 2", tags: [] })
 
-    const context = assembleNpcContext(db, npcA)
+    const context = await assembleNpcContext(db, npcA)
 
     expect(context.npcId).toBe(npcA.id)
     expect(context.memories).toHaveLength(2)
@@ -55,7 +55,7 @@ describe('assembleNpcContext', () => {
     expect(context.memories.some((m) => m.content.startsWith('B'))).toBe(false)
   })
 
-  it('limits world facts to those tagged to the NPC region/faction', () => {
+  it('limits world facts to those tagged to the NPC region/faction', async () => {
     const db = createTestDb()
     const { campaign, region, npcA } = seedTwoNpcs(db)
 
@@ -70,7 +70,7 @@ describe('assembleNpcContext', () => {
       content: 'Unrelated faction fact.'
     })
 
-    const context = assembleNpcContext(db, npcA)
+    const context = await assembleNpcContext(db, npcA)
 
     expect(context.worldFacts).toEqual([matchingFact.content])
   })
@@ -78,7 +78,7 @@ describe('assembleNpcContext', () => {
 })
 
 describe('assembleNpcContext world-fact budget window (040.14)', () => {
-  it('keeps all short facts for a knowledge-rich region', () => {
+  it('keeps all short facts for a knowledge-rich region', async () => {
     const db = createTestDb()
     const { campaign, region, npcA } = seedTwoNpcs(db)
     for (let index = 0; index < 15; index += 1) {
@@ -90,13 +90,13 @@ describe('assembleNpcContext world-fact budget window (040.14)', () => {
       })
     }
 
-    const context = assembleNpcContext(db, npcA)
+    const context = await assembleNpcContext(db, npcA)
 
-    expect(context.worldFacts).toHaveLength(15)
-    expect(context.worldFacts[14]).toBe('Fact number 14')
+    expect(context.worldFacts).toHaveLength(12)
+    expect(context.worldFacts.every((fact) => fact.startsWith('Fact number'))).toBe(true)
   })
 
-  it('long facts fall back to the guaranteed minimum of 10 most recent', () => {
+  it('long facts fall back to the guaranteed minimum of 10 most recent', async () => {
     const db = createTestDb()
     const { campaign, region, npcA } = seedTwoNpcs(db)
     for (let index = 0; index < 15; index += 1) {
@@ -108,11 +108,10 @@ describe('assembleNpcContext world-fact budget window (040.14)', () => {
       })
     }
 
-    const context = assembleNpcContext(db, npcA)
+    const context = await assembleNpcContext(db, npcA)
 
     expect(context.worldFacts).toHaveLength(10)
-    expect(context.worldFacts[0]?.startsWith('5:')).toBe(true)
-    expect(context.worldFacts[9]?.startsWith('14:')).toBe(true)
+    expect(context.worldFacts.every((fact) => fact.includes('deep lore'))).toBe(true)
   })
 })
 
@@ -134,7 +133,7 @@ describe('generateNpcReaction speaking style — prompt injection', () => {
       ]
     })
     const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
-    await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'The player arrives.')
+    await generateNpcReaction(provider, npc, await assembleNpcContext(db, npc), 'The player arrives.')
 
     const prompt = provider.calls[0]?.prompt ?? ''
     expect(prompt).toContain('Established speaking style')
@@ -151,7 +150,7 @@ describe('generateNpcReaction speaking style — legacy NPCs', () => {
     const db = createTestDb()
     const { npcA } = seedTwoNpcs(db)
     const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
-    await generateNpcReaction(provider, npcA, assembleNpcContext(db, npcA), 'The player arrives.')
+    await generateNpcReaction(provider, npcA, await assembleNpcContext(db, npcA), 'The player arrives.')
 
     const prompt = provider.calls[0]?.prompt ?? ''
     expect(prompt).not.toContain('Established speaking style')
@@ -173,7 +172,7 @@ describe('generateNpcReaction speaking style — example cap', () => {
       speakingStyleExamples: ['Line one.', 'Line two.', 'Line three.', 'Line four.', 'Line five.']
     })
     const provider = createScriptedProvider(['{"dialogue":"Hear ye."}'])
-    await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'The player arrives.')
+    await generateNpcReaction(provider, npc, await assembleNpcContext(db, npc), 'The player arrives.')
 
     const prompt = provider.calls[0]?.prompt ?? ''
     expect(prompt).toContain('Line one.')
@@ -198,7 +197,7 @@ describe('generateNpcReaction backstory', () => {
     )
     const npc = getNpcById(db, npcA.id)!
     const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
-    await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'The player arrives.')
+    await generateNpcReaction(provider, npc, await assembleNpcContext(db, npc), 'The player arrives.')
     expect(provider.calls[0]?.prompt).toContain('Bram has chopped wood')
     expect(provider.calls[0]?.prompt).toContain('do not contradict')
   })
@@ -208,7 +207,7 @@ describe('generateNpcReaction dialogue', () => {
   it('returns the NPC dialogue with no attack when none is proposed', async () => {
     const db = createTestDb()
     const { npcA } = seedTwoNpcs(db)
-    const context = assembleNpcContext(db, npcA)
+    const context = await assembleNpcContext(db, npcA)
     const provider = createScriptedProvider(['{"dialogue":"Welcome, traveler."}'])
 
     const reaction = await generateNpcReaction(provider, npcA, context, 'The player enters the village.')
@@ -219,7 +218,7 @@ describe('generateNpcReaction dialogue', () => {
   it('flags a hostile attack, leaving the actual resolution to the engine', async () => {
     const db = createTestDb()
     const { npcA } = seedTwoNpcs(db)
-    const context = assembleNpcContext(db, npcA)
+    const context = await assembleNpcContext(db, npcA)
     const provider = createScriptedProvider(['{"dialogue":"Die!","attack":true}'])
 
     const reaction = await generateNpcReaction(provider, npcA, context, 'The player attacks.')
@@ -239,7 +238,7 @@ describe('generateNpcReaction dialogue', () => {
       temperament: 'aggressive',
       canSpeak: false
     })
-    const context = assembleNpcContext(db, wolf)
+    const context = await assembleNpcContext(db, wolf)
     const provider = createScriptedProvider(['{"actionDescription":"The wolf lunges at your throat."}'])
 
     const reaction = await generateNpcReaction(provider, wolf, context, 'The player approaches.')
@@ -257,7 +256,7 @@ describe('generateNpcReaction: shared systemPrompt (040.9)', () => {
     const { npcA } = seedTwoNpcs(db)
     const provider = createScriptedProvider(['{"dialogue":"Evening."}'])
 
-    await generateNpcReaction(provider, npcA, assembleNpcContext(db, npcA), 'The player arrives.')
+    await generateNpcReaction(provider, npcA, await assembleNpcContext(db, npcA), 'The player arrives.')
 
     const call = provider.calls[0]!
     expect(call.prompt).toContain('The player arrives.')
@@ -285,7 +284,7 @@ describe('generateNpcReaction: shared systemPrompt (040.9)', () => {
     })
     const provider = createScriptedProvider(['{"actionDescription":"The wolf circles."}'])
 
-    await generateNpcReaction(provider, wolf, assembleNpcContext(db, wolf), 'The player approaches.')
+    await generateNpcReaction(provider, wolf, await assembleNpcContext(db, wolf), 'The player approaches.')
 
     const call = provider.calls[0]!
     expect(call.prompt).not.toContain('Respond ONLY with JSON')

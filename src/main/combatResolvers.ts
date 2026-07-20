@@ -208,7 +208,12 @@ async function resolveNpcCombatTurn(input: CatchUpInput & { npcId: string }): Pr
   // must stay at this combat call site: the shared generateNpcReaction agent
   // also serves the non-combat path, which persists NPC memories.
   const llmReaction = combatLlmFlavorEnabled()
-    ? await generateNpcReaction(provider, npc, assembleNpcContext(db, npc), 'Combat turn')
+    ? await generateNpcReaction(
+        provider,
+        npc,
+        await assembleNpcContext(db, npc),
+        'Combat turn'
+      )
     : undefined
   const { attackBonus, damageRoll } = resolveNpcAttackProfile(db, npc)
   const scores = (player.stats as { abilityScores?: AbilityScores }).abilityScores
@@ -256,7 +261,7 @@ async function resolvePartyCombatTurn(
     ? await decidePartyMemberAction(
         provider,
         member,
-        assemblePartyMemberContext(db, campaignId, member),
+        await assemblePartyMemberContext(db, campaignId, member),
         'Combat turn'
       )
     : { actionText: buildPartyMemberCombatFlavor(member.name) }

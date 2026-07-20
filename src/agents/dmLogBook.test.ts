@@ -27,7 +27,7 @@ function seedCampaignWithPlayer(db: ReturnType<typeof createTestDb>) {
 }
 
 describe('assembleNarrationContext log book entries', () => {
-  it('includes only the acting character windowed log entries', () => {
+  it('includes only the acting character windowed log entries', async () => {
     const db = createTestDb()
     const { campaign, region, player } = seedCampaignWithPlayer(db)
     const other = createCharacter(db, {
@@ -54,7 +54,7 @@ describe('assembleNarrationContext log book entries', () => {
       learnedInGameDate: 2
     })
 
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     // Slim shape (040.4): id preserved for amendment/deletion echo; campaignId/characterId/dates dropped.
     expect(context.logBookEntries).toEqual([
       {
@@ -67,10 +67,10 @@ describe('assembleNarrationContext log book entries', () => {
     ])
   })
 
-  it('returns an empty log book section for a character with no entries', () => {
+  it('returns an empty log book section for a character with no entries', async () => {
     const db = createTestDb()
     const { campaign, region, player } = seedCampaignWithPlayer(db)
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(context.logBookEntries).toEqual([])
   })
 })

@@ -29,6 +29,11 @@ export function deleteRegionCascade(db: Database.Database, regionId: string): vo
       `DELETE FROM npc_memories
        WHERE npc_id IN (SELECT id FROM npcs WHERE region_id = ?)`
     ).run(regionId)
+    db.prepare('DELETE FROM rag_chunks WHERE region_id = ?').run(regionId)
+    db.prepare(
+      `DELETE FROM rag_chunks
+       WHERE npc_id IN (SELECT id FROM npcs WHERE region_id = ?)`
+    ).run(regionId)
     db.prepare('DELETE FROM npcs WHERE region_id = ?').run(regionId)
     db.prepare('DELETE FROM world_facts WHERE region_id = ?').run(regionId)
     db.prepare('DELETE FROM region_history WHERE region_id = ?').run(regionId)

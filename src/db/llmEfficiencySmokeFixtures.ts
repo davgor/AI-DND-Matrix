@@ -214,7 +214,7 @@ function seedNarrationGrounding(scene: DialogueScene): void {
 export async function captureNarrationPromptCall(): Promise<MockProviderCall> {
   const scene = seedDialogueScene()
   seedNarrationGrounding(scene)
-  const context = assembleNarrationContext({
+  const context = await assembleNarrationContext({
     db: scene.db,
     campaignId: scene.campaign.id,
     regionId: scene.region.id,
@@ -268,6 +268,8 @@ function buildIdentityContext(
       'You grew up far from settled lands, reading weather, game trails, and the moods of wild places.',
     backgroundStory:
       'Sylwen left the grove after the wardens fell silent. Two seasons of tracking the silence led her to the frontier, where she now guides travelers for coin and rumors.',
+    startingGear: [{ name: 'Shortbow', equippedSlot: 'mainHand' }],
+    knownSpellNames: [],
     regions: [
       { id: 'region-frontier', name: 'Frontier March', description: 'A rebuilt borderland.' }
     ],
