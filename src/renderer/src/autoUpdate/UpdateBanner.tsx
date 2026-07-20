@@ -93,11 +93,7 @@ function DownloadingBanner(update: AutoUpdateState): JSX.Element {
 
 function ReadyBanner(props: UpdateBannerViewProps): JSX.Element {
   const { update, onRestart, installing = false, installError = null } = props
-  const readyText =
-    update.message ??
-    (update.availableVersion
-      ? `Version ${update.availableVersion} is ready. Restart to apply silently — no installer.`
-      : 'Update ready. Restart to apply silently — no installer.')
+  const readyText = update.message ?? 'Restart and update'
   return (
     <div className="update-banner update-banner-ready" role="status">
       {bannerText(readyText)}
@@ -107,7 +103,7 @@ function ReadyBanner(props: UpdateBannerViewProps): JSX.Element {
         onClick={onRestart}
         disabled={installing}
       >
-        {installing ? 'Restarting…' : 'Restart & Install'}
+        {installing ? 'Restarting…' : 'Restart and update'}
       </button>
       {installError ? <span className="update-banner-error">{installError}</span> : null}
     </div>

@@ -20,8 +20,8 @@ export function canStartUpdateCheck(phase: AutoUpdatePhase): boolean {
   return phase === 'idle' || phase === 'error'
 }
 
-export function formatUpdateReadyMessage(version: string): string {
-  return `Version ${version} is ready. Restart to apply silently — no installer.`
+export function formatUpdateReadyMessage(_version: string): string {
+  return 'Restart and update'
 }
 
 function broadcastState(): void {
