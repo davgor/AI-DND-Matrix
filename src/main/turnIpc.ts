@@ -638,20 +638,24 @@ export function updateBeatSceneContext(
   state.sceneContextBeats.push(sceneUpdate ?? flavorText)
 }
 
-function applyNarrationPersistence(
+async function applyNarrationPersistence(
   db: Database.Database,
   input: {
     campaignId: string
     regionId: string
     characterId: string
+    playerLevel: number
+    provider: Provider
     narrationResult: NarrationResult
     state: BeatExecutionState
   }
-): string[] {
-  const sideEffects = persistNarrationSideEffects(db, input.narrationResult, {
+): Promise<string[]> {
+  const sideEffects = await persistNarrationSideEffects(db, input.narrationResult, {
     campaignId: input.campaignId,
     regionId: input.regionId,
-    characterId: input.characterId
+    characterId: input.characterId,
+    provider: input.provider,
+    playerLevel: input.playerLevel
   })
   if (sideEffects.commerce) {
     input.state.commerceEffect = sideEffects.commerce
@@ -677,10 +681,12 @@ async function executeDmNarrationBeat(
     const threads = listStoryThreadsByCampaign(db, input.campaignId)
     previousThreadState = threads.find((t) => t.id === narrationResult.storyThreadUpdate!.threadId)?.state
   }
-  const completedQuestIds = applyNarrationPersistence(db, {
+  const completedQuestIds = await applyNarrationPersistence(db, {
     campaignId: input.campaignId,
     regionId: input.regionId,
     characterId: input.character.id,
+    playerLevel: input.character.level,
+    provider,
     narrationResult,
     state: input.state
   })

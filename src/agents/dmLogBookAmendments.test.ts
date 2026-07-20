@@ -37,10 +37,10 @@ function seedPlayerWithTwoEntries() {
 }
 
 describe('persistNarrationSideEffects log book amendments', () => {
-  it('applies amendments and deletions for the acting character', () => {
+  it('applies amendments and deletions for the acting character', async () => {
     const { db, campaign, region, player, wrongEntry, staleEntry } = seedPlayerWithTwoEntries()
 
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'Fixed.',
@@ -83,7 +83,7 @@ describe('log book amendment round-trip after context slimming (040.4)', () => {
     expect(prompt).toContain(wrongEntry.id)
     expect(prompt).toContain(staleEntry.id)
 
-    persistNarrationSideEffects(db, result, {
+    await persistNarrationSideEffects(db, result, {
       campaignId: campaign.id,
       regionId: region.id,
       characterId: player.id

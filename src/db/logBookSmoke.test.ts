@@ -38,7 +38,7 @@ describe('log book end-to-end smoke', () => {
     const db = createTestDb()
     const { campaign, region, player } = seedCampaign(db)
 
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'You explore the village square.',
@@ -70,7 +70,7 @@ describe('log book end-to-end smoke', () => {
   })
 })
 
-describe('log book persistence smoke', () => {
+describe('log book persistence smoke', async () => {
   let dir: string | undefined
   let db: Database.Database | undefined
 
@@ -83,7 +83,7 @@ describe('log book persistence smoke', () => {
     }
   })
 
-  it('preserves log entries after reopening the database file', () => {
+  it('preserves log entries after reopening the database file', async () => {
     dir = mkdtempSync(join(tmpdir(), 'logbook-smoke-'))
     db = openFileTestDb(join(dir, 'save.sqlite'))
     runMigrations(db, migrations)

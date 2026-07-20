@@ -15,6 +15,7 @@ import {
   isValidGenerationResult,
   needsNpcTopUp,
   nextPreferredCanonName,
+  normalizeBestiaryGeneration,
   normalizeCanonRecall,
   normalizeGeneratedPantheon,
   normalizeGeneratedWorld,
@@ -33,6 +34,12 @@ import {
   buildStoryThreadGenerationPrompt,
   buildWorldGenerationPrompt
 } from './prompts'
+import {
+  BESTIARY_STAGE_MAX_TOKENS,
+  buildBestiaryStagePrompt,
+  ensureSignatureBestiaryFoes,
+  isValidBestiaryRoster
+} from './bestiaryStage'
 import { persistGeneratedCampaign, enrichNpcWithSpeakingStyle } from './persist'
 import { mapWithConcurrency } from './concurrency'
 import { buildAvailableRaceOptions } from '../raceLore'
@@ -52,6 +59,7 @@ import type {
   CampaignGenerationResult,
   CanonRecall,
   CampaignSetupInput,
+  GeneratedBestiaryRoster,
   GeneratedDeity,
   GeneratedNpc,
   GeneratedPantheon,
@@ -203,6 +211,32 @@ export async function generateCampaignStoryThread(
     errorMessage: 'DM agent did not return a valid story thread schema after retries'
   })
   return storyThread
+}
+
+async function generateCampaignBestiary(
+  provider: Provider,
+  premisePrompt: string,
+  input: {
+    world: GeneratedWorld
+    regions: GeneratedRegion[]
+    deities?: GeneratedDeity[]
+  }
+): Promise<GeneratedBestiaryRoster> {
+  return generateWithRetries({
+    provider,
+    buildPrompt: () =>
+      buildBestiaryStagePrompt(premisePrompt, input.world, input.regions, input.deities ?? []),
+    maxTokens: BESTIARY_STAGE_MAX_TOKENS,
+    normalize: (parsed) => {
+      const normalized = normalizeBestiaryGeneration(parsed)
+      if (!normalized) {
+        return undefined
+      }
+      return ensureSignatureBestiaryFoes(premisePrompt, normalized)
+    },
+    isValid: isValidBestiaryRoster,
+    errorMessage: 'DM agent did not return a valid bestiary roster after retries'
+  })
 }
 
 /** In-flight cap for parallel shortfall single-NPC requests (rate-limit friendly). */
@@ -516,6 +550,29 @@ async function generateSeedNpcs(input: {
   })
 }
 
+async function generateBestiaryAndStory(input: {
+  provider: Provider
+  premisePrompt: string
+  world: GeneratedWorld
+  regions: GeneratedRegion[]
+  deities: GeneratedDeity[]
+  onProgress?: CreateCampaignProgressCallback
+}): Promise<{ bestiary: GeneratedBestiaryRoster; storyThread: GeneratedStoryThread }> {
+  input.onProgress?.('bestiary')
+  const bestiary = await generateCampaignBestiary(input.provider, input.premisePrompt, {
+    world: input.world,
+    regions: input.regions,
+    deities: input.deities
+  })
+  input.onProgress?.('story')
+  const storyThread = await generateCampaignStoryThread(input.provider, input.premisePrompt, {
+    world: input.world,
+    regions: input.regions,
+    deities: input.deities
+  })
+  return { bestiary, storyThread }
+}
+
 async function runCampaignSeedAttempt(input: {
   provider: Provider
   premisePrompt: string
@@ -549,16 +606,18 @@ async function runCampaignSeedAttempt(input: {
     deities: pantheon.deities,
     onNpcRegionStart: () => input.onProgress?.('npcs')
   })
-  input.onProgress?.('story')
-  const storyThread = await generateCampaignStoryThread(input.provider, input.premisePrompt, {
+  const { bestiary, storyThread } = await generateBestiaryAndStory({
+    provider: input.provider,
+    premisePrompt: input.premisePrompt,
     world,
     regions,
-    deities: pantheon.deities
+    deities: pantheon.deities,
+    onProgress: input.onProgress
   })
   return repairNpcShortfall({
     provider: input.provider,
     premisePrompt: input.premisePrompt,
-    normalized: { world, pantheon, regions, npcs, storyThread },
+    normalized: { world, pantheon, regions, npcs, bestiary, storyThread },
     counts: input.counts,
     availableRaces: input.availableRaces,
     canon

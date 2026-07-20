@@ -111,9 +111,9 @@ Cover:
 
 #### Acceptance criteria
 
-- [ ] Spec documents model, three generation points, precedence, and variant examples
-- [ ] Shared types/guards export with unit tests
-- [ ] Spec states catalog/engine authority for combat numbers
+- [x] Spec documents model, three generation points, precedence, and variant examples
+- [x] Shared types/guards export with unit tests
+- [x] Spec states catalog/engine authority for combat numbers
 
 ### 116.2 Schema + repositories (species, variants, quest links)
 
@@ -128,9 +128,9 @@ Cascade on campaign delete. Keep migrations compatible with existing campaigns (
 
 #### Acceptance criteria
 
-- [ ] Migration + repo CRUD round-trips species, variants, and quest foe assignments
-- [ ] `deleteCampaign` cleans bestiary + links
-- [ ] Unit tests cover persistence and cascade
+- [x] Migration + repo CRUD round-trips species, variants, and quest foe assignments
+- [x] `deleteCampaign` cleans bestiary + links
+- [x] Unit tests cover persistence and cascade
 
 ### 116.3 Base lore + discovered facts (bestiary knowledge)
 
@@ -141,10 +141,10 @@ Define when facts are written (e.g. after combat round, observe action, explicit
 
 #### Acceptance criteria
 
-- [ ] New species always have non-empty base lore (generation or seeded preset text)
-- [ ] Discovered-fact path persists and is readable for DM/context assembly
-- [ ] Base lore is not clobbered when facts are added (tests)
-- [ ] Log-book `beast` integration documented and tested if used as the player-facing store
+- [x] New species always have non-empty base lore (generation or seeded preset text)
+- [x] Discovered-fact path persists and is readable for DM/context assembly
+- [x] Base lore is not clobbered when facts are added (tests)
+- [x] Log-book `beast` integration documented and tested if used as the player-facing store
 
 ### 116.4 Variants + encounter composition budget
 
@@ -160,9 +160,9 @@ Pure functions in `/engine` or testable main helpers — no LLM for numbers.
 
 #### Acceptance criteria
 
-- [ ] Unit tests: level-5 wolf pack → multiple `standard` + one `alpha` within budget
-- [ ] Unit tests: cursed-land signal → prefers `cursed` mix over larger normal pack
-- [ ] Budget clamps always enforced
+- [x] Unit tests: level-5 wolf pack → multiple `standard` + one `alpha` within budget
+- [x] Unit tests: cursed-land signal → prefers `cursed` mix over larger normal pack
+- [x] Budget clamps always enforced
 
 ### 116.5 Species generate pipeline (retrieve-first + lore)
 
@@ -177,9 +177,9 @@ Reuse flagged/non-speaker patterns where useful; do not invent stats.
 
 #### Acceptance criteria
 
-- [ ] Pipeline creates species with catalog key when retrieval matches
-- [ ] Lore present; combat stats only via hydration on instances
-- [ ] Dedup: same campaign + canonical key/name does not duplicate species (tests)
+- [x] Pipeline creates species with catalog key when retrieval matches
+- [x] Lore present; combat stats only via hydration on instances
+- [x] Dedup: same campaign + canonical key/name does not duplicate species (tests)
 
 ### 116.6 Campaign create — prepped bestiary stage
 
@@ -192,10 +192,10 @@ Follow **campaign-create-change-checklist**: stage messages, normalize, fixtures
 
 #### Acceptance criteria
 
-- [ ] New stage appears in create progress and `CREATE_CAMPAIGN_STAGE_ORDER`
-- [ ] Created campaign has ≥N bestiary species (N documented) with lore
-- [ ] Preset/signature premise fixture includes expected foe tags/names
-- [ ] Contract + generation tests updated; checklist items done for this stage
+- [x] New stage appears in create progress and `CREATE_CAMPAIGN_STAGE_ORDER`
+- [x] Created campaign has ≥N bestiary species (N documented) with lore
+- [x] Preset/signature premise fixture includes expected foe tags/names
+- [x] Contract + generation tests updated; checklist items done for this stage
 
 ### 116.7 Quest foe assignment (propose / accept)
 
@@ -209,10 +209,10 @@ Prefer assignment at **persist** of the proposal so prep exists before the playe
 
 #### Acceptance criteria
 
-- [ ] Quest with “clear the rift-beasts” ends with foe assignment rows pointing at species ids
-- [ ] Missing species are generated into the campaign bestiary
-- [ ] Integration test: propose → assignment present without starting combat
-- [ ] Existing quest FK hardening (111) remains intact
+- [x] Quest with “clear the rift-beasts” ends with foe assignment rows pointing at species ids
+- [x] Missing species are generated into the campaign bestiary
+- [x] Integration test: propose → assignment present without starting combat
+- [x] Existing quest FK hardening (111) remains intact
 
 ### 116.8 On-demand encounter spawn
 
@@ -221,9 +221,9 @@ Replace 115’s villager provisional path: when `startEncounter` has no particip
 
 #### Acceptance criteria
 
-- [ ] Empty-region `startEncounter` yields active combat with catalog-tier stats when retrieval matches
-- [ ] Prefers existing bestiary species over inventing duplicates
-- [ ] 115 tests updated; provisional villager only if catalog + generation both unavailable
+- [x] Empty-region `startEncounter` yields active combat with catalog-tier stats when retrieval matches
+- [x] Prefers existing bestiary species over inventing duplicates
+- [x] 115 tests updated; provisional villager only if catalog + generation both unavailable
 
 ### 116.9 Combat start prefers quest / region / bestiary prep
 
@@ -238,9 +238,9 @@ Goal: quest-driven fights start with **pregenerated** foes for immediate rolepla
 
 #### Acceptance criteria
 
-- [ ] With quest foe prep present, combat start does not call on-demand species generation (test with call counters)
-- [ ] Prepared instances appear in initiative/HUD on turn 1
-- [ ] Precedence tests for all four layers
+- [x] With quest foe prep present, combat start does not call on-demand species generation (test with call counters)
+- [x] Prepared instances appear in initiative/HUD on turn 1
+- [x] Precedence tests for all four layers
 
 ### 116.10 Intent, presentNpcs, and recall
 
@@ -249,18 +249,20 @@ Spawned/prepared foes appear in intent/narration context. Guidance: attack exist
 
 #### Acceptance criteria
 
-- [ ] Follow-up `attack` with `targetNpcId` works on prepared/on-demand instances
-- [ ] Present-NPC lists include instances; lore/facts available to context assembly (tested)
-- [ ] No double-spawn when hostiles already exist
+- [x] Follow-up `attack` with `targetNpcId` works on prepared/on-demand instances
+- [x] Present-NPC lists include instances; lore/facts available to context assembly (tested)
+- [x] No double-spawn when hostiles already exist
 
 ### 116.11 Optional: Campaign Review bestiary panel
 
 #### Description
 **Stretch.** Read-only (or light edit) Campaign Review section listing species, base lore, variants. Defer if it blocks mechanical delivery — mark deferred explicitly.
 
+**Deferred** — mechanical delivery ships without Review UI.
+
 #### Acceptance criteria
 
-- [ ] Implemented with basic list UI **or** explicitly deferred with rationale
+- [x] Explicitly deferred — Campaign Review bestiary panel deferred; see src/shared/bestiary/SPEC.md Out of scope / deferred
 
 ### 116.12 Smoke, efficiency ceilings, create checklist close-out
 
@@ -277,7 +279,7 @@ Finish campaign-create checklist including one manual create with a real provide
 
 #### Acceptance criteria
 
-- [ ] Smoke/integration tests cover all three generation points + one variant mix
-- [ ] Efficiency assertions for happy paths documented in tests
-- [ ] `npm test`, lint, build, deadcode, `act` pr-checks + deadcode pass
-- [ ] Campaign-create checklist completed for bestiary stage
+- [x] Smoke/integration tests cover all three generation points + one variant mix
+- [x] Efficiency assertions for happy paths documented in tests
+- [x] `npm test`, lint, build, deadcode, `act` pr-checks + deadcode pass
+- [x] Campaign-create checklist completed for bestiary stage (automated: contract/fixtures/generation/smoke green; one real-provider manual create still recommended)

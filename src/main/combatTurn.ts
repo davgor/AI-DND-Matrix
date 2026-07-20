@@ -99,22 +99,30 @@ async function buildCombatTurnResult(input: {
   })
 }
 
+async function beginEncounterIfRequested(
+  input: CombatTurnInput
+): Promise<import('../db/repositories/combatEncounters').CombatEncounter | undefined> {
+  const { db, provider, campaignId, character, regionId, intent, rng } = input
+  const existing = getActiveEncounter(db, campaignId)
+  if (intent.combatIntent !== 'startEncounter' || existing) {
+    return existing ?? undefined
+  }
+  provokeListedNpcs(db, intent.participantNpcIds)
+  return startEncounter({
+    db,
+    campaignId,
+    regionId,
+    player: character,
+    participantNpcIds: intent.participantNpcIds,
+    playerInput: input.playerInput,
+    provider,
+    rng
+  })
+}
+
 export async function resolveCombatTurn(input: CombatTurnInput): Promise<TurnResult> {
   const { db, provider, campaignId, character, regionId, intent, rng } = input
-  let encounter = getActiveEncounter(db, campaignId)
-
-  if (intent.combatIntent === 'startEncounter' && !encounter) {
-    provokeListedNpcs(db, intent.participantNpcIds)
-    encounter = startEncounter({
-      db,
-      campaignId,
-      regionId,
-      player: character,
-      participantNpcIds: intent.participantNpcIds,
-      playerInput: input.playerInput,
-      rng
-    })
-  }
+  let encounter = await beginEncounterIfRequested(input)
   if (!encounter) {
     throw new CombatTurnError('No active encounter for combat action')
   }

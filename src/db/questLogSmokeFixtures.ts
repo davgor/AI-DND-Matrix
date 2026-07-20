@@ -15,6 +15,28 @@ export const QUEST_SMOKE_GENERATION: CampaignGenerationResult = {
     }
   ],
   npcs: [],
+  bestiary: {
+    foes: [
+      {
+        name: 'Mill Wolf',
+        tags: ['wolf'],
+        buckets: ['beast'],
+        lore: 'Mill wolves circle the grain stores after dark and leave prints in the flour dust.'
+      },
+      {
+        name: 'Old Mill Shade',
+        tags: ['undead'],
+        buckets: ['undead'],
+        lore: 'Shades cling to the millstones and whisper debts owed to the last miller.'
+      },
+      {
+        name: 'Ditch Slime',
+        tags: ['slime'],
+        buckets: ['elemental'],
+        lore: 'Ditch slime pools under the mill race and dissolves careless boots.'
+      }
+    ]
+  },
   storyThread: {
     title: 'The Mill Mystery',
     state: 'active',

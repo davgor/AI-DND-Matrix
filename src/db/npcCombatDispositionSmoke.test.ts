@@ -126,7 +126,7 @@ describe('npc combat disposition smoke scenario A', () => {
     const reviewSpy = vi.spyOn(retiredAdventurerReview, 'reviewRetiredAdventurer')
     reviewSpy.mockClear()
 
-    const provoke = provokeAndAttackNpc({
+    const provoke = await provokeAndAttackNpc({
       db,
       campaignId: campaign.id,
       regionId: region.id,

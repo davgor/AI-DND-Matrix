@@ -11,6 +11,8 @@ function tableNames(db: Database.Database): string[] {
 }
 
 const ALL_TABLE_NAMES = [
+  'bestiary_species',
+  'bestiary_variants',
   'campaign_races',
   'campaigns',
   'catalog_bucket_tags',
@@ -29,6 +31,7 @@ const ALL_TABLE_NAMES = [
   'log_entries',
   'npc_memories',
   'npcs',
+  'quest_foe_assignments',
   'quests',
   'rag_backfill_state',
   'rag_chunks',

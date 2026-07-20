@@ -40,7 +40,7 @@ describe('quest log smoke rewards', () => {
     expect(getMainQuestByCampaign(db, campaign.id)?.hookLine).toContain('Millbrook')
     const side = listQuestsByCampaign(db, campaign.id).find((quest) => quest.kind === 'side')!
     upsertCharacterQuest(db, { characterId: hero.id, questId: side.id, status: 'active', acceptedInGameDate: 1 })
-    persistQuestNarrationSideEffects(
+    await persistQuestNarrationSideEffects(
       db,
       { narrationText: 'Done.', questCompletions: [side.id] },
       { campaignId: campaign.id, characterId: hero.id }

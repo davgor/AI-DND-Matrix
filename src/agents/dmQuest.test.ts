@@ -28,12 +28,12 @@ function seedPlayer(db: Database.Database): { campaignId: string; characterId: s
   return { campaignId: campaign.id, characterId: player.id }
 }
 
-function proposeSide(
+async function proposeSide(
   db: Database.Database,
   ids: { campaignId: string; characterId: string },
   proposal: QuestProposal
-): void {
-  persistQuestNarrationSideEffects(
+): Promise<void> {
+  await persistQuestNarrationSideEffects(
     db,
     { narrationText: 'A job offer.', questProposals: [proposal] },
     ids
@@ -41,10 +41,10 @@ function proposeSide(
 }
 
 describe('persistQuestNarrationSideEffects proposals', () => {
-  it('persists quest proposals for the acting player', () => {
+  it('persists quest proposals for the acting player', async () => {
     const db = createTestDb()
     const ids = seedPlayer(db)
-    proposeSide(db, ids, {
+    await proposeSide(db, ids, {
       kind: 'side',
       title: 'Deliver package',
       summary: 'Take the package to the docks.',
@@ -54,10 +54,10 @@ describe('persistQuestNarrationSideEffects proposals', () => {
     expect(getCharacterQuest(db, ids.characterId, questRow.id)?.status).toBe('available')
   })
 
-  it('nulls nonexistent regionId instead of throwing FK', () => {
+  it('nulls nonexistent regionId instead of throwing FK', async () => {
     const db = createTestDb()
     const ids = seedPlayer(db)
-    expect(() =>
+    await expect(
       proposeSide(db, ids, {
         kind: 'side',
         title: 'Ghost region job',
@@ -65,7 +65,7 @@ describe('persistQuestNarrationSideEffects proposals', () => {
         scale: 'minor',
         regionId: 'missing-region-id'
       })
-    ).not.toThrow()
+    ).resolves.toBeUndefined()
     const questRow = db.prepare('SELECT id, region_id FROM quests WHERE kind = ?').get('side') as {
       id: string
       region_id: string | null
@@ -76,10 +76,10 @@ describe('persistQuestNarrationSideEffects proposals', () => {
 })
 
 describe('persistQuestNarrationSideEffects invalid world fact FK', () => {
-  it('nulls nonexistent relatedWorldFactId instead of throwing FK', () => {
+  it('nulls nonexistent relatedWorldFactId instead of throwing FK', async () => {
     const db = createTestDb()
     const ids = seedPlayer(db)
-    expect(() =>
+    await expect(
       proposeSide(db, ids, {
         kind: 'side',
         title: 'Ghost fact job',
@@ -87,7 +87,7 @@ describe('persistQuestNarrationSideEffects invalid world fact FK', () => {
         scale: 'minor',
         relatedWorldFactId: 'missing-world-fact-id'
       })
-    ).not.toThrow()
+    ).resolves.toBeUndefined()
     const questRow = db
       .prepare('SELECT id, source_world_fact_id FROM quests WHERE kind = ?')
       .get('side') as { id: string; source_world_fact_id: string | null }
@@ -97,7 +97,7 @@ describe('persistQuestNarrationSideEffects invalid world fact FK', () => {
 })
 
 describe('persistQuestNarrationSideEffects proposal FK keep', () => {
-  it('keeps valid regionId and promotes quest_hook world facts', () => {
+  it('keeps valid regionId and promotes quest_hook world facts', async () => {
     const db = createTestDb()
     const ids = seedPlayer(db)
     const region = createRegion(db, { campaignId: ids.campaignId, name: 'Docks', description: 'Busy pier.' })
@@ -107,7 +107,7 @@ describe('persistQuestNarrationSideEffects proposal FK keep', () => {
       factionTag: 'quest_hook',
       content: 'A crate needs escorting to the north gate.'
     })
-    proposeSide(db, ids, {
+    await proposeSide(db, ids, {
       kind: 'side',
       title: 'Escort the crate',
       summary: 'Take it safely north.',
@@ -121,7 +121,7 @@ describe('persistQuestNarrationSideEffects proposal FK keep', () => {
     expect(getCharacterQuest(db, ids.characterId, promoted.id)?.status).toBe('available')
   })
 
-  it('does not wipe promoted region when proposal regionId is invalid', () => {
+  it('does not wipe promoted region when proposal regionId is invalid', async () => {
     const db = createTestDb()
     const ids = seedPlayer(db)
     const region = createRegion(db, { campaignId: ids.campaignId, name: 'Docks', description: 'Busy pier.' })
@@ -131,7 +131,7 @@ describe('persistQuestNarrationSideEffects proposal FK keep', () => {
       factionTag: 'quest_hook',
       content: 'A crate needs escorting to the north gate.'
     })
-    proposeSide(db, ids, {
+    await proposeSide(db, ids, {
       kind: 'side',
       title: 'Escort the crate',
       summary: 'Take it safely north.',
@@ -144,7 +144,7 @@ describe('persistQuestNarrationSideEffects proposal FK keep', () => {
 })
 
 describe('persistQuestNarrationSideEffects story thread sync', () => {
-  it('syncs story thread updates to the main quest without duplicate rows', () => {
+  it('syncs story thread updates to the main quest without duplicate rows', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Q', premisePrompt: 'Epic hook', deathMode: 'legendary' })
     const player = createCharacter(db, {
@@ -167,7 +167,7 @@ describe('persistQuestNarrationSideEffects story thread sync', () => {
     })
     seedCharacterQuestMembership(db, campaign.id, player.id, 0)
     const main = getMainQuestByCampaign(db, campaign.id)!
-    persistQuestNarrationSideEffects(
+    await persistQuestNarrationSideEffects(
       db,
       {
         narrationText: 'Arc ends.',
@@ -181,10 +181,10 @@ describe('persistQuestNarrationSideEffects story thread sync', () => {
 })
 
 describe('persistQuestNarrationSideEffects invalid completions', () => {
-  it('drops invalid quest completion ids safely', () => {
+  it('drops invalid quest completion ids safely', async () => {
     const db = createTestDb()
     const ids = seedPlayer(db)
-    const result = persistQuestNarrationSideEffects(
+    const result = await persistQuestNarrationSideEffects(
       db,
       { narrationText: 'Nothing.', questCompletions: ['missing-id'] },
       ids

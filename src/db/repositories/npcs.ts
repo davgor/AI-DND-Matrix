@@ -47,6 +47,8 @@ export interface Npc {
   classKey: string | null
   speakingStyleSpecimen: string | null
   speakingStyleExamples: string[] | null
+  bestiarySpeciesId: string | null
+  bestiaryVariantKey: string | null
 }
 
 export interface CreateNpcInput {
@@ -68,6 +70,8 @@ export interface CreateNpcInput {
   classKey?: string | null
   speakingStyleSpecimen?: string | null
   speakingStyleExamples?: string[] | null
+  bestiarySpeciesId?: string | null
+  bestiaryVariantKey?: string | null
 }
 
 interface NpcRow {
@@ -99,6 +103,8 @@ interface NpcRow {
   class_key: string | null
   speaking_style_specimen: string | null
   speaking_style_examples_json: string | null
+  bestiary_species_id: string | null
+  bestiary_variant_key: string | null
 }
 
 function parseSpeakingStyleExamples(raw: string | null): string[] | null {
@@ -158,6 +164,15 @@ function identityKeyFieldsFromRow(
   }
 }
 
+function bestiaryLinkFieldsFromRow(
+  row: NpcRow
+): Pick<Npc, 'bestiarySpeciesId' | 'bestiaryVariantKey'> {
+  return {
+    bestiarySpeciesId: row.bestiary_species_id ?? null,
+    bestiaryVariantKey: row.bestiary_variant_key ?? null
+  }
+}
+
 function rowToNpc(row: NpcRow): Npc {
   const combatTier = isNpcCombatTier(row.combat_tier) ? row.combat_tier : 'villager'
   const profile = row.retired_adventurer_profile as RetiredAdventurerProfile | null
@@ -185,7 +200,8 @@ function rowToNpc(row: NpcRow): Npc {
     catalogCreatureKey: row.catalog_creature_key,
     encounterOutcome: (row.encounter_outcome as NpcYieldOutcome | null) ?? null,
     ...identityKeyFieldsFromRow(row),
-    ...speakingStyleFieldsFromRow(row)
+    ...speakingStyleFieldsFromRow(row),
+    ...bestiaryLinkFieldsFromRow(row)
   }
 }
 
@@ -262,7 +278,9 @@ function resolveNpcKeyDefaults(input: CreateNpcInput) {
     genderKey: input.genderKey ?? null,
     classKey: input.classKey ?? null,
     speakingStyleSpecimen: input.speakingStyleSpecimen ?? null,
-    speakingStyleExamples: input.speakingStyleExamples ?? null
+    speakingStyleExamples: input.speakingStyleExamples ?? null,
+    bestiarySpeciesId: input.bestiarySpeciesId ?? null,
+    bestiaryVariantKey: input.bestiaryVariantKey ?? null
   }
 }
 
@@ -287,12 +305,14 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
       id, campaign_id, region_id, name, role, disposition, alignment, temperament,
       can_speak, status, is_party_member, backstory, catalog_creature_key, combat_tier,
       race_key, background_key, gender_key, class_key,
-      speaking_style_specimen, speaking_style_examples_json
+      speaking_style_specimen, speaking_style_examples_json,
+      bestiary_species_id, bestiary_variant_key
     ) VALUES (
       @id, @campaignId, @regionId, @name, @role, @disposition, @alignment, @temperament,
       @canSpeak, @status, 0, @backstory, @catalogCreatureKey, 'villager',
       @raceKey, @backgroundKey, @genderKey, @classKey,
-      @speakingStyleSpecimen, @speakingStyleExamplesJson
+      @speakingStyleSpecimen, @speakingStyleExamplesJson,
+      @bestiarySpeciesId, @bestiaryVariantKey
     )`
   ).run({
     id,
@@ -312,7 +332,9 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
     genderKey: defaults.genderKey,
     classKey: defaults.classKey,
     speakingStyleSpecimen: defaults.speakingStyleSpecimen,
-    speakingStyleExamplesJson: serializeSpeakingStyleExamples(defaults.speakingStyleExamples)
+    speakingStyleExamplesJson: serializeSpeakingStyleExamples(defaults.speakingStyleExamples),
+    bestiarySpeciesId: defaults.bestiarySpeciesId,
+    bestiaryVariantKey: defaults.bestiaryVariantKey
   })
 
   if (!input.skipCombatHydration && !input.catalogCreatureKey) {
@@ -344,6 +366,21 @@ export function markNpcPromoted(db: Database.Database, id: string): void {
 
 export function updateNpcDisposition(db: Database.Database, id: string, disposition: string): void {
   db.prepare('UPDATE npcs SET disposition = ? WHERE id = ?').run(disposition, id)
+}
+
+export interface SetNpcBestiaryLinkInput {
+  bestiarySpeciesId: string | null
+  bestiaryVariantKey: string | null
+}
+
+export function setNpcBestiaryLink(
+  db: Database.Database,
+  id: string,
+  input: SetNpcBestiaryLinkInput
+): void {
+  db.prepare(
+    'UPDATE npcs SET bestiary_species_id = ?, bestiary_variant_key = ? WHERE id = ?'
+  ).run(input.bestiarySpeciesId, input.bestiaryVariantKey, id)
 }
 
 export interface UpdateNpcTraitsInput {

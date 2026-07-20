@@ -32,7 +32,7 @@ describe('buildCreateProgress', () => {
     const progress = buildCreateProgress('story')
     expect(progress).toEqual({
       stage: 'story',
-      stageIndex: 5,
+      stageIndex: 6,
       stageTotal: CREATE_CAMPAIGN_STAGE_TOTAL,
       statusText: CREATE_STAGE_GOOFY_MESSAGES.story[0]
     })
@@ -46,6 +46,7 @@ describe('mapCreateStageToPlayerMessage', () => {
     expect(mapCreateStageToPlayerMessage('world')).toBe('Imagining your world')
     expect(mapCreateStageToPlayerMessage('regions')).toBe('Shaping regions')
     expect(mapCreateStageToPlayerMessage('npcs')).toBe('Populating your world')
+    expect(mapCreateStageToPlayerMessage('bestiary')).toBe('Stocking the bestiary')
     expect(mapCreateStageToPlayerMessage('story')).toBe('Weaving the main story')
     expect(mapCreateStageToPlayerMessage('persist')).toBe('Saving your campaign')
     expect(mapCreateStageToPlayerMessage(null)).toBe('Creating your campaign')
@@ -59,6 +60,7 @@ describe('mapCreateStageTraceLabel', () => {
     expect(mapCreateStageTraceLabel('world')).toBe('World')
     expect(mapCreateStageTraceLabel('regions')).toBe('Regions')
     expect(mapCreateStageTraceLabel('npcs')).toBe('NPCs')
+    expect(mapCreateStageTraceLabel('bestiary')).toBe('Bestiary')
     expect(mapCreateStageTraceLabel('story')).toBe('Story')
     expect(mapCreateStageTraceLabel('persist')).toBe('Saving')
   })

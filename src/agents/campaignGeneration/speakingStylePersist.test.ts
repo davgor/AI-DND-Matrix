@@ -16,7 +16,7 @@ import {
   RACE_LORE_RESPONSE,
   SHIELD_HERO_CANON
 } from '../../test/fixtures/campaignGenerationFixtures'
-import type { GeneratedNpc } from './types'
+import type { GeneratedBestiaryRoster, GeneratedNpc } from './types'
 import { buildAvailableRaceOptions } from '../raceLore'
 
 function findSpeakingStylePrompt(calls: Array<{ prompt: string }>): string {
@@ -57,6 +57,29 @@ function seedCampaignForStylePersist(db: ReturnType<typeof createTestDb>, name: 
 
 function stylePersistProviderQueue() {
   return createScriptedProvider([RACE_LORE_RESPONSE, SPEAKING_STYLE_RESPONSE, '{"upgrade":false}'])
+}
+
+const DEFAULT_TEST_BESTIARY: GeneratedBestiaryRoster = {
+  foes: [
+    {
+      name: 'Ash Wolf',
+      tags: ['wolf'],
+      buckets: ['beast'],
+      lore: 'Ash wolves haunt burnt ridgelines where smoke still clings to the scrub.'
+    },
+    {
+      name: 'Cave Crawler',
+      tags: ['ambush'],
+      buckets: ['beast'],
+      lore: 'Cave crawlers cling to damp ceilings and drop when torchlight wobbles.'
+    },
+    {
+      name: 'Bog Wight',
+      tags: ['undead'],
+      buckets: ['undead'],
+      lore: 'Bog wights rise where travelers drowned with unpaid debts still clutched in their fists.'
+    }
+  ]
 }
 
 describe('normalizeGeneratedNpc speaking-style clearing', () => {
@@ -226,6 +249,7 @@ describe('persistGeneratedCampaign speaking style', () => {
         },
         regions: [makeRegion('Seed Vale', 'seed')],
         npcs,
+        bestiary: DEFAULT_TEST_BESTIARY,
         storyThread: { title: 'Arc', state: 'open', summary: 'Begin.' }
       }
     })

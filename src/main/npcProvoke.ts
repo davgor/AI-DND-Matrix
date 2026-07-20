@@ -83,14 +83,14 @@ export interface ProvokeAttackResult {
   encounterStarted: boolean
 }
 
-export function provokeAndAttackNpc(input: {
+export async function provokeAndAttackNpc(input: {
   db: Database.Database
   campaignId: string
   regionId: string
   player: Character
   targetNpcId: string
   rng: RandomFn
-}): ProvokeAttackResult {
+}): Promise<ProvokeAttackResult> {
   const { db, campaignId, regionId, player, targetNpcId, rng } = input
   let npc = ensureNpcCombatStats(db, getNpcById(db, targetNpcId) as Npc)
   if (!isNpcAttackableInRegion(npc, regionId)) {
@@ -102,7 +102,7 @@ export function provokeAndAttackNpc(input: {
 
   let encounterStarted = false
   if (!getActiveEncounter(db, campaignId)) {
-    startEncounter({
+    await startEncounter({
       db,
       campaignId,
       regionId,

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { listBestiarySpecies } from '../db/repositories/bestiary'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import {
   buildCrimsonReachCascadingResponses,
   buildRealisticLlmCascadingSeedResponses,
+  buildShieldHeroCascadingSeedResponses,
   persistNpcEnrichmentResponses
 } from '../test/fixtures/campaignGenerationFixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
@@ -33,7 +35,6 @@ describe('createCampaignFromRequest contract — default setup form', () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
     const result = await createCampaignFromRequest(db, providerForDefaultForm(), DEFAULT_CREATE_REQUEST)
-
     expect(result.ok).toBe(true)
     if (!result.ok) {
       return
@@ -48,6 +49,9 @@ describe('createCampaignFromRequest contract — default setup form', () => {
     expect(result.detail.regions).toHaveLength(2)
     expect(result.detail.npcs).toHaveLength(6)
     expect(result.detail.storyThreads[0]?.title).toBe('The Missing Envoy')
+    const species = listBestiarySpecies(db, result.detail.campaign!.id)
+    expect(species.length).toBeGreaterThanOrEqual(3)
+    expect(species.every((entry) => entry.baseLore.trim().length > 0)).toBe(true)
   })
 
   it('accepts realistic live-model response shapes', async () => {
@@ -56,7 +60,9 @@ describe('createCampaignFromRequest contract — default setup form', () => {
     const result = await createCampaignFromRequest(db, providerForDefaultForm(), DEFAULT_CREATE_REQUEST)
     expect(result.ok).toBe(true)
   })
+})
 
+describe('createCampaignFromRequest contract — Crimson Reach', () => {
   it('succeeds for Crimson Reach premise with friendly temperament and Human race labels', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
@@ -77,7 +83,39 @@ describe('createCampaignFromRequest contract — default setup form', () => {
     if (result.ok) {
       expect(result.detail.campaign?.worldName).toBe('Venn Calder')
       expect(result.detail.npcs).toHaveLength(6)
+      expect(listBestiarySpecies(db, result.detail.campaign!.id).length).toBeGreaterThanOrEqual(3)
     }
+  })
+})
+
+describe('createCampaignFromRequest contract — Shield Hero foes', () => {
+  it('seeds slime and rift-beast style foes for Shield Hero-like premises', async () => {
+    resetCampaignCreateForTests()
+    const db = createTestDb()
+    const provider = createScriptedProvider([
+      ...buildShieldHeroCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 1 }),
+      ...persistNpcEnrichmentResponses(2)
+    ])
+    const result = await createCampaignFromRequest(db, provider, {
+      sessionId: 'contract-shield-bestiary',
+      name: 'Waves of Melromarc',
+      premisePrompt: 'Campaign set in the world of the shield hero with rift Waves and slimes',
+      deathMode: 'standard',
+      regionCount: 2,
+      npcsPerRegion: 1
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) {
+      return
+    }
+    const species = listBestiarySpecies(db, result.detail.campaign!.id)
+    expect(species.length).toBeGreaterThanOrEqual(3)
+    const blob = species
+      .map((entry) => `${entry.name} ${entry.tags.join(' ')}`)
+      .join(' ')
+      .toLowerCase()
+    expect(blob.includes('slime')).toBe(true)
+    expect(blob.includes('rift')).toBe(true)
   })
 })
 
@@ -89,7 +127,6 @@ describe('createCampaignFromRequest contract — generation failure', () => {
       sessionId: 'contract-generation-failure',
       premisePrompt: 'Broken premise'
     })
-
     expect(result.ok).toBe(false)
     if (result.ok) {
       return
@@ -107,7 +144,6 @@ describe('createCampaignFromRequest contract — generation failure', () => {
       premisePrompt: 'Broken premise'
     })
     const after = db.prepare('SELECT COUNT(*) as count FROM campaigns').get() as { count: number }
-
     expect(result.ok).toBe(false)
     expect(after.count).toBe(before.count)
   })

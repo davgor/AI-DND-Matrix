@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3'
 import type { Alignment, PendingAlignmentShift } from '../shared/alignment/types'
 import { getCharacterById, listPlayerCharacters } from '../db/repositories/characters'
 import { listEventsByCampaign } from '../db/repositories/events'
-import { listNpcsByRegion } from '../db/repositories/npcs'
+import { isHostileNpc, listNpcsByRegion } from '../db/repositories/npcs'
 import { getRegionById, type RegionStatus } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { listLogEntriesByCharacter } from '../db/repositories/logEntries'
@@ -16,6 +16,16 @@ import { loadActiveQuestsForCharacter } from './narrationQuestContext'
 import { loadKnownSpellsForNarration } from './narrationSpellContext'
 import type { ActiveQuestContext } from './questWindow'
 import type { KnownSpellContext } from './spellWindow'
+import {
+  loadPresentBestiaryGrounding,
+  type SlimPresentBestiaryGrounding
+} from './bestiary/contextGrounding'
+
+type PresentNpcContext = {
+  id: string
+  name: string
+  isHostile: boolean
+}
 
 function listInactiveLivingPlayersInRegion(
   db: Database.Database,
@@ -41,26 +51,39 @@ function listInactiveLivingPlayersInRegion(
 function loadNarrationWorldFields(
   db: Database.Database,
   campaignId: string,
-  regionId: string
+  regionId: string,
+  characterId: string
 ): {
   regionStatus: RegionStatus
   recentEvents: SlimEvent[]
   storyThreadState: { id: string; state: string; summary: string } | null
-  presentNpcs: { id: string; name: string }[]
+  presentNpcs: PresentNpcContext[]
+  bestiaryRecall: SlimPresentBestiaryGrounding[]
 } {
   const region = getRegionById(db, regionId)
   const recentEvents = slimEvents(takeRecent(listEventsByCampaign(db, campaignId)))
   const [primaryThread] = listStoryThreadsByCampaign(db, campaignId)
-  const presentNpcs = listNpcsByRegion(db, regionId)
-    .filter((npc) => !npc.isPartyMember)
-    .map((npc) => ({ id: npc.id, name: npc.name }))
+  const regionNpcs = listNpcsByRegion(db, regionId).filter((npc) => !npc.isPartyMember)
+  const presentNpcs = regionNpcs.map((npc) => ({
+    id: npc.id,
+    name: npc.name,
+    isHostile: isHostileNpc(npc)
+  }))
+  const bestiaryRecall = loadPresentBestiaryGrounding(db, {
+    characterId,
+    presentNpcs: regionNpcs.map((npc) => ({
+      id: npc.id,
+      bestiarySpeciesId: npc.bestiarySpeciesId
+    }))
+  })
   return {
     regionStatus: region?.status ?? { destroyed: false },
     recentEvents,
     storyThreadState: primaryThread
       ? { id: primaryThread.id, state: primaryThread.state, summary: primaryThread.summary }
       : null,
-    presentNpcs
+    presentNpcs,
+    bestiaryRecall
   }
 }
 
@@ -118,7 +141,8 @@ export function loadNarrationContextFields(
   regionStatus: RegionStatus
   recentEvents: SlimEvent[]
   storyThreadState: { id: string; state: string; summary: string } | null
-  presentNpcs: { id: string; name: string }[]
+  presentNpcs: PresentNpcContext[]
+  bestiaryRecall: SlimPresentBestiaryGrounding[]
   logBookEntries: SlimLogEntry[]
   playerAlignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
@@ -128,7 +152,7 @@ export function loadNarrationContextFields(
   activeQuests: ActiveQuestContext[]
   knownSpells: KnownSpellContext[]
 } {
-  const world = loadNarrationWorldFields(db, input.campaignId, input.regionId)
+  const world = loadNarrationWorldFields(db, input.campaignId, input.regionId, input.characterId)
   const characterFields = loadNarrationCharacterFields(db, {
     campaignId: input.campaignId,
     regionId: input.regionId,

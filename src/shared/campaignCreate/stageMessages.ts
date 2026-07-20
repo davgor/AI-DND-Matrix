@@ -46,6 +46,14 @@ export const CREATE_STAGE_GOOFY_MESSAGES: Record<CreateCampaignStage, readonly s
     'Handing out suspiciously specific rumors…',
     'Drafting the guy who knows a guy…'
   ],
+  bestiary: [
+    'Filing fangs under "local wildlife"…',
+    'Naming things that want to eat the party…',
+    'Sketching slime silhouettes in the margins…',
+    'Convincing monsters they have lore…',
+    'Stocking the bestiary before anyone asks…',
+    'Counting how many ways a rift can bite…'
+  ],
   story: [
     'Planting a main quest like a landmine…',
     'Weaving foreshadowing nobody will notice…',
@@ -91,6 +99,8 @@ export function mapCreateStageToPlayerMessage(stage: CreateCampaignStage | null)
       return 'Shaping regions'
     case 'npcs':
       return 'Populating your world'
+    case 'bestiary':
+      return 'Stocking the bestiary'
     case 'story':
       return 'Weaving the main story'
     case 'persist':
@@ -112,6 +122,8 @@ export function mapCreateStageTraceLabel(stage: CreateCampaignStage): string {
       return 'Regions'
     case 'npcs':
       return 'NPCs'
+    case 'bestiary':
+      return 'Bestiary'
     case 'story':
       return 'Story'
     case 'persist':

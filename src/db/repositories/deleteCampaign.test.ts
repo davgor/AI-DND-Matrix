@@ -12,8 +12,10 @@ import { touchLastPlayed } from './sessions'
 import { createStoryThread } from './storyThreads'
 import { createWorldFact } from './worldFacts'
 import { createCampaignRace } from './campaignRaces'
+import { createBestiarySpecies, setQuestFoeAssignment } from './bestiary'
 import { createDeity } from './deities'
 import { deleteCampaignCascade } from './deleteCampaign'
+import { createQuest } from './quests'
 
 const SAMPLE_RACE_LORE = {
   summary: 'Humans are widespread.',
@@ -23,8 +25,10 @@ const SAMPLE_RACE_LORE = {
   hooks: ['A frontier town grows.', 'Old bloodlines feud.']
 }
 
+type TestDb = ReturnType<typeof createTestDb>
+
 function insertTestRagChunk(
-  db: ReturnType<typeof createTestDb>,
+  db: TestDb,
   campaignId: string,
   overrides: { id?: string; sourceId?: string } = {}
 ): void {
@@ -45,50 +49,32 @@ function insertTestRagChunk(
   )
 }
 
-function insertTestRagBackfillState(db: ReturnType<typeof createTestDb>, campaignId: string): void {
+function insertTestRagBackfillState(db: TestDb, campaignId: string): void {
   db.prepare(
     `INSERT INTO rag_backfill_state (campaign_id, completed_at, updated_at) VALUES (?, NULL, ?)`
   ).run(campaignId, '2026-01-01T00:00:00.000Z')
 }
 
-function countForCampaign(db: ReturnType<typeof createTestDb>, table: string, campaignId: string): number {
-  if (table === 'region_history') {
-    return (
-      db
-        .prepare(
-          `SELECT COUNT(*) as count FROM region_history
-           WHERE region_id IN (SELECT id FROM regions WHERE campaign_id = ?)`
-        )
-        .get(campaignId) as { count: number }
-    ).count
-  }
-  if (table === 'npc_memories') {
-    return (
-      db
-        .prepare(
-          `SELECT COUNT(*) as count FROM npc_memories
-           WHERE npc_id IN (SELECT id FROM npcs WHERE campaign_id = ?)`
-        )
-        .get(campaignId) as { count: number }
-    ).count
-  }
-  if (table === 'character_items') {
-    return (
-      db
-        .prepare(
-          `SELECT COUNT(*) as count FROM character_items
-           WHERE character_id IN (SELECT id FROM characters WHERE campaign_id = ?)`
-        )
-        .get(campaignId) as { count: number }
-    ).count
-  }
-  const row = db
-    .prepare(`SELECT COUNT(*) as count FROM ${table} WHERE campaign_id = ?`)
-    .get(campaignId) as { count: number }
-  return row.count
+const NESTED_COUNT_SQL: Record<string, string> = {
+  region_history: `SELECT COUNT(*) as count FROM region_history
+           WHERE region_id IN (SELECT id FROM regions WHERE campaign_id = ?)`,
+  npc_memories: `SELECT COUNT(*) as count FROM npc_memories
+           WHERE npc_id IN (SELECT id FROM npcs WHERE campaign_id = ?)`,
+  character_items: `SELECT COUNT(*) as count FROM character_items
+           WHERE character_id IN (SELECT id FROM characters WHERE campaign_id = ?)`,
+  bestiary_variants: `SELECT COUNT(*) as count FROM bestiary_variants
+           WHERE species_id IN (SELECT id FROM bestiary_species WHERE campaign_id = ?)`,
+  quest_foe_assignments: `SELECT COUNT(*) as count FROM quest_foe_assignments
+           WHERE quest_id IN (SELECT id FROM quests WHERE campaign_id = ?)`
 }
 
-function seedDeityForCampaign(db: ReturnType<typeof createTestDb>, campaignId: string, label: string): void {
+function countForCampaign(db: TestDb, table: string, campaignId: string): number {
+  const nested = NESTED_COUNT_SQL[table]
+  const sql = nested ?? `SELECT COUNT(*) as count FROM ${table} WHERE campaign_id = ?`
+  return (db.prepare(sql).get(campaignId) as { count: number }).count
+}
+
+function seedDeityForCampaign(db: TestDb, campaignId: string, label: string): void {
   createDeity(db, {
     campaignId,
     name: `${label} God`,
@@ -101,20 +87,15 @@ function seedDeityForCampaign(db: ReturnType<typeof createTestDb>, campaignId: s
   })
 }
 
-function seedCampaignFootprint(db: ReturnType<typeof createTestDb>, label: string) {
-  const campaign = createCampaign(db, {
-    name: label,
-    premisePrompt: 'A test premise.',
-    deathMode: 'legendary'
-  })
+function seedRegionNpcAndCharacter(db: TestDb, campaignId: string, label: string) {
   const region = createRegion(db, {
-    campaignId: campaign.id,
+    campaignId,
     name: `${label} Region`,
     description: 'Description'
   })
   createRegionHistoryEntry(db, { regionId: region.id, inGameDate: 0, content: 'History' })
   const npc = createNpc(db, {
-    campaignId: campaign.id,
+    campaignId,
     regionId: region.id,
     name: `${label} NPC`,
     role: 'guide',
@@ -122,13 +103,43 @@ function seedCampaignFootprint(db: ReturnType<typeof createTestDb>, label: strin
   })
   appendNpcMemory(db, { npcId: npc.id, content: 'Memory', tags: ['test'] })
   const character = createCharacter(db, {
-    campaignId: campaign.id,
+    campaignId,
     name: `${label} Hero`,
     characterClass: 'fighter',
     kind: 'player',
     portraitPath: `/tmp/${label}-portrait.png`,
     sheetBackgroundPath: `/tmp/${label}-sheet.png`
   })
+  return { region, character }
+}
+
+function seedBestiaryAndQuest(db: TestDb, campaignId: string, label: string): void {
+  const species = createBestiarySpecies(db, {
+    campaignId,
+    key: `${label.toLowerCase()}-beast`,
+    name: `${label} Beast`,
+    baseLore: 'A test bestiary species.',
+    buckets: ['beast'],
+    tags: ['test'],
+    variants: [{ variantKey: 'standard' }]
+  })
+  const quest = createQuest(db, {
+    campaignId,
+    kind: 'side',
+    title: `${label} Quest`,
+    summary: 'Clear the beasts.',
+    scale: 'minor'
+  })
+  setQuestFoeAssignment(db, quest.id, [{ speciesId: species.id }])
+}
+
+function seedCampaignFootprint(db: TestDb, label: string) {
+  const campaign = createCampaign(db, {
+    name: label,
+    premisePrompt: 'A test premise.',
+    deathMode: 'legendary'
+  })
+  const { region, character } = seedRegionNpcAndCharacter(db, campaign.id, label)
   createCampaignRace(db, {
     campaignId: campaign.id,
     raceKey: 'human',
@@ -139,6 +150,7 @@ function seedCampaignFootprint(db: ReturnType<typeof createTestDb>, label: strin
     createdByCharacterId: character.id
   })
   seedDeityForCampaign(db, campaign.id, label)
+  seedBestiaryAndQuest(db, campaign.id, label)
   createSaveSnapshot(db, campaign.id)
   createWorldFact(db, { campaignId: campaign.id, content: 'Fact', regionId: region.id })
   createStoryThread(db, { campaignId: campaign.id, title: 'Thread', state: 'open' })
@@ -149,27 +161,55 @@ function seedCampaignFootprint(db: ReturnType<typeof createTestDb>, label: strin
   return campaign
 }
 
-function expectCampaignFullyDeleted(db: ReturnType<typeof createTestDb>, campaignId: string): void {
+const DIRECT_TABLES = [
+  'regions',
+  'npcs',
+  'characters',
+  'saves',
+  'world_facts',
+  'story_threads',
+  'events',
+  'sessions',
+  'campaign_races',
+  'deities',
+  'bestiary_species',
+  'quests'
+] as const
+
+const NESTED_TABLES = [
+  'region_history',
+  'npc_memories',
+  'character_items',
+  'bestiary_variants',
+  'quest_foe_assignments',
+  'rag_chunks',
+  'rag_backfill_state'
+] as const
+
+function expectCampaignFullyDeleted(db: TestDb, campaignId: string): void {
   expect(getCampaignById(db, campaignId)).toBeUndefined()
-  for (const table of [
-    'regions',
-    'npcs',
-    'characters',
-    'saves',
-    'world_facts',
-    'story_threads',
-    'events',
-    'sessions',
-    'campaign_races',
-    'deities'
-  ]) {
+  for (const table of DIRECT_TABLES) {
     expect(countForCampaign(db, table, campaignId)).toBe(0)
   }
-  expect(countForCampaign(db, 'region_history', campaignId)).toBe(0)
-  expect(countForCampaign(db, 'npc_memories', campaignId)).toBe(0)
-  expect(countForCampaign(db, 'character_items', campaignId)).toBe(0)
-  expect(countForCampaign(db, 'rag_chunks', campaignId)).toBe(0)
-  expect(countForCampaign(db, 'rag_backfill_state', campaignId)).toBe(0)
+  for (const table of NESTED_TABLES) {
+    expect(countForCampaign(db, table, campaignId)).toBe(0)
+  }
+}
+
+function expectOtherCampaignIntact(db: TestDb, otherId: string): void {
+  expect(getCampaignById(db, otherId)?.name).toBe('Other')
+  expect(countForCampaign(db, 'characters', otherId)).toBe(1)
+  expect(countForCampaign(db, 'campaign_races', otherId)).toBe(1)
+  expect(countForCampaign(db, 'deities', otherId)).toBe(1)
+  expect(countForCampaign(db, 'bestiary_species', otherId)).toBe(1)
+  expect(countForCampaign(db, 'bestiary_variants', otherId)).toBe(1)
+  expect(countForCampaign(db, 'quest_foe_assignments', otherId)).toBe(1)
+  expect(
+    (db.prepare('SELECT COUNT(*) as count FROM quest_foe_assignments').get() as { count: number }).count
+  ).toBe(1)
+  expect(
+    (db.prepare('SELECT COUNT(*) as count FROM bestiary_variants').get() as { count: number }).count
+  ).toBe(1)
 }
 
 describe('deleteCampaignCascade', () => {
@@ -177,32 +217,27 @@ describe('deleteCampaignCascade', () => {
     const db = createTestDb()
     const target = seedCampaignFootprint(db, 'Target')
     const other = seedCampaignFootprint(db, 'Other')
-
     deleteCampaignCascade(db, target.id)
-
     expectCampaignFullyDeleted(db, target.id)
-
-    expect(getCampaignById(db, other.id)?.name).toBe('Other')
-    expect(countForCampaign(db, 'characters', other.id)).toBe(1)
-    expect(countForCampaign(db, 'campaign_races', other.id)).toBe(1)
-    expect(countForCampaign(db, 'deities', other.id)).toBe(1)
+    expectOtherCampaignIntact(db, other.id)
   })
 
   it('succeeds when foreign keys are enforced (post-migration connection state)', () => {
     const db = createTestDb()
     db.pragma('foreign_keys = ON')
     const target = seedCampaignFootprint(db, 'FkEnforced')
-
     expect(() => deleteCampaignCascade(db, target.id)).not.toThrow()
     expect(getCampaignById(db, target.id)).toBeUndefined()
     expect(countForCampaign(db, 'campaign_races', target.id)).toBe(0)
     expect(countForCampaign(db, 'deities', target.id)).toBe(0)
+    expect(countForCampaign(db, 'bestiary_species', target.id)).toBe(0)
+    expect(countForCampaign(db, 'bestiary_variants', target.id)).toBe(0)
+    expect(countForCampaign(db, 'quest_foe_assignments', target.id)).toBe(0)
   })
 
   it('rolls back when a forced mid-delete failure occurs', () => {
     const db = createTestDb()
     const target = seedCampaignFootprint(db, 'Rollback')
-
     expect(() =>
       deleteCampaignCascade(db, target.id, {
         beforeCommit: () => {
@@ -210,11 +245,13 @@ describe('deleteCampaignCascade', () => {
         }
       })
     ).toThrow('forced failure')
-
     expect(getCampaignById(db, target.id)?.name).toBe('Rollback')
     expect(countForCampaign(db, 'characters', target.id)).toBe(1)
     expect(countForCampaign(db, 'events', target.id)).toBe(1)
     expect(countForCampaign(db, 'campaign_races', target.id)).toBe(1)
     expect(countForCampaign(db, 'deities', target.id)).toBe(1)
+    expect(countForCampaign(db, 'bestiary_species', target.id)).toBe(1)
+    expect(countForCampaign(db, 'bestiary_variants', target.id)).toBe(1)
+    expect(countForCampaign(db, 'quest_foe_assignments', target.id)).toBe(1)
   })
 })

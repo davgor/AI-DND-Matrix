@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import { resolveOrRealizeCampaignRace } from '../raceLore'
 import { generateNpcSpeakingStyle } from '../npcSpeakingStyle'
+import { generateOrGetBestiarySpecies } from '../bestiary/generateSpecies'
 import { createCampaign, type Campaign } from '../../db/repositories/campaigns'
 import { createDeity } from '../../db/repositories/deities'
 import { createNpcWithCombatReview } from '../../db/repositories/npcCombatHydration'
@@ -16,6 +17,7 @@ import type { Provider } from '../providers/types'
 import type {
   CampaignGenerationResult,
   CampaignSetupInput,
+  GeneratedBestiaryRoster,
   GeneratedNpc,
   GeneratedPantheon,
   GeneratedRegion,
@@ -277,6 +279,50 @@ function persistGeneratedPantheon(
   }
 }
 
+async function persistGeneratedBestiary(args: {
+  db: Database.Database
+  provider: Provider
+  campaignId: string
+  bestiary: GeneratedBestiaryRoster
+  settingHints?: string
+}): Promise<void> {
+  const { db, provider, campaignId, bestiary, settingHints } = args
+  for (const foe of bestiary.foes) {
+    await generateOrGetBestiarySpecies(db, provider, {
+      campaignId,
+      name: foe.name,
+      buckets: foe.buckets,
+      tags: foe.tags,
+      settingHints,
+      presetLore: foe.lore
+    })
+  }
+}
+
+function persistStoryThreadAndQuests(
+  db: Database.Database,
+  campaignId: string,
+  storyThread: CampaignGenerationResult['storyThread']
+): void {
+  createStoryThread(db, {
+    campaignId,
+    title: storyThread.title,
+    state: storyThread.state,
+    summary: storyThread.summary
+  })
+  const [thread] = listStoryThreadsByCampaign(db, campaignId)
+  if (!thread) {
+    return
+  }
+  seedMainQuestForCampaign(db, {
+    campaignId,
+    storyThreadId: thread.id,
+    title: thread.title,
+    summary: thread.summary
+  })
+  importSideQuestsFromQuestHooks(db, campaignId)
+}
+
 export async function persistGeneratedCampaign(args: {
   db: Database.Database
   provider: Provider
@@ -297,7 +343,6 @@ export async function persistGeneratedCampaign(args: {
   })
 
   persistGeneratedPantheon(db, campaign.id, generation.pantheon)
-
   const regionIdsByName = persistGeneratedRegionsWithQuests(db, campaign.id, generation.regions)
   await persistCampaignNpcsFromGeneration({
     db,
@@ -309,24 +354,13 @@ export async function persistGeneratedCampaign(args: {
     knownCharacters: options?.knownCharacters,
     settingLabel: options?.settingLabel
   })
-
-  createStoryThread(db, {
+  await persistGeneratedBestiary({
+    db,
+    provider,
     campaignId: campaign.id,
-    title: generation.storyThread.title,
-    state: generation.storyThread.state,
-    summary: generation.storyThread.summary
+    bestiary: generation.bestiary,
+    settingHints: [input.premisePrompt, generation.world.worldName].filter(Boolean).join('\n')
   })
-
-  const [thread] = listStoryThreadsByCampaign(db, campaign.id)
-  if (thread) {
-    seedMainQuestForCampaign(db, {
-      campaignId: campaign.id,
-      storyThreadId: thread.id,
-      title: thread.title,
-      summary: thread.summary
-    })
-    importSideQuestsFromQuestHooks(db, campaign.id)
-  }
-
+  persistStoryThreadAndQuests(db, campaign.id, generation.storyThread)
   return campaign
 }
