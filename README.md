@@ -17,6 +17,8 @@ Each campaign supports **multiple player characters** in one shared world. After
 - **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
 - **105** — NPC dossier modal (Social/log-book entry → traits, facts, opinion, disposition)
 - **106** — Ask the DM OOC chat (session-chrome panel; never hits the turn pipeline)
+- **112** — LLM usage metering (tokens/cost by purpose for subscription modeling)
+- **113** — Multi-cloud provider settings (Claude / GPT / Gemini / Grok dropdown + model picker)
 
 **Still parked** (`board/backlog/revisit/`):
 
