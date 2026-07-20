@@ -56,16 +56,23 @@ describe('buildAskDmPrompt', () => {
 })
 
 describe('generateAskDmReply', () => {
+  const baseContext = {
+    campaignId: 'camp-test',
+    characterId: 'char-test',
+    campaignName: 'Test',
+    campaignSummary: '',
+    characterName: 'Kael',
+    characterClass: 'fighter',
+    characterLevel: 1,
+    recentIcLines: [] as string[],
+    oocTranscript: [] as Array<{ role: 'player' | 'dm'; content: string }>,
+    playerQuestion: 'Who runs the tavern?'
+  }
+
   it('returns trimmed prose from the provider', async () => {
     const provider = createScriptedProvider(['  The innkeeper is Mira.  '])
     const reply = await generateAskDmReply(provider, {
-      campaignName: 'Test',
-      campaignSummary: '',
-      characterName: 'Kael',
-      characterClass: 'fighter',
-      characterLevel: 1,
-      recentIcLines: [],
-      oocTranscript: [],
+      ...baseContext,
       playerQuestion: 'Who runs the tavern?'
     })
 
@@ -78,13 +85,7 @@ describe('generateAskDmReply', () => {
   it('returns null for blank provider output', async () => {
     const provider = createScriptedProvider(['   '])
     const reply = await generateAskDmReply(provider, {
-      campaignName: 'Test',
-      campaignSummary: '',
-      characterName: 'Kael',
-      characterClass: 'fighter',
-      characterLevel: 1,
-      recentIcLines: [],
-      oocTranscript: [],
+      ...baseContext,
       playerQuestion: 'Rules?'
     })
     expect(reply).toBeNull()
@@ -93,13 +94,7 @@ describe('generateAskDmReply', () => {
   it('returns null when the provider throws', async () => {
     const provider = createScriptedProvider([new Error('provider down')])
     const reply = await generateAskDmReply(provider, {
-      campaignName: 'Test',
-      campaignSummary: '',
-      characterName: 'Kael',
-      characterClass: 'fighter',
-      characterLevel: 1,
-      recentIcLines: [],
-      oocTranscript: [],
+      ...baseContext,
       playerQuestion: 'Rules?'
     })
     expect(reply).toBeNull()

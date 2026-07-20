@@ -6,7 +6,7 @@ Each campaign supports **multiple player characters** in one shared world. After
 
 ## Status
 
-**Shipped through epic 108**, plus **106** Ask the DM OOC chat (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: cascading campaign creation (pantheon, world, regions, NPCs, story), onboarding review, race/background/equipment selection, guided identity and opening scene, hub-based multi-character management, turn-based play with Social/Scene streaming, combat, quests, spellbook, progression, loot, out-of-character Ask the DM, and packaging with auto-update.
+**Shipped through epic 108**, plus **106** Ask the DM OOC chat and **112** LLM usage metering (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: cascading campaign creation (pantheon, world, regions, NPCs, story), onboarding review, race/background/equipment selection, guided identity and opening scene, hub-based multi-character management, turn-based play with Social/Scene streaming, combat, quests, spellbook, progression, loot, out-of-character Ask the DM, and packaging with auto-update.
 
 **In progress** (`board/in-progress/`):
 
@@ -15,7 +15,6 @@ Each campaign supports **multiple player characters** in one shared world. After
 **Active backlog** (`board/backlog/`):
 
 - **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
-- **112** — LLM usage metering (tokens/cost by purpose for subscription modeling)
 - **113** — Multi-cloud provider settings (Claude / GPT / Gemini / Grok dropdown + model picker)
 
 **Still parked** (`board/backlog/revisit/`):

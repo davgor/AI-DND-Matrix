@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { SaveDialogReturnValue } from 'electron'
 import { createTestDb } from '../db/testUtils'
 import { insertLlmUsageEvent } from '../db/repositories/llmUsageEvents'
 import {
   buildUsageExportPayloadForDb,
   exportLlmUsageLog,
   getLlmUsageRecentTotals,
-  resolveRecentTotalsFilter
+  resolveRecentTotalsFilter,
+  type LlmUsageExportDeps
 } from './llmUsageIpc'
 
 function seedEvent(
@@ -70,8 +72,10 @@ describe('exportLlmUsageLog', () => {
   it('writes JSON export via save dialog and returns the path', async () => {
     const db = createTestDb()
     seedEvent(db)
-    const writeFile = vi.fn(async () => undefined)
-    const showSaveDialog = vi.fn(async () => ({
+    const writeFile = vi.fn(async (_path: string, data: string) => {
+      expect(data).toContain('"schemaVersion": 1')
+    }) as LlmUsageExportDeps['writeFile']
+    const showSaveDialog = vi.fn(async (): Promise<SaveDialogReturnValue> => ({
       canceled: false,
       filePath: 'C:\\exports\\ai-ttrpg-usage.json'
     }))
@@ -88,15 +92,13 @@ describe('exportLlmUsageLog', () => {
     expect(result).toEqual({ ok: true, path: 'C:\\exports\\ai-ttrpg-usage.json' })
     expect(showSaveDialog).toHaveBeenCalledOnce()
     expect(writeFile).toHaveBeenCalledOnce()
-    const written = writeFile.mock.calls[0]?.[1] as string
-    expect(written).toContain('"schemaVersion": 1')
-    expect(written).not.toContain('claudeApiKey')
+    expect(writeFile).not.toHaveBeenCalledWith(expect.anything(), expect.stringContaining('claudeApiKey'))
   })
 
   it('returns canceled when the dialog is dismissed', async () => {
     const db = createTestDb()
     const result = await exportLlmUsageLog(db, {
-      showSaveDialog: vi.fn(async () => ({ canceled: true })),
+      showSaveDialog: vi.fn(async (): Promise<SaveDialogReturnValue> => ({ canceled: true, filePath: '' })),
       writeFile: vi.fn(),
       now: () => new Date('2026-07-20T12:00:00.000Z'),
       appVersion: '0.28.0',
