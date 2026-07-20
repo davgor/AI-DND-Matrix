@@ -9,6 +9,7 @@ import { migrateGuidedCreationEquipmentPhaseV26 } from './migrateGuidedCreationE
 import { migrateRaceSelectionCharactersV29 } from './migrateRaceSelectionCharactersV29'
 import { migrateCharacterBackgroundCharactersV31 } from './migrateCharacterBackgroundCharactersV31'
 import { seedStarterItemCatalog } from './seedStarterItems'
+import { migrateRagChunksV37 } from './rag/migrateRagChunksV37'
 
 function addColumnIfMissing(
   db: Database.Database,
@@ -574,6 +575,12 @@ export const migrations: Migration[] = [
     up: (db) => {
       addColumnIfMissing(db, 'npcs', 'speaking_style_specimen', 'TEXT')
       addColumnIfMissing(db, 'npcs', 'speaking_style_examples_json', 'TEXT')
+    }
+  },
+  {
+    version: 37,
+    up: (db) => {
+      migrateRagChunksV37(db)
     }
   }
 ]

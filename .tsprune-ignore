@@ -1,7 +1,7 @@
 # Baseline ignore for ts-prune (one pattern per line)
 # Generated from tsconfig.node.json + tsconfig.web.json
 # Refresh after export moves/deletes: npm run deadcode:refresh
-# Refreshed 2026-07-19 (787 entries)
+# Refreshed 2026-07-20 (836 entries)
 
 electron.vite.config.ts:41 - default
 src/agents/campaignGeneration/flaggedNpc.ts:103 - generateFlaggedNpcDetails
@@ -91,10 +91,13 @@ src/agents/defeatDisposition.ts:14 - NON_SPEAKING_DEFEAT_DISPOSITION
 src/agents/defeatRules.ts:16 - DefeatRuleInput
 src/agents/defeatRules.ts:79 - defeatNarrationTemplate
 src/agents/defeatRules.ts:83 - defeatLocationTag
-src/agents/dm.ts:316 - CheckOutcome
-src/agents/dm.ts:345 - ProposedItemGrant
-src/agents/dm.ts:515 - NarrationSideEffectInput
-src/agents/dm.ts:60 - ActionType
+src/agents/dm.ts:318 - CheckOutcome
+src/agents/dm.ts:351 - ProposedItemGrant
+src/agents/dm.ts:539 - NarrationSideEffectInput
+src/agents/dm.ts:62 - ActionType
+src/agents/dmRagContext.ts:18 - DM_RAG_LORE_SERIALIZED_CHAR_CAP
+src/agents/dmRagContext.ts:20 - DmRagLoreFields
+src/agents/dmRagContext.ts:26 - LoadDmRagLoreParams
 src/agents/fleeNarration.ts:10 - FleeNarrationSchemaError
 src/agents/fleeNarration.ts:15 - FleeNarrationContext
 src/agents/fleeNarration.ts:59 - validateDmEscapeJudgment
@@ -120,8 +123,9 @@ src/agents/logBookWindow.ts:3 - LOG_ENTRIES_PER_CATEGORY_LIMIT
 src/agents/logBookWindow.ts:5 - LogBookSceneContext
 src/agents/loot.ts:101 - buildLootPrompt
 src/agents/loot.ts:47 - parseLootAgentResponse
-src/agents/npc.ts:13 - NpcContext
-src/agents/npc.ts:27 - NpcReaction
+src/agents/npc.ts:55 - AssembleNpcContextOptions
+src/agents/npc.ts:60 - NpcContext
+src/agents/npc.ts:96 - NpcReaction
 src/agents/npcSpeakingStyle.ts:25 - NpcSpeakingStyleSample
 src/agents/npcSpeakingStyle.ts:8 - NpcSpeakingStyleIdentity
 src/agents/npcSpeakingStyle.ts:80 - buildNpcSpeakingStylePrompt
@@ -129,8 +133,9 @@ src/agents/obituary.ts:14 - ObituarySchemaError
 src/agents/obituary.ts:22 - ObituaryNpcHistory
 src/agents/obituary.ts:230 - PersistObituaryOnDeathInput
 src/agents/obituary.ts:32 - ObituaryContext
-src/agents/partyMember.ts:16 - PartyMemberContext
-src/agents/partyMember.ts:39 - PartyMemberAction
+src/agents/partyMember.ts:42 - AssemblePartyMemberContextOptions
+src/agents/partyMember.ts:47 - PartyMemberContext
+src/agents/partyMember.ts:89 - PartyMemberAction
 src/agents/providers/claude.ts:22 - ClaudeTruncationError
 src/agents/providers/claude.ts:27 - ClaudeAdapterConfig
 src/agents/providers/claude.ts:3 - ClaudeConfigError
@@ -186,6 +191,46 @@ src/db/combatFleeSmokeHelpers.ts:14 - exploreTurnResponses
 src/db/index.ts:1 - getDatabasePath
 src/db/migrateEquipSlots.ts:9 - inferAccessorySlotFromName
 src/db/migrateEquipSlotsLegacyIO.ts:4 - LegacyItemRow
+src/db/rag/fakeEmbedder.ts:4 - FakeEmbedder
+src/db/rag/fakeEmbedder.ts:8 - FakeEmbedderOptions
+src/db/rag/index.ts:10 - packEmbedding
+src/db/rag/index.ts:10 - unpackEmbedding
+src/db/rag/index.ts:11 - FakeEmbedder
+src/db/rag/index.ts:11 - FakeEmbedderOptions
+src/db/rag/index.ts:11 - createFakeEmbedder
+src/db/rag/index.ts:12 - createLocalEmbedder
+src/db/rag/index.ts:14 - RAG_CHUNK_INJECTION_CAP
+src/db/rag/index.ts:15 - hybridRankScore
+src/db/rag/index.ts:16 - selectHybridRankedChunks
+src/db/rag/index.ts:17 - HybridRankCandidate
+src/db/rag/index.ts:2 - backfillCampaignRag
+src/db/rag/index.ts:20 - retrieveForContext
+src/db/rag/index.ts:21 - retrieveWithHybridRank
+src/db/rag/index.ts:22 - RetrieveForContextParams
+src/db/rag/index.ts:25 - retrieveRelevantChunks
+src/db/rag/index.ts:26 - RetrievedChunk
+src/db/rag/index.ts:27 - RetrievalScope
+src/db/rag/index.ts:28 - RetrievalScopeIds
+src/db/rag/index.ts:29 - RetrieveRelevantChunksParams
+src/db/rag/index.ts:3 - ensureCampaignRagBackfill
+src/db/rag/index.ts:31 - selectEmbedder
+src/db/rag/index.ts:32 - EMBEDDING_DIMENSION
+src/db/rag/index.ts:32 - Embedder
+src/db/rag/index.ts:32 - EmbedderName
+src/db/rag/index.ts:33 - UpsertRagChunkInput
+src/db/rag/index.ts:33 - resolveEmbedder
+src/db/rag/index.ts:33 - upsertRagChunk
+src/db/rag/index.ts:4 - RAG_BACKFILL_BATCH_SIZE
+src/db/rag/index.ts:5 - BackfillCampaignRagParams
+src/db/rag/index.ts:6 - BackfillCampaignRagResult
+src/db/rag/index.ts:8 - contentHash
+src/db/rag/index.ts:9 - cosineSimilarity
+src/db/rag/localEmbedder.ts:19 - l2Normalize
+src/db/rag/retrieve.ts:22 - RetrieveRelevantChunksParams
+src/db/rag/retrieve.ts:52 - retrieveRelevantChunks
+src/db/rag/retrieve.ts:6 - RetrievalScope
+src/db/rag/retrieve.ts:8 - RetrievalScopeIds
+src/db/rag/upsertChunk.ts:8 - UpsertRagChunkInput
 src/db/repositories/campaigns.ts:27 - CreateCampaignInput
 src/db/repositories/campaigns.ts:272 - UpdateCampaignDeathModeInput
 src/db/repositories/campaigns.ts:277 - updateCampaignDeathMode
@@ -227,7 +272,8 @@ src/db/repositories/items.ts:79 - findCatalogItemByName
 src/db/repositories/logEntries.ts:92 - UpdateLogEntryInput
 src/db/repositories/npcAttackProfile.ts:8 - NpcAttackProfile
 src/db/repositories/npcCombatHydration.ts:18 - hydrateNpcFromCatalog
-src/db/repositories/npcMemories.ts:12 - AppendNpcMemoryInput
+src/db/repositories/npcMemories.ts:14 - AppendNpcMemoryInput
+src/db/repositories/npcMemories.ts:21 - AppendNpcMemoryOptions
 src/db/repositories/npcs.ts:16 - NpcStatus
 src/db/repositories/npcs.ts:337 - updateNpcStatus
 src/db/repositories/npcs.ts:341 - markNpcPromoted
@@ -243,13 +289,14 @@ src/db/repositories/quests.ts:276 - importSideQuestsFromQuestHooks
 src/db/repositories/quests.ts:292 - seedMainQuestForCampaign
 src/db/repositories/quests.ts:314 - seedCharacterQuestMembership
 src/db/repositories/quests.ts:336 - seedAllPlayerCharacterQuestMembership
-src/db/repositories/regionHistory.ts:104 - replaceRegionHistoryWithCompressedSummary
-src/db/repositories/regionHistory.ts:12 - CreateRegionHistoryEntryInput
-src/db/repositories/regionHistory.ts:36 - createRegionHistoryEntry
-src/db/repositories/regionHistory.ts:4 - RegionHistoryEntry
-src/db/repositories/regionHistory.ts:71 - markRegionHistoryCompressed
-src/db/repositories/regionHistory.ts:82 - listCompressionCandidates
-src/db/repositories/regionHistory.ts:97 - ReplaceWithCompressedSummaryInput
+src/db/repositories/regionHistory.ts:101 - markRegionHistoryCompressed
+src/db/repositories/regionHistory.ts:112 - listCompressionCandidates
+src/db/repositories/regionHistory.ts:127 - ReplaceWithCompressedSummaryInput
+src/db/repositories/regionHistory.ts:134 - replaceRegionHistoryWithCompressedSummary
+src/db/repositories/regionHistory.ts:15 - CreateRegionHistoryEntryInput
+src/db/repositories/regionHistory.ts:21 - WriteRegionHistoryOptions
+src/db/repositories/regionHistory.ts:63 - createRegionHistoryEntry
+src/db/repositories/regionHistory.ts:7 - RegionHistoryEntry
 src/db/repositories/regions.ts:17 - CreateRegionInput
 src/db/repositories/regions.ts:80 - updateRegionStatus
 src/db/repositories/startingLoadoutApply.ts:39 - commitStartingLoadout
@@ -257,7 +304,10 @@ src/db/repositories/startingLoadoutOffer.ts:34 - BuildStartingLoadoutOfferResult
 src/db/repositories/storyThreads.ts:12 - CreateStoryThreadInput
 src/db/repositories/storyThreads.ts:37 - createStoryThread
 src/db/repositories/weaponDamageProfile.ts:42 - weaponPropertiesToComponents
-src/db/repositories/worldFacts.ts:13 - CreateWorldFactInput
+src/db/repositories/worldFacts.ts:15 - CreateWorldFactInput
+src/db/repositories/worldFacts.ts:23 - UpdateWorldFactInput
+src/db/repositories/worldFacts.ts:27 - WriteWorldFactOptions
+src/db/repositories/worldFacts.ts:94 - updateWorldFact
 src/db/testUtils.ts:12 - ensureLegacyRaceKeyColumns
 src/engine/abilities.ts:11 - POINT_BUY_POOL
 src/engine/abilities.ts:12 - POINT_BUY_MIN

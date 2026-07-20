@@ -1,4 +1,8 @@
 import type Database from 'better-sqlite3'
+import { ensureCampaignRagBackfill, retrieveForContext } from '../db/rag'
+import type { RetrievedChunk } from '../db/rag/retrieve'
+import type { Embedder } from '../db/rag/types'
+import { resolveEmbedder } from '../db/rag/upsertChunk'
 import type { Character } from '../db/repositories/characters'
 import { listEventsByCampaign } from '../db/repositories/events'
 import { listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
@@ -13,25 +17,71 @@ import { tryParseJson } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 import { buildAgentSystemPrompt } from './sharedSystemPrompts'
 
+const DEFAULT_PARTY_MEMBER_RAG_QUERY = 'what I know about this scene'
+
+function orderRowsByHits<T extends { id: string }>(hits: RetrievedChunk[], rows: T[]): T[] {
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  return hits
+    .map((hit) => byId.get(hit.sourceId))
+    .filter((row): row is T => row !== undefined)
+}
+
+function priorNpcMemoriesFromHits(
+  db: Database.Database,
+  sourceNpcId: string,
+  memoryHits: RetrievedChunk[]
+): SlimNpcMemory[] {
+  if (memoryHits.length === 0) {
+    return windowNpcMemories(listNpcMemoriesByNpc(db, sourceNpcId))
+  }
+  const hitIds = new Set(memoryHits.map((hit) => hit.sourceId))
+  const matched = listNpcMemoriesByNpc(db, sourceNpcId).filter((memory) => hitIds.has(memory.id))
+  return windowNpcMemories(orderRowsByHits(memoryHits, matched))
+}
+
+export interface AssemblePartyMemberContextOptions {
+  embedder?: Embedder
+  query?: string
+}
+
 export interface PartyMemberContext {
   characterId: string
   relationshipEvents: SlimEvent[]
   priorNpcMemories: SlimNpcMemory[]
 }
 
-export function assemblePartyMemberContext(
+export async function assemblePartyMemberContext(
   db: Database.Database,
   campaignId: string,
-  character: Character
-): PartyMemberContext {
+  character: Character,
+  options?: AssemblePartyMemberContextOptions
+): Promise<PartyMemberContext> {
+  const embedder = resolveEmbedder(options?.embedder)
+  const query = options?.query ?? DEFAULT_PARTY_MEMBER_RAG_QUERY
+
+  await ensureCampaignRagBackfill({ db, campaignId, embedder })
+
   const allEvents = listEventsByCampaign(db, campaignId)
   const relevant = allEvents.filter((event) => event.payload['characterId'] === character.id)
-  const priorNpcMemories = character.sourceNpcId
-    ? windowNpcMemories(listNpcMemoriesByNpc(db, character.sourceNpcId))
-    : []
+  const relationshipEvents = slimEvents(takeRecent(relevant))
+
+  let priorNpcMemories: SlimNpcMemory[] = []
+  if (character.sourceNpcId) {
+    const hits = await retrieveForContext({
+      db,
+      campaignId,
+      query,
+      scope: 'npc',
+      scopeIds: { npcId: character.sourceNpcId },
+      embedder
+    })
+    const memoryHits = hits.filter((hit) => hit.sourceTable === 'npc_memories')
+    priorNpcMemories = priorNpcMemoriesFromHits(db, character.sourceNpcId, memoryHits)
+  }
+
   return {
     characterId: character.id,
-    relationshipEvents: slimEvents(takeRecent(relevant)),
+    relationshipEvents,
     priorNpcMemories
   }
 }

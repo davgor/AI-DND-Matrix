@@ -36,7 +36,7 @@ export async function expectEmphasisGuidanceInPrompts(): Promise<void> {
   })
 
   const dmProvider = createScriptedProvider([JSON.stringify({ narrationText: 'All clear.' })])
-  const context = assembleNarrationContext({
+  const context = await assembleNarrationContext({
     db,
     campaignId: campaign.id,
     regionId: region.id,
@@ -48,6 +48,11 @@ export async function expectEmphasisGuidanceInPrompts(): Promise<void> {
   expect(dmProvider.calls[0]?.context?.systemPrompt).toContain(NARRATIVE_EMPHASIS_GUIDANCE)
 
   const npcProvider = createScriptedProvider(['{"dialogue":"*Hello.*"}'])
-  await generateNpcReaction(npcProvider, npc, assembleNpcContext(db, npc), 'The hero arrives.')
+  await generateNpcReaction(
+    npcProvider,
+    npc,
+    await assembleNpcContext(db, npc),
+    'The hero arrives.'
+  )
   expect(npcProvider.calls[0]?.context?.systemPrompt).toContain(NPC_EMPHASIS_GUIDANCE)
 }

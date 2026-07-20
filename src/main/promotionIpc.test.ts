@@ -208,14 +208,14 @@ describe('recruitPartyMemberFromRoster (038.13)', () => {
 })
 
 describe('promotion memory carry-forward (011.4)', () => {
-  it("includes the NPC's pre-promotion memories in the new party member's initial context", () => {
+  it("includes the NPC's pre-promotion memories in the new party member's initial context", async () => {
     const { db, campaign, npc } = seedNpc('shopkeeper')
     appendNpcMemory(db, { npcId: npc.id, content: 'Helped the party haggle for supplies.', tags: [] })
 
     confirmNpcPromotion(db, { campaignId: campaign.id, npcId: npc.id })
     const promoted = listCharactersByCampaign(db, campaign.id).find((c) => c.sourceNpcId === npc.id)!
 
-    const context = assemblePartyMemberContext(db, campaign.id, promoted)
+    const context = await assemblePartyMemberContext(db, campaign.id, promoted)
 
     expect(context.priorNpcMemories.length).toBeGreaterThanOrEqual(1)
     expect(context.priorNpcMemories.some((m) => m.content === 'Helped the party haggle for supplies.')).toBe(

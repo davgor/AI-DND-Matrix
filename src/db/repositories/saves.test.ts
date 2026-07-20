@@ -20,6 +20,32 @@ function seedCampaignWithCharacter(db: ReturnType<typeof createTestDb>) {
   return { campaign, character }
 }
 
+function insertPersistedRagChunk(db: ReturnType<typeof createTestDb>, campaignId: string): void {
+  const embedding = Buffer.alloc(256 * 4)
+  db.prepare(
+    `INSERT INTO rag_chunks (
+      id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
+      text, content_hash, embedding, updated_at
+    ) VALUES (?, ?, 'world_facts', ?, NULL, NULL, NULL, ?, ?, ?, ?)`
+  ).run(
+    'persist-chunk',
+    campaignId,
+    'fact-persist',
+    'Persistent indexed chunk.',
+    'hash-persist',
+    embedding,
+    '2026-01-01T00:00:00.000Z'
+  )
+}
+
+function countRagChunksForCampaign(db: ReturnType<typeof createTestDb>, campaignId: string): number {
+  return (
+    db.prepare('SELECT COUNT(*) as count FROM rag_chunks WHERE campaign_id = ?').get(campaignId) as {
+      count: number
+    }
+  ).count
+}
+
 describe('saves repository', () => {
   it('restores a prior snapshot, reverting a later HP mutation', () => {
     const db = createTestDb()
@@ -47,6 +73,20 @@ describe('saves repository', () => {
     restoreLatestSave(db, campaign.id)
 
     expect(getCharacterById(db, character.id)?.hp).toBe(15)
+  })
+
+  it('does not duplicate or remove rag_chunks when restoring a snapshot', () => {
+    const db = createTestDb()
+    const { campaign, character } = seedCampaignWithCharacter(db)
+    insertPersistedRagChunk(db, campaign.id)
+
+    createSaveSnapshot(db, campaign.id)
+    updateCharacter(db, character.id, { hp: 1 })
+
+    restoreLatestSave(db, campaign.id)
+
+    expect(getCharacterById(db, character.id)?.hp).toBe(20)
+    expect(countRagChunksForCampaign(db, campaign.id)).toBe(1)
   })
 
   it('restores campaign-level state alongside character state', () => {

@@ -136,12 +136,12 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     const { db, campaign, region, player } = seedCampaignWithRegion()
     createStoryThread(db, { campaignId: campaign.id, title: 'Main Arc', state: 'rising', summary: 'so far...' })
 
-    const before = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const before = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(before.regionStatus).toEqual({ destroyed: false })
     expect(before.storyThreadState?.state).toBe('rising')
 
     updateRegionStatus(db, region.id, { destroyed: true, cause: 'firebomb' })
-    const after = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const after = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(after.regionStatus).toEqual({ destroyed: true, cause: 'firebomb' })
   })
 
@@ -155,7 +155,7 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
       disposition: 'friendly'
     })
 
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
     expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira' }])
   })
 
@@ -170,7 +170,7 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     })
     markNpcPromoted(db, npc.id)
 
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     expect(context.presentNpcs).toEqual([])
   })
@@ -205,7 +205,7 @@ describe('narration context slimming (040.4)', () => {
       }
     })
     const provider = createScriptedProvider(['{"narrationText":"You press on."}'])
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     await narrate(provider, { success: true, total: 10, dc: 10 }, context)
 
@@ -233,7 +233,7 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
     const provider = createScriptedProvider([
       `{"narrationText":"Mira gasps.","reactingNpcIds":["${npc.id}"]}`
     ])
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     const result = await narrate(provider, { success: true, total: 15, dc: 10 }, context)
 
@@ -252,7 +252,7 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
     const provider = createScriptedProvider([
       `{"narrationText":"Mira considers your offer.","proposedPromotionNpcId":"${npc.id}"}`
     ])
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     const result = await narrate(provider, { success: true, total: 15, dc: 10 }, context)
 
@@ -263,7 +263,7 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
     const { db, campaign, region, player } = seedCampaignWithRegion()
     const provider = createScriptedProvider(['{"narrationText":"The blade finds its mark."}'])
     const outcome = { success: true, total: 17, dc: 12 }
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
 
     await narrate(provider, outcome, context)
 
@@ -275,7 +275,7 @@ describe('narrate: shared systemPrompt (040.9)', () => {
   it('moves the narration schema, guidance, and emphasis rules into systemPrompt', async () => {
     const { db, campaign, region, player } = seedCampaignWithRegion()
     const provider = createScriptedProvider(['{"narrationText":"The door creaks open."}'])
-    const context = assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'I open the door' })
+    const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'I open the door' })
 
     await narrate(provider, { success: true, total: 12, dc: 10 }, context)
 

@@ -214,7 +214,7 @@ function seedNarrationGrounding(scene: DialogueScene): void {
 export async function captureNarrationPromptCall(): Promise<MockProviderCall> {
   const scene = seedDialogueScene()
   seedNarrationGrounding(scene)
-  const context = assembleNarrationContext({
+  const context = await assembleNarrationContext({
     db: scene.db,
     campaignId: scene.campaign.id,
     regionId: scene.region.id,

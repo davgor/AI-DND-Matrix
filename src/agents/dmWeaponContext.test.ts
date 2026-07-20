@@ -13,7 +13,7 @@ import { listEventsByCampaign } from '../db/repositories/events'
 import { persistValidatedModification } from '../main/modificationPipeline'
 
 describe('assembleNarrationContext equipped weapon modifications', () => {
-  it('includes equipped weapon modification summary after enchant', () => {
+  it('includes equipped weapon modification summary after enchant', async () => {
     const db = createTestDb()
     runMigrations(db, migrations)
     const campaign = createCampaign(db, { name: 'Enchant', premisePrompt: 'x', deathMode: 'standard' })
@@ -43,7 +43,7 @@ describe('assembleNarrationContext equipped weapon modifications', () => {
       }
     })
 
-    const context = assembleNarrationContext({
+    const context = await assembleNarrationContext({
       db,
       campaignId: campaign.id,
       regionId: region.id,

@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
+import { resolveEmbedder, upsertRagChunk } from '../rag/upsertChunk'
+import type { Embedder } from '../rag/types'
 
 export interface WorldFact {
   id: string
@@ -16,6 +18,14 @@ export interface CreateWorldFactInput {
   regionId?: string | null
   factionTag?: string | null
   createdAt?: string
+}
+
+export interface UpdateWorldFactInput {
+  content: string
+}
+
+export interface WriteWorldFactOptions {
+  embedder?: Embedder
 }
 
 interface WorldFactRow {
@@ -38,7 +48,27 @@ function rowToWorldFact(row: WorldFactRow): WorldFact {
   }
 }
 
-export function createWorldFact(db: Database.Database, input: CreateWorldFactInput): WorldFact {
+function indexWorldFact(
+  db: Database.Database,
+  fact: WorldFact,
+  options?: WriteWorldFactOptions
+): void {
+  void upsertRagChunk({
+    db,
+    campaignId: fact.campaignId,
+    sourceTable: 'world_facts',
+    sourceId: fact.id,
+    regionId: fact.regionId,
+    text: fact.content,
+    embedder: resolveEmbedder(options?.embedder)
+  }).catch(() => undefined)
+}
+
+export function createWorldFact(
+  db: Database.Database,
+  input: CreateWorldFactInput,
+  options?: WriteWorldFactOptions
+): WorldFact {
   const id = randomUUID()
   const regionId = input.regionId ?? null
   const factionTag = input.factionTag ?? null
@@ -49,7 +79,7 @@ export function createWorldFact(db: Database.Database, input: CreateWorldFactInp
      VALUES (?, ?, ?, ?, ?, ?)`
   ).run(id, input.campaignId, regionId, factionTag, input.content, createdAt)
 
-  return {
+  const fact: WorldFact = {
     id,
     campaignId: input.campaignId,
     regionId,
@@ -57,6 +87,26 @@ export function createWorldFact(db: Database.Database, input: CreateWorldFactInp
     content: input.content,
     createdAt
   }
+  indexWorldFact(db, fact, options)
+  return fact
+}
+
+export function updateWorldFact(
+  db: Database.Database,
+  factId: string,
+  input: UpdateWorldFactInput,
+  options?: WriteWorldFactOptions
+): WorldFact | null {
+  const row = db.prepare('SELECT * FROM world_facts WHERE id = ?').get(factId) as WorldFactRow | undefined
+  if (!row) {
+    return null
+  }
+
+  db.prepare('UPDATE world_facts SET content = ? WHERE id = ?').run(input.content, factId)
+
+  const fact = rowToWorldFact({ ...row, content: input.content })
+  indexWorldFact(db, fact, options)
+  return fact
 }
 
 export function listQuestHooksByRegion(db: Database.Database, regionId: string): WorldFact[] {

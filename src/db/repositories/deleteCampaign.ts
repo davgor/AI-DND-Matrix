@@ -43,6 +43,8 @@ export function deleteCampaignCascade(
     db.prepare('DELETE FROM events WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM combat_encounters WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM sessions WHERE campaign_id = ?').run(campaignId)
+    db.prepare('DELETE FROM rag_chunks WHERE campaign_id = ?').run(campaignId)
+    db.prepare('DELETE FROM rag_backfill_state WHERE campaign_id = ?').run(campaignId)
     db.prepare('DELETE FROM campaigns WHERE id = ?').run(campaignId)
     hooks?.beforeCommit?.()
   })

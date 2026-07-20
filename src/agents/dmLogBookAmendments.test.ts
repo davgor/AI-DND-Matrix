@@ -68,7 +68,7 @@ describe('log book amendment round-trip after context slimming (040.4)', () => {
         logBookDeletions: [staleEntry.id]
       })
     ])
-    const context = assembleNarrationContext({
+    const context = await assembleNarrationContext({
       db,
       campaignId: campaign.id,
       regionId: region.id,

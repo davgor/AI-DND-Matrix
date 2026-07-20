@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
+import { resolveEmbedder, upsertRagChunk } from '../rag/upsertChunk'
+import type { Embedder } from '../rag/types'
+import { getRegionById } from './regions'
 
 export interface RegionHistoryEntry {
   id: string
@@ -13,6 +16,10 @@ export interface CreateRegionHistoryEntryInput {
   regionId: string
   inGameDate: number
   content: string
+}
+
+export interface WriteRegionHistoryOptions {
+  embedder?: Embedder
 }
 
 interface RegionHistoryRow {
@@ -33,9 +40,30 @@ function rowToEntry(row: RegionHistoryRow): RegionHistoryEntry {
   }
 }
 
+function indexRegionHistoryEntry(
+  db: Database.Database,
+  entry: RegionHistoryEntry,
+  options?: WriteRegionHistoryOptions
+): void {
+  const region = getRegionById(db, entry.regionId)
+  if (!region) {
+    return
+  }
+  void upsertRagChunk({
+    db,
+    campaignId: region.campaignId,
+    sourceTable: 'region_history',
+    sourceId: entry.id,
+    regionId: entry.regionId,
+    text: entry.content,
+    embedder: resolveEmbedder(options?.embedder)
+  }).catch(() => undefined)
+}
+
 export function createRegionHistoryEntry(
   db: Database.Database,
-  input: CreateRegionHistoryEntryInput
+  input: CreateRegionHistoryEntryInput,
+  options?: WriteRegionHistoryOptions
 ): RegionHistoryEntry {
   const id = randomUUID()
 
@@ -49,13 +77,15 @@ export function createRegionHistoryEntry(
     content: input.content
   })
 
-  return {
+  const entry: RegionHistoryEntry = {
     id,
     regionId: input.regionId,
     inGameDate: input.inGameDate,
     content: input.content,
     isCompressed: false
   }
+  indexRegionHistoryEntry(db, entry, options)
+  return entry
 }
 
 export function listRegionHistoryByRegion(

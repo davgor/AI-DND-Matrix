@@ -13,7 +13,7 @@ import { reviewTurn } from './turnReview'
 // reviewTurn is a deprecated redirect onto the merged intent + routing call
 // (040.2) — providers script the merged {"intent":…,"routingPlan":…} schema.
 
-function seedReviewContext() {
+async function seedReviewContext() {
   const db = createTestDb()
   const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
   const region = createRegion(db, { campaignId: campaign.id, name: 'Oakhollow', description: '...' })
@@ -30,7 +30,7 @@ function seedReviewContext() {
     role: 'shopkeeper',
     disposition: 'friendly'
   })
-  const narrationContext = assembleNarrationContext({
+  const narrationContext = await assembleNarrationContext({
     db,
     campaignId: campaign.id,
     regionId: region.id,
@@ -42,7 +42,7 @@ function seedReviewContext() {
 
 describe('reviewTurn: converse and act dispositions', () => {
   it('routes a converse-only turn to targeted npc response without narration', async () => {
-    const { npc, narrationContext } = seedReviewContext()
+    const { npc, narrationContext } = await seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
         intent: { checkNeeded: false },
@@ -64,7 +64,7 @@ describe('reviewTurn: converse and act dispositions', () => {
   })
 
   it('routes an action-expression-only turn', async () => {
-    const { narrationContext } = seedReviewContext()
+    const { narrationContext } = await seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
         intent: { checkNeeded: false },
@@ -90,7 +90,7 @@ describe('reviewTurn: converse and act dispositions', () => {
 
 describe('reviewTurn: narrate and composite dispositions', () => {
   it('routes a check turn including dmNarration — plan is produced before the roll', async () => {
-    const { narrationContext } = seedReviewContext()
+    const { narrationContext } = await seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
         intent: { checkNeeded: true, ability: 'agility', dc: 12, proficient: false },
@@ -109,7 +109,7 @@ describe('reviewTurn: narrate and composite dispositions', () => {
   })
 
   it('preserves composite beat ordering from the agent', async () => {
-    const { npc, narrationContext } = seedReviewContext()
+    const { npc, narrationContext } = await seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
         intent: { checkNeeded: true, ability: 'body', dc: 10, proficient: true },
@@ -139,7 +139,7 @@ describe('reviewTurn: narrate and composite dispositions', () => {
 
 describe('reviewTurn: slim context (040.4)', () => {
   it('sends slim recent events in the merged prompt — no event ids or raw payloads', async () => {
-    const { db, campaign, region, player, npc } = seedReviewContext()
+    const { db, campaign, region, player, npc } = await seedReviewContext()
     const priorEvent = appendEvent(db, {
       campaignId: campaign.id,
       type: 'npc_reaction',
@@ -151,7 +151,7 @@ describe('reviewTurn: slim context (040.4)', () => {
         attack: false
       }
     })
-    const narrationContext = assembleNarrationContext({
+    const narrationContext = await assembleNarrationContext({
       db,
       campaignId: campaign.id,
       regionId: region.id,
@@ -177,7 +177,7 @@ describe('reviewTurn: slim context (040.4)', () => {
 
 describe('reviewTurn: validation', () => {
   it('strips invalid npc ids from the plan', async () => {
-    const { npc, narrationContext } = seedReviewContext()
+    const { npc, narrationContext } = await seedReviewContext()
     const provider = createScriptedProvider([
       JSON.stringify({
         intent: { checkNeeded: false },
@@ -197,7 +197,7 @@ describe('reviewTurn: validation', () => {
   })
 
   it('retries on schema failure then throws after max attempts', async () => {
-    const { narrationContext } = seedReviewContext()
+    const { narrationContext } = await seedReviewContext()
     const provider = createScriptedProvider(['bad', 'still bad', 'nope'])
 
     await expect(
