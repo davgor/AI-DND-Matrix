@@ -91,6 +91,11 @@ export function createWorldFact(
   return fact
 }
 
+export function getWorldFactById(db: Database.Database, factId: string): WorldFact | null {
+  const row = db.prepare('SELECT * FROM world_facts WHERE id = ?').get(factId) as WorldFactRow | undefined
+  return row ? rowToWorldFact(row) : null
+}
+
 export function updateWorldFact(
   db: Database.Database,
   factId: string,
