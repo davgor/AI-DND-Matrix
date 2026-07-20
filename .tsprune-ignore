@@ -156,9 +156,9 @@ src/agents/providers/withRetry.ts:13 - defaultRetryOptions
 src/agents/providers/withRetry.ts:15 - ProviderUnreachableError
 src/agents/providers/withRetry.ts:4 - RetryLogger
 src/agents/providers/withRetry.ts:8 - RetryOptions
-src/agents/questNarration.ts:244 - isValidQuestProposal
-src/agents/questNarration.ts:257 - isValidQuestUpdate
-src/agents/questNarration.ts:36 - QuestSideEffectResult
+src/agents/questNarration.ts:271 - isValidQuestProposal
+src/agents/questNarration.ts:284 - isValidQuestUpdate
+src/agents/questNarration.ts:38 - QuestSideEffectResult
 src/agents/raceLore.ts:115 - ResolveOrRealizeParams
 src/agents/raceLore.ts:20 - CampaignRace
 src/agents/raceLore.ts:44 - buildRaceLorePrompt
@@ -307,7 +307,7 @@ src/db/repositories/weaponDamageProfile.ts:42 - weaponPropertiesToComponents
 src/db/repositories/worldFacts.ts:15 - CreateWorldFactInput
 src/db/repositories/worldFacts.ts:23 - UpdateWorldFactInput
 src/db/repositories/worldFacts.ts:27 - WriteWorldFactOptions
-src/db/repositories/worldFacts.ts:94 - updateWorldFact
+src/db/repositories/worldFacts.ts:99 - updateWorldFact
 src/db/testUtils.ts:12 - ensureLegacyRaceKeyColumns
 src/engine/abilities.ts:11 - POINT_BUY_POOL
 src/engine/abilities.ts:12 - POINT_BUY_MIN

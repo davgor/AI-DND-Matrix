@@ -15,7 +15,6 @@ Each campaign supports **multiple player characters** in one shared world. After
 **Active backlog** (`board/backlog/`):
 
 - **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
-- **083** — RAG over campaign SQLite (semantic retrieval for agent grounding)
 - **105** — NPC dossier modal (Social/log-book entry → traits, facts, opinion, disposition)
 - **106** — Ask the DM OOC chat (session-chrome panel; never hits the turn pipeline)
 
@@ -23,7 +22,7 @@ Each campaign supports **multiple player characters** in one shared world. After
 
 - **021** — consolidated end-to-end smoke test (v1 definition of done; pairs with 020 local parity)
 
-**Exploratory** (`board/backlog/moonshots/`): image generation (m001), host-driven multiplayer (m002), mod-driven homebrew catalog (m003), pixel/sprite grid campaign type (m004). Not committed delivery scope until promoted to the main backlog.
+**Exploratory** (`board/backlog/moonshots/`): image generation (m001), host-driven multiplayer (m002), mod-driven homebrew catalog (m003), pixel/sprite grid campaign type (m004), remote play via PC local providers (m005). Not committed delivery scope until promoted to the main backlog.
 
 Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-progress`, `done`). Smoke runbooks are in `/docs/runbooks`. **Changing campaign creation?** See `docs/runbooks/campaign-create-change-checklist.md` before marking work done.
 
@@ -51,7 +50,7 @@ Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-prog
 ## Core Design
 
 - **Engine and database are the source of truth.** AI agents read state to produce narration and propose actions; a deterministic rules engine validates and resolves everything (dice, checks, damage, death) before it's persisted. Agents never decide outcomes themselves.
-- **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick. Context assembly is slimmed for token cost (epic **040**); semantic RAG over the save is planned (**083**).
+- **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick. Context assembly is slimmed for token cost (epic **040**); semantic RAG over the save selects relevant lore within a hard injection cap (epic **083**).
 - **NPCs have isolated memory.** Each NPC has its own private memory log; it only ever sees its own memories plus world facts explicitly tagged to its region/faction. No NPC can "know" something only another NPC experienced. Speaking style and selective replies keep Social chatter on-character without every NPC answering every line.
 - **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — Claude (Anthropic Messages API) and [Player2](http://127.0.0.1:4315) (local) are both implemented, swappable via runtime config with no code changes required. Local llama.cpp is backlog (**020**).
 - **Campaign-level world, character-level story.** World name/summary/history, pantheon, regions, NPCs, story threads, events, and `current_state_summary` are shared across all player characters in a campaign. Journal, log book, quest log, known spells, narration/turn history, party roster ownership, `currentRegionId`, and guided-creation state are per character.
@@ -148,6 +147,7 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | 060–062 | **Packaging, XP, CI hygiene** — version in UI; mac `.dmg`; difficulty-rated XP; deadcode/security CI; codebase pruning; smoother auto-updates *(note: ids 060–062 were reused across a few tickets)* |
 | 063–071 | **Prompt & guided polish** — plain-English fantasy tone; mundane-human lore; fandom canon-recall seeding; spellcheck; guided thinking / Where → starting region |
 | 072–082 | **Opening-scene handoff & engineering gates** — Generate reply, opening-scene kickoff / enter-world, rebrand AI-TTRPG, deadcode as a delivery gate |
+| 083 | **RAG over campaign SQLite** — local embedder, chunk index, hybrid retrieval for DM/NPC/party grounding within 040 budgets |
 | 084–092 | **Social stream & NPC voice** — Social/Scene split + streaming window; selective NPC replies; speaking-style samples; auto-update parity |
 | 093–104 | **Balance, branding, release polish** — starting-weapon / ability-score retunes; shield app icon; update-ready copy; deploy/CI harden |
 | 107–108 | **CI sharding & identity grounding** — dynamic Vitest shards; identity kickoff grounded in race/background/gear/spells |
@@ -163,7 +163,6 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | Epic | Intent |
 |------|--------|
 | **020** | Local llama.cpp provider: managed `llama-server` lifecycle, adapter behind the existing provider interface, settings wiring, packaged runtime, and smoke parity across major flows without a cloud API key |
-| **083** | Local-first RAG over campaign SQLite so agent grounding retrieves relevant older facts within a token budget (NPC memory isolation unchanged) |
 | **105** | NPC dossier modal from Social / log book — traits, player-known facts, DM opinion summary, disposition |
 | **106** | Ask the DM — out-of-character chat in session chrome that never calls `turn:resolve` |
 
@@ -181,6 +180,7 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | **m002** | Host-driven multiplayer with host-side AI routing and guest party-member identities |
 | **m003** | Mod packs that seed homebrew catalog content from structured text files |
 | **m004** | Pixel/sprite grid campaign type (FF + Pokémon-style exploration/combat) forked from the narrative create pipeline |
+| **m005** | Remote play: thin client routes to the user’s PC for host-authoritative play via Player2 / local LLM (optional dumb relay; $0 developer LLM hosting) |
 
 See `board/backlog/moonshots/README.md` for promotion rules when a moonshot graduates to the main backlog.
 

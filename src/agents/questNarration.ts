@@ -11,9 +11,11 @@ import {
   updateQuest,
   upsertCharacterQuest
 } from '../db/repositories/quests'
+import { getRegionById } from '../db/repositories/regions'
 import { updateStoryThreadStateAndSummary } from '../db/repositories/storyThreads'
+import { getWorldFactById } from '../db/repositories/worldFacts'
 import type { QuestScale } from '../shared/loot/types'
-import type { QuestKind } from '../shared/quests/types'
+import type { QuestKind, UpdateQuestInput } from '../shared/quests/types'
 import type { NarrationResult } from './dm'
 
 export interface QuestProposal {
@@ -45,6 +47,20 @@ interface QuestProposalPersistInput {
   inGameDate: number
 }
 
+function resolveExistingRegionId(db: Database.Database, regionId: string | undefined): string | null {
+  if (!regionId) {
+    return null
+  }
+  return getRegionById(db, regionId) ? regionId : null
+}
+
+function resolveExistingWorldFactId(db: Database.Database, worldFactId: string | undefined): string | null {
+  if (!worldFactId) {
+    return null
+  }
+  return getWorldFactById(db, worldFactId) ? worldFactId : null
+}
+
 function resolveQuestIdFromProposal(input: QuestProposalPersistInput): string {
   const { db, campaignId, proposal } = input
   if (proposal.relatedWorldFactId) {
@@ -58,23 +74,34 @@ function resolveQuestIdFromProposal(input: QuestProposalPersistInput): string {
     kind: proposal.kind,
     title: proposal.title,
     summary: proposal.summary,
-    regionId: proposal.regionId ?? null,
-    sourceWorldFactId: proposal.relatedWorldFactId ?? null,
+    regionId: resolveExistingRegionId(db, proposal.regionId),
+    sourceWorldFactId: resolveExistingWorldFactId(db, proposal.relatedWorldFactId),
     scale: proposal.scale,
     objectives: objectiveTextsToChecklist(proposal.objectives ?? [proposal.summary])
   }).id
+}
+
+function buildProposalQuestUpdate(db: Database.Database, proposal: QuestProposal): UpdateQuestInput {
+  const updates: UpdateQuestInput = {
+    title: proposal.title,
+    summary: proposal.summary,
+    scale: proposal.scale
+  }
+  if (!proposal.regionId) {
+    return updates
+  }
+  const regionId = resolveExistingRegionId(db, proposal.regionId)
+  if (regionId) {
+    updates.regionId = regionId
+  }
+  return updates
 }
 
 function persistQuestProposal(input: QuestProposalPersistInput): string | null {
   const { db, characterId, proposal, inGameDate } = input
   const questId = resolveQuestIdFromProposal(input)
   if (proposal.relatedWorldFactId && proposal.summary) {
-    updateQuest(db, questId, {
-      title: proposal.title,
-      summary: proposal.summary,
-      scale: proposal.scale,
-      regionId: proposal.regionId ?? null
-    })
+    updateQuest(db, questId, buildProposalQuestUpdate(db, proposal))
   }
   const status = proposal.kind === 'side' ? 'available' : 'active'
   upsertCharacterQuest(db, {
