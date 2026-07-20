@@ -105,7 +105,15 @@ export async function resolveCombatTurn(input: CombatTurnInput): Promise<TurnRes
 
   if (intent.combatIntent === 'startEncounter' && !encounter) {
     provokeListedNpcs(db, intent.participantNpcIds)
-    encounter = startEncounter({ db, campaignId, regionId, player: character, participantNpcIds: intent.participantNpcIds, rng })
+    encounter = startEncounter({
+      db,
+      campaignId,
+      regionId,
+      player: character,
+      participantNpcIds: intent.participantNpcIds,
+      playerInput: input.playerInput,
+      rng
+    })
   }
   if (!encounter) {
     throw new CombatTurnError('No active encounter for combat action')

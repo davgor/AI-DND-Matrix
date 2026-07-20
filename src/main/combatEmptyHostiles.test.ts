@@ -1,0 +1,160 @@
+import { describe, expect, it } from 'vitest'
+import { createTestDb } from '../db/testUtils'
+import { createCampaign } from '../db/repositories/campaigns'
+import { createRegion } from '../db/repositories/regions'
+import { createCharacter } from '../db/repositories/characters'
+import { createNpc, getNpcById, listNpcsByRegion, setNpcCombatStats } from '../db/repositories/npcs'
+import { getActiveEncounter } from '../db/repositories/combatEncounters'
+import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { resolvePlayerTurn } from './turnIpc'
+import {
+  allHostilesDefeated,
+  collectEncounterCombatants,
+  startEncounter
+} from './combatOrchestration'
+
+function seedPlayerOnlyScene() {
+  const db = createTestDb()
+  const campaign = createCampaign(db, {
+    name: 'Empty Hostiles',
+    premisePrompt: 'Rift beasts',
+    deathMode: 'legendary'
+  })
+  const region = createRegion(db, {
+    campaignId: campaign.id,
+    name: 'Barley fields',
+    description: 'Golden barley beside a rift'
+  })
+  const player = createCharacter(db, {
+    campaignId: campaign.id,
+    name: 'David',
+    characterClass: 'fighter',
+    kind: 'player',
+    hp: 10,
+    level: 1,
+    stats: {
+      abilityScores: { body: 15, agility: 14, mind: 12, presence: 13 },
+      currentRegionId: region.id,
+      weaponProficient: true
+    }
+  })
+  return { db, campaign, region, player }
+}
+
+describe('allHostilesDefeated', () => {
+  it('is false when the encounter has zero NPC participants', () => {
+    const { db, campaign, player } = seedPlayerOnlyScene()
+    const encounter = {
+      id: 'enc-1',
+      campaignId: campaign.id,
+      phase: 'active' as const,
+      round: 1,
+      activeTurnIndex: 0,
+      initiativeOrder: [{ combatant: { kind: 'player' as const, id: player.id }, roll: 15 }],
+      participantIds: [{ kind: 'player' as const, id: player.id }],
+      pursuitState: 'engaged' as const,
+      exitedCombatantIds: [],
+      outcome: undefined,
+      startedAt: '2026-07-20T00:00:00.000Z'
+    }
+    expect(allHostilesDefeated(db, encounter)).toBe(false)
+  })
+})
+
+describe('collectEncounterCombatants', () => {
+  it('treats empty participantNpcIds as omitted and uses region hostiles', () => {
+    const { db, region, player } = seedPlayerOnlyScene()
+    const goblin = createNpc(db, {
+      campaignId: player.campaignId,
+      regionId: region.id,
+      name: 'Goblin',
+      role: 'enemy',
+      disposition: 'hostile',
+      skipCombatHydration: true
+    })
+    setNpcCombatStats(db, goblin.id, { hp: 8, maxHp: 8, ac: 12 })
+
+    const withOmitted = collectEncounterCombatants(db, region.id, player)
+    const withEmpty = collectEncounterCombatants(db, region.id, player, [])
+
+    expect(withEmpty).toEqual(withOmitted)
+    expect(withEmpty.some((ref) => ref.kind === 'npc' && ref.id === goblin.id)).toBe(true)
+  })
+})
+
+describe('deriveProvisionalHostileName (via spawn)', () => {
+  it('names the provisional foe from attack-at phrasing', () => {
+    const { db, campaign, region, player } = seedPlayerOnlyScene()
+    startEncounter({
+      db,
+      campaignId: campaign.id,
+      regionId: region.id,
+      player,
+      playerInput: '*I swing my sword at the nearest beast*',
+      rng: () => 0.5
+    })
+    expect(listNpcsByRegion(db, region.id)[0]?.name.toLowerCase()).toContain('beast')
+  })
+
+  it('falls back when no target phrase is present', () => {
+    const { db, campaign, region, player } = seedPlayerOnlyScene()
+    startEncounter({
+      db,
+      campaignId: campaign.id,
+      regionId: region.id,
+      player,
+      playerInput: 'I draw my sword',
+      rng: () => 0.5
+    })
+    expect(listNpcsByRegion(db, region.id)[0]?.name).toBe('Hostile creature')
+  })
+})
+
+describe('startEncounter without hostiles (115)', () => {
+  it('spawns a provisional hostile so the encounter stays active', () => {
+    const { db, campaign, region, player } = seedPlayerOnlyScene()
+    expect(listNpcsByRegion(db, region.id)).toHaveLength(0)
+
+    const encounter = startEncounter({
+      db,
+      campaignId: campaign.id,
+      regionId: region.id,
+      player,
+      playerInput: 'I swing my sword at the nearest beast',
+      rng: () => 0.5
+    })
+
+    expect(encounter.phase).toBe('active')
+    expect(encounter.participantIds.some((ref) => ref.kind === 'npc')).toBe(true)
+    expect(allHostilesDefeated(db, encounter)).toBe(false)
+    const spawned = listNpcsByRegion(db, region.id)
+    expect(spawned).toHaveLength(1)
+    expect(spawned[0]?.disposition.toLowerCase().startsWith('hostile')).toBe(true)
+    expect(spawned[0]?.name.toLowerCase()).toContain('beast')
+    expect(getNpcById(db, spawned[0]!.id)?.hp).toBeGreaterThan(0)
+  })
+})
+
+describe('resolvePlayerTurn startEncounter without hostiles (115)', () => {
+  it('returns active combatState instead of a silent defeated noop', async () => {
+    const { db, campaign, player } = seedPlayerOnlyScene()
+    const provider = createScriptedProvider([
+      '{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}'
+    ])
+
+    const result = await resolvePlayerTurn(
+      db,
+      provider,
+      {
+        campaignId: campaign.id,
+        characterId: player.id,
+        playerInput: '*I swing my sword at the nearest beast*'
+      },
+      () => 0.5
+    )
+
+    expect(result.combatState).not.toBeNull()
+    expect(result.combatState?.combatants.some((c) => c.ref.kind === 'npc')).toBe(true)
+    expect(getActiveEncounter(db, campaign.id)?.phase).toBe('active')
+  })
+})

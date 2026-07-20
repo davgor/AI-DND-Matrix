@@ -442,9 +442,9 @@ src/main/characterDeath.ts:6 - deathCauseForDyingStatus
 src/main/combatFlee.ts:20 - FleeCombatTurnInput
 src/main/combatFleeHelpers.ts:34 - ThreateningHostile
 src/main/combatIpc.ts:7 - getCombatState
-src/main/combatOrchestration.ts:115 - isCombatantSkipped
-src/main/combatOrchestration.ts:32 - StartEncounterInput
-src/main/combatOrchestration.ts:41 - collectEncounterCombatants
+src/main/combatOrchestration.ts:181 - isCombatantSkipped
+src/main/combatOrchestration.ts:33 - StartEncounterInput
+src/main/combatOrchestration.ts:85 - collectEncounterCombatants
 src/main/combatResolvers.ts:43 - CatchUpInput
 src/main/combatResolvers.ts:52 - PlayerAttackInput
 src/main/combatResolvers.ts:61 - PlayerAttackSyncResult

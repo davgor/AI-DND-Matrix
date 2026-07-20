@@ -18,6 +18,7 @@ import {
 import { appendEvent } from '../db/repositories/events'
 import { ensureNpcCombatStats, hydrateNpcWithFallback } from '../db/repositories/npcCombatHydration'
 import {
+  createNpc,
   getNpcById,
   isHostileNpc,
   isNpcOutOfFight,
@@ -35,7 +36,50 @@ export interface StartEncounterInput {
   regionId: string
   player: Character
   participantNpcIds?: string[]
+  /** Used to name a provisional hostile when the region has none. */
+  playerInput?: string
   rng: RandomFn
+}
+
+const PROVISIONAL_HOSTILE_FALLBACK_NAME = 'Hostile creature'
+
+/**
+ * Pull a short foe label from common attack phrasing ("at the nearest beast").
+ * Falls back when no usable target phrase is present.
+ */
+function deriveProvisionalHostileName(playerInput: string): string {
+  const cleaned = playerInput.replace(/^\*+|\*+$/g, '').trim()
+  const atMatch = cleaned.match(
+    /\b(?:at|toward|towards|against)\s+(?:the\s+|a\s+|an\s+)?(.+?)(?:[.!?]|$)/i
+  )
+  const raw = atMatch?.[1]?.trim()
+  if (!raw) {
+    return PROVISIONAL_HOSTILE_FALLBACK_NAME
+  }
+  const withoutNearest = raw.replace(/^(?:nearest|closest|nearest\s+of\s+the)\s+/i, '').trim()
+  const label = withoutNearest.replace(/^(?:the|a|an)\s+/i, '').trim()
+  if (label.length < 2) {
+    return PROVISIONAL_HOSTILE_FALLBACK_NAME
+  }
+  const clipped = label.slice(0, 48)
+  return clipped.charAt(0).toUpperCase() + clipped.slice(1)
+}
+
+function spawnProvisionalHostile(
+  db: Database.Database,
+  input: { campaignId: string; regionId: string; playerInput?: string }
+): Npc {
+  const name = deriveProvisionalHostileName(input.playerInput ?? '')
+  return createNpc(db, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    name,
+    role: 'enemy',
+    disposition: 'hostile',
+    canSpeak: false,
+    temperament: 'aggressive',
+    backstory: 'Provisional combatant spawned when an encounter started with no region hostiles.'
+  })
 }
 
 export function collectEncounterCombatants(
@@ -49,20 +93,42 @@ export function collectEncounterCombatants(
   for (const member of partyMembers) {
     refs.push({ kind: 'ai_party_member', id: member.id })
   }
+  // Empty arrays from the LLM are treated as omitted (031: default to region hostiles).
   const npcIds =
-    participantNpcIds ??
-    listNpcsByRegion(db, regionId)
-      .filter((npc) => isHostileNpc(npc) && !isNpcOutOfFight(npc))
-      .map((npc) => npc.id)
+    participantNpcIds && participantNpcIds.length > 0
+      ? participantNpcIds
+      : listNpcsByRegion(db, regionId)
+          .filter((npc) => isHostileNpc(npc) && !isNpcOutOfFight(npc))
+          .map((npc) => npc.id)
   for (const npcId of npcIds) {
     refs.push({ kind: 'npc', id: npcId })
   }
   return refs
 }
 
+function ensureNpcParticipants(
+  db: Database.Database,
+  input: StartEncounterInput,
+  participantRefs: CombatantRef[]
+): CombatantRef[] {
+  if (participantRefs.some((ref) => ref.kind === 'npc')) {
+    return participantRefs
+  }
+  const spawned = spawnProvisionalHostile(db, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    playerInput: input.playerInput
+  })
+  return [...participantRefs, { kind: 'npc', id: spawned.id }]
+}
+
 export function startEncounter(input: StartEncounterInput): CombatEncounter {
   const { db, campaignId, regionId, player, participantNpcIds, rng } = input
-  const participantRefs = collectEncounterCombatants(db, regionId, player, participantNpcIds)
+  const participantRefs = ensureNpcParticipants(
+    db,
+    input,
+    collectEncounterCombatants(db, regionId, player, participantNpcIds)
+  )
   for (const ref of participantRefs) {
     if (ref.kind === 'npc') {
       const npc = getNpcById(db, ref.id)
@@ -166,6 +232,10 @@ function skipToActiveCombatant(
 
 export function allHostilesDefeated(db: Database.Database, encounter: StoredEncounter): boolean {
   const hostileNpcRefs = encounter.participantIds.filter((ref) => ref.kind === 'npc')
+  // Zero hostiles is not a victory — that state means the encounter was never populated.
+  if (hostileNpcRefs.length === 0) {
+    return false
+  }
   return hostileNpcRefs.every((ref) => {
     const npc = getNpcById(db, ref.id)
     return !npc || isNpcOutOfFight(npc)
