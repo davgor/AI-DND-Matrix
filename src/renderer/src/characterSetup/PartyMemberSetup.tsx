@@ -10,16 +10,13 @@ export interface PartyMemberDraft {
   raceKey: string
 }
 
-export interface PartyMemberSetupProps {
+interface PartyMemberSetupProps {
   campaignId: string
   members: PartyMemberDraft[]
   onChange: (members: PartyMemberDraft[]) => void
 }
 
-function emptyMember(): PartyMemberDraft {
-  return { name: '', characterClass: '', personality: '', raceKey: 'human' }
-}
-
+/** Kept for re-enable; character setup UI currently hides party members. */
 export function PartyMemberSetup(props: PartyMemberSetupProps): JSX.Element {
   const [roster, setRoster] = useState<RaceRosterGroup[]>([])
   const [campaignRaces, setCampaignRaces] = useState<CampaignRace[]>([])
@@ -48,9 +45,6 @@ export function PartyMemberSetup(props: PartyMemberSetupProps): JSX.Element {
           onRemove={(rowIndex) => props.onChange(props.members.filter((_, i) => i !== rowIndex))}
         />
       ))}
-      <button type="button" onClick={() => props.onChange([...props.members, emptyMember()])}>
-        Add party member
-      </button>
     </section>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   abilityModifier,
+  availableStandardArrayOptions,
   createSeededRandom,
   getPointBuyRemaining,
   POINT_BUY_MAX,
@@ -9,7 +10,6 @@ import {
   resolvePointBuy,
   resolveStandardArray,
   rollForStats,
-  STANDARD_ARRAY,
   type Ability,
   type AbilityScores
 } from '../../../engine/abilities'
@@ -309,7 +309,7 @@ function StandardArrayFields(props: StandardArrayFieldsProps): JSX.Element {
             onChange={(event) => props.onChange(ability, Number(event.target.value))}
           >
             <option value="">Choose a score</option>
-            {STANDARD_ARRAY.map((value) => (
+            {availableStandardArrayOptions(props.assignment, ability).map((value) => (
               <option key={value} value={value}>
                 {value}
               </option>

@@ -15,6 +15,7 @@ Any implementation work in this repo must follow `.cursor/skills/delivery-standa
    - `npm run lint`
    - `npm run build`
    - `npm run deadcode` (ts-prune vs `.tsprune-ignore`; if export moves/deletes drift the baseline, run `npm run deadcode:refresh` after confirming the new findings are intentional)
+   - **`act` CI** — run `.github/workflows/pr-checks.yml` and `.github/workflows/deadcode.yml` via `act` (see `act-ci-after-local-tasks` rule). If Docker is not running, **pause and ask the user to start Docker** — do not silently skip or fall back.
 3. **Board traceability** — **ALWAYS write a ticket yourself.** Never ask the user whether to create one, which number to use, or whether to skip tracking. Create `/board/backlog/` (or move to `in-progress` when starting) with Description + checkable Acceptance Criteria before or as you start. If the user named a ticket id, use `complete-ticket` skill. Next free id: look at highest `NNN` under `board/` and increment.
 
 ## Also required

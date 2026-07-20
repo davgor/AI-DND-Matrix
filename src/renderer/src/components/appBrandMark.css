@@ -1,0 +1,12 @@
+.app-brand-mark {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.app-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -1,0 +1,29 @@
+---
+description: After local task completion, run PR CI via act; pause if Docker is off
+alwaysApply: true
+---
+
+# Act CI after local tasks
+
+Whenever you finish implementation work locally (feature, bugfix, refactor, ticket, or verification gate), **also run the real GitHub Actions workflows via `act`** before reporting done. Local `npm test` / `lint` / `build` / `deadcode` alone is not enough.
+
+## Required workflows
+
+1. `.github/workflows/pr-checks.yml` (test, lint, build)
+2. `.github/workflows/deadcode.yml`
+
+Use the same `act` invocation pattern as [complete-ticket](../skills/complete-ticket/SKILL.md) (WinGet `act.exe` path, `windows-latest=catthehacker/ubuntu:act-latest`, `--container-architecture linux/amd64`, `--pull=false`).
+
+Confirm every job ends with `🏁 Job succeeded`. Fix failures and rerun; do not call the work done while any job failed.
+
+## Docker must be running
+
+Before `act`, check that Docker is up (e.g. `docker info`).
+
+- **If Docker is not running or unreachable:** stop. Do **not** fall back to local-only commands and claim CI is done. Ask the user to start Docker Desktop, then wait for confirmation and retry `act`.
+- **If `act` fails with Docker Hub auth / pull errors:** refresh `catthehacker/ubuntu:act-latest` once, then retry with `--pull=false` (see complete-ticket).
+
+## Exceptions
+
+- Read-only answers with no code changes: skip `act`.
+- User explicitly scopes to local checks only: honor that and say `act` was skipped.

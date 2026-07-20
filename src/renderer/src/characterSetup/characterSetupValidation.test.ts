@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { validateCharacterSetup, type CharacterSetupState } from './characterSetupValidation'
 
-const VALID_SCORES = { body: 12, agility: 14, mind: 10, presence: 10 }
+const VALID_SCORES = { body: 14, agility: 12, mind: 10, presence: 8 }
 
 function baseState(overrides: Partial<CharacterSetupState> = {}): CharacterSetupState {
   return {
@@ -45,7 +45,7 @@ describe('validateCharacterSetup (009.6)', () => {
           abilityScoreMethod: 'pointBuy'
         })
       )
-    ).toBe('Point buy scores must stay within the 8-15 range and 15-point budget.')
+    ).toBe('Point buy scores must stay within the 8-20 range and 12-point budget.')
   })
 
   it('allows rolled stats when the roll method is selected', () => {

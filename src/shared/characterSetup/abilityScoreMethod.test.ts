@@ -7,11 +7,11 @@ describe('abilityScoreMethod', () => {
   })
 
   it('infers standard array when scores match the array', () => {
-    expect(inferAbilityScoreMethod({ body: 15, agility: 14, mind: 13, presence: 12 })).toBe('standardArray')
+    expect(inferAbilityScoreMethod({ body: 14, agility: 12, mind: 10, presence: 8 })).toBe('standardArray')
   })
 
   it('prefers a stored method over inference', () => {
-    const scores = { body: 15, agility: 14, mind: 13, presence: 12 }
+    const scores = { body: 14, agility: 12, mind: 10, presence: 8 }
     expect(resolveAbilityScoreMethod({ abilityScoreMethod: 'roll' }, scores)).toBe('roll')
   })
 })

@@ -513,10 +513,9 @@ src/renderer/src/campaignReview/useGenerateRegion.ts:11 - UseGenerateRegionOptio
 src/renderer/src/campaignStart/CampaignStartModal.tsx:7 - CampaignStartModalProps
 src/renderer/src/campaignStart/executeCampaignCreate.ts:11 - CampaignCreateSetters
 src/renderer/src/characterSetup/AbilityScoreAssignment.tsx:33 - AbilityScoreAssignmentProps
-src/renderer/src/characterSetup/CharacterSetup.tsx:12 - CharacterSetupProps
 src/renderer/src/characterSetup/CharacterSetupFields.tsx:6 - CharacterSetupAlignmentField
 src/renderer/src/characterSetup/PartyMemberRow.tsx:5 - PartyMemberRowProps
-src/renderer/src/characterSetup/PartyMemberSetup.tsx:13 - PartyMemberSetupProps
+src/renderer/src/characterSetup/PartyMemberSetup.tsx:20 - PartyMemberSetup
 src/renderer/src/characterSetup/characterSetupDraft.ts:22 - extractAbilityScores
 src/renderer/src/characterSetup/characterSetupSessionDraft.ts:7 - CharacterSetupSessionDraft
 src/renderer/src/characterSetup/useImageSelectors.ts:3 - ImageSelectors

@@ -55,10 +55,17 @@
     "appId": "com.davgor.aidndmatrix",
     "productName": "AI-TTRPG",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "out/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
     ],
     "publish": {
       "provider": "github",
@@ -66,6 +73,7 @@
       "repo": "AI-DND-Matrix"
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -91,6 +99,7 @@
       "artifactName": "${productName}-${version}-Portable.${ext}"
     },
     "mac": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "dmg",

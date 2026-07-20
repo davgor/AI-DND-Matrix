@@ -20,10 +20,17 @@
 
 .loading-screen-eyebrow {
   margin: 0 0 0.75rem;
+  display: flex;
+  justify-content: center;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   font-size: 0.72rem;
   color: var(--text-accent);
+}
+
+.loading-screen-brand-name {
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .loading-screen-title {

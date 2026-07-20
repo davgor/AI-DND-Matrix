@@ -17,7 +17,7 @@ function validateAbilityScoresForMethod(
   method: AbilityScoreMethod
 ): string | null {
   if (method === 'pointBuy' && !resolvePointBuy(scores).valid) {
-    return 'Point buy scores must stay within the 8-15 range and 15-point budget.'
+    return 'Point buy scores must stay within the 8-20 range and 12-point budget.'
   }
   if (method === 'standardArray' && !resolveStandardArray(scores).valid) {
     return 'Assign each standard array value exactly once.'
