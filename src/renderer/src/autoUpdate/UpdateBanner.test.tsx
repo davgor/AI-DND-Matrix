@@ -77,14 +77,15 @@ describe('UpdateBannerView ready and error', () => {
       update: state({
         phase: 'downloaded',
         availableVersion: '1.1.0',
-        message: 'Version 1.1.0 is ready. Restart to apply silently — no installer.'
+        message: 'Restart and update'
       }),
       onRestart
     })
     expect(node?.props.className).toContain('update-banner-ready')
     const children = node?.props.children as JSX.Element[]
+    expect(children[0]?.props.children).toBe('Restart and update')
     const button = children.find((child) => child?.type === 'button')
-    expect(button?.props.children).toBe('Restart & Install')
+    expect(button?.props.children).toBe('Restart and update')
     button?.props.onClick()
     expect(onRestart).toHaveBeenCalledTimes(1)
   })

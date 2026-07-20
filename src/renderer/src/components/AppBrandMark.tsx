@@ -1,4 +1,5 @@
-import { APP_BRAND_MARK_SRC, APP_DISPLAY_NAME } from '../../../shared/appBranding'
+import { APP_DISPLAY_NAME } from '../../../shared/appBranding'
+import appBrandMarkUrl from '../assets/app-icon.png'
 import './appBrandMark.css'
 
 interface AppBrandMarkProps {
@@ -11,7 +12,7 @@ export function AppBrandMark(props: AppBrandMarkProps = {}): JSX.Element {
   return (
     <img
       className={props.className ?? 'app-brand-mark'}
-      src={APP_BRAND_MARK_SRC}
+      src={appBrandMarkUrl}
       alt=""
       width={size}
       height={size}

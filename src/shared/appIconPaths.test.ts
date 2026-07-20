@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  APP_BRAND_MARK_SRC,
+  APP_BRAND_MARK_ASSET,
   APP_ICON_BUILD_ICO,
   APP_ICON_BUILD_PNG,
   APP_ICON_RESOURCE_NAME
@@ -35,7 +35,7 @@ describe('app icon branding assets', () => {
   it('keeps build icon files in the repo', () => {
     expect(existsSync(join(repoRoot(), APP_ICON_BUILD_PNG))).toBe(true)
     expect(existsSync(join(repoRoot(), APP_ICON_BUILD_ICO))).toBe(true)
-    expect(existsSync(join(repoRoot(), 'src/renderer/public/app-icon.png'))).toBe(true)
+    expect(existsSync(join(repoRoot(), APP_BRAND_MARK_ASSET))).toBe(true)
   })
 
   it('wires package.json build.icon and extraResources to the shield mark', () => {
@@ -52,13 +52,9 @@ describe('app icon branding assets', () => {
     )
   })
 
-  it('exposes the in-app brand mark public URL', () => {
-    expect(APP_BRAND_MARK_SRC).toBe('/app-icon.png')
-  })
-
   it('uses transparent corners on brand PNGs (no white squares)', () => {
     const buildPng = readFileSync(join(repoRoot(), APP_ICON_BUILD_PNG))
-    const appPng = readFileSync(join(repoRoot(), 'src/renderer/public/app-icon.png'))
+    const appPng = readFileSync(join(repoRoot(), APP_BRAND_MARK_ASSET))
     expect(pngCornersAreTransparent(buildPng)).toBe(true)
     expect(pngCornersAreTransparent(appPng)).toBe(true)
   })

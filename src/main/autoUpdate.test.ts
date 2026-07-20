@@ -147,9 +147,8 @@ describe('silent apply helpers', () => {
     expect(quitAndInstall).toHaveBeenCalledWith(true, true)
   })
 
-  it('formats ready-state copy for silent restart apply', async () => {
+  it('formats ready-state copy as Restart and update', async () => {
     const { formatUpdateReadyMessage } = await loadModule()
-    expect(formatUpdateReadyMessage('2.0.0')).toMatch(/restart/i)
-    expect(formatUpdateReadyMessage('2.0.0')).toMatch(/silent|no installer/i)
+    expect(formatUpdateReadyMessage('2.0.0')).toBe('Restart and update')
   })
 })
