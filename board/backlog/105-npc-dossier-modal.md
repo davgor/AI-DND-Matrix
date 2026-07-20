@@ -1,39 +1,73 @@
 # EPIC: NPC dossier modal — traits, facts, opinion summary, disposition
 
-Clicking an NPC's avatar/icon in the Social stream (epic **085**) should open a **dossier modal** that surfaces everything the player (and/or table) needs to know about that character in one place. Today those icons are non-interactive (`social-avatar` is a decorative initial bubble); NPC identity lives on the row + Campaign Review Traits panel (**068** / **052** / **051**), player-facing knowledge lives in the log book People category (**025** / **044**), private conversation history lives in `npc_memories` (**006**), and disposition is a free-text field on the NPC — but nothing ties them together behind the Social avatar.
+Clicking an NPC's avatar/icon in the Social stream (epic **085**) or opening them from the log book should open a **dossier modal** scoped entirely to that one NPC: sections for **Traits → Facts → DM opinion summary → Disposition**, in that order. Today Social avatars are non-interactive; NPC identity lives on the row + Campaign Review Traits panel (**068** / **052** / **051**), player-facing knowledge lives in the log book (**025** / **044**), private history lives in `npc_memories` (**006**), and disposition is a free-text field on the NPC — but nothing ties them together.
 
-This epic adds a read-only **Npc dossier** modal opened from Social (and optionally other NPC chrome later): sections for **Traits → Facts → DM opinion summary → Disposition**, in that order.
-
-Builds on **085** (Social avatars), **052** / **051** / **068** (identity traits), **025** / **044** (log book People), **006** (NPC memory isolation), **046** / **045** (modal + IPC patterns). Complements backlog **083** (RAG) — see sequencing below.
+Builds on **085** (Social avatars), **052** / **051** / **068** (identity traits), **025** / **044** (log book), **006** (NPC memory isolation), **046** / **045** (modal + IPC patterns). Complements backlog **083** (RAG) — see sequencing below.
 
 ## Target UX
 
 ```
-Social stream
-  └── Click NPC avatar (or name affordance)
+Entry points
+  ├── Social stream — click NPC avatar (or name affordance)
+  └── Log book — open dossier from a People entry linked to an NPC
         │
         ▼
-NpcDossierModal (ModalPortal)
+NpcDossierModal (ModalPortal) — everything scoped to this npcId only
   ├── Header: NPC name + role
-  ├── Traits          — identity bundle (temperament, race, alignment, …)
-  ├── Facts           — known lore / log-book People / related world facts
-  ├── Opinion (DM)    — short summary of how this NPC feels about the player,
-  │                     grounded in chat / memories
+  ├── Traits          — identity bundle for this NPC
+  ├── Facts           — player-known facts about this NPC only
+  ├── Opinion (DM)    — persisted summary of how this NPC feels about the player
   └── Disposition     — stored disposition string (how they treat the player)
 ```
 
-Empty sections show a clear empty state (e.g. "No facts recorded yet") rather than hiding the section heading, so the layout stays predictable.
+Empty sections show a clear empty state (e.g. "No facts recorded yet") rather than hiding the section heading.
+
+## Product decisions (locked)
+
+| # | Decision |
+|---|----------|
+| 1 | **Facts = known facts only.** Facts are player-discovered information about this NPC — not omniscient backstory, `world_facts`, or raw `npc_memories`. Primary source: active character log book entries with `relatedEntityId = npcId` (any category, but content must be about this NPC). |
+| 2 | **NPC-scoped content only.** The modal shows nothing about other NPCs or unrelated log book entries. Every section is filtered to the dossier subject (`npcId`). |
+| 3 | **Persisted opinion summary.** Store the DM opinion summary durably. On open: return the stored summary unchanged unless the player has **new interaction** with this NPC since the summary was last generated. No live LLM call on every open when nothing changed. |
+| 4 | **Two entry points (v1):** Social NPC avatar **and** log book (People entry → open dossier for linked NPC). |
+| 5 | **Same modal for non-speakers.** `canSpeak: false` creatures use the same layout; opinion grounding uses **observed actions** (combat, movement, scene beats) instead of dialogue/memories from speech. |
+| 6 | **NPC-scoped opinion (v1).** Opinion summarizes this NPC's view of **the player** only. Opinions toward other characters (party, other NPCs) are **out of scope for v1** — candidate follow-up. |
 
 ## Section contract (v1)
 
-| Section | Purpose | Likely sources (resolve in 105.1) |
-|---------|---------|-----------------------------------|
-| **Traits** | Stable identity the player can treat as established once met | NPC row: temperament, race, alignment, gender, class, background, role; reuse Campaign Review trait labeling where possible |
-| **Facts** | Discrete known information about the character | Character log book `person` entries with `relatedEntityId = npcId`; optionally region-tagged `world_facts` that mention the NPC; **not** other NPCs' private memories |
-| **Opinion (DM summary)** | Narrative read on the NPC↔player relationship from interactions | New LLM (or templated) summary over that NPC's `npc_memories` + Social dialogue involving them; must respect memory isolation |
-| **Disposition** | Authoritative "how they treat the player" line | `npcs.disposition` (generation field — one or two sentences) |
+| Section | Purpose | Sources |
+|---------|---------|---------|
+| **Traits** | Identity bundle for this NPC | NPC row: temperament, race, alignment, gender, class, background, role; reuse Campaign Review trait labeling |
+| **Facts** | Known information about this NPC | Active character log book entries where `relatedEntityId = npcId` — title + content only; no other tables in v1 |
+| **Opinion (DM summary)** | How this NPC feels about the player | **Persisted** summary; regenerate only when interaction watermark advances (see below) |
+| **Disposition** | How they treat the player | `npcs.disposition` |
 
-**Ordering is binding for UI:** Traits, then Facts, then Opinion summary, then Disposition.
+**Ordering is binding:** Traits → Facts → Opinion → Disposition.
+
+### Opinion persistence + refresh rules
+
+Store per NPC (campaign-scoped row):
+
+| Field | Purpose |
+|-------|---------|
+| `opinionSummary` | DM-voiced paragraph (nullable until first generation) |
+| `opinionSummaryGeneratedAt` | When the summary was last written |
+| `lastPlayerInteractionAt` | Watermark: last turn/event where the active campaign player interacted with this NPC |
+
+**On dossier open:**
+
+1. If `opinionSummary` is null → generate once, persist, set both timestamps.
+2. If `lastPlayerInteractionAt <= opinionSummaryGeneratedAt` → return stored summary (**no LLM**).
+3. If `lastPlayerInteractionAt > opinionSummaryGeneratedAt` → regenerate from new interaction context, persist, update `opinionSummaryGeneratedAt`.
+
+**Interaction watermark sources:**
+
+| NPC type | Counts as interaction |
+|----------|----------------------|
+| Speaking (`canSpeak: true`) | Social dialogue lines + `npc_memories` appended since last summary |
+| Non-speaking | Scene/combat **action** entries involving this NPC (not dialogue) |
+
+Bump `lastPlayerInteractionAt` on the turn pipeline when the player meaningfully engages that NPC (converse beat, action targeting them, etc.) — exact hooks in 105.1 / 105.5.
 
 ## Sequencing vs RAG epic **083**
 
@@ -42,137 +76,136 @@ Empty sections show a clear empty state (e.g. "No facts recorded yet") rather th
 | Concern | Needs 083? | Why |
 |---------|------------|-----|
 | Traits + Disposition display | No | Already on the NPC row |
-| Facts from log book / tagged rows | No | Direct queries by `npcId` / `relatedEntityId` |
-| Opinion summary (early campaigns) | No | Recency-capped `npc_memories` + Social lines match today's agent grounding (**006** / **040**) |
-| Opinion / fact selection in long campaigns | **Benefits after 083** | Semantic retrieval over that NPC's memories/facts improves summary quality when history exceeds the window |
+| Facts from log book | No | Direct query by `relatedEntityId` |
+| Opinion summary (early campaigns) | No | Recency-capped memories / recent action beats |
+| Opinion / fact selection in long campaigns | **Benefits after 083** | Semantic retrieval when history exceeds the window |
 
-Recommendation: implement **105** with recency/tag retrieval first; add an optional follow-up sub-ticket or note under **083** to swap the opinion/facts loader to scoped RAG (`scope: npc`) once **083.6–083.8** land. **083 does not need to wait for 105**, and **105 does not need to wait for 083**.
+**083 does not need to wait for 105**, and **105 does not need to wait for 083**.
 
 ## Definition of done
 
-- Clicking an NPC Social avatar opens a dossier modal for that NPC
-- Modal sections render in order: Traits → Facts → Opinion → Disposition
-- Traits reuse established identity labels (aligned with Campaign Review where practical)
-- Facts are player-known / campaign-grounded rows linked to the NPC — never another NPC's private memories
-- Opinion summary is a DM-voiced short paragraph grounded in that NPC's interaction history; isolation preserved
-- Disposition shows the stored NPC disposition field
-- IPC + unit/component tests; smoke notes; `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
+- Social NPC avatar and log book People entry open the dossier for that NPC
+- Sections render in order: Traits → Facts → Opinion → Disposition
+- Facts show only player-known log book entries linked to this NPC
+- Opinion summary is persisted; unchanged on reopen unless new player↔NPC interaction since last generation
+- Non-speaking NPCs use action-based opinion grounding; same modal shell
+- Disposition shows stored `npcs.disposition`
+- IPC + tests + smoke; `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
 
-105.1 dossier contract + knowledge rules · 105.2 dossier query/IPC · 105.3 Traits + Disposition UI · 105.4 Facts section · 105.5 Opinion summary agent · 105.6 Social avatar click entry · 105.7 tests + smoke
+105.1 dossier contract + persistence rules · 105.2 schema + dossier IPC · 105.3 Traits + Disposition UI · 105.4 Facts section · 105.5 Opinion agent + interaction watermark · 105.6 Social + log book entry points · 105.7 tests + smoke
 
 ## Relationship to other epics
 
 | Epic | Integration |
 |------|-------------|
-| **085** | Primary entry: Social avatar becomes a button/control |
-| **052** / **051** / **068** | Trait field set + display labels |
-| **025** / **044** | Log book People as Facts source |
-| **006** | NPC memory isolation for opinion grounding |
-| **046** / **045** | `ModalPortal`, play-sheet modal CSS/IPC patterns |
-| **083** (backlog) | Optional later upgrade for opinion/fact retrieval; not a prerequisite |
-| **040** | Opinion prompt must stay slim (capped memories / summary length) |
+| **085** | Social avatar click entry |
+| **025** / **044** | Log book People entry → dossier; Facts source |
+| **052** / **051** / **068** | Trait labels |
+| **006** | NPC memory isolation for speaking opinion grounding |
+| **046** / **045** | Modal + IPC patterns |
+| **083** (backlog) | Optional later retrieval upgrade |
+| **040** | Opinion prompt stays slim |
 
 ## Out of scope (v1)
 
-- Editing traits, facts, disposition, or opinion from the modal (read-only)
-- Portrait / generated images for the avatar (initial letter remains fine)
-- Party-member dossiers (player allies) — NPC speakers only unless promoted later
-- Campaign Review Traits panel changes (reuse patterns; do not merge UIs)
-- Full chat transcript dump inside the modal (summary only; raw lines stay in Social)
-- Changing how disposition is authored at generation time
-
-## Open decisions (resolve in 105.1 / with product)
-
-1. **Audience / fog of war:** Is the dossier **player-facing knowledge only** (hide traits/facts not yet revealed in play), a **full omniscient sheet** (everything on the NPC row + memories summarized), or a **hybrid** (full traits once spoken to, facts only from log book)?
-2. **Facts source priority:** Log book People only vs also `world_facts` / backstory excerpts / `npc_memories` surfaced as bullets?
-3. **Opinion refresh:** On every open (live LLM call), cached until next Social turn with that NPC, or regenerate on demand via a button?
-4. **Entry points:** Social avatar only, or also present-NPC list / Scene mentions / Campaign Review?
-5. **Non-speakers / creatures:** Same modal with reduced sections, or click disabled for `canSpeak: false`?
-6. **Multi-character campaigns:** Opinion/facts scoped to the **active** player character's log book + that PC's interactions, or campaign-global?
+- Editing traits, facts, disposition, or opinion from the modal
+- Portrait / generated NPC images
+- Party-member dossiers
+- Campaign Review UI changes
+- Full chat/action transcript in the modal (summary only)
+- NPC opinions of **other** characters (party, other NPCs) — follow-up epic
+- Regenerating opinion on demand via a manual refresh button
+- Present-NPC list / Scene / Campaign Review entry points
 
 ## Sub-tickets
 
-### 105.1 Dossier contract + knowledge / isolation rules
+### 105.1 Dossier contract + persistence rules
 
 #### Description
 
-Write a short SPEC (under `docs/` or `src/shared/npcDossier/`) defining section order, field sources, fog-of-war choice from Open decisions, empty states, and hard isolation: opinion grounding may only use the target NPC's memories + allowed shared facts.
+SPEC under `docs/` or `src/shared/npcDossier/`: section order, NPC-only filtering, Facts = log book `relatedEntityId`, opinion persistence fields, interaction watermark bump points, speaking vs non-speaking grounding.
 
 #### Acceptance criteria
 
-- [ ] SPEC documents Traits / Facts / Opinion / Disposition sources and section order
-- [ ] SPEC records the fog-of-war decision (player-known vs omniscient vs hybrid)
-- [ ] SPEC states NPC memory isolation rules for opinion generation (no cross-NPC leakage)
-- [ ] SPEC notes RAG (**083**) as a non-blocking future retrieval upgrade
+- [ ] SPEC documents Traits / Facts / Opinion / Disposition sources and locked product decisions above
+- [ ] SPEC defines interaction watermark bump rules (dialogue vs action paths)
+- [ ] SPEC states NPC memory isolation for speaking opinion generation
+- [ ] SPEC notes RAG (**083**) as optional later upgrade
 
-### 105.2 Dossier query + IPC
+### 105.2 Schema + dossier query IPC
 
 #### Description
 
-Add a typed IPC (e.g. `npcDossier:get`) that returns the payload for one `npcId` + active `characterId`: traits view-model, facts list, disposition string, and either a cached opinion or enough context handles for 105.5 to generate one.
+Migration for persisted opinion fields on NPC (or dedicated table keyed by `npc_id`). IPC `npcDossier:get` returns traits, facts (log book slice), disposition, stored opinion (generating only when watermark requires).
 
 #### Acceptance criteria
 
-- [ ] IPC returns structured dossier DTO; missing NPC → clear error / empty
-- [ ] Facts query never returns another NPC's `npc_memories`
-- [ ] Unit tests cover happy path + isolation + missing NPC
+- [ ] Schema stores `opinionSummary`, `opinionSummaryGeneratedAt`, `lastPlayerInteractionAt` per NPC
+- [ ] IPC returns dossier DTO; regenerates opinion only when `lastPlayerInteractionAt > opinionSummaryGeneratedAt`
+- [ ] Reopen without new interaction returns identical stored summary (unit test)
+- [ ] Facts query returns only log book rows with `relatedEntityId = npcId` for the active character
+- [ ] Unit tests: isolation, missing NPC, stale vs fresh watermark
 
 ### 105.3 Traits + Disposition sections (UI)
 
 #### Description
 
-Render Traits and Disposition in the modal using shared label helpers where possible (`CampaignReviewNpcTraits` patterns / race-background resolvers). Disposition is its own final section, not buried inside Traits.
+Render Traits and Disposition; reuse Campaign Review label helpers. Disposition is the final section.
 
 #### Acceptance criteria
 
-- [ ] Traits section lists the agreed identity fields with empty-state handling for null keys
-- [ ] Disposition section shows `npc.disposition` (or empty state)
-- [ ] Component tests cover speaking vs non-speaking / missing optional keys
+- [ ] Traits list identity fields with empty states for null keys
+- [ ] Disposition shows `npc.disposition`
+- [ ] Component tests: speaking vs non-speaking
 
 ### 105.4 Facts section
 
 #### Description
 
-List known facts per 105.1 (likely log book People entries linked to the NPC, plus any other approved sources), newest-first or SPEC-defined order.
+List log book entries linked to this NPC only (`relatedEntityId = npcId`), newest-first.
 
 #### Acceptance criteria
 
-- [ ] Facts section renders linked entries; empty state when none
-- [ ] Unit/integration test: log book person entry with `relatedEntityId` appears; unrelated person entries do not
+- [ ] Facts section shows linked entries only; empty state when none
+- [ ] Unrelated log book entries never appear
+- [ ] Unit test: linked person entry appears; unrelated entries do not
 
-### 105.5 DM opinion summary agent
+### 105.5 Opinion summary agent + interaction watermark
 
 #### Description
 
-Generate a short DM-voiced summary of the NPC's opinion of the active player from that NPC's memories and/or Social dialogue involving them. Cap input size per **040**; persist or cache per 105.1 refresh decision.
+DM-voiced summary generator; speaking NPCs ground on dialogue + `npc_memories`; non-speakers ground on **actions** only. Turn pipeline bumps `lastPlayerInteractionAt` when the player engages the NPC.
 
 #### Acceptance criteria
 
-- [ ] Prompt/builder + generator with schema validation and slim token budget
-- [ ] Isolation test: memories from NPC B never appear in NPC A's opinion prompt
-- [ ] Unit tests with scripted provider; failure path shows a safe fallback message in the UI
+- [ ] Prompt/builder + generator with slim token budget (**040**)
+- [ ] Speaking path uses that NPC's memories only (isolation test)
+- [ ] Non-speaking path uses action/scene signals, not dialogue
+- [ ] Watermark bump wired on relevant turns; regeneration only after new interaction
+- [ ] Scripted-provider tests + safe UI fallback on generation failure
 
-### 105.6 Social avatar click → open modal
+### 105.6 Entry points — Social avatar + log book
 
 #### Description
 
-Make the Social NPC avatar (and optionally name) an accessible control that opens `NpcDossierModal` for `entry` speaker NPC id. Wire through play-view modal host (peer to spellbook/quest log patterns).
+Social: NPC avatar/name opens dossier. Log book: People entry with `relatedEntityId` resolving to an NPC opens the same modal.
 
 #### Acceptance criteria
 
-- [ ] Click/keyboard activation on NPC avatar opens dossier for that speaker
-- [ ] Player / non-NPC avatars do not open an NPC dossier
-- [ ] Modal closes via existing overlay/close patterns; focus returns reasonably
-- [ ] Component/UI test covers open/close wiring with a stub dossier payload
+- [ ] Social NPC avatar/name opens dossier for that speaker's `npcId`
+- [ ] Log book People entry affordance opens dossier when linked to an NPC
+- [ ] Player lines / non-NPC entries do not open NPC dossier incorrectly
+- [ ] Modal close/focus behavior matches existing play-sheet modals
+- [ ] Component tests for both entry paths
 
 ### 105.7 Tests + smoke runbook
 
 #### Description
 
-Automated coverage for IPC + sections + opinion isolation; short manual smoke: converse with an NPC, open dossier, confirm Traits / Facts / Opinion / Disposition.
+Automated coverage + manual smoke: converse (or act with non-speaker), open dossier, reopen without new interaction → same opinion; new interaction → opinion updates.
 
 #### Acceptance criteria
 
-- [ ] Automated tests cover 105.2–105.6 critical paths
-- [ ] Runbook notes (new or section under play Social) for the click → dossier happy path
-- [ ] `npm test`, `npm run lint`, `npm run build`, and `npm run deadcode` pass when the epic is implemented
+- [ ] Tests cover 105.2–105.6 critical paths including persistence idempotency
+- [ ] Runbook covers Social + log book entry and opinion refresh behavior
+- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass when implemented
