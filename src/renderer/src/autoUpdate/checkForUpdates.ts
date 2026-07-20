@@ -1,5 +1,7 @@
+import type { ManualUpdateCheckResult } from '../../../shared/autoUpdate/types'
+
 export function requestCheckForUpdates(
-  checkForUpdates: () => Promise<void>
-): Promise<void> {
+  checkForUpdates: () => Promise<ManualUpdateCheckResult>
+): Promise<ManualUpdateCheckResult> {
   return checkForUpdates()
 }

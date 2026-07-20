@@ -136,7 +136,20 @@
   font-size: 12px;
 }
 
+.settings-check-updates-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .settings-check-updates {
   font-size: 12px;
   padding: 4px 8px;
+}
+
+.settings-check-pending {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
