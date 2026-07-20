@@ -4,6 +4,7 @@ import type { Character } from '../db/repositories/characters'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import type { IdentityFoundationsStatus } from '../shared/guidedCreation/types'
 import { resolveCharacterBackgroundContext, resolveCharacterRaceContext } from './guidedCreationIdentity'
+import { resolveCharacterStartingGear } from './guidedCreationStartingGear'
 
 export function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
   const scores = stats.abilityScores as Record<string, number> | undefined
@@ -27,6 +28,11 @@ export function buildIdentityInterviewAgentContext(
     input.character.backgroundKey,
     input.character.backgroundStory
   )
+  const gearContext = resolveCharacterStartingGear(
+    input.db,
+    input.character.id,
+    input.character.stats as Record<string, unknown>
+  )
   const regions = listRegionsByCampaign(input.db, input.campaignId).map((region) => ({
     id: region.id,
     name: region.name,
@@ -43,6 +49,8 @@ export function buildIdentityInterviewAgentContext(
     backgroundLabel: backgroundContext.backgroundLabel,
     backgroundDescription: backgroundContext.backgroundDescription,
     backgroundStory: backgroundContext.backgroundStory,
+    startingGear: gearContext.startingGear,
+    knownSpellNames: gearContext.knownSpellNames,
     regions,
     transcript: input.transcript,
     currentFoundations: input.currentFoundations

@@ -51,6 +51,10 @@ export interface IdentityInterviewContext {
   backgroundLabel: string | null
   backgroundDescription: string | null
   backgroundStory: string | null
+  /** Items granted during equipment selection (names + equipped slots). */
+  startingGear: Array<{ name: string; equippedSlot: string | null }>
+  /** Display names for spells chosen during equipment selection. */
+  knownSpellNames: string[]
   regions: IdentityRegionOption[]
   transcript: Array<{ role: 'player' | 'dm'; content: string }>
   currentFoundations: IdentityFoundationsStatus
@@ -130,6 +134,8 @@ function buildMechanicalCharacterBlock(
     | 'raceLore'
     | 'backgroundLabel'
     | 'backgroundDescription'
+    | 'startingGear'
+    | 'knownSpellNames'
   >
 ): string {
   const block: Record<string, unknown> = {
@@ -150,6 +156,12 @@ function buildMechanicalCharacterBlock(
   if (context.backgroundDescription) {
     block['backgroundDescription'] = context.backgroundDescription
   }
+  if (context.startingGear.length > 0) {
+    block['startingGear'] = context.startingGear
+  }
+  if (context.knownSpellNames.length > 0) {
+    block['knownSpells'] = context.knownSpellNames
+  }
   return JSON.stringify(block)
 }
 
@@ -167,6 +179,7 @@ function buildIdentityContextLines(
     `Mechanical character (established facts — do not change or overwrite): ${buildMechanicalCharacterBlock(context)}`,
     'Race and race lore were chosen during setup — reference them as established fact, not something to re-ask or overwrite.',
     'Background type and description were chosen during setup — build on them as established fact rather than re-eliciting personal history from scratch.',
+    'Starting gear and known spells were chosen during equipment selection — treat them as already on the character, not something to invent or re-offer.',
     `Generated campaign regions (start location must be one of these): ${JSON.stringify(context.regions)}`
   ]
   const storyLine = buildBackgroundStoryLine(context.backgroundStory)
@@ -195,12 +208,16 @@ function buildIdentityKickoffSystemPrompt(
     'You are the DM beginning a pre-play identity interview. The player has not spoken yet.',
     ...buildIdentityStaticSystemLines(context),
     IDENTITY_DM_REPLY_STYLE_RULES,
+    'Ground the Who question in established setup facts already on their sheet — treat name, class, race, background, starting gear, and known spells as known.',
+    'Do not invent an opening scene, location, or cold-open situation — scene-setting comes later.',
     'Respond ONLY with JSON: {"dmReply":string}'
   ].join('\n')
 }
 
 const IDENTITY_KICKOFF_PROMPT = [
   'Open with a concise, in-character question about WHO they are (name, lineage, appearance, personal history).',
+  'Ground the question in established setup facts already on their sheet (name, class, race, background, starting gear, known spells) — treat those as known, not unknown.',
+  'Do not invent an opening scene, location, or cold-open situation — scene-setting comes later. Ask about identity only.',
   'Do not ask about Why, Where, or What yet — focus only on Who.',
   'Keep dmReply short — one or two sentences that prompt an answer.'
 ].join('\n')

@@ -405,8 +405,8 @@ src/main/config.ts:4 - AgentProviderName
 src/main/dyingResolution.ts:159 - reloadCharacter
 src/main/encounterLootContext.ts:48 - AssembleEncounterLootContextParams
 src/main/encounterXpContext.ts:54 - AssembleEncounterXpContextParams
-src/main/guidedCreationAgentContext.ts:13 - BuildIdentityInterviewAgentContextInput
-src/main/guidedCreationIdentity.ts:132 - IdentityInterviewTurn
+src/main/guidedCreationAgentContext.ts:14 - BuildIdentityInterviewAgentContextInput
+src/main/guidedCreationIdentity.ts:155 - IdentityInterviewTurn
 src/main/guidedCreationIpc.ts:219 - getGuidedCreationState
 src/main/itemIpc.ts:13 - EquipItemInput
 src/main/itemIpc.ts:19 - UnequipItemInput

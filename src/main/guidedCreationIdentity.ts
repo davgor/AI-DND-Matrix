@@ -27,6 +27,7 @@ import {
   listGuidedCreationMessagesByPhase
 } from '../db/repositories/guidedCreationMessages'
 import type { GuidedCreationKickoffInput, GuidedCreationKickoffResult } from '../shared/guidedCreation/types'
+import { resolveCharacterStartingGear } from './guidedCreationStartingGear'
 
 function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
   const scores = stats.abilityScores as Record<string, number> | undefined
@@ -76,6 +77,39 @@ export function resolveCharacterRaceContext(
   return { raceName: roster?.label ?? null, raceLore: null }
 }
 
+function buildKickoffInterviewContext(
+  db: Database.Database,
+  campaignId: string,
+  campaignPremise: string,
+  character: NonNullable<ReturnType<typeof getCharacterById>>
+) {
+  const raceContext = resolveCharacterRaceContext(db, campaignId, character.raceKey)
+  const backgroundContext = resolveCharacterBackgroundContext(
+    character.backgroundKey,
+    character.backgroundStory
+  )
+  const gearContext = resolveCharacterStartingGear(
+    db,
+    character.id,
+    character.stats as Record<string, unknown>
+  )
+  return {
+    campaignPremise,
+    characterName: character.name,
+    characterClass: character.characterClass,
+    abilityScores: abilityScoresFromCharacter(character.stats),
+    alignment: character.alignment,
+    raceName: raceContext.raceName,
+    raceLore: raceContext.raceLore,
+    backgroundLabel: backgroundContext.backgroundLabel,
+    backgroundDescription: backgroundContext.backgroundDescription,
+    backgroundStory: backgroundContext.backgroundStory,
+    startingGear: gearContext.startingGear,
+    knownSpellNames: gearContext.knownSpellNames,
+    regions: regionsForCampaign(db, campaignId)
+  }
+}
+
 export async function kickoffIdentityInterviewIfNeeded(
   db: Database.Database,
   provider: Provider,
@@ -96,23 +130,12 @@ export async function kickoffIdentityInterviewIfNeeded(
     return { ok: true, kickedOff: false }
   }
 
-  const raceContext = resolveCharacterRaceContext(db, input.campaignId, character.raceKey)
-  const backgroundContext = resolveCharacterBackgroundContext(character.backgroundKey, character.backgroundStory)
   let dmReply: string
   try {
-    const kickoff = await runIdentityInterviewKickoff(provider, {
-      campaignPremise: campaign.premisePrompt,
-      characterName: character.name,
-      characterClass: character.characterClass,
-      abilityScores: abilityScoresFromCharacter(character.stats),
-      alignment: character.alignment,
-      raceName: raceContext.raceName,
-      raceLore: raceContext.raceLore,
-      backgroundLabel: backgroundContext.backgroundLabel,
-      backgroundDescription: backgroundContext.backgroundDescription,
-      backgroundStory: backgroundContext.backgroundStory,
-      regions: regionsForCampaign(db, input.campaignId)
-    })
+    const kickoff = await runIdentityInterviewKickoff(
+      provider,
+      buildKickoffInterviewContext(db, input.campaignId, campaign.premisePrompt, character)
+    )
     dmReply = kickoff.dmReply
   } catch {
     dmReply = identityWhoKickoffFallback(character.name)

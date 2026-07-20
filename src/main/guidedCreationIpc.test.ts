@@ -7,8 +7,10 @@ import { createRegion } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
 import { listGuidedCreationMessagesByCharacter } from '../db/repositories/guidedCreationMessages'
 import { setGuidedCreationPhase } from '../db/repositories/guidedCreation'
+import { applyStartingLoadout } from '../db/repositories/startingLoadout'
 import { sendGuidedCreationMessage, kickoffGuidedCreationIdentity, revertGuidedCreationPhase, generateGuidedCreationReply } from './guidedCreationIpc'
 import { readGuidedCreationFields } from '../db/repositories/guidedCreation'
+import { getSpellByKey } from '../db/catalog/spells'
 
 function seedGuidedCampaign(db: ReturnType<typeof createTestDb>) {
   const campaign = createCampaign(db, {
@@ -76,6 +78,51 @@ describe('kickoffGuidedCreationIdentity', () => {
     expect(second).toEqual({ ok: true, kickedOff: false })
     expect(listGuidedCreationMessagesByCharacter(db, player.id)).toHaveLength(1)
     expect(provider.calls).toHaveLength(1)
+  })
+})
+
+describe('kickoffGuidedCreationIdentity prior setup context', () => {
+  it('grounds the kickoff prompt in starting gear and known spells from setup', async () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Guided',
+      premisePrompt: 'A haunted marsh.',
+      deathMode: 'legendary'
+    })
+    createRegion(db, { campaignId: campaign.id, name: 'Oakhollow', description: 'A village.' })
+    const player = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      characterClass: 'fighter',
+      kind: 'player',
+      guidedCreationPhase: 'equipment',
+      stats: { abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 }, ac: 11, maxHp: 12 }
+    })
+    expect(
+      applyStartingLoadout(db, player.id, {
+        weaponName: 'Longsword',
+        armorName: 'Chain Hauberk',
+        offHandChoice: 'Wooden Shield',
+        spellKeys: ['rallying-strike']
+      })
+    ).toEqual({ ok: true })
+    const spellName = getSpellByKey(db, 'rallying-strike')?.name
+    expect(spellName).toBeTruthy()
+
+    const provider = createScriptedProvider([
+      JSON.stringify({ dmReply: 'Who are you beyond the fighter on your sheet?' })
+    ])
+    await kickoffGuidedCreationIdentity(db, provider, {
+      campaignId: campaign.id,
+      characterId: player.id
+    })
+
+    const systemPrompt = provider.calls[0]?.context?.systemPrompt ?? ''
+    expect(systemPrompt).toContain('Longsword')
+    expect(systemPrompt).toContain('Chain Hauberk')
+    expect(systemPrompt).toContain('Wooden Shield')
+    expect(systemPrompt).toContain(spellName!)
+    expect(provider.calls[0]?.prompt.toLowerCase()).toMatch(/do not invent an opening scene/)
   })
 })
 

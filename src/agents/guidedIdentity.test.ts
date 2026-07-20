@@ -33,6 +33,11 @@ const IDENTITY_INTERVIEW_CONTEXT = {
   backgroundLabel: null,
   backgroundDescription: null,
   backgroundStory: null,
+  startingGear: [
+    { name: 'Longsword', equippedSlot: 'mainHand' },
+    { name: 'Chain Hauberk', equippedSlot: 'armor' }
+  ],
+  knownSpellNames: ['Rallying Strike'],
   regions: SAMPLE_REGIONS,
   transcript: [] as Array<{ role: 'player' | 'dm'; content: string }>,
   currentFoundations: defaultIdentityFoundations()
@@ -74,6 +79,8 @@ describe('runIdentityInterviewKickoff', () => {
       backgroundLabel: IDENTITY_INTERVIEW_CONTEXT.backgroundLabel,
       backgroundDescription: IDENTITY_INTERVIEW_CONTEXT.backgroundDescription,
       backgroundStory: IDENTITY_INTERVIEW_CONTEXT.backgroundStory,
+      startingGear: IDENTITY_INTERVIEW_CONTEXT.startingGear,
+      knownSpellNames: IDENTITY_INTERVIEW_CONTEXT.knownSpellNames,
       regions: IDENTITY_INTERVIEW_CONTEXT.regions
     })
     expect(result.dmReply.toLowerCase()).toContain('who')
@@ -81,11 +88,18 @@ describe('runIdentityInterviewKickoff', () => {
     expect(systemPrompt).toContain('Kael')
     expect(systemPrompt).toContain('Elf')
     expect(systemPrompt).toContain('lawful_good')
+    expect(systemPrompt).toContain('Longsword')
+    expect(systemPrompt).toContain('Chain Hauberk')
+    expect(systemPrompt).toContain('Rallying Strike')
     expect(systemPrompt).toContain('Oakhollow')
     expect(systemPrompt).toContain('Blackmire')
     expect(systemPrompt).toContain('concise')
     expect(systemPrompt.toLowerCase()).toContain('do not restate')
+    expect(systemPrompt.toLowerCase()).toContain('established setup')
+    expect(systemPrompt.toLowerCase()).toMatch(/do not invent an opening scene/)
     expect(provider.calls[0]?.prompt).toContain('concise')
+    expect(provider.calls[0]?.prompt.toLowerCase()).toContain('established setup')
+    expect(provider.calls[0]?.prompt.toLowerCase()).toMatch(/do not invent an opening scene/)
     expect(provider.calls[0]?.context?.maxTokens).toBe(384)
   })
 })
@@ -114,6 +128,8 @@ describe('runIdentityInterviewKickoff background context', () => {
       backgroundLabel: 'Soldier',
       backgroundDescription: 'You served in an army.',
       backgroundStory: 'I marched on the northern border.',
+      startingGear: [],
+      knownSpellNames: [],
       regions: IDENTITY_INTERVIEW_CONTEXT.regions
     })
     const systemPrompt = provider.calls[0]?.context?.systemPrompt ?? ''
