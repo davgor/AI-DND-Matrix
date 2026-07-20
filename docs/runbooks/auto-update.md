@@ -30,7 +30,7 @@ Release filenames must **not contain spaces**. GitHub Releases rewrites spaces t
 
 1. **Initial check** ~8 seconds after launch
 2. **Polling** every **4 hours** while the app stays open (skips if a check/download is already in flight or an update is ready)
-3. **Manual check** — Settings → “Check for updates” (same guarded path; no-op in dev / when `DISABLE_AUTO_UPDATE=1`)
+3. **Manual check** — Settings → “Check for updates” (same guarded path; shows status for checking / no update / update found; reports disabled in dev / when `DISABLE_AUTO_UPDATE=1`)
 
 When an update is ready, the banner offers **Restart & Install**. Apply uses `quitAndInstall(true, true)`: silent NSIS (`/S`) and relaunch. Users should not see the installer wizard on update — only a brief restart, Discord-style.
 

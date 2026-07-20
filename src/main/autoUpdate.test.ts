@@ -128,12 +128,57 @@ describe('checkForUpdatesNow guards', () => {
     await checkForUpdatesNow()
     expect(checkForUpdates).toHaveBeenCalledTimes(1)
   })
+})
 
-  it('is a no-op when auto-update is disabled', async () => {
+describe('checkForUpdatesNow results', () => {
+  beforeEach(resetAutoUpdateTest)
+  afterEach(restoreAutoUpdateTest)
+
+  it('returns disabled when auto-update is disabled', async () => {
     process.env['DISABLE_AUTO_UPDATE'] = '1'
     const { checkForUpdatesNow } = await loadModule()
-    await checkForUpdatesNow()
+    await expect(checkForUpdatesNow()).resolves.toEqual({ outcome: 'disabled' })
     expect(checkForUpdates).not.toHaveBeenCalled()
+  })
+
+  it('returns up-to-date when the updater finds no newer version', async () => {
+    checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: false,
+      updateInfo: { version: '1.2.3' }
+    })
+    const { checkForUpdatesNow } = await loadModule()
+    await expect(checkForUpdatesNow()).resolves.toEqual({ outcome: 'up-to-date' })
+  })
+
+  it('returns update-available with version when a newer build exists', async () => {
+    checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: true,
+      updateInfo: { version: '9.9.9' }
+    })
+    const { checkForUpdatesNow } = await loadModule()
+    await expect(checkForUpdatesNow()).resolves.toEqual({
+      outcome: 'update-available',
+      version: '9.9.9'
+    })
+  })
+
+  it('returns busy when a check is already in flight', async () => {
+    let resolveCheck: (() => void) | undefined
+    checkForUpdates.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCheck = () =>
+            resolve({ isUpdateAvailable: false, updateInfo: { version: '1.2.3' } })
+        })
+    )
+
+    const { initAutoUpdate, checkForUpdatesNow, INITIAL_CHECK_DELAY_MS } = await loadModule()
+    initAutoUpdate()
+    await vi.advanceTimersByTimeAsync(INITIAL_CHECK_DELAY_MS)
+
+    const overlapping = checkForUpdatesNow()
+    await expect(overlapping).resolves.toEqual({ outcome: 'busy' })
+    resolveCheck?.()
   })
 })
 

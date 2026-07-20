@@ -1,6 +1,10 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { autoUpdater } from 'electron-updater'
-import type { AutoUpdatePhase, AutoUpdateState } from '../shared/autoUpdate/types'
+import type {
+  AutoUpdatePhase,
+  AutoUpdateState,
+  ManualUpdateCheckResult
+} from '../shared/autoUpdate/types'
 import { logger } from './logger'
 
 /** Delay before the first update check after launch. */
@@ -49,23 +53,42 @@ export function quitAndInstallUpdate(): void {
   autoUpdater.quitAndInstall(true, true)
 }
 
-export async function checkForUpdatesNow(): Promise<void> {
+function busyResultForPhase(phase: AutoUpdatePhase): ManualUpdateCheckResult {
+  if (phase === 'downloaded') {
+    return { outcome: 'busy', message: 'An update is ready to install.' }
+  }
+  if (phase === 'downloading' || phase === 'available') {
+    return { outcome: 'busy', message: 'An update is already downloading.' }
+  }
+  return { outcome: 'busy' }
+}
+
+export async function checkForUpdatesNow(): Promise<ManualUpdateCheckResult> {
   if (!isAutoUpdateEnabled()) {
-    return
+    return { outcome: 'disabled' }
   }
   if (checkInFlight || !canStartUpdateCheck(state.phase)) {
-    return
+    return busyResultForPhase(state.phase)
   }
 
   checkInFlight = true
   try {
-    await autoUpdater.checkForUpdates()
+    const result = await autoUpdater.checkForUpdates()
+    if (!result) {
+      return { outcome: 'error', message: 'No update response from provider' }
+    }
+    if (result.isUpdateAvailable) {
+      return { outcome: 'update-available', version: result.updateInfo.version }
+    }
+    return { outcome: 'up-to-date' }
   } catch (error: unknown) {
     logger.error('Auto-update check failed:', error)
+    const message = error instanceof Error ? error.message : 'Update check failed'
     setState({
       phase: 'error',
-      message: error instanceof Error ? error.message : 'Update check failed'
+      message
     })
+    return { outcome: 'error', message }
   } finally {
     checkInFlight = false
   }

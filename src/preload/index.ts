@@ -50,7 +50,7 @@ import type {
   SaveProviderSettingsInput
 } from '../shared/settings/types'
 import type { SettingsIntroState } from '../shared/settingsIntro/types'
-import type { AutoUpdateState } from '../shared/autoUpdate/types'
+import type { AutoUpdateState, ManualUpdateCheckResult } from '../shared/autoUpdate/types'
 import type { CampaignRace, RaceApplyInput, RaceApplyResult, RacePreviewLoreResult } from '../shared/raceSelection/types'
 import type { RaceRosterGroup, PreviewLoreInput } from '../main/raceIpc'
 import type {
@@ -328,7 +328,8 @@ const settingsIntro = {
 
 const autoUpdate = {
   getState: (): Promise<AutoUpdateState> => ipcRenderer.invoke('autoUpdate:getState'),
-  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('autoUpdate:checkForUpdates'),
+  checkForUpdates: (): Promise<ManualUpdateCheckResult> =>
+    ipcRenderer.invoke('autoUpdate:checkForUpdates'),
   quitAndInstall: (): Promise<void> => ipcRenderer.invoke('autoUpdate:quitAndInstall'),
   onEvent: (listener: (payload: AutoUpdateState) => void): (() => void) => {
     const handler = (_event: IpcRendererEvent, payload: AutoUpdateState): void => {

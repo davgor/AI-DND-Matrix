@@ -14,4 +14,11 @@ export interface AutoUpdateState {
   message?: string
 }
 
+export type ManualUpdateCheckResult =
+  | { outcome: 'update-available'; version: string }
+  | { outcome: 'up-to-date' }
+  | { outcome: 'disabled' }
+  | { outcome: 'busy'; message?: string }
+  | { outcome: 'error'; message: string }
+
 export const AUTO_UPDATE_EVENT_CHANNEL = 'autoUpdate:event'
