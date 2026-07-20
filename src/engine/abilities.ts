@@ -8,9 +8,9 @@ export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2)
 }
 
-export const POINT_BUY_POOL = 15
+export const POINT_BUY_POOL = 12
 export const POINT_BUY_MIN = 8
-export const POINT_BUY_MAX = 15
+export const POINT_BUY_MAX = 20
 
 export type PointBuyResult =
   | { valid: true; scores: AbilityScores }
@@ -46,7 +46,7 @@ export function resolvePointBuy(allocation: AbilityScores): PointBuyResult {
   return { valid: true, scores: allocation }
 }
 
-export const STANDARD_ARRAY = [15, 14, 13, 12] as const
+export const STANDARD_ARRAY = [14, 12, 10, 8] as const
 
 export type StandardArrayResult =
   | { valid: true; scores: AbilityScores }
@@ -63,6 +63,26 @@ export function resolveStandardArray(assignment: AbilityScores): StandardArrayRe
   }
 
   return { valid: true, scores: assignment }
+}
+
+const STANDARD_ARRAY_ABILITIES: Ability[] = ['body', 'agility', 'mind', 'presence']
+
+/** Scores still selectable for `forAbility`, excluding values already taken by other abilities. */
+export function availableStandardArrayOptions(
+  assignment: Record<Ability, number | ''>,
+  forAbility: Ability
+): number[] {
+  const usedByOthers = new Set<number>()
+  for (const ability of STANDARD_ARRAY_ABILITIES) {
+    if (ability === forAbility) {
+      continue
+    }
+    const value = assignment[ability]
+    if (typeof value === 'number') {
+      usedByOthers.add(value)
+    }
+  }
+  return STANDARD_ARRAY.filter((value) => !usedByOthers.has(value))
 }
 
 export function createSeededRandom(seed: number): RandomFn {

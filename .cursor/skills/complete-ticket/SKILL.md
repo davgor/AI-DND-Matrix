@@ -61,7 +61,7 @@ ACT="/c/Users/davgo/AppData/Local/Microsoft/WinGet/Packages/nektos.act_Microsoft
 
 - Confirm the output ends with `🏁 Job succeeded` for every job in the workflow (test, lint, build, and any others added later) — a job that errors or any job reporting `🏁 Job failed` means the work is not done yet, fix it and rerun.
 - A `Failed to save: "/usr/bin/tar" ...` warning from the `Post actions/setup-node` cache-save step is a known harmless quirk (the repo path contains a space) — it does not affect job success and is not a failure to chase.
-- If `act`/Docker aren't available in a given environment, fall back to running the equivalent commands locally and say explicitly that the real workflow wasn't exercised — don't silently skip this and call the ticket done.
+- If Docker is not running or unreachable, **pause and ask the user to start Docker Desktop**, then retry `act` after they confirm. Do **not** fall back to local-only commands and call the ticket done — the real workflows must be exercised via `act`.
 
 **If the ticket touches a native Node module (anything with a compiled `.node` binary — `better-sqlite3` today, possibly others later) or wires new code into `main/index.ts`/`preload/index.ts` for the first time**, passing `npm test` is not sufficient proof it works — Vitest runs under plain system Node, but the real app runs under Electron's bundled Node, which has a different ABI. A native module built for one will throw `NODE_MODULE_VERSION` errors in the other. This already happened once with `better-sqlite3` (Node ABI 137 vs Electron's 146) — all 54 tests passed while the real app crashed on first use. Before considering such a ticket done:
 

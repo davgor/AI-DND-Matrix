@@ -29,7 +29,7 @@ describe('resolveCharacterSetupFormDefaults', () => {
       name: 'Draft',
       archetype: 'mage',
       alignment: 'chaotic_neutral',
-      abilityScores: { body: 15, agility: 14, mind: 13, presence: 12 },
+      abilityScores: { body: 14, agility: 12, mind: 10, presence: 8 },
       abilityScoreMethod: 'standardArray'
     })
 
@@ -37,7 +37,7 @@ describe('resolveCharacterSetupFormDefaults', () => {
       name: 'Draft',
       archetype: 'mage',
       alignment: 'chaotic_neutral',
-      abilityScores: { body: 15, agility: 14, mind: 13, presence: 12 },
+      abilityScores: { body: 14, agility: 12, mind: 10, presence: 8 },
       abilityScoreMethod: 'standardArray'
     })
   })

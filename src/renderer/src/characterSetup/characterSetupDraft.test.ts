@@ -9,7 +9,7 @@ function player(overrides: Partial<Character> = {}): Character {
     name: 'Kael',
     characterClass: 'fighter',
     stats: {
-      abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
+      abilityScores: { body: 13, agility: 13, mind: 10, presence: 8 },
       ac: 11,
       maxHp: 12,
       hitDieRolls: [8]
@@ -51,7 +51,7 @@ describe('characterSetupDraft', () => {
       name: 'Kael',
       archetype: 'fighter',
       alignment: 'lawful_good',
-      abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
+      abilityScores: { body: 13, agility: 13, mind: 10, presence: 8 },
       abilityScoreMethod: 'pointBuy',
       portraitPath: '/portrait.png',
       sheetBackgroundPath: null
@@ -71,7 +71,7 @@ describe('characterSetupDraft', () => {
       name: 'Kael',
       archetype: 'fighter',
       alignment: 'lawful_good',
-      abilityScores: { body: 14, agility: 12, mind: 10, presence: 10 },
+      abilityScores: { body: 13, agility: 13, mind: 10, presence: 8 },
       abilityScoreMethod: 'pointBuy',
       portraitPath: '/portrait.png',
       sheetBackgroundPath: null

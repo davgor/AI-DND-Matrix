@@ -1,7 +1,6 @@
 import type { Archetype } from '../../../engine/hp'
 import { AbilityScoreAssignment } from './AbilityScoreAssignment'
 import { CharacterSetupCoreFields } from './CharacterSetupFields'
-import { PartyMemberSetup } from './PartyMemberSetup'
 import type { CharacterSetupDraft } from './characterSetupDraft'
 import { useCharacterSetup } from './useCharacterSetup'
 import { ProceedButton } from '../onboarding/ProceedButton'
@@ -9,7 +8,7 @@ import './characterSetup.css'
 
 const ARCHETYPES: Archetype[] = ['fighter', 'rogue', 'mage', 'cleric', 'ranger']
 
-export interface CharacterSetupProps {
+interface CharacterSetupProps {
   campaignId: string
   draft?: CharacterSetupDraft | null
   onComplete: () => void
@@ -32,21 +31,6 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
         onAssigned={setup.setAbilityScores}
         onMethodChange={setup.setAbilityScoreMethod}
       />
-
-      <PartyMemberSetup
-        campaignId={props.campaignId}
-        members={setup.partyMembers}
-        onChange={setup.setPartyMembers}
-      />
-
-      <div className="portrait-upload">
-        <button type="button" onClick={() => void setup.selectPortrait()}>
-          Select Portrait
-        </button>
-        <button type="button" onClick={() => void setup.selectSheetBackground()}>
-          Select Sheet Background
-        </button>
-      </div>
 
       {setup.validationError && (
         <p className="character-setup-error">{setup.validationError}</p>

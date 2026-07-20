@@ -76,6 +76,8 @@ Also run `npm run typecheck` when types/TS config changed or build errors are am
 
 **Deadcode (`npm run deadcode`):** compares `ts-prune` output to `.tsprune-ignore` (also CI via `.github/workflows/deadcode.yml`). After intentional export moves/deletes, prefer unexporting truly unused symbols; if the ignore baseline drifts on known intentional exports, refresh with `npm run deadcode:refresh` and keep the diff reviewable. Do not skip this gate.
 
+**Act CI (required after local gates):** run the real workflows with `act` before reporting done — at least `.github/workflows/pr-checks.yml` and `.github/workflows/deadcode.yml`. Use the WinGet `act.exe` path and flags from [complete-ticket](../complete-ticket/SKILL.md). Confirm every job ends with `🏁 Job succeeded`. If Docker is not running, **pause and ask the user to start Docker Desktop**, then retry — do not fall back to local-only commands and claim CI passed.
+
 **Targeted tests during iteration** are fine (`npx vitest run path/to/foo.test.ts`), but **finish with full `npm test`** unless the user scoped a subset.
 
 **Native modules / Electron** (`better-sqlite3`, new `main`/`preload` wiring): see complete-ticket §4 — `npm test` alone is not enough; exercise the path in the real app after `npm run rebuild:electron`.
@@ -104,5 +106,6 @@ Delivery:
 - [ ] npm run lint — pass
 - [ ] npm run build — pass
 - [ ] npm run deadcode — pass
+- [ ] act pr-checks.yml + deadcode.yml — pass (pause if Docker off)
 - [ ] Acceptance criteria checked off only when verified
 ```
