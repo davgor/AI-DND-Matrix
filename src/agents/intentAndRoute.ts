@@ -122,7 +122,8 @@ export const INTENT_AND_ROUTE_SYSTEM_PROMPT = buildAgentSystemPrompt({
 // larger than the plain-intent band because the response carries both halves.
 const INTENT_AND_ROUTE_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: INTENT_AND_ROUTE_SYSTEM_PROMPT,
-  maxTokens: 512
+  maxTokens: 512,
+  purpose: 'play.intent_route'
 }
 
 export function buildIntentAndRoutePrompt(context: IntentAndRouteContext): string {

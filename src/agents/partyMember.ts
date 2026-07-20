@@ -108,7 +108,8 @@ const PARTY_MEMBER_GENERATE_CONTEXT: GenerateContext = {
       "Decide your character's action this round automatically, in character, without waiting for player direction."
     ]
   }),
-  maxTokens: 256
+  maxTokens: 256,
+  purpose: 'play.party_member'
 }
 
 function buildPartyMemberPrompt(
@@ -133,7 +134,11 @@ export async function decidePartyMemberAction(
 ): Promise<PartyMemberAction> {
   const raw = await provider.generate(
     buildPartyMemberPrompt(character, context, sceneNarration),
-    PARTY_MEMBER_GENERATE_CONTEXT
+    {
+      ...PARTY_MEMBER_GENERATE_CONTEXT,
+      campaignId: character.campaignId,
+      characterId: character.id
+    }
   )
   const parsed = tryParseJson(raw)
   return isValidPartyMemberAction(parsed) ? parsed : { actionText: raw }

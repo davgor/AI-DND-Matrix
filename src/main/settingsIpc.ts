@@ -49,7 +49,7 @@ export function saveProviderSettings(
 export async function testPlayer2Connection(baseUrl: string): Promise<ConnectionCheckResult> {
   try {
     const provider = createPlayer2Provider({ baseUrl })
-    await provider.generate('ping', { maxTokens: 1 })
+    await provider.generate('ping', { maxTokens: 1, purpose: 'system.ping' })
     return { ok: true, message: 'Connected to Player2 successfully.' }
   } catch (error) {
     // 040.14: a 1-token ping usually stops at the cap — truncation proves the

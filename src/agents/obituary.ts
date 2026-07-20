@@ -17,7 +17,7 @@ export class ObituarySchemaError extends Error {}
 // verbatim as the character's permanent obituary. Cap reasoned from the schema
 // (multi-paragraph memorial + a handful of reaction entries), not measured
 // against recorded outputs; one-time cost, so generous on purpose.
-const OBITUARY_GENERATE_CONTEXT: GenerateContext = { maxTokens: 1024 }
+const OBITUARY_GENERATE_CONTEXT: GenerateContext = { maxTokens: 1024, purpose: 'play.narration' }
 
 export interface ObituaryNpcHistory {
   npcId: string
@@ -30,6 +30,8 @@ export interface ObituaryNpcHistory {
 }
 
 export interface ObituaryContext {
+  campaignId: string
+  characterId: string
   deathCause: string
   characterName: string
   characterClass: string
@@ -100,6 +102,8 @@ export function assembleObituaryContext(
   }))
   const peopleLogEntries = listLogEntriesByCharacterAndCategory(db, characterId, 'person')
   return {
+    campaignId,
+    characterId,
     deathCause,
     characterName: character.name,
     characterClass: character.characterClass,
@@ -203,7 +207,11 @@ export async function generateObituary(
     () => buildObituaryPrompt(context),
     (value) => parseGeneratedObituary(value) ?? undefined,
     {
-      context: OBITUARY_GENERATE_CONTEXT,
+      context: {
+        ...OBITUARY_GENERATE_CONTEXT,
+        campaignId: context.campaignId,
+        characterId: context.characterId
+      },
       exhaustedError: () =>
         new ObituarySchemaError('Obituary agent did not return a valid schema after retries')
     }

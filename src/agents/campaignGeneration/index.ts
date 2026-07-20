@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import { tryParseJson } from '../jsonResponse'
 import type { Provider } from '../providers/types'
+import type { LlmPurposeId } from '../../shared/llmUsage'
 import {
   meetsRegionTropeDiversity,
   meetsPremiseTropeDiversity,
@@ -91,12 +92,16 @@ async function generateWithRetries<T>(input: {
   provider: Provider
   buildPrompt: () => string
   maxTokens: number
+  purpose: LlmPurposeId
   normalize: (parsed: unknown) => T | undefined
   isValid: (value: T) => boolean
   errorMessage: string
 }): Promise<T> {
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await input.provider.generate(input.buildPrompt(), { maxTokens: input.maxTokens })
+    const raw = await input.provider.generate(input.buildPrompt(), {
+      maxTokens: input.maxTokens,
+      purpose: input.purpose
+    })
     const parsed = tryParseJson(raw)
     const normalized = input.normalize(parsed)
     if (normalized && input.isValid(normalized)) {
@@ -115,6 +120,7 @@ export async function generateCampaignWorld(
     provider,
     buildPrompt: () => buildWorldGenerationPrompt(premisePrompt, pantheon),
     maxTokens: WORLD_MAX_TOKENS,
+    purpose: 'campaign.world',
     normalize: normalizeGeneratedWorld,
     isValid: (world) => isValidGeneratedWorld(world) && meetsWorldTropeDiversity(world, premisePrompt),
     errorMessage: 'DM agent did not return a valid world schema after retries'
@@ -135,6 +141,7 @@ export async function generateCanonRecall(
       provider,
       buildPrompt: () => buildCanonRecallPrompt(premisePrompt, world),
       maxTokens: CANON_MAX_TOKENS,
+      purpose: 'campaign.world',
       normalize: normalizeCanonRecall,
       isValid: isValidCanonRecall,
       errorMessage: 'DM agent did not return a valid canon recall schema after retries'
@@ -153,6 +160,7 @@ export async function generateCampaignPantheon(
     provider,
     buildPrompt: () => buildPantheonGenerationPrompt(premisePrompt, canon),
     maxTokens: PANTHEON_MAX_TOKENS,
+    purpose: 'campaign.pantheon',
     normalize: normalizeGeneratedPantheon,
     isValid: isValidGeneratedPantheon,
     errorMessage: 'DM agent did not return a valid pantheon schema after retries'
@@ -175,6 +183,7 @@ export async function generateCampaignRegions(input: {
     buildPrompt: () =>
       buildRegionsGenerationPrompt(input.premisePrompt, input.world, input.counts, canon),
     maxTokens: REGIONS_MAX_TOKENS,
+    purpose: 'campaign.region',
     normalize: (parsed) => normalizeRegionsGeneration(parsed, input.counts),
     isValid: (regions) =>
       regions.length === input.counts.regionCount &&
@@ -202,6 +211,7 @@ export async function generateCampaignStoryThread(
         input.deities ?? []
       ),
     maxTokens: STORY_THREAD_MAX_TOKENS,
+    purpose: 'campaign.story',
     normalize: normalizeStoryThreadGeneration,
     isValid: (thread) =>
       typeof thread.title === 'string' &&
@@ -227,6 +237,7 @@ async function generateCampaignBestiary(
     buildPrompt: () =>
       buildBestiaryStagePrompt(premisePrompt, input.world, input.regions, input.deities ?? []),
     maxTokens: BESTIARY_STAGE_MAX_TOKENS,
+    purpose: 'campaign.npc',
     normalize: (parsed) => {
       const normalized = normalizeBestiaryGeneration(parsed)
       if (!normalized) {
@@ -719,7 +730,7 @@ export async function generateAdditionalRegion(
         history: request.history,
         deities: request.deities
       }, availableRaces),
-      { maxTokens: ADDITIONAL_REGION_MAX_TOKENS }
+      { maxTokens: ADDITIONAL_REGION_MAX_TOKENS, purpose: 'campaign.region' }
     )
     const parsed = tryParseJson(raw)
     const normalized = normalizeAdditionalRegion(parsed, npcCount)
@@ -761,7 +772,8 @@ async function attemptGenerateSingleNpc(
   }
 ): Promise<GeneratedSingleNpcResult | undefined> {
   const raw = await provider.generate(buildSingleNpcPrompt(input), {
-    maxTokens: SINGLE_NPC_MAX_TOKENS
+    maxTokens: SINGLE_NPC_MAX_TOKENS,
+    purpose: 'campaign.npc'
   })
   const parsed = tryParseJson(raw)
   const normalized = normalizeGeneratedSingleNpc(parsed, input.regionName)

@@ -5,6 +5,8 @@ import { LlamaLocalSection } from './LlamaLocalSection'
 import { Player2Section } from './Player2Section'
 import { ProviderModeSelector } from './ProviderModeSelector'
 import { useSettings } from './useSettings'
+import { LlmUsageSection } from './LlmUsageSection'
+import { useLlmUsageSettings } from './useLlmUsageSettings'
 import './settings.css'
 
 export interface SettingsViewProps {
@@ -72,6 +74,7 @@ function canSave(controller: ReturnType<typeof useSettings>): boolean {
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
   const controller = useSettings(props.onClose)
+  const llmUsage = useLlmUsageSettings()
   const { currentVersion } = useAppUpdate()
 
   return (
@@ -88,6 +91,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         )}
         <ProviderModeSelector mode={controller.draft.mode} onChange={(mode) => controller.updateDraft({ mode })} />
         <ProviderSection controller={controller} />
+        <LlmUsageSection controller={llmUsage} />
         {controller.saveFailed && <p className="settings-field-error">Could not save settings. Please try again.</p>}
         <footer className="settings-footer">
           <div className="settings-version-row">

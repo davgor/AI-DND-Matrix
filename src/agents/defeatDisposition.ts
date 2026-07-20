@@ -28,7 +28,8 @@ const DEFEAT_GENERATE_CONTEXT: GenerateContext = {
       'Do not invent new victor biography.'
     ]
   }),
-  maxTokens: 192
+  maxTokens: 192,
+  purpose: 'play.combat'
 }
 
 function buildDefeatPrompt(input: {
@@ -86,7 +87,11 @@ export async function proposeDefeatDisposition(
     () => buildDefeatPrompt(input),
     (parsed) => parseDefeatDispositionProposal(parsed) ?? undefined,
     {
-      context: DEFEAT_GENERATE_CONTEXT,
+      context: {
+        ...DEFEAT_GENERATE_CONTEXT,
+        campaignId: input.victor.campaignId,
+        characterId: input.player.id
+      },
       fallback: () => ({
         disposition: 'leave_unconscious',
         narrationText: `${input.victor.name} stands over you as consciousness fades.`

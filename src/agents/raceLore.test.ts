@@ -78,11 +78,15 @@ describe('buildRaceLorePrompt human tone (069)', () => {
 describe('generateRaceLore', () => {
   it('parses valid lore JSON and retries malformed output', async () => {
     const provider = createScriptedProvider(['not json', JSON.stringify(VALID_LORE)])
-    const lore = await generateRaceLore(provider, 'Premise.', 'Summary.', {
-      kind: 'preset',
-      raceKey: 'human',
-      label: 'Human',
-      seedPrompt: 'Adaptable.'
+    const lore = await generateRaceLore(provider, {
+      campaignPremise: 'Premise.',
+      worldSummary: 'Summary.',
+      input: {
+        kind: 'preset',
+        raceKey: 'human',
+        label: 'Human',
+        seedPrompt: 'Adaptable.'
+      }
     })
     expect(lore.summary).toBe(VALID_LORE.summary)
     expect(provider.calls).toHaveLength(2)
@@ -90,11 +94,15 @@ describe('generateRaceLore', () => {
 
   it('caps output at the structured-lore band and reuses the context on retries (040.1)', async () => {
     const provider = createScriptedProvider(['not json', JSON.stringify(VALID_LORE)])
-    await generateRaceLore(provider, 'Premise.', 'Summary.', {
-      kind: 'preset',
-      raceKey: 'human',
-      label: 'Human',
-      seedPrompt: 'Adaptable.'
+    await generateRaceLore(provider, {
+      campaignPremise: 'Premise.',
+      worldSummary: 'Summary.',
+      input: {
+        kind: 'preset',
+        raceKey: 'human',
+        label: 'Human',
+        seedPrompt: 'Adaptable.'
+      }
     })
     expect(provider.calls[0]?.context?.maxTokens).toBe(512)
     expect(provider.calls[1]?.context).toBe(provider.calls[0]?.context)

@@ -10,7 +10,7 @@ import {
 export class FleeNarrationSchemaError extends Error {}
 
 // 040.1: 192 — an outcome word plus one short narration line.
-const FLEE_NARRATION_GENERATE_CONTEXT: GenerateContext = { maxTokens: 192 }
+const FLEE_NARRATION_GENERATE_CONTEXT: GenerateContext = { maxTokens: 192, purpose: 'play.combat' }
 
 export interface FleeNarrationContext {
   checkResult: FleeAttemptResult

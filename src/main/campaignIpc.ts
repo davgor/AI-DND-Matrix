@@ -4,6 +4,7 @@ import { generateAndPersistCampaign } from '../agents/campaignGeneration'
 import { createProviderRegistry, selectProvider } from '../agents/providers/selectProvider'
 import { withTokenEscalation } from '../agents/providers/tokenEscalation'
 import { withRetry } from '../agents/providers/withRetry'
+import { withUsageRecording } from '../agents/providers/withUsageRecording'
 import type { Provider } from '../agents/providers/types'
 import {
   getCampaignById,
@@ -82,7 +83,19 @@ export function buildAgentProvider(): Provider {
   const registry = createProviderRegistry(resolved)
   // 040.14: escalation wraps retry — a truncated response is retried with a
   // doubled cap (each cap attempt keeps its own connectivity retries beneath).
-  return withTokenEscalation(withRetry(selectProvider(resolved.agentProvider, registry), logger))
+  // 112: usage recording wraps outside escalation so retries aggregate into one event.
+  const escalated = withTokenEscalation(
+    withRetry(selectProvider(resolved.agentProvider, registry), logger)
+  )
+  const defaultModelId =
+    resolved.agentProvider === 'claude' ? resolved.claudeModel : resolved.agentProvider
+  return withUsageRecording(escalated, {
+    getDb,
+    providerName: resolved.agentProvider,
+    defaultModelId,
+    warn: (message) => logger.warn(message),
+    logInsertError: (message, error) => logger.error(message, error)
+  })
 }
 
 export async function generateCampaignFromPrompt(

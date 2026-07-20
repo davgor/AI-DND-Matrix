@@ -223,7 +223,8 @@ const INTENT_GENERATE_CONTEXT: GenerateContext = {
     schemaFragment: INTENT_SCHEMA_FIELDS,
     guidanceLines: INTENT_GUIDANCE_LINES
   }),
-  maxTokens: 384
+  maxTokens: 384,
+  purpose: 'play.intent_route'
 }
 
 function buildIntentPrompt(playerInput: string, combat?: CombatIntentContext): string {
@@ -502,7 +503,8 @@ const NARRATION_GENERATE_CONTEXT: GenerateContext = {
     guidanceLines: NARRATION_GUIDANCE_LINES,
     emphasisGuidance: NARRATIVE_EMPHASIS_GUIDANCE
   }),
-  maxTokens: 1024
+  maxTokens: 1024,
+  purpose: 'play.narration'
 }
 
 function buildNarrationPrompt(outcome: CheckOutcome, context: NarrationContext): string {

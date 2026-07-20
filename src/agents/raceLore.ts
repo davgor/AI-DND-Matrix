@@ -19,9 +19,16 @@ import { PROSE_CLARITY_RULES } from './campaignGeneration/prompts'
 
 export type { CampaignRace } from '../shared/raceSelection/types'
 
+export interface RaceLoreGenerationContext {
+  campaignPremise: string
+  worldSummary: string
+  input: RaceLoreInput
+  campaignId?: string
+}
+
 // 040.1: 512 — structured lore JSON (five short flavor fields + 2-4 hook
 // strings), generated once per race per campaign.
-const RACE_LORE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512 }
+const RACE_LORE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512, purpose: 'onboarding.race_lore' }
 
 function isValidRaceLore(value: unknown): value is RaceLore {
   if (typeof value !== 'object' || value === null) {
@@ -73,17 +80,23 @@ export function buildRaceLorePrompt(
 
 export async function generateRaceLore(
   provider: Provider,
-  campaignPremise: string,
-  worldSummary: string,
-  input: RaceLoreInput
+  loreContext: RaceLoreGenerationContext
 ): Promise<RaceLore> {
   return generateJsonWithRetry(
     provider,
-    () => buildRaceLorePrompt(campaignPremise, worldSummary, input),
+    () =>
+      buildRaceLorePrompt(
+        loreContext.campaignPremise,
+        loreContext.worldSummary,
+        loreContext.input
+      ),
     (parsed) => (isValidRaceLore(parsed) ? parsed : undefined),
     {
       attempts: MAX_GENERATION_ATTEMPTS,
-      context: RACE_LORE_GENERATE_CONTEXT,
+      context: {
+        ...RACE_LORE_GENERATE_CONTEXT,
+        ...(loreContext.campaignId !== undefined ? { campaignId: loreContext.campaignId } : {})
+      },
       exhaustedError: () =>
         new Error('Race lore generation did not return a valid schema after retries')
     }
@@ -138,17 +151,17 @@ export async function resolveOrRealizeCampaignRace(
     throw new Error('invalid_preset_race_key')
   }
 
-  const lore = await generateRaceLore(
-    provider,
-    campaign.premisePrompt,
-    campaign.worldSummary || campaign.currentStateSummary,
-    {
+  const lore = await generateRaceLore(provider, {
+    campaignPremise: campaign.premisePrompt,
+    worldSummary: campaign.worldSummary || campaign.currentStateSummary,
+    input: {
       kind: 'preset',
       raceKey: rosterEntry.key,
       label: rosterEntry.label,
       seedPrompt: rosterEntry.seedPrompt
-    }
-  )
+    },
+    campaignId: params.campaignId
+  })
 
   return createCampaignRace(db, {
     campaignId: params.campaignId,

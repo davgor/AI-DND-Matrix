@@ -64,30 +64,28 @@ export async function previewRaceLore(
     if (!rosterEntry) {
       throw new Error('invalid_race_key')
     }
-    const lore = await generateRaceLore(
-      provider,
-      campaign.premisePrompt,
-      campaign.currentStateSummary,
-      {
+    const lore = await generateRaceLore(provider, {
+      campaignPremise: campaign.premisePrompt,
+      worldSummary: campaign.currentStateSummary,
+      input: {
         kind: 'preset',
         raceKey: rosterEntry.key,
         label: rosterEntry.label,
         seedPrompt: rosterEntry.seedPrompt
       }
-    )
+    })
     return { locked: false, lore }
   }
 
-  const lore = await generateRaceLore(
-    provider,
-    campaign.premisePrompt,
-    campaign.currentStateSummary,
-    {
+  const lore = await generateRaceLore(provider, {
+    campaignPremise: campaign.premisePrompt,
+    worldSummary: campaign.currentStateSummary,
+    input: {
       kind: 'custom',
       label: input.label,
       seedPrompt: input.seedPrompt
     }
-  )
+  })
   return { locked: false, lore }
 }
 

@@ -8,7 +8,7 @@ import {
 
 // 040.1: 128 — a boolean, an optional profile word, and an optional short
 // reason; the smallest structured response in the codebase.
-const RETIRED_REVIEW_GENERATE_CONTEXT: GenerateContext = { maxTokens: 128 }
+const RETIRED_REVIEW_GENERATE_CONTEXT: GenerateContext = { maxTokens: 128, purpose: 'play.combat' }
 
 function buildReviewPrompt(npc: Npc): string {
   return [
@@ -37,7 +37,7 @@ export async function reviewRetiredAdventurer(
     () => buildReviewPrompt(npc),
     (parsed) => (parsed === undefined ? undefined : parseRetiredAdventurerReview(parsed)),
     {
-      context: RETIRED_REVIEW_GENERATE_CONTEXT,
+      context: { ...RETIRED_REVIEW_GENERATE_CONTEXT, campaignId: npc.campaignId },
       fallback: () => ({ upgrade: false })
     }
   )

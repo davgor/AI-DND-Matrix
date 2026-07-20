@@ -33,7 +33,8 @@ const YIELD_GENERATE_CONTEXT: GenerateContext = {
       '"narrationText" is a short prose seed (1-2 sentences) the DM can use for narration.'
     ]
   }),
-  maxTokens: 192
+  maxTokens: 192,
+  purpose: 'play.combat'
 }
 
 function buildYieldReviewPrompt(input: YieldReviewInput): string {

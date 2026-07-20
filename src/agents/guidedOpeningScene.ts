@@ -36,7 +36,7 @@ export interface OpeningSceneResponse {
 // 040.1: 768 — dmReply plus proposedOpeningScene prose; the accepted scene is
 // persisted verbatim as the character's opening scene. Cap reasoned from the
 // schema (two short prose fields), not measured against recorded outputs.
-const OPENING_SCENE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 768 }
+const OPENING_SCENE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 768, purpose: 'onboarding.opening_scene' }
 
 const OPENING_SCENE_CONFIRM_RULES = [
   'In dmReply, propose a concrete starting scene and ask clearly whether it looks good (e.g. "Does this look good to you?").',
@@ -140,7 +140,8 @@ export async function runOpeningSceneKickoff(
 ): Promise<OpeningSceneResponse> {
   const generateContext: GenerateContext = {
     systemPrompt: buildOpeningSceneKickoffSystemPrompt(context),
-    maxTokens: OPENING_SCENE_GENERATE_CONTEXT.maxTokens
+    maxTokens: OPENING_SCENE_GENERATE_CONTEXT.maxTokens,
+    purpose: 'onboarding.opening_scene'
   }
   return generateJsonWithRetry(
     provider,

@@ -7,7 +7,7 @@ import type { GenerateContext, Provider } from './providers/types'
 // persisted verbatim as the character's background story. Cap reasoned from
 // that instruction (two paragraphs comfortably fit), not measured against
 // recorded outputs; truncation now throws at the provider.
-const BACKGROUND_STORY_GENERATE_CONTEXT: GenerateContext = { maxTokens: 768 }
+const BACKGROUND_STORY_GENERATE_CONTEXT: GenerateContext = { maxTokens: 768, purpose: 'onboarding.background' }
 
 export interface BackgroundStoryInput {
   characterName: string

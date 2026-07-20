@@ -155,7 +155,8 @@ const SPEAKING_GENERATE_CONTEXT: GenerateContext = {
     ],
     emphasisGuidance: NPC_EMPHASIS_GUIDANCE
   }),
-  maxTokens: NPC_REACTION_MAX_TOKENS
+  maxTokens: NPC_REACTION_MAX_TOKENS,
+  purpose: 'play.npc_reaction'
 }
 
 const ACTION_GENERATE_CONTEXT: GenerateContext = {
@@ -168,7 +169,8 @@ const ACTION_GENERATE_CONTEXT: GenerateContext = {
     ],
     emphasisGuidance: NPC_EMPHASIS_GUIDANCE
   }),
-  maxTokens: NPC_REACTION_MAX_TOKENS
+  maxTokens: NPC_REACTION_MAX_TOKENS,
+  purpose: 'play.npc_reaction'
 }
 
 function buildSpeakingStyleLine(npc: Npc): string {
@@ -228,7 +230,10 @@ export async function generateNpcReaction(
     : buildActionPrompt(npc, context, sceneNarration)
   const raw = await provider.generate(
     prompt,
-    npc.canSpeak ? SPEAKING_GENERATE_CONTEXT : ACTION_GENERATE_CONTEXT
+    {
+      ...(npc.canSpeak ? SPEAKING_GENERATE_CONTEXT : ACTION_GENERATE_CONTEXT),
+      campaignId: npc.campaignId
+    }
   )
   const parsed = tryParseJson(raw)
   const reaction = npc.canSpeak ? parseSpeakingReaction(parsed) : parseActionReaction(parsed)

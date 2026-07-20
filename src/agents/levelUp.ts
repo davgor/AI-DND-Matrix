@@ -5,7 +5,7 @@ import { parseLevelUpAgentResponse } from '../shared/progression/types'
 
 // 040.1: 512 — narration line plus exactly 3 perks, each with a name, short
 // description, and flavor tags; larger than the one-liner bands but bounded.
-const LEVEL_UP_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512 }
+const LEVEL_UP_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512, purpose: 'play.loot_xp' }
 
 export interface LevelUpAgentResult {
   narrationText: string
@@ -41,7 +41,11 @@ export async function resolveLevelUpPerks(
     prompt,
     (parsed) => parseLevelUpAgentResponse(parsed) ?? undefined,
     {
-      context: LEVEL_UP_GENERATE_CONTEXT,
+      context: {
+        ...LEVEL_UP_GENERATE_CONTEXT,
+        campaignId: ctx.campaignId,
+        characterId: ctx.characterId
+      },
       fallback: () => fallbackLevelUpOptions(ctx)
     }
   )

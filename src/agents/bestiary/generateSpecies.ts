@@ -37,7 +37,8 @@ export interface GenerateSpeciesResult {
 
 const SPECIES_LORE_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: SPECIES_LORE_SYSTEM_PROMPT,
-  maxTokens: 512
+  maxTokens: 512,
+  purpose: 'campaign.npc'
 }
 
 const DEFAULT_VARIANTS: CreateBestiaryVariantInput[] = [
@@ -117,7 +118,7 @@ async function resolveBaseLore(
       }),
     parseSpeciesLore,
     {
-      context: SPECIES_LORE_GENERATE_CONTEXT,
+      context: { ...SPECIES_LORE_GENERATE_CONTEXT, campaignId: proposal.campaignId },
       exhaustedError: () =>
         new Error('Species lore generation did not return valid baseLore after retries')
     }
