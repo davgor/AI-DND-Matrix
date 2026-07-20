@@ -15,6 +15,7 @@ interface PlayerActionPanelProps {
   playerImprisoned?: boolean
   combatState?: CombatStateSnapshot | null
   characterId?: string
+  onOpenNpcDossier?: (npcId: string) => void
 }
 
 export function turnStateMessage(props: PlayerActionPanelProps): string | null {
@@ -70,7 +71,7 @@ export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
           </p>
         ) : null}
         {visibleEntries.map((entry) => (
-          <SocialMessage key={entry.id} entry={entry} />
+          <SocialMessage key={entry.id} entry={entry} onOpenNpcDossier={props.onOpenNpcDossier} />
         ))}
       </div>
       <footer className="play-view-composer">

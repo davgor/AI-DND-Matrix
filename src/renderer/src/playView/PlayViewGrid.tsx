@@ -7,6 +7,7 @@ import { InCampaignLayout } from '../inCampaign/InCampaignLayout'
 import type { InCampaignLayoutMode } from '../../../shared/inCampaignLayout/types'
 import { PlayDmExpositionColumn } from './PlayDmExpositionColumn'
 import { PlayerActionPanel } from './PlayerActionPanel'
+import { usePlaySheetModals } from './usePlaySheetModals'
 import type { usePlayViewController } from './usePlayViewController'
 
 function playDmColumn(
@@ -21,7 +22,8 @@ function playDmColumn(
 
 function playPlayerColumn(
   controller: ReturnType<typeof usePlayViewController>,
-  characterId: string
+  characterId: string,
+  onOpenNpcDossier: (npcId: string) => void
 ): JSX.Element {
   return (
     <PlayerActionPanel
@@ -34,6 +36,7 @@ function playPlayerColumn(
       playerImprisoned={controller.playerImprisoned}
       combatState={controller.combatState}
       characterId={characterId}
+      onOpenNpcDossier={onOpenNpcDossier}
     />
   )
 }
@@ -54,6 +57,8 @@ export function PlayViewGrid(props: {
   onBackdropDismiss: () => void
   overlays?: ReactNode
 }): JSX.Element {
+  const modals = usePlaySheetModals()
+
   return (
     <InCampaignLayout
       mode={props.layoutMode}
@@ -70,7 +75,7 @@ export function PlayViewGrid(props: {
         />
       }
       dmExposition={playDmColumn(props.layoutMode, props.controller, props.sceneContext)}
-      playerInteraction={playPlayerColumn(props.controller, props.characterId)}
+      playerInteraction={playPlayerColumn(props.controller, props.characterId, modals.openDossier)}
       playerSheet={
         <PlaySheetRail
           campaignId={props.campaignId}
@@ -78,6 +83,7 @@ export function PlayViewGrid(props: {
           collapsed={props.sheetCollapsed}
           onToggleCollapsed={props.onToggleSheet}
           refreshToken={props.controller.characterRefreshToken}
+          modals={modals}
         />
       }
       overlays={props.overlays}

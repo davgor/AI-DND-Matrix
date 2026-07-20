@@ -11,12 +11,14 @@ Today `Provider.generate()` returns only text. Claude/Player2 adapters discard A
 - Persist events locally so sessions can be aggregated offline
 - Estimate **USD cost** from a configurable price table (Claude API rates; local/Player2 may show tokens-only or $0)
 - Produce reports that answer: “what does campaign setup cost vs an open-field NPC conversation?”
+- Ship a **playtester-sendable usage log**: one obvious in-app action that writes a single file playtesters can attach (Discord/email) with no secrets and no prompt/response bodies
 
 ## Non-goals (v1)
 
 - Billing customers or enforcing subscription quotas (follow-up once numbers exist)
 - Hosting a cloud meter for multiplayer (m002/m005) — this epic is desktop-first instrumentation
 - Changing agent prompts solely for cost (continue to rely on **040** for efficiency)
+- Auto-upload / telemetry of usage (playtesters must choose to export and send the file)
 
 ## Purpose taxonomy (v1 — extend carefully; keep stable ids)
 
@@ -48,11 +50,12 @@ Buckets `setup` vs `play` are the primary subscription-design split; finer purpo
 ## Definition of done
 
 - Every production `provider.generate` path records usage with purpose + provider/model
-- Local persistence + aggregation APIs/CLI or settings export exist
+- Local persistence + aggregation APIs exist
+- **Playtester export:** Settings (or equivalent always-reachable UI) offers “Export usage log” → save dialog → one JSON file containing summary rollups + event rows, app/provider metadata, **no API keys / no prompt text**; documented one-liner for playtesters (“Settings → Export usage log → send me the file”)
 - A documented sample report compares **campaign create** vs **field NPC conversation** with token and estimated $ figures
-- Tests cover usage parsing, purpose tagging, persistence, and aggregation
+- Tests cover usage parsing, purpose tagging, persistence, aggregation, and export payload shape (secrets excluded)
 - `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
 
 Broken down into **112.1–112.7**.
 
-112.1 usage + purpose contract · 112.2 provider adapters emit usage · 112.3 persist usage events · 112.4 tag all call sites · 112.5 aggregation export and cost estimate · 112.6 subscription-modeling sample report · 112.7 tests and verification
+112.1 usage + purpose contract · 112.2 provider adapters emit usage · 112.3 persist usage events · 112.4 tag all call sites · 112.5 aggregation, playtester export, and cost estimate · 112.6 subscription-modeling sample report · 112.7 tests and verification

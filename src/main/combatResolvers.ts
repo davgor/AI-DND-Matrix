@@ -39,6 +39,7 @@ import {
 import type { TurnResult } from './turnIpc'
 import { CombatTurnError } from './combatErrors'
 import { reloadEncounter } from './combatTurnPhases'
+import { recordNpcPlayerInteraction } from './npcInteractionWatermark'
 
 export interface CatchUpInput {
   db: Database.Database
@@ -136,6 +137,7 @@ export function resolvePlayerAttack(input: PlayerAttackInput): PlayerAttackSyncR
     targetDefeated: resolution.targetDefeated
   }
   appendEvent(db, { campaignId: player.campaignId, type: 'combat_attack', payload: attackResult as unknown as Record<string, unknown> })
+  recordNpcPlayerInteraction(db, targetNpc.id)
   if (!resolution.hit) {
     return { attackResult }
   }

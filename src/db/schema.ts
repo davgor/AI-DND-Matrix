@@ -636,5 +636,61 @@ export const migrations: Migration[] = [
       addColumnIfMissing(db, 'npcs', 'bestiary_species_id', 'TEXT')
       addColumnIfMissing(db, 'npcs', 'bestiary_variant_key', 'TEXT')
     }
+  },
+  {
+    version: 39,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'opinion_summary', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'opinion_summary_generated_at', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'last_player_interaction_at', 'TEXT')
+    }
+  },
+  {
+    version: 40,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE ask_dm_messages (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          character_id TEXT NOT NULL REFERENCES characters(id),
+          role TEXT NOT NULL CHECK (role IN ('player', 'dm')),
+          content TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX idx_ask_dm_messages_character ON ask_dm_messages(character_id);
+      `)
+    }
+  },
+  {
+    version: 41,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS llm_usage_events (
+          id TEXT PRIMARY KEY,
+          provider_name TEXT NOT NULL,
+          model_id TEXT NOT NULL,
+          input_tokens INTEGER,
+          output_tokens INTEGER,
+          total_tokens INTEGER,
+          purpose TEXT NOT NULL,
+          bucket TEXT NOT NULL,
+          campaign_id TEXT,
+          character_id TEXT,
+          created_at TEXT NOT NULL,
+          outcome TEXT NOT NULL,
+          error_message TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_purpose
+          ON llm_usage_events(purpose);
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_bucket
+          ON llm_usage_events(bucket);
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_campaign_id
+          ON llm_usage_events(campaign_id);
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_created_at
+          ON llm_usage_events(created_at);
+      `)
+    }
   }
 ]

@@ -49,6 +49,7 @@ import {
 import { setOpeningScene } from '../db/repositories/guidedCreation'
 import { appendEvent } from '../db/repositories/events'
 import { appendNpcMemory, listNpcMemoriesByNpc } from '../db/repositories/npcMemories'
+import { recordNpcPlayerInteraction } from './npcInteractionWatermark'
 import { getNpcById } from '../db/repositories/npcs'
 import { getRegionById, listRegionsByCampaign } from '../db/repositories/regions'
 import {
@@ -354,6 +355,7 @@ async function resolveTargetedNpcReaction(
     input.sceneNarration
   )
   appendNpcMemory(db, { npcId: input.npcId, content: reaction.text, tags: [] })
+  const interactionAt = new Date().toISOString()
   appendEvent(db, {
     campaignId: input.campaignId,
     type: 'npc_reaction',
@@ -363,8 +365,10 @@ async function resolveTargetedNpcReaction(
       text: reaction.text,
       reactionKind: reaction.reactionKind,
       attack: Boolean(reaction.attack)
-    }
+    },
+    timestamp: interactionAt
   })
+  recordNpcPlayerInteraction(db, input.npcId, interactionAt)
   const attackResult = reaction.attack && !getActiveEncounter(db, input.campaignId)
     ? resolveNpcAttackAgainstPlayer(db, input.player, input.rng)
     : undefined

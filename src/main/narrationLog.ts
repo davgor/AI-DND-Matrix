@@ -17,6 +17,7 @@ export interface PlayLogEntry {
   playerLineKind?: PlayerLineKind
   sceneSetting?: boolean
   speakerName?: string
+  npcId?: string
 }
 
 function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
@@ -96,6 +97,7 @@ function npcReactionEntries(event: Event): PlayLogEntry[] {
     text?: string
     reactionKind?: NpcReactionKind
     npcName?: string
+    npcId?: string
   }
   const text = payload.text ?? payload.dialogue
   if (typeof text !== 'string') {
@@ -108,7 +110,8 @@ function npcReactionEntries(event: Event): PlayLogEntry[] {
       speaker: 'npc',
       text: payload.reactionKind === 'action' ? stripActionMarkers(text) : text,
       reactionKind: payload.reactionKind ?? 'dialogue',
-      speakerName: typeof payload.npcName === 'string' ? payload.npcName : undefined
+      speakerName: typeof payload.npcName === 'string' ? payload.npcName : undefined,
+      npcId: typeof payload.npcId === 'string' ? payload.npcId : undefined
     }
   ]
 }
@@ -206,7 +209,7 @@ function partyMemberActionEntries(event: Event): PlayLogEntry[] {
   ]
 }
 
-export function eventToLogEntries(event: Event): PlayLogEntry[] {
+function eventToLogEntries(event: Event): PlayLogEntry[] {
   const progression = progressionEventEntries(event)
   if (progression) {
     return progression

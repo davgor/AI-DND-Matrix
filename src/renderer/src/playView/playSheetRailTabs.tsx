@@ -163,6 +163,7 @@ export function PlaySheetJournalTab(props: {
   onOpenJournal: () => void
   onOpenQuestLog: () => void
   onOpenSpellbook: () => void
+  onOpenAskDm: () => void
   onOpenLogBook: () => void
 }): JSX.Element {
   return (
@@ -181,6 +182,9 @@ export function PlaySheetJournalTab(props: {
         <button type="button" className="play-sheet-action-button" onClick={props.onOpenSpellbook}>
           Open spellbook
         </button>
+        <button type="button" className="play-sheet-action-button" onClick={props.onOpenAskDm}>
+          Ask the DM
+        </button>
       </div>
     </div>
   )
@@ -195,6 +199,7 @@ export function PlaySheetTabPanel(props: {
   onOpenInventory: () => void
   onOpenJournal: () => void
   onOpenSpellbook: () => void
+  onOpenAskDm: () => void
 }): JSX.Element {
   if (props.activeTab === 'inventory') {
     return <PlaySheetInventoryTab character={props.character} onOpenInventory={props.onOpenInventory} />
@@ -205,6 +210,7 @@ export function PlaySheetTabPanel(props: {
         onOpenJournal={props.onOpenJournal}
         onOpenQuestLog={props.onOpenQuestLog}
         onOpenSpellbook={props.onOpenSpellbook}
+        onOpenAskDm={props.onOpenAskDm}
         onOpenLogBook={props.onOpenLogBook}
       />
     )

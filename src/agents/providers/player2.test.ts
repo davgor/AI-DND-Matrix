@@ -142,6 +142,126 @@ describe('createPlayer2Provider: max_tokens truncation guard (040.1)', () => {
 
     const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
 
-    await expect(provider.generate('what do I see?')).resolves.toBe('legacy-shaped')
+    await     expect(provider.generate('what do I see?')).resolves.toBe('legacy-shaped')
+  })
+})
+
+describe('createPlayer2Provider: usage metering success', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('calls onUsage with OpenAI-compatible usage after a successful response', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        model: 'local-llama',
+        choices: [{ index: 0, message: { role: 'assistant', content: 'done' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 50, completion_tokens: 25 }
+      })
+    )
+
+    const onUsage = vi.fn()
+    const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
+    await provider.generate('hello', { onUsage })
+
+    expect(onUsage).toHaveBeenCalledOnce()
+    expect(onUsage).toHaveBeenCalledWith({
+      inputTokens: 50,
+      outputTokens: 25,
+      totalTokens: 75,
+      modelId: 'local-llama'
+    })
+  })
+})
+
+describe('createPlayer2Provider: usage metering model fallback', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('falls back to player2 model id when the response omits model', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        choices: [{ index: 0, message: { role: 'assistant', content: 'done' } }],
+        usage: { prompt_tokens: 1, completion_tokens: 2 }
+      })
+    )
+
+    const onUsage = vi.fn()
+    const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
+    await provider.generate('hello', { onUsage })
+
+    expect(onUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: 'player2', inputTokens: 1, outputTokens: 2, totalTokens: 3 })
+    )
+  })
+})
+
+describe('createPlayer2Provider: usage metering absent usage', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('records null usage without failing when usage is absent', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ choices: [{ index: 0, message: { role: 'assistant', content: 'done' } }] })
+    )
+
+    const onUsage = vi.fn()
+    const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
+    await provider.generate('hello', { onUsage })
+
+    expect(onUsage).toHaveBeenCalledWith({
+      inputTokens: null,
+      outputTokens: null,
+      totalTokens: null,
+      modelId: 'player2'
+    })
+  })
+})
+
+describe('createPlayer2Provider: usage metering error paths', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('does not call onUsage on truncation or error paths', async () => {
+    const onUsage = vi.fn()
+    const provider = createPlayer2Provider({ baseUrl: 'http://127.0.0.1:4315' })
+
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        choices: [
+          {
+            index: 0,
+            message: { role: 'assistant', content: '{"partial":' },
+            finish_reason: 'length'
+          }
+        ],
+        usage: { prompt_tokens: 5, completion_tokens: 32 }
+      })
+    )
+    await expect(provider.generate('hello', { onUsage })).rejects.toBeInstanceOf(Player2TruncationError)
+    expect(onUsage).not.toHaveBeenCalled()
+
+    vi.mocked(fetch).mockResolvedValue(textResponse('bad request', 422))
+    await expect(provider.generate('hello', { onUsage })).rejects.toBeInstanceOf(Player2RequestError)
+    expect(onUsage).not.toHaveBeenCalled()
   })
 })

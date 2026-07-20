@@ -1,0 +1,120 @@
+.npc-dossier-overlay {
+  align-items: center;
+  justify-content: center;
+}
+
+.npc-dossier-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 92vw);
+  max-height: min(80vh, 720px);
+  overflow: hidden;
+}
+
+.npc-dossier-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.npc-dossier-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+}
+
+.npc-dossier-sections {
+  overflow-y: auto;
+  padding: 12px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.npc-dossier-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.npc-dossier-traits {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.npc-dossier-trait-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 8rem) 1fr;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.npc-dossier-trait-row dt {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.npc-dossier-trait-row dd {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.npc-dossier-facts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.npc-dossier-fact {
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-scene);
+}
+
+.npc-dossier-fact-title {
+  display: block;
+  color: var(--text-primary);
+}
+
+.npc-dossier-fact-content {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.npc-dossier-opinion-summary,
+.npc-dossier-disposition {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.npc-dossier-opinion-stale {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.npc-dossier-loading,
+.npc-dossier-error {
+  padding: 12px 20px 20px;
+}
+
+.npc-dossier-error {
+  color: var(--text-danger, #c45);
+  font-size: 0.9rem;
+}

@@ -76,24 +76,20 @@ Play sheet → Journal tab actions:
 
 ### 106.1 — OOC contract + play UX spec
 
-#### Description
 
 Document the Ask the DM feature in shared layout/spec (extend `PLAY_VIEW_UX_SPEC.md` or add a focused companion): OOC vs IC, **Journal-tab placement under Open spellbook**, panel behavior, what the DM may answer, hard isolation from `turn:resolve`, persistence choice, and overlay stacking relative to Recap / spellbook.
 
-Resolve open decisions listed above so later tickets do not invent conflicting shapes.
+Resolve open decisions listed on epic 106 so later tickets do not invent conflicting shapes.
 
 #### Acceptance Criteria
 
-- [ ] Spec checked in under `/shared` (or clearly linked from the epic) covering Journal-tab button placement, panel UX, OOC tone, and non-goals
-- [ ] Explicit hard rule: OOC send **never** invokes `turn:resolve` / `resolvePlayerTurn`
-- [ ] Persistence and Scene/Social exclusion rules are written so 106.3 can implement without re-deciding
-- [ ] Overlay/panel z-index relative to Recap, spellbook, and existing play overlays is documented
-
----
+- [x] Spec checked in under `/shared` (or clearly linked from the epic) covering Journal-tab button placement, panel UX, OOC tone, and non-goals
+- [x] Explicit hard rule: OOC send **never** invokes `turn:resolve` / `resolvePlayerTurn`
+- [x] Persistence and Scene/Social exclusion rules are written so 106.3 can implement without re-deciding
+- [x] Overlay/panel z-index relative to Recap, spellbook, and existing play overlays is documented
 
 ### 106.2 — Journal-tab “Ask the DM” button + chat panel UI
 
-#### Description
 
 Add an **Ask the DM** control to `PlaySheetJournalTab` journal actions, **immediately after** the “Open spellbook” button in `play-sheet-journal-actions`. Opening it shows the OOC chat panel: scrollable transcript, composer, loading/error states, dismiss (button / Escape / backdrop as chosen in 106.1).
 
@@ -101,17 +97,14 @@ Panel is reachable whenever the play sheet Journal tab is available (exploration
 
 #### Acceptance Criteria
 
-- [ ] Journal tab shows an **Ask the DM** button **directly under** “Open spellbook” that opens the OOC panel
-- [ ] Panel is usable during campaign play (including when combat is active)
-- [ ] Composer + transcript are visually distinct from Scene/Social columns (clear OOC labeling)
-- [ ] Component/UI tests cover open/close and Journal-tab wiring (same spirit as spellbook / journal action tests)
-- [ ] Styles live with play sheet rail / journal actions (`playSheetRail.css` or adjacent), matching existing `play-sheet-action-button` patterns
-
----
+- [x] Journal tab shows an **Ask the DM** button **directly under** “Open spellbook” that opens the OOC panel
+- [x] Panel is usable during campaign play (including when combat is active)
+- [x] Composer + transcript are visually distinct from Scene/Social columns (clear OOC labeling)
+- [x] Component/UI tests cover open/close and Journal-tab wiring (same spirit as spellbook / journal action tests)
+- [x] Styles live with play sheet rail / journal actions (`playSheetRail.css` or adjacent), matching existing `play-sheet-action-button` patterns
 
 ### 106.3 — Ask-DM IPC + persistence (no turn side effects)
 
-#### Description
 
 Add typed main/preload IPC to list history and send a player OOC message (and receive the DM reply). Persist the thread using the shape chosen in 106.1. Persistence must not project into Scene or Social feeds (`filterDmExpositionEntries` / `filterSocialEntries` / `buildNarrationLog`).
 
@@ -119,17 +112,14 @@ Sending must not call `resolvePlayerTurn`, must not run routing beats, and must 
 
 #### Acceptance Criteria
 
-- [ ] Preload exposes typed `askDm` (or equivalent) APIs; main registers handlers outside `turnIpc` resolve path
-- [ ] Player OOC messages and DM OOC replies persist and reload for the correct campaign/character scope
-- [ ] OOC records never appear in Scene or Social play-log projections
-- [ ] Unit/integration tests cover list/send persistence and exclusion from narration/social filters
-- [ ] Send path does not invoke `resolvePlayerTurn` / `turn:resolve`
-
----
+- [x] Preload exposes typed `askDm` (or equivalent) APIs; main registers handlers outside `turnIpc` resolve path
+- [x] Player OOC messages and DM OOC replies persist and reload for the correct campaign/character scope
+- [x] OOC records never appear in Scene or Social play-log projections
+- [x] Unit/integration tests cover list/send persistence and exclusion from narration/social filters
+- [x] Send path does not invoke `resolvePlayerTurn` / `turn:resolve`
 
 ### 106.4 — OOC DM agent mode
 
-#### Description
 
 Add a dedicated agent path (e.g. `src/agents/askDm.ts`) that answers the human player as DM-facilitator: clarifications, rules reminders, known facts — not in-character narration and not intent/routing schemas.
 
@@ -137,16 +127,13 @@ Use slim grounding per 106.1. Do **not** call `persistNarrationSideEffects`, com
 
 #### Acceptance Criteria
 
-- [ ] OOC system prompt instructs player-as-player / DM-as-facilitator tone and forbids advancing the fictional scene as a turn
-- [ ] Agent module has no dependency on intent/routing narration side-effect persistence
-- [ ] Unit tests cover prompt grounding rules and reply shaping (success + empty/error handling)
-- [ ] Wired from 106.3 send handler so the UI receives a DM OOC reply
-
----
+- [x] OOC system prompt instructs player-as-player / DM-as-facilitator tone and forbids advancing the fictional scene as a turn
+- [x] Agent module has no dependency on intent/routing narration side-effect persistence
+- [x] Unit tests cover prompt grounding rules and reply shaping (success + empty/error handling)
+- [x] Wired from 106.3 send handler so the UI receives a DM OOC reply
 
 ### 106.5 — Turn-pipeline isolation guarantees
 
-#### Description
 
 Harden and document isolation so regressions are caught: OOC send cannot enqueue combat turns, append IC Social lines, create scene DM exposition, trigger rest/travel/item-mod, or force a turn save snapshot.
 
@@ -154,22 +141,19 @@ Add focused tests (and optional DEV trace distinct from campaign-action turn tra
 
 #### Acceptance Criteria
 
-- [ ] Automated tests assert OOC send does not call `resolvePlayerTurn` and does not emit IC `player_action` / DM narration / combat advance events
-- [ ] In-character Social “Act” path remains unchanged (still uses `turn:resolve`)
-- [ ] No world-mutating narration side effects run on OOC replies
-- [ ] Isolation expectations are noted in the 106.1 spec (or a short comment/runbook pointer near the IPC module)
-
----
+- [x] Automated tests assert OOC send does not call `resolvePlayerTurn` and does not emit IC `player_action` / DM narration / combat advance events
+- [x] In-character Social “Act” path remains unchanged (still uses `turn:resolve`)
+- [x] No world-mutating narration side effects run on OOC replies
+- [x] Isolation expectations are noted in the 106.1 spec (or a short comment/runbook pointer near the IPC module)
 
 ### 106.6 — Tests, smoke, and delivery gate
 
-#### Description
 
 End-to-end confidence: open Ask the DM from the Journal tab (under Open spellbook) mid-play, exchange messages, confirm Scene/Social/turn state unchanged, reopen campaign and see history. Close the epic only after full delivery gates.
 
 #### Acceptance Criteria
 
-- [ ] Smoke steps documented (or covered by automated tests) for: Journal → Ask the DM (under spellbook) → send OOC → DM reply → no turn/Scene/Social advance → history survives reopen
-- [ ] `npm test`, `npm run lint`, `npm run build`, and `npm run deadcode` pass
-- [ ] `act` runs for `.github/workflows/pr-checks.yml` and `.github/workflows/deadcode.yml` succeed
-- [ ] All 106.1–106.5 acceptance criteria are checked off
+- [x] Smoke steps documented (or covered by automated tests) for: Journal → Ask the DM (under spellbook) → send OOC → DM reply → no turn/Scene/Social advance → history survives reopen
+- [x] `npm test`, `npm run lint`, `npm run build`, and `npm run deadcode` pass
+- [x] `act` runs for `.github/workflows/pr-checks.yml` and `.github/workflows/deadcode.yml` succeed
+- [x] All 106.1–106.5 acceptance criteria are checked off

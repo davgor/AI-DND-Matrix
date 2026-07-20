@@ -21,6 +21,7 @@ import { startEncounter } from './combatOrchestration'
 import { PROVOKE_HOSTILE_DISPOSITION } from '../shared/npcCombat/types'
 import type { Character } from '../db/repositories/characters'
 import { appendEvent } from '../db/repositories/events'
+import { recordNpcPlayerInteraction } from './npcInteractionWatermark'
 
 export class NpcAttackTargetError extends Error {}
 
@@ -123,6 +124,7 @@ export async function provokeAndAttackNpc(input: {
       provoked: true
     }
   })
+  recordNpcPlayerInteraction(db, npc.id)
 
   return {
     npc,

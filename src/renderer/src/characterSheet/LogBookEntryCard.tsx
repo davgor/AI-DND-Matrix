@@ -1,6 +1,7 @@
 import type { LogEntry } from '../../../shared/logBook/types'
 import { FormattedText } from '../shared/FormattedText'
 import { LogBookCurateActions } from './LogBookCurateActions'
+import { LogBookOpenDossierButton, logBookShowsDossierAffordance } from './LogBookDossierAffordance'
 import { LOG_CATEGORY_LABELS } from './logBookGrouping'
 
 function LogBookEditForm(props: {
@@ -29,22 +30,21 @@ function LogBookEditForm(props: {
   )
 }
 
-export function LogBookEntryCard(props: {
+function LogBookEntryCardBody(props: {
   entry: LogEntry
   relatedLabel: string | null
-  curateMode: boolean
   editing: boolean
   editTitle: string
   editContent: string
-  onStartEdit: () => void
   onSaveEdit: () => void
   onCancelEdit: () => void
-  onDelete: () => void
   onEditTitle: (value: string) => void
   onEditContent: (value: string) => void
+  relatedEntityId: string | null
+  onOpenNpcDossier?: (npcId: string) => void
 }): JSX.Element {
   return (
-    <li className="character-log-book-entry-card">
+    <>
       <div className="character-log-book-entry-header">
         <strong>{props.entry.title}</strong>
         <span className="character-log-book-date">
@@ -68,6 +68,54 @@ export function LogBookEntryCard(props: {
           Related: {props.relatedLabel}
         </p>
       ) : null}
+      {props.relatedEntityId && props.onOpenNpcDossier ? (
+        <LogBookOpenDossierButton
+          relatedEntityId={props.relatedEntityId}
+          onOpenNpcDossier={props.onOpenNpcDossier}
+        />
+      ) : null}
+    </>
+  )
+}
+
+export function LogBookEntryCard(props: {
+  entry: LogEntry
+  relatedLabel: string | null
+  curateMode: boolean
+  editing: boolean
+  editTitle: string
+  editContent: string
+  onStartEdit: () => void
+  onSaveEdit: () => void
+  onCancelEdit: () => void
+  onDelete: () => void
+  onEditTitle: (value: string) => void
+  onEditContent: (value: string) => void
+  onOpenNpcDossier?: (npcId: string) => void
+}): JSX.Element {
+  const relatedEntityId = logBookShowsDossierAffordance(
+    props.entry.category,
+    props.entry.relatedEntityId,
+    props.onOpenNpcDossier
+  )
+    ? props.entry.relatedEntityId
+    : null
+
+  return (
+    <li className="character-log-book-entry-card">
+      <LogBookEntryCardBody
+        entry={props.entry}
+        relatedLabel={props.relatedLabel}
+        editing={props.editing}
+        editTitle={props.editTitle}
+        editContent={props.editContent}
+        onSaveEdit={props.onSaveEdit}
+        onCancelEdit={props.onCancelEdit}
+        onEditTitle={props.onEditTitle}
+        onEditContent={props.onEditContent}
+        relatedEntityId={relatedEntityId}
+        onOpenNpcDossier={props.onOpenNpcDossier}
+      />
       {props.curateMode && !props.editing ? (
         <LogBookCurateActions onEdit={props.onStartEdit} onDelete={props.onDelete} />
       ) : null}

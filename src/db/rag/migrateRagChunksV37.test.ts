@@ -119,7 +119,16 @@ describe('migration v37 install and upgrade', () => {
     )
 
     expect(tableNames(db)).toEqual(
-      [...before, 'bestiary_species', 'bestiary_variants', 'quest_foe_assignments', 'rag_backfill_state', 'rag_chunks'].sort()
+      [
+        ...before,
+        'ask_dm_messages',
+        'bestiary_species',
+        'bestiary_variants',
+        'llm_usage_events',
+        'quest_foe_assignments',
+        'rag_backfill_state',
+        'rag_chunks'
+      ].sort()
     )
     expect(columnNames(db, 'rag_chunks')).toEqual(RAG_CHUNK_COLUMNS)
     expect(indexNames(db, 'rag_chunks')).toEqual(RAG_CHUNK_INDEXES)

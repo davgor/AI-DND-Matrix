@@ -26,9 +26,11 @@ function deleteNestedCampaignRows(db: Database.Database, campaignId: string): vo
 }
 
 function deleteDirectCampaignRows(db: Database.Database, campaignId: string): void {
+  db.prepare(`DELETE FROM llm_usage_events WHERE campaign_id = ?`).run(campaignId)
   db.prepare(`DELETE FROM log_entries WHERE campaign_id = ?`).run(campaignId)
   db.prepare(`DELETE FROM character_journal_entries WHERE campaign_id = ?`).run(campaignId)
   db.prepare(`DELETE FROM guided_creation_messages WHERE campaign_id = ?`).run(campaignId)
+  db.prepare(`DELETE FROM ask_dm_messages WHERE campaign_id = ?`).run(campaignId)
   db.prepare('DELETE FROM bestiary_species WHERE campaign_id = ?').run(campaignId)
   db.prepare('DELETE FROM quests WHERE campaign_id = ?').run(campaignId)
   db.prepare('DELETE FROM campaign_races WHERE campaign_id = ?').run(campaignId)

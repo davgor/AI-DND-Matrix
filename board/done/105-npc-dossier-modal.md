@@ -127,10 +127,10 @@ SPEC under `docs/` or `src/shared/npcDossier/`: section order, NPC-only filterin
 
 #### Acceptance criteria
 
-- [ ] SPEC documents Traits / Facts / Opinion / Disposition sources and locked product decisions above
-- [ ] SPEC defines interaction watermark bump rules (dialogue vs action paths)
-- [ ] SPEC states NPC memory isolation for speaking opinion generation
-- [ ] SPEC notes RAG (**083**) as optional later upgrade
+- [x] SPEC documents Traits / Facts / Opinion / Disposition sources and locked product decisions above
+- [x] SPEC defines interaction watermark bump rules (dialogue vs action paths)
+- [x] SPEC states NPC memory isolation for speaking opinion generation
+- [x] SPEC notes RAG (**083**) as optional later upgrade
 
 ### 105.2 Schema + dossier query IPC
 
@@ -140,11 +140,11 @@ Migration for persisted opinion fields on NPC (or dedicated table keyed by `npc_
 
 #### Acceptance criteria
 
-- [ ] Schema stores `opinionSummary`, `opinionSummaryGeneratedAt`, `lastPlayerInteractionAt` per NPC
-- [ ] IPC returns dossier DTO; regenerates opinion only when `lastPlayerInteractionAt > opinionSummaryGeneratedAt`
-- [ ] Reopen without new interaction returns identical stored summary (unit test)
-- [ ] Facts query returns only log book rows with `relatedEntityId = npcId` for the active character
-- [ ] Unit tests: isolation, missing NPC, stale vs fresh watermark
+- [x] Schema stores `opinionSummary`, `opinionSummaryGeneratedAt`, `lastPlayerInteractionAt` per NPC
+- [x] IPC returns dossier DTO; regenerates opinion only when `lastPlayerInteractionAt > opinionSummaryGeneratedAt`
+- [x] Reopen without new interaction returns identical stored summary (unit test)
+- [x] Facts query returns only log book rows with `relatedEntityId = npcId` for the active character
+- [x] Unit tests: isolation, missing NPC, stale vs fresh watermark
 
 ### 105.3 Traits + Disposition sections (UI)
 
@@ -154,9 +154,9 @@ Render Traits and Disposition; reuse Campaign Review label helpers. Disposition 
 
 #### Acceptance criteria
 
-- [ ] Traits list identity fields with empty states for null keys
-- [ ] Disposition shows `npc.disposition`
-- [ ] Component tests: speaking vs non-speaking
+- [x] Traits list identity fields with empty states for null keys
+- [x] Disposition shows `npc.disposition`
+- [x] Component tests: speaking vs non-speaking
 
 ### 105.4 Facts section
 
@@ -166,9 +166,9 @@ List log book entries linked to this NPC only (`relatedEntityId = npcId`), newes
 
 #### Acceptance criteria
 
-- [ ] Facts section shows linked entries only; empty state when none
-- [ ] Unrelated log book entries never appear
-- [ ] Unit test: linked person entry appears; unrelated entries do not
+- [x] Facts section shows linked entries only; empty state when none
+- [x] Unrelated log book entries never appear
+- [x] Unit test: linked person entry appears; unrelated entries do not
 
 ### 105.5 Opinion summary agent + interaction watermark
 
@@ -178,11 +178,11 @@ DM-voiced summary generator; speaking NPCs ground on dialogue + `npc_memories`; 
 
 #### Acceptance criteria
 
-- [ ] Prompt/builder + generator with slim token budget (**040**)
-- [ ] Speaking path uses that NPC's memories only (isolation test)
-- [ ] Non-speaking path uses action/scene signals, not dialogue
-- [ ] Watermark bump wired on relevant turns; regeneration only after new interaction
-- [ ] Scripted-provider tests + safe UI fallback on generation failure
+- [x] Prompt/builder + generator with slim token budget (**040**)
+- [x] Speaking path uses that NPC's memories only (isolation test)
+- [x] Non-speaking path uses action/scene signals, not dialogue
+- [x] Watermark bump wired on relevant turns; regeneration only after new interaction
+- [x] Scripted-provider tests + safe UI fallback on generation failure
 
 ### 105.6 Entry points — Social avatar + log book
 
@@ -192,11 +192,11 @@ Social: NPC avatar/name opens dossier. Log book: People entry with `relatedEntit
 
 #### Acceptance criteria
 
-- [ ] Social NPC avatar/name opens dossier for that speaker's `npcId`
-- [ ] Log book People entry affordance opens dossier when linked to an NPC
-- [ ] Player lines / non-NPC entries do not open NPC dossier incorrectly
-- [ ] Modal close/focus behavior matches existing play-sheet modals
-- [ ] Component tests for both entry paths
+- [x] Social NPC avatar/name opens dossier for that speaker's `npcId`
+- [x] Log book People entry affordance opens dossier when linked to an NPC
+- [x] Player lines / non-NPC entries do not open NPC dossier incorrectly
+- [x] Modal close/focus behavior matches existing play-sheet modals
+- [x] Component tests for both entry paths
 
 ### 105.7 Tests + smoke runbook
 
@@ -206,6 +206,6 @@ Automated coverage + manual smoke: converse (or act with non-speaker), open doss
 
 #### Acceptance criteria
 
-- [ ] Tests cover 105.2–105.6 critical paths including persistence idempotency
-- [ ] Runbook covers Social + log book entry and opinion refresh behavior
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass when implemented
+- [x] Tests cover 105.2–105.6 critical paths including persistence idempotency
+- [x] Runbook covers Social + log book entry and opinion refresh behavior
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass when implemented

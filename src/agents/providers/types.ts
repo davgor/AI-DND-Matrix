@@ -1,3 +1,5 @@
+import type { LlmPurposeId, ProviderUsageSnapshot } from '../../shared/llmUsage'
+
 export interface GenerateContext {
   systemPrompt?: string
   /**
@@ -26,6 +28,15 @@ export interface GenerateContext {
    * narration — recovers at bounded extra cost instead of failing the turn.
    */
   maxTokens?: number
+  /**
+   * 112: stable workload tag for metering. Production call sites must pass an
+   * explicit purpose; omitted → other.unclassified (dev warning).
+   */
+  purpose?: LlmPurposeId
+  campaignId?: string
+  characterId?: string
+  /** Adapter fires after a successful response with parsed token usage (may be nulls). */
+  onUsage?: (usage: ProviderUsageSnapshot) => void
 }
 
 export interface Provider {

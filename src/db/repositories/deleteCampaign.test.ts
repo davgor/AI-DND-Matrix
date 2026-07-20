@@ -15,6 +15,7 @@ import { createCampaignRace } from './campaignRaces'
 import { createBestiarySpecies, setQuestFoeAssignment } from './bestiary'
 import { createDeity } from './deities'
 import { deleteCampaignCascade } from './deleteCampaign'
+import { insertLlmUsageEvent } from './llmUsageEvents'
 import { createQuest } from './quests'
 
 const SAMPLE_RACE_LORE = {
@@ -158,6 +159,13 @@ function seedCampaignFootprint(db: TestDb, label: string) {
   touchLastPlayed(db, campaign.id)
   insertTestRagChunk(db, campaign.id)
   insertTestRagBackfillState(db, campaign.id)
+  insertLlmUsageEvent(db, {
+    providerName: 'openai',
+    modelId: 'gpt-4o-mini',
+    purpose: 'play.narration',
+    campaignId: campaign.id,
+    outcome: 'success'
+  })
   return campaign
 }
 
@@ -173,7 +181,8 @@ const DIRECT_TABLES = [
   'campaign_races',
   'deities',
   'bestiary_species',
-  'quests'
+  'quests',
+  'llm_usage_events'
 ] as const
 
 const NESTED_TABLES = [
@@ -212,16 +221,30 @@ function expectOtherCampaignIntact(db: TestDb, otherId: string): void {
   ).toBe(1)
 }
 
-describe('deleteCampaignCascade', () => {
+describe('deleteCampaignCascade: full delete', () => {
   it('removes every campaign-scoped row across all listed tables', () => {
     const db = createTestDb()
     const target = seedCampaignFootprint(db, 'Target')
     const other = seedCampaignFootprint(db, 'Other')
+    insertLlmUsageEvent(db, {
+      providerName: 'openai',
+      modelId: 'gpt-4o-mini',
+      purpose: 'system.ping',
+      campaignId: null,
+      outcome: 'success'
+    })
     deleteCampaignCascade(db, target.id)
     expectCampaignFullyDeleted(db, target.id)
     expectOtherCampaignIntact(db, other.id)
+    expect(
+      (db.prepare('SELECT COUNT(*) as count FROM llm_usage_events WHERE campaign_id IS NULL').get() as {
+        count: number
+      }).count
+    ).toBe(1)
   })
+})
 
+describe('deleteCampaignCascade: foreign keys', () => {
   it('succeeds when foreign keys are enforced (post-migration connection state)', () => {
     const db = createTestDb()
     db.pragma('foreign_keys = ON')
@@ -234,7 +257,9 @@ describe('deleteCampaignCascade', () => {
     expect(countForCampaign(db, 'bestiary_variants', target.id)).toBe(0)
     expect(countForCampaign(db, 'quest_foe_assignments', target.id)).toBe(0)
   })
+})
 
+describe('deleteCampaignCascade: rollback', () => {
   it('rolls back when a forced mid-delete failure occurs', () => {
     const db = createTestDb()
     const target = seedCampaignFootprint(db, 'Rollback')

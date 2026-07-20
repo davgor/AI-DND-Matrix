@@ -1,4 +1,4 @@
-import type { AutoUpdateApi, BackgroundApi, CampaignsApi, CharactersApi, LogBookApi, CombatApi, FilesApi, GuidedCreationApi, ProgressionApi, QuestsApi, RaceApi, SettingsApi, SettingsIntroApi, SpellbookApi, StartupApi, StartingLoadoutApi, TurnApi, WindowControls } from '../../preload'
+import type { AutoUpdateApi, BackgroundApi, CampaignsApi, CharactersApi, LogBookApi, CombatApi, FilesApi, GuidedCreationApi, NpcDossierApi, AskDmApi, LlmUsageApi, ProgressionApi, QuestsApi, RaceApi, SettingsApi, SettingsIntroApi, SpellbookApi, StartupApi, StartingLoadoutApi, TurnApi, WindowControls } from '../../preload'
 
 declare global {
   interface Window {
@@ -13,6 +13,7 @@ declare global {
     progression: ProgressionApi
     startup: StartupApi
     settings: SettingsApi
+    llmUsage: LlmUsageApi
     settingsIntro: SettingsIntroApi
     autoUpdate: AutoUpdateApi
     quests: QuestsApi
@@ -20,5 +21,7 @@ declare global {
     startingLoadout: StartingLoadoutApi
     race: RaceApi
     background: BackgroundApi
+    npcDossier: NpcDossierApi
+    askDm: AskDmApi
   }
 }

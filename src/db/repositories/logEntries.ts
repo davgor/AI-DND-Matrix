@@ -84,6 +84,21 @@ export function listLogEntriesByCharacterAndCategory(
   return rows.map(rowToEntry)
 }
 
+export function listLogEntriesRelatedToEntity(
+  db: Database.Database,
+  characterId: string,
+  relatedEntityId: string
+): LogEntry[] {
+  const rows = db
+    .prepare(
+      `SELECT * FROM log_entries
+       WHERE character_id = ? AND related_entity_id = ?
+       ORDER BY learned_in_game_date DESC, created_at DESC`
+    )
+    .all(characterId, relatedEntityId) as LogEntryRow[]
+  return rows.map(rowToEntry)
+}
+
 export function getLogEntryById(db: Database.Database, id: string): LogEntry | undefined {
   const row = db.prepare('SELECT * FROM log_entries WHERE id = ?').get(id) as LogEntryRow | undefined
   return row ? rowToEntry(row) : undefined

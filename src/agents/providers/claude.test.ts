@@ -25,7 +25,10 @@ describe('createClaudeProvider', () => {
 
   it('calls the Anthropic Messages API and returns the generated text', async () => {
     vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ content: [{ type: 'text', text: 'a goblin leaps from the shadows' }] })
+      jsonResponse({
+        content: [{ type: 'text', text: 'a goblin leaps from the shadows' }],
+        usage: { input_tokens: 12, output_tokens: 8 }
+      })
     )
 
     const provider = createClaudeProvider({ apiKey: 'sk-test-key', model: 'claude-sonnet-4-6' })
@@ -151,5 +154,99 @@ describe('createClaudeProvider: GenerateContext pass-through (040.9)', () => {
     const [, init] = vi.mocked(fetch).mock.calls[0]
     const body = JSON.parse(init?.body as string) as { system?: string }
     expect(body.system).toBeUndefined()
+  })
+})
+
+describe('createClaudeProvider: usage metering success', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('calls onUsage with parsed Anthropic usage after a successful response', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        content: [{ type: 'text', text: 'done' }],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 100, output_tokens: 40 }
+      })
+    )
+
+    const onUsage = vi.fn()
+    const provider = createClaudeProvider({ apiKey: 'sk-test-key', model: 'claude-sonnet-4-6' })
+    await provider.generate('hello', { onUsage })
+
+    expect(onUsage).toHaveBeenCalledOnce()
+    expect(onUsage).toHaveBeenCalledWith({
+      inputTokens: 100,
+      outputTokens: 40,
+      totalTokens: 140,
+      modelId: 'claude-sonnet-4-6'
+    })
+  })
+})
+
+describe('createClaudeProvider: usage metering partial usage', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('reports null totals when usage counts are partially absent', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({
+        content: [{ type: 'text', text: 'done' }],
+        usage: { input_tokens: 10 }
+      })
+    )
+
+    const onUsage = vi.fn()
+    const provider = createClaudeProvider({ apiKey: 'sk-test-key', model: 'claude-sonnet-4-6' })
+    await provider.generate('hello', { onUsage })
+
+    expect(onUsage).toHaveBeenCalledWith({
+      inputTokens: 10,
+      outputTokens: null,
+      totalTokens: null,
+      modelId: 'claude-sonnet-4-6'
+    })
+  })
+})
+
+describe('createClaudeProvider: usage metering error paths', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('does not call onUsage on truncation or error paths', async () => {
+    const onUsage = vi.fn()
+    const provider = createClaudeProvider({ apiKey: 'sk-test-key', model: 'claude-sonnet-4-6' })
+
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(
+        {
+          content: [{ type: 'text', text: '{"partial":' }],
+          stop_reason: 'max_tokens',
+          usage: { input_tokens: 5, output_tokens: 32 }
+        },
+        200
+      )
+    )
+    await expect(provider.generate('hello', { onUsage })).rejects.toBeInstanceOf(ClaudeTruncationError)
+    expect(onUsage).not.toHaveBeenCalled()
+
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ error: 'rate limited' }, 429))
+    await expect(provider.generate('hello', { onUsage })).rejects.toBeInstanceOf(ClaudeRequestError)
+    expect(onUsage).not.toHaveBeenCalled()
   })
 })

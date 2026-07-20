@@ -11,6 +11,7 @@ function tableNames(db: Database.Database): string[] {
 }
 
 const ALL_TABLE_NAMES = [
+  'ask_dm_messages',
   'bestiary_species',
   'bestiary_variants',
   'campaign_races',
@@ -28,6 +29,7 @@ const ALL_TABLE_NAMES = [
   'events',
   'guided_creation_messages',
   'items',
+  'llm_usage_events',
   'log_entries',
   'npc_memories',
   'npcs',
@@ -68,7 +70,7 @@ describe('the real app migrations registry', () => {
   })
 })
 
-describe('schema migrations specifics', () => {
+describe('schema migration 35', () => {
   it('migration 35 adds deities table and pantheon_summary column', () => {
     const db = new Database(':memory:')
     runMigrations(
@@ -89,7 +91,50 @@ describe('schema migrations specifics', () => {
       .map((row) => (row as { name: string }).name)
     expect(campaignColumns).toContain('pantheon_summary')
   })
+})
 
+describe('schema migration 39', () => {
+  it('migration 39 adds NPC dossier opinion columns', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 38)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 39)
+    )
+
+    const npcColumns = db
+      .prepare('PRAGMA table_info(npcs)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(npcColumns).toContain('opinion_summary')
+    expect(npcColumns).toContain('opinion_summary_generated_at')
+    expect(npcColumns).toContain('last_player_interaction_at')
+  })
+})
+
+describe('schema migration 40', () => {
+  it('migration 40 adds ask_dm_messages table', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 39)
+    )
+    expect(tableNames(db)).not.toContain('ask_dm_messages')
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 40)
+    )
+
+    expect(tableNames(db)).toContain('ask_dm_messages')
+  })
+})
+
+describe('schema migration 17', () => {
   it('migration 17 adds alignment and temperament columns', () => {
     const db = new Database(':memory:')
     runMigrations(

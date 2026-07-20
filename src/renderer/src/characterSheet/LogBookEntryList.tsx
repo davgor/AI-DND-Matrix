@@ -15,6 +15,7 @@ export function LogBookEntryList(props: {
   onEditContent: (value: string) => void
   onSetEditingId: (id: string | null) => void
   onRefresh: () => void
+  onOpenNpcDossier?: (npcId: string) => void
 }): JSX.Element {
   if (props.loading) {
     return <p className="character-sheet-empty">Loading entries…</p>
@@ -43,6 +44,7 @@ export function LogBookEntryList(props: {
           onDelete={() => void deleteEntry(props.characterId, entry.id, props.onRefresh)}
           onEditTitle={props.onEditTitle}
           onEditContent={props.onEditContent}
+          onOpenNpcDossier={props.onOpenNpcDossier}
         />
       ))}
     </ul>

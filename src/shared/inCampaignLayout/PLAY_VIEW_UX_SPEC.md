@@ -63,6 +63,10 @@ Social column uses `filterSocialEntries` (player raw + NPC/party lines) as a cha
 
 Log book opens from Character or Gear via existing modal pattern.
 
+## Ask the DM (OOC)
+
+Out-of-character player ↔ DM chat (epic **106**) opens from the Journal tab action list **directly under** “Open spellbook”. Full contract: [`ASK_THE_DM_OOC_SPEC.md`](./ASK_THE_DM_OOC_SPEC.md). Hard rule: OOC send never invokes `turn:resolve` / `resolvePlayerTurn`.
+
 ## Overlay z-index stack
 
 Lowest → highest (implementation in CSS):
@@ -75,6 +79,7 @@ Lowest → highest (implementation in CSS):
 | Sheet overlay rail (`sheet-overlay`, `compact`) | 20–25 | Right rail when expanded |
 | Campaigns overlay rail (`compact`) | 30 | Left rail when expanded |
 | Overlay backdrop | 15 | Semi-transparent; click/Escape dismiss |
+| Ask the DM / Spellbook / Recap dialog / journal notes | 200 | Shared `.modal-overlay` (see Ask the DM spec) |
 | Level-up modal | 1000 | Full-screen scrim + dialog |
 | Obituary drafting modal | 1100 | Above level-up when both could appear |
 

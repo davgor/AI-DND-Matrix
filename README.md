@@ -6,7 +6,7 @@ Each campaign supports **multiple player characters** in one shared world. After
 
 ## Status
 
-**Shipped through epic 108** (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: cascading campaign creation (pantheon, world, regions, NPCs, story), onboarding review, race/background/equipment selection, guided identity and opening scene, hub-based multi-character management, turn-based play with Social/Scene streaming, combat, quests, spellbook, progression, loot, and packaging with auto-update.
+**Shipped through epic 108**, plus **106** Ask the DM OOC chat (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: cascading campaign creation (pantheon, world, regions, NPCs, story), onboarding review, race/background/equipment selection, guided identity and opening scene, hub-based multi-character management, turn-based play with Social/Scene streaming, combat, quests, spellbook, progression, loot, out-of-character Ask the DM, and packaging with auto-update.
 
 **In progress** (`board/in-progress/`):
 
@@ -15,8 +15,6 @@ Each campaign supports **multiple player characters** in one shared world. After
 **Active backlog** (`board/backlog/`):
 
 - **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
-- **105** — NPC dossier modal (Social/log-book entry → traits, facts, opinion, disposition)
-- **106** — Ask the DM OOC chat (session-chrome panel; never hits the turn pipeline)
 - **112** — LLM usage metering (tokens/cost by purpose for subscription modeling)
 - **113** — Multi-cloud provider settings (Claude / GPT / Gemini / Grok dropdown + model picker)
 
@@ -153,6 +151,7 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | 084–092 | **Social stream & NPC voice** — Social/Scene split + streaming window; selective NPC replies; speaking-style samples; auto-update parity |
 | 093–104 | **Balance, branding, release polish** — starting-weapon / ability-score retunes; shield app icon; update-ready copy; deploy/CI harden |
 | 107–108 | **CI sharding & identity grounding** — dynamic Vitest shards; identity kickoff grounded in race/background/gear/spells |
+| 105 | **NPC dossier modal** — Social / log book entry → Traits → Facts → persisted DM opinion → Disposition |
 
 ### In progress
 
@@ -165,7 +164,6 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | Epic | Intent |
 |------|--------|
 | **020** | Local llama.cpp provider: managed `llama-server` lifecycle, adapter behind the existing provider interface, settings wiring, packaged runtime, and smoke parity across major flows without a cloud API key |
-| **105** | NPC dossier modal from Social / log book — traits, player-known facts, DM opinion summary, disposition |
 | **106** | Ask the DM — out-of-character chat in session chrome that never calls `turn:resolve` |
 
 ### Revisit backlog

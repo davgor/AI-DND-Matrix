@@ -49,6 +49,9 @@ export interface Npc {
   speakingStyleExamples: string[] | null
   bestiarySpeciesId: string | null
   bestiaryVariantKey: string | null
+  opinionSummary: string | null
+  opinionSummaryGeneratedAt: string | null
+  lastPlayerInteractionAt: string | null
 }
 
 export interface CreateNpcInput {
@@ -105,6 +108,9 @@ interface NpcRow {
   speaking_style_examples_json: string | null
   bestiary_species_id: string | null
   bestiary_variant_key: string | null
+  opinion_summary: string | null
+  opinion_summary_generated_at: string | null
+  last_player_interaction_at: string | null
 }
 
 function parseSpeakingStyleExamples(raw: string | null): string[] | null {
@@ -173,6 +179,16 @@ function bestiaryLinkFieldsFromRow(
   }
 }
 
+function opinionFieldsFromRow(
+  row: NpcRow
+): Pick<Npc, 'opinionSummary' | 'opinionSummaryGeneratedAt' | 'lastPlayerInteractionAt'> {
+  return {
+    opinionSummary: row.opinion_summary ?? null,
+    opinionSummaryGeneratedAt: row.opinion_summary_generated_at ?? null,
+    lastPlayerInteractionAt: row.last_player_interaction_at ?? null
+  }
+}
+
 function rowToNpc(row: NpcRow): Npc {
   const combatTier = isNpcCombatTier(row.combat_tier) ? row.combat_tier : 'villager'
   const profile = row.retired_adventurer_profile as RetiredAdventurerProfile | null
@@ -201,7 +217,8 @@ function rowToNpc(row: NpcRow): Npc {
     encounterOutcome: (row.encounter_outcome as NpcYieldOutcome | null) ?? null,
     ...identityKeyFieldsFromRow(row),
     ...speakingStyleFieldsFromRow(row),
-    ...bestiaryLinkFieldsFromRow(row)
+    ...bestiaryLinkFieldsFromRow(row),
+    ...opinionFieldsFromRow(row)
   }
 }
 
@@ -366,6 +383,29 @@ export function markNpcPromoted(db: Database.Database, id: string): void {
 
 export function updateNpcDisposition(db: Database.Database, id: string, disposition: string): void {
   db.prepare('UPDATE npcs SET disposition = ? WHERE id = ?').run(disposition, id)
+}
+
+export interface UpdateNpcOpinionSummaryInput {
+  summary: string
+  generatedAt: string
+}
+
+export function updateNpcOpinionSummary(
+  db: Database.Database,
+  npcId: string,
+  input: UpdateNpcOpinionSummaryInput
+): void {
+  db.prepare(
+    'UPDATE npcs SET opinion_summary = ?, opinion_summary_generated_at = ? WHERE id = ?'
+  ).run(input.summary, input.generatedAt, npcId)
+}
+
+export function bumpNpcPlayerInteractionAt(
+  db: Database.Database,
+  npcId: string,
+  at: string
+): void {
+  db.prepare('UPDATE npcs SET last_player_interaction_at = ? WHERE id = ?').run(at, npcId)
 }
 
 export interface SetNpcBestiaryLinkInput {

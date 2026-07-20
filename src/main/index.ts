@@ -17,7 +17,7 @@ import { setupGlobalErrorLogging } from './logger'
 import { registerNarrationLogHandlers } from './narrationLog'
 import { registerPromotionHandlers } from './promotionIpc'
 import { registerRecapHandlers } from './recapIpc'
-import { registerSettingsHandlers } from './settingsIpc'
+import { registerLlmUsageHandlers } from './llmUsageIpc'
 import { registerSettingsIntroHandlers } from './settingsIntroIpc'
 import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
@@ -27,6 +27,8 @@ import { registerSpellbookHandlers } from './spellbookIpc'
 import { registerStartingLoadoutHandlers } from './startingLoadoutIpc'
 import { registerRaceHandlers } from './raceIpc'
 import { registerBackgroundHandlers } from './backgroundIpc'
+import { registerNpcDossierHandlers } from './npcDossierIpc'
+import { registerAskDmHandlers } from './askDmIpc'
 import { registerProgressionHandlers } from './progressionIpc'
 import { initAutoUpdate, registerAutoUpdateHandlers } from './autoUpdate'
 import { configureSpellcheck } from './spellcheck'
@@ -99,6 +101,8 @@ app.whenReady().then(() => {
   registerStartingLoadoutHandlers()
   registerRaceHandlers()
   registerBackgroundHandlers()
+  registerNpcDossierHandlers()
+  registerAskDmHandlers()
   registerGuidedCreationHandlers()
   registerTurnHandlers()
   registerCombatHandlers()
@@ -107,6 +111,7 @@ app.whenReady().then(() => {
   registerNarrationLogHandlers()
   registerPromotionHandlers()
   registerSettingsHandlers()
+  registerLlmUsageHandlers()
   registerSettingsIntroHandlers()
   registerAutoUpdateHandlers()
   initAutoUpdate()
