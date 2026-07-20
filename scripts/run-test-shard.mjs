@@ -7,7 +7,6 @@
  */
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { discoverTestFiles } from './discoverTestFiles.mjs'
@@ -48,6 +47,29 @@ export function parseShardArgs(argv) {
 }
 
 /**
+ * Build a Windows-safe Vitest spawn (node + vitest.mjs, no npx.cmd).
+ * @param {{
+ *   root: string
+ *   reportOut: string
+ *   shardFiles: string[]
+ * }} options
+ */
+export function buildVitestShardArgs({ root, reportOut, shardFiles }) {
+  const vitestCli = join(root, 'node_modules', 'vitest', 'vitest.mjs')
+  return {
+    command: process.execPath,
+    args: [
+      vitestCli,
+      'run',
+      '--reporter=default',
+      '--reporter=json',
+      `--outputFile.json=${reportOut}`,
+      ...shardFiles
+    ]
+  }
+}
+
+/**
  * @param {{
  *   root?: string
  *   index: number
@@ -55,7 +77,10 @@ export function parseShardArgs(argv) {
  *   timingsPath?: string
  *   jsonOut?: string
  *   reportOut?: string
- *   spawnVitest?: (args: string[]) => { status: number | null }
+ *   spawnVitest?: (
+ *     command: string,
+ *     args: string[]
+ *   ) => { status: number | null; error?: Error }
  * }} options
  */
 export function runTestShard(options) {
@@ -72,7 +97,7 @@ export function runTestShard(options) {
 
   const shardFiles = plan.shards[options.index]
   const reportOut =
-    options.reportOut || join(tmpdir(), `vitest-report-shard-${options.index}.json`)
+    options.reportOut || join(root, `vitest-report-shard-${options.index}.json`)
   const jsonOut =
     options.jsonOut || join(root, `shard-timings-${options.index}.json`)
 
@@ -94,28 +119,22 @@ export function runTestShard(options) {
     return { status: 0, shardFiles, jsonOut }
   }
 
-  const vitestArgs = [
-    'vitest',
-    'run',
-    '--reporter=default',
-    '--reporter=json',
-    `--outputFile.json=${reportOut}`,
-    ...shardFiles
-  ]
+  const { command, args } = buildVitestShardArgs({ root, reportOut, shardFiles })
 
   const spawnVitest =
     options.spawnVitest ??
-    ((args) => {
-      const npxBin = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-      return spawnSync(npxBin, args, {
+    ((cmd, argv) =>
+      spawnSync(cmd, argv, {
         cwd: root,
         stdio: 'inherit',
         shell: false,
         env: process.env
-      })
-    })
+      }))
 
-  const result = spawnVitest(vitestArgs)
+  const result = spawnVitest(command, args)
+  if (result.error) {
+    console.error('Failed to spawn Vitest:', result.error)
+  }
   const status = result.status ?? 1
 
   try {

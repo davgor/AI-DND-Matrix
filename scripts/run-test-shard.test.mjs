@@ -33,6 +33,23 @@ describe('runTestPlanCi', () => {
   })
 })
 
+describe('buildVitestShardArgs', () => {
+  it('runs vitest via node entrypoint with workspace JSON report path', async () => {
+    const { buildVitestShardArgs } = await import('./run-test-shard.mjs')
+    const args = buildVitestShardArgs({
+      root: 'D:/a/repo',
+      reportOut: 'D:/a/repo/vitest-report-shard-0.json',
+      shardFiles: ['src/a.test.ts', 'src/b.test.ts']
+    })
+    expect(args.command).toBe(process.execPath)
+    expect(args.args[0].replace(/\\/g, '/')).toMatch(/node_modules\/vitest\/vitest\.mjs$/)
+    expect(args.args).toContain('--reporter=json')
+    expect(args.args).toContain('--outputFile.json=D:/a/repo/vitest-report-shard-0.json')
+    expect(args.args.at(-2)).toBe('src/a.test.ts')
+    expect(args.args.at(-1)).toBe('src/b.test.ts')
+  })
+})
+
 describe('runTestShard', () => {
   it('invokes vitest with only the planned shard files', () => {
     const root = mkdtempSync(join(tmpdir(), 'run-shard-'))
@@ -45,7 +62,7 @@ describe('runTestShard', () => {
       JSON.stringify({ 'src/a.test.ts': 40_000, 'src/b.test.ts': 40_000 })
     )
 
-    /** @type {string[] | null} */
+    /** @type {{ command: string, args: string[] } | null} */
     let captured = null
     const reportOut = join(root, 'report-0.json')
     const result = runTestShard({
@@ -55,8 +72,8 @@ describe('runTestShard', () => {
       timingsPath,
       jsonOut: join(root, 'shard-0.json'),
       reportOut,
-      spawnVitest: (args) => {
-        captured = args
+      spawnVitest: (command, args) => {
+        captured = { command, args }
         writeFileSync(
           reportOut,
           JSON.stringify({
@@ -74,8 +91,8 @@ describe('runTestShard', () => {
     })
 
     expect(result.status).toBe(0)
-    expect(captured).not.toBeNull()
-    const fileArgs = captured?.filter((a) => a.endsWith('.test.ts')) ?? []
+    expect(captured?.command).toBe(process.execPath)
+    const fileArgs = captured?.args.filter((a) => a.endsWith('.test.ts')) ?? []
     expect(fileArgs).toHaveLength(1)
     expect(readFileSync(join(root, 'shard-0.json'), 'utf8')).toContain('src/a.test.ts')
   })
