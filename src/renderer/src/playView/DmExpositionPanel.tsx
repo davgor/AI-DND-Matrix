@@ -4,9 +4,18 @@ import type { TurnResult } from '../../../main/turnIpc'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { SceneSummaryInput } from '../../../shared/inCampaignLayout/sceneContext'
 import { DmExpositionSceneHeader, renderFeedLine } from './dmExpositionParts'
+import {
+  incomingHighlightClassName,
+  useIncomingIdHighlights
+} from './incomingHighlight'
+import {
+  eligibleHighlightIds,
+  entryIds,
+  isSceneSettingEntry
+} from './incomingHighlight/incomingHighlightTargets'
 import { usePinnedScroll } from './usePinnedScroll'
 
-export interface DmExpositionPanelProps {
+interface DmExpositionPanelProps {
   entries: PlayLogEntry[]
   sceneContext: SceneSummaryInput
   expositionStatus: ExpositionStatus
@@ -24,6 +33,10 @@ function formatRoll(check: NonNullable<TurnResult['check']>): string {
 export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
   const feedCount = props.entries.length + (props.showRolls && props.lastCheck ? 1 : 0)
   const { scrollRef } = usePinnedScroll<HTMLDivElement>(feedCount)
+  const highlightedIds = useIncomingIdHighlights(
+    entryIds(props.entries),
+    eligibleHighlightIds(props.entries, isSceneSettingEntry)
+  )
 
   return (
     <div className="play-view-panel play-view-dm-panel dm-exposition-panel">
@@ -37,7 +50,14 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
       {props.statusAlerts}
       <div ref={scrollRef} className="play-view-log dm-exposition-feed">
         {props.entries.map((entry) => (
-          <p key={entry.id} className="play-view-log-entry">
+          <p
+            key={entry.id}
+            data-entry-id={entry.id}
+            className={incomingHighlightClassName(
+              highlightedIds.has(entry.id),
+              'play-view-log-entry'
+            )}
+          >
             {renderFeedLine(entry)}
           </p>
         ))}

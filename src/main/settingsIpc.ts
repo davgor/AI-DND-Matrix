@@ -1,8 +1,12 @@
 import { ipcMain } from 'electron'
+import { testGeminiConnection } from '../agents/providers/gemini'
+import { testGrokConnection } from '../agents/providers/grok'
+import { testOpenAiConnection } from '../agents/providers/openai'
+import { createClaudeProvider } from '../agents/providers/claude'
 import { createPlayer2Provider } from '../agents/providers/player2'
 import { isTruncationError } from '../agents/providers/tokenEscalation'
 import { DEFAULT_PROVIDER_SETTINGS, type ConnectionCheckResult } from '../shared/settings/types'
-import type { ProviderSettings, RedactedProviderSettings, SaveProviderSettingsInput } from '../shared/settings/types'
+import type { ProviderMode, ProviderSettings, RedactedProviderSettings, SaveProviderSettingsInput } from '../shared/settings/types'
 import { redactProviderSettings, validateProviderSettings } from '../shared/settings/validation'
 import { createElectronSecretCodec, getSettingsFilePath, loadSettings, saveSettings, type SecretCodec } from './settingsStore'
 
@@ -20,11 +24,21 @@ export function getRedactedSettings(
   return redactProviderSettings(loadSettings(filePath, codec, fallback))
 }
 
+function mergeApiKey(
+  incoming: string | undefined,
+  current: string
+): string {
+  return incoming === undefined ? current : incoming
+}
+
 function mergeSaveInput(current: ProviderSettings, input: SaveProviderSettingsInput): ProviderSettings {
   return {
     ...current,
     ...input,
-    claudeApiKey: input.claudeApiKey === undefined ? current.claudeApiKey : input.claudeApiKey
+    claudeApiKey: mergeApiKey(input.claudeApiKey, current.claudeApiKey),
+    openaiApiKey: mergeApiKey(input.openaiApiKey, current.openaiApiKey),
+    geminiApiKey: mergeApiKey(input.geminiApiKey, current.geminiApiKey),
+    grokApiKey: mergeApiKey(input.grokApiKey, current.grokApiKey)
   }
 }
 
@@ -37,7 +51,12 @@ export function saveProviderSettings(
   const current = loadSettings(filePath, codec, fallback)
   const merged = mergeSaveInput(current, input)
 
-  const errors = validateProviderSettings(merged)
+  const errors = validateProviderSettings(merged, {
+    claudeApiKeySet: merged.claudeApiKey.trim().length > 0,
+    openaiApiKeySet: merged.openaiApiKey.trim().length > 0,
+    geminiApiKeySet: merged.geminiApiKey.trim().length > 0,
+    grokApiKeySet: merged.grokApiKey.trim().length > 0
+  })
   if (errors.length > 0) {
     throw new SettingsValidationFailedError(errors)
   }
@@ -61,7 +80,63 @@ export async function testPlayer2Connection(baseUrl: string): Promise<Connection
   }
 }
 
-export interface LlamaRuntimeCheckDeps {
+interface CloudConnectionTestInput {
+  mode: Extract<ProviderMode, 'claude' | 'openai' | 'gemini' | 'grok'>
+  apiKey: string
+  model: string
+}
+
+async function testClaudeConnection(apiKey: string, model: string): Promise<ConnectionCheckResult> {
+  try {
+    const provider = createClaudeProvider({ apiKey, model })
+    await provider.generate('ping', { maxTokens: 1, purpose: 'system.ping' })
+    return { ok: true, message: 'Connected to Claude successfully.' }
+  } catch (error) {
+    if (isTruncationError(error)) {
+      return { ok: true, message: 'Connected to Claude successfully.' }
+    }
+    return { ok: false, message: `Could not reach Claude: ${(error as Error).message}` }
+  }
+}
+
+function resolveCloudKey(
+  filePath: string,
+  codec: SecretCodec,
+  mode: CloudConnectionTestInput['mode'],
+  draftKey: string
+): string {
+  if (draftKey.trim()) {
+    return draftKey.trim()
+  }
+  const saved = loadSettings(filePath, codec, DEFAULT_PROVIDER_SETTINGS)
+  if (mode === 'claude') return saved.claudeApiKey
+  if (mode === 'openai') return saved.openaiApiKey
+  if (mode === 'gemini') return saved.geminiApiKey
+  return saved.grokApiKey
+}
+
+async function testCloudProviderConnection(
+  input: CloudConnectionTestInput,
+  filePath: string,
+  codec: SecretCodec
+): Promise<ConnectionCheckResult> {
+  const apiKey = resolveCloudKey(filePath, codec, input.mode, input.apiKey)
+  if (!apiKey) {
+    return { ok: false, message: 'API key is required to test the connection.' }
+  }
+  if (input.mode === 'claude') {
+    return testClaudeConnection(apiKey, input.model)
+  }
+  if (input.mode === 'openai') {
+    return testOpenAiConnection(apiKey, input.model)
+  }
+  if (input.mode === 'gemini') {
+    return testGeminiConnection(apiKey, input.model)
+  }
+  return testGrokConnection(apiKey, input.model)
+}
+
+interface LlamaRuntimeCheckDeps {
   fetchHealth?: (url: string) => Promise<number>
   pathExists?: (path: string) => boolean
 }
@@ -111,6 +186,10 @@ export function registerSettingsHandlers(): void {
   )
 
   ipcMain.handle('settings:testPlayer2Connection', (_event, baseUrl: string) => testPlayer2Connection(baseUrl))
+
+  ipcMain.handle('settings:testCloudConnection', (_event, input: CloudConnectionTestInput) =>
+    testCloudProviderConnection(input, filePath, codec)
+  )
 
   ipcMain.handle('settings:checkLlamaRuntime', (_event, settings: ProviderSettings) =>
     checkLlamaRuntimeConfig(settings)

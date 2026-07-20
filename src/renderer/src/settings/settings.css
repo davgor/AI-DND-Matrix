@@ -43,11 +43,24 @@
 .settings-provider-mode {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 10px;
   background: var(--surface-inset);
+}
+
+.settings-provider-mode label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.settings-provider-mode select {
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
 }
 
 .settings-provider-mode-option {

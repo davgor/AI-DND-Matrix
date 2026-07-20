@@ -1,0 +1,145 @@
+/* Animated D20 roll overlay (epic 118). No purple glow. */
+
+.d20-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none !important;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.d20-overlay-die {
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.d20-overlay-die--travel {
+  animation: d20-roll-across var(--d20-total-ms, 2350ms) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+.d20-overlay-die--reduced {
+  margin-left: 50%;
+  animation: d20-reduced-flash var(--d20-reduced-ms, 700ms) ease-out forwards;
+}
+
+/* Travel ~47%, settle ~38%, exit ~15% of total (1100+900+350). */
+@keyframes d20-roll-across {
+  0% {
+    transform: translate3d(-18vw, 10vh, 0) rotate(-200deg) scale(0.72);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  47% {
+    transform: translate3d(40vw, -2vh, 0) rotate(460deg) scale(1);
+    opacity: 1;
+  }
+  55% {
+    transform: translate3d(40vw, -2vh, 0) rotate(500deg) scale(1.08);
+  }
+  85% {
+    transform: translate3d(40vw, -2vh, 0) rotate(500deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(46vw, -8vh, 0) rotate(530deg) scale(0.88);
+    opacity: 0;
+  }
+}
+
+@keyframes d20-reduced-flash {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
+  70% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.96);
+  }
+}
+
+.d20-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+.d20-face-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.d20-face-poly {
+  fill: var(--surface-raised, #2a2a32);
+  stroke: var(--accent-gold, #c9a227);
+  stroke-width: 2.5;
+}
+
+.d20-face-facet {
+  fill: color-mix(in srgb, var(--accent-gold, #c9a227) 18%, transparent);
+  stroke: color-mix(in srgb, var(--accent-gold, #c9a227) 55%, transparent);
+  stroke-width: 1;
+}
+
+.d20-face-facet-dim {
+  fill: color-mix(in srgb, var(--surface-inset, #111) 35%, transparent);
+}
+
+.d20-face-value {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display, Georgia, 'Times New Roman', serif);
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary, #f3f0e7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
+/* Show rolls off: face appears near settle, then clears (brief-then-clear). */
+.d20-face--brief .d20-face-value {
+  opacity: 0;
+  animation: d20-brief-label var(--d20-total-ms, 2350ms) ease-out forwards;
+}
+
+@keyframes d20-brief-label {
+  0%,
+  45% {
+    opacity: 0;
+  }
+  50%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .d20-overlay-die--travel {
+    margin-left: 50%;
+    animation: d20-reduced-flash var(--d20-reduced-ms, 700ms) ease-out forwards;
+  }
+
+  .d20-face--brief .d20-face-value {
+    animation: none;
+    opacity: 1;
+  }
+}

@@ -23,7 +23,7 @@ export function LevelUpModal(props: LevelUpModalProps): JSX.Element | null {
     void refresh()
   }, [refresh, props.refreshToken])
 
-  if (!pending) {
+  if (!pending || !Array.isArray(pending.perks) || pending.perks.length === 0) {
     return null
   }
 

@@ -8,6 +8,12 @@ const envConfig: AppConfig = {
   player2BaseUrl: 'http://127.0.0.1:4315',
   claudeApiKey: 'env-claude-key',
   claudeModel: 'env-claude-model',
+  openaiApiKey: 'env-openai-key',
+  openaiModel: 'env-openai-model',
+  geminiApiKey: 'env-gemini-key',
+  geminiModel: 'env-gemini-model',
+  grokApiKey: 'env-grok-key',
+  grokModel: 'env-grok-model',
   llamaCppBaseUrl: 'http://127.0.0.1:8080',
   llamaCppServerPath: undefined,
   llamaCppModelPath: undefined,
@@ -16,7 +22,7 @@ const envConfig: AppConfig = {
   llamaCppStartMode: 'attach'
 }
 
-describe('resolveProviderRegistryConfig', () => {
+describe('resolveProviderRegistryConfig: env fallback', () => {
   it('falls back entirely to env config when no settings have been persisted', () => {
     const resolved = resolveProviderRegistryConfig(envConfig, null)
 
@@ -27,6 +33,24 @@ describe('resolveProviderRegistryConfig', () => {
     expect(resolved.llamaCppBaseUrl).toBe('http://127.0.0.1:8080')
   })
 
+  it('falls back to the env Claude API key when persisted settings have an empty one', () => {
+    const persisted = { ...DEFAULT_PROVIDER_SETTINGS, mode: 'claude' as const, claudeApiKey: '' }
+    const resolved = resolveProviderRegistryConfig(envConfig, persisted)
+    expect(resolved.claudeApiKey).toBe('env-claude-key')
+  })
+
+  it('falls back to env openai key when persisted key is empty', () => {
+    const persisted = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'openai' as const,
+      openaiApiKey: ''
+    }
+    const resolved = resolveProviderRegistryConfig(envConfig, persisted)
+    expect(resolved.openaiApiKey).toBe('env-openai-key')
+  })
+})
+
+describe('resolveProviderRegistryConfig: persisted prefs', () => {
   it('prefers persisted settings over env config when both are present', () => {
     const persisted = {
       ...DEFAULT_PROVIDER_SETTINGS,
@@ -46,23 +70,28 @@ describe('resolveProviderRegistryConfig', () => {
     expect(resolved.llamaCppBaseUrl).toBe('http://persisted-llama:9090')
   })
 
-  it('falls back to the env Claude API key when persisted settings have an empty one', () => {
-    const persisted = { ...DEFAULT_PROVIDER_SETTINGS, mode: 'claude' as const, claudeApiKey: '' }
+  it('resolves openai mode with persisted key and model', () => {
+    const persisted = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'openai' as const,
+      openaiApiKey: 'persisted-openai',
+      openaiModel: 'gpt-4.1'
+    }
 
     const resolved = resolveProviderRegistryConfig(envConfig, persisted)
 
-    expect(resolved.claudeApiKey).toBe('env-claude-key')
+    expect(resolved.agentProvider).toBe('openai')
+    expect(resolved.openaiApiKey).toBe('persisted-openai')
+    expect(resolved.openaiModel).toBe('gpt-4.1')
   })
 
-  it('resolves to the llamacpp provider with its persisted base URL when that mode is selected', () => {
+  it('resolves llamacpp mode with persisted base URL', () => {
     const persisted = {
       ...DEFAULT_PROVIDER_SETTINGS,
       mode: 'llamacpp' as const,
       llamaCppBaseUrl: 'http://127.0.0.1:8081'
     }
-
     const resolved = resolveProviderRegistryConfig(envConfig, persisted)
-
     expect(resolved.agentProvider).toBe('llamacpp')
     expect(resolved.llamaCppBaseUrl).toBe('http://127.0.0.1:8081')
   })

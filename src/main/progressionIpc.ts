@@ -20,7 +20,7 @@ export function getPendingLevelUpForCharacter(
   characterId: string
 ): PendingLevelUpResponse | null {
   const ceremony = getPendingLevelUpCeremony(db, characterId)
-  if (!ceremony) {
+  if (!ceremony || !Array.isArray(ceremony.perks) || ceremony.perks.length === 0) {
     return null
   }
   return {

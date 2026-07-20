@@ -116,14 +116,22 @@ function parseObituaryJson(raw: string | null | undefined): CharacterObituary | 
   }
 }
 
+function parseJsonObject(raw: string): Record<string, unknown> {
+  return (JSON.parse(raw) as Record<string, unknown> | null) ?? {}
+}
+
+function parseJsonArray(raw: string): unknown[] {
+  return (JSON.parse(raw) as unknown[] | null) ?? []
+}
+
 function rowToCharacter(row: CharacterRow): Character {
   return {
     id: row.id,
     campaignId: row.campaign_id,
     name: row.name,
     characterClass: row.class,
-    stats: JSON.parse(row.stats) as Record<string, unknown>,
-    inventory: JSON.parse(row.inventory) as unknown[],
+    stats: parseJsonObject(row.stats),
+    inventory: parseJsonArray(row.inventory),
     hp: row.hp,
     xp: row.xp,
     level: row.level,

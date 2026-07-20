@@ -6,27 +6,30 @@ export interface ProviderModeSelectorProps {
 }
 
 const MODES: { value: ProviderMode; label: string }[] = [
-  { value: 'claude', label: 'Claude (API key)' },
-  { value: 'llamacpp', label: 'Local llama.cpp' },
-  { value: 'player2', label: 'Player2 (local endpoint)' }
+  { value: 'claude', label: 'Claude' },
+  { value: 'openai', label: 'GPT (OpenAI)' },
+  { value: 'gemini', label: 'Gemini' },
+  { value: 'grok', label: 'Grok (xAI)' },
+  { value: 'player2', label: 'Player2' },
+  { value: 'llamacpp', label: 'Local llama.cpp' }
 ]
 
 export function ProviderModeSelector(props: ProviderModeSelectorProps): JSX.Element {
   return (
-    <fieldset className="settings-provider-mode">
-      <legend>Provider</legend>
-      {MODES.map((option) => (
-        <label key={option.value} className="settings-provider-mode-option">
-          <input
-            type="radio"
-            name="provider-mode"
-            value={option.value}
-            checked={props.mode === option.value}
-            onChange={() => props.onChange(option.value)}
-          />
-          {option.label}
-        </label>
-      ))}
-    </fieldset>
+    <div className="settings-provider-mode">
+      <label htmlFor="settings-provider-mode">Provider</label>
+      <select
+        id="settings-provider-mode"
+        aria-label="Provider"
+        value={props.mode}
+        onChange={(event) => props.onChange(event.target.value as ProviderMode)}
+      >
+        {MODES.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
   )
 }

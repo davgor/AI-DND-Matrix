@@ -1,4 +1,9 @@
-import type { ProviderSettings, RedactedProviderSettings, SettingsValidationError } from './types'
+import type {
+  ProviderSettings,
+  ProviderValidationContext,
+  RedactedProviderSettings,
+  SettingsValidationError
+} from './types'
 
 function isValidUrl(value: string): boolean {
   try {
@@ -9,11 +14,63 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-function validateClaude(settings: ProviderSettings): SettingsValidationError[] {
-  if (!settings.claudeApiKey.trim()) {
-    return [{ field: 'claudeApiKey', message: 'A Claude API key is required.' }]
+function requireApiKey(
+  key: string,
+  field: string,
+  label: string,
+  keySet: boolean | undefined
+): SettingsValidationError[] {
+  if (key.trim() || keySet) {
+    return []
   }
-  return []
+  return [{ field, message: `${label} API key is required.` }]
+}
+
+function requireModel(model: string, field: string, label: string): SettingsValidationError[] {
+  if (model.trim()) {
+    return []
+  }
+  return [{ field, message: `${label} model is required.` }]
+}
+
+function validateClaude(
+  settings: ProviderSettings,
+  context?: ProviderValidationContext
+): SettingsValidationError[] {
+  return [
+    ...requireApiKey(settings.claudeApiKey, 'claudeApiKey', 'Claude', context?.claudeApiKeySet),
+    ...requireModel(settings.claudeModel, 'claudeModel', 'Claude')
+  ]
+}
+
+function validateOpenAi(
+  settings: ProviderSettings,
+  context?: ProviderValidationContext
+): SettingsValidationError[] {
+  return [
+    ...requireApiKey(settings.openaiApiKey, 'openaiApiKey', 'OpenAI', context?.openaiApiKeySet),
+    ...requireModel(settings.openaiModel, 'openaiModel', 'OpenAI')
+  ]
+}
+
+function validateGemini(
+  settings: ProviderSettings,
+  context?: ProviderValidationContext
+): SettingsValidationError[] {
+  return [
+    ...requireApiKey(settings.geminiApiKey, 'geminiApiKey', 'Gemini', context?.geminiApiKeySet),
+    ...requireModel(settings.geminiModel, 'geminiModel', 'Gemini')
+  ]
+}
+
+function validateGrok(
+  settings: ProviderSettings,
+  context?: ProviderValidationContext
+): SettingsValidationError[] {
+  return [
+    ...requireApiKey(settings.grokApiKey, 'grokApiKey', 'Grok', context?.grokApiKeySet),
+    ...requireModel(settings.grokModel, 'grokModel', 'Grok')
+  ]
 }
 
 function validatePlayer2(settings: ProviderSettings): SettingsValidationError[] {
@@ -48,9 +105,21 @@ function validateLlamaCpp(settings: ProviderSettings): SettingsValidationError[]
   return [...errors, ...validateLlamaCppManagedPaths(settings)]
 }
 
-export function validateProviderSettings(settings: ProviderSettings): SettingsValidationError[] {
+export function validateProviderSettings(
+  settings: ProviderSettings,
+  context?: ProviderValidationContext
+): SettingsValidationError[] {
   if (settings.mode === 'claude') {
-    return validateClaude(settings)
+    return validateClaude(settings, context)
+  }
+  if (settings.mode === 'openai') {
+    return validateOpenAi(settings, context)
+  }
+  if (settings.mode === 'gemini') {
+    return validateGemini(settings, context)
+  }
+  if (settings.mode === 'grok') {
+    return validateGrok(settings, context)
   }
   if (settings.mode === 'player2') {
     return validatePlayer2(settings)
@@ -59,6 +128,18 @@ export function validateProviderSettings(settings: ProviderSettings): SettingsVa
 }
 
 export function redactProviderSettings(settings: ProviderSettings): RedactedProviderSettings {
-  const { claudeApiKey, ...rest } = settings
-  return { ...rest, claudeApiKeySet: claudeApiKey.trim().length > 0 }
+  const {
+    claudeApiKey,
+    openaiApiKey,
+    geminiApiKey,
+    grokApiKey,
+    ...rest
+  } = settings
+  return {
+    ...rest,
+    claudeApiKeySet: claudeApiKey.trim().length > 0,
+    openaiApiKeySet: openaiApiKey.trim().length > 0,
+    geminiApiKeySet: geminiApiKey.trim().length > 0,
+    grokApiKeySet: grokApiKey.trim().length > 0
+  }
 }

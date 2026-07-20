@@ -105,7 +105,7 @@ function PlaySheetVitals(props: { character: Character; stats: CharacterTabStats
 export function PlaySheetCharacterTab(props: {
   character: Character
 }): JSX.Element {
-  const stats = props.character.stats as CharacterTabStats
+  const stats = (props.character.stats ?? {}) as CharacterTabStats
   const alignmentLabel = props.character.alignment
     ? (ALIGNMENT_LABELS[props.character.alignment as Alignment] ?? props.character.alignment)
     : null
@@ -127,7 +127,7 @@ export function PlaySheetCharacterTab(props: {
       ) : null}
       <PlaySheetSectionDivider />
       {stats.abilityScores ? <AbilityScoreGrid abilityScores={stats.abilityScores} /> : null}
-      <CharacterPerksSection stats={props.character.stats} />
+      <CharacterPerksSection stats={stats as Record<string, unknown>} />
     </div>
   )
 }

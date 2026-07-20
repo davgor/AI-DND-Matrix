@@ -10,6 +10,7 @@ import { ReadyAppHubRoute } from './app/ReadyAppHubRoute'
 import { ReadyAppOnboardingView } from './app/ReadyAppOnboardingView'
 import { ReadyAppPlayView } from './app/ReadyAppPlayView'
 import { useReadyAppBodyState } from './app/useReadyAppBody'
+import { Sidebar } from './sidebar/Sidebar'
 import type { useSidebarController } from './sidebar/useSidebarController'
 import { SettingsIntroModal } from './settingsIntro/SettingsIntroModal'
 import { useSettingsIntro } from './settingsIntro/useSettingsIntro'
@@ -126,18 +127,35 @@ function ReadyAppBody(props: ReadyAppShellProps): JSX.Element {
     )
   }
 
-  if (props.stage === 'campaignHub' && props.detail && body.hubSnapshot) {
+  if (props.stage === 'campaignHub' && props.detail) {
+    if (body.hubSnapshot) {
+      return (
+        <ReadyAppHubRoute
+          sidebarRef={props.sidebarRef}
+          detail={props.detail}
+          stage={props.stage}
+          setDetail={props.setDetail}
+          setStage={props.setStage}
+          body={body}
+          campaignCallbacks={campaignCallbacks}
+          onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)()}
+        />
+      )
+    }
     return (
-      <ReadyAppHubRoute
-        sidebarRef={props.sidebarRef}
-        detail={props.detail}
-        stage={props.stage}
-        setDetail={props.setDetail}
-        setStage={props.setStage}
-        body={body}
-        campaignCallbacks={campaignCallbacks}
-        onCharacterSetupComplete={() => void handleCharacterSetupComplete(props)()}
-      />
+      <>
+        <Sidebar
+          sidebarRef={props.sidebarRef}
+          selectedCampaignId={props.detail.campaign?.id ?? null}
+          {...campaignCallbacks}
+        />
+        <main className="main-panel main-panel-empty" aria-busy="true">
+          <div className="main-panel-empty-card">
+            <p className="eyebrow">Campaign hub</p>
+            <p>Loading campaign…</p>
+          </div>
+        </main>
+      </>
     )
   }
 

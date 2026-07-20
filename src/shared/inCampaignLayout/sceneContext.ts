@@ -5,28 +5,36 @@ export interface SceneSummaryInput {
   regionBlurb?: string | null
 }
 
-export function pickSceneSummary(
-  entries: PlayLogEntry[],
-  context: SceneSummaryInput = {}
-): string {
+function latestSceneSettingText(entries: PlayLogEntry[]): string | null {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const entry = entries[index]
-    if (entry?.speaker === 'dm' && entry.sceneSetting === true) {
+    if (entry?.speaker !== 'dm' || entry.sceneSetting !== true) {
+      continue
+    }
+    if (typeof entry.text === 'string' && entry.text.length > 0) {
       return entry.text
     }
   }
+  return null
+}
 
+function quietSceneFallback(context: SceneSummaryInput): string {
   const blurb = context.regionBlurb?.trim()
   if (blurb) {
     return blurb
   }
-
   const regionName = context.regionName?.trim()
   if (regionName) {
     return `The scene is quiet in ${regionName}…`
   }
-
   return 'The scene is quiet…'
+}
+
+export function pickSceneSummary(
+  entries: PlayLogEntry[],
+  context: SceneSummaryInput = {}
+): string {
+  return latestSceneSettingText(entries) ?? quietSceneFallback(context)
 }
 
 /** @deprecated Use pickSceneSummary — kept for transitional imports only */

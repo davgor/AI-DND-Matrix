@@ -29,7 +29,21 @@ export function getSettingsFilePath(): string {
 
 interface PersistedSettingsFile {
   claudeApiKeyEncrypted: string
-  rest: Omit<ProviderSettings, 'claudeApiKey'>
+  openaiApiKeyEncrypted?: string
+  geminiApiKeyEncrypted?: string
+  grokApiKeyEncrypted?: string
+  rest: Omit<
+    ProviderSettings,
+    'claudeApiKey' | 'openaiApiKey' | 'geminiApiKey' | 'grokApiKey'
+  >
+}
+
+function decryptKey(codec: SecretCodec, encoded: string | undefined): string {
+  return encoded ? codec.decrypt(encoded) : ''
+}
+
+function encryptKey(codec: SecretCodec, plain: string): string {
+  return plain ? codec.encrypt(plain) : ''
 }
 
 export function loadSettings(
@@ -41,11 +55,21 @@ export function loadSettings(
     return fallback
   }
   const parsed = JSON.parse(readFileSync(filePath, 'utf-8')) as Partial<PersistedSettingsFile>
-  const claudeApiKey = parsed.claudeApiKeyEncrypted ? codec.decrypt(parsed.claudeApiKeyEncrypted) : ''
-  return { ...fallback, ...parsed.rest, claudeApiKey }
+  return {
+    ...fallback,
+    ...parsed.rest,
+    claudeApiKey: decryptKey(codec, parsed.claudeApiKeyEncrypted),
+    openaiApiKey: decryptKey(codec, parsed.openaiApiKeyEncrypted),
+    geminiApiKey: decryptKey(codec, parsed.geminiApiKeyEncrypted),
+    grokApiKey: decryptKey(codec, parsed.grokApiKeyEncrypted)
+  }
 }
 
-export function loadSettingsOrNull(filePath: string, codec: SecretCodec, fallback: ProviderSettings): ProviderSettings | null {
+export function loadSettingsOrNull(
+  filePath: string,
+  codec: SecretCodec,
+  fallback: ProviderSettings
+): ProviderSettings | null {
   if (!existsSync(filePath)) {
     return null
   }
@@ -53,9 +77,12 @@ export function loadSettingsOrNull(filePath: string, codec: SecretCodec, fallbac
 }
 
 export function saveSettings(filePath: string, codec: SecretCodec, settings: ProviderSettings): void {
-  const { claudeApiKey, ...rest } = settings
+  const { claudeApiKey, openaiApiKey, geminiApiKey, grokApiKey, ...rest } = settings
   const file: PersistedSettingsFile = {
-    claudeApiKeyEncrypted: claudeApiKey ? codec.encrypt(claudeApiKey) : '',
+    claudeApiKeyEncrypted: encryptKey(codec, claudeApiKey),
+    openaiApiKeyEncrypted: encryptKey(codec, openaiApiKey),
+    geminiApiKeyEncrypted: encryptKey(codec, geminiApiKey),
+    grokApiKeyEncrypted: encryptKey(codec, grokApiKey),
     rest
   }
   mkdirSync(dirname(filePath), { recursive: true })

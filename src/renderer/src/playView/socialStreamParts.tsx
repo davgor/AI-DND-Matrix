@@ -1,5 +1,6 @@
 import type { PlayLogEntry } from '../../../main/narrationLog'
 import { FormattedText } from '../shared/FormattedText'
+import { incomingHighlightClassName } from './incomingHighlight'
 
 type SocialMessageSide = 'player' | 'other'
 
@@ -77,6 +78,7 @@ function SocialName(props: {
 
 export function SocialMessage(props: {
   entry: PlayLogEntry
+  highlighted?: boolean
   onOpenNpcDossier?: (npcId: string) => void
 }): JSX.Element {
   const { entry } = props
@@ -84,15 +86,19 @@ export function SocialMessage(props: {
   const name = socialSpeakerName(entry)
   const showAvatar = side === 'other'
   const dossierNpcId = socialOpensDossier(entry) ? entry.npcId : undefined
+  const bubbleClass = incomingHighlightClassName(
+    props.highlighted === true,
+    'social-message-bubble'
+  )
 
   return (
-    <div className={`social-message social-message--${side}`}>
+    <div className={`social-message social-message--${side}`} data-entry-id={entry.id}>
       {showAvatar ? (
         <SocialAvatar name={name} npcId={dossierNpcId} onOpenNpcDossier={props.onOpenNpcDossier} />
       ) : null}
       <div className="social-message-body">
         <SocialName name={name} npcId={dossierNpcId} onOpenNpcDossier={props.onOpenNpcDossier} />
-        <div className="social-message-bubble">
+        <div className={bubbleClass}>
           {FormattedText({ as: 'p', className: 'social-message-text', text: entry.text })}
         </div>
       </div>

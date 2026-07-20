@@ -6,7 +6,7 @@ Each campaign supports **multiple player characters** in one shared world. After
 
 ## Status
 
-**Shipped through epic 108**, plus **106** Ask the DM OOC chat and **112** LLM usage metering (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: cascading campaign creation (pantheon, world, regions, NPCs, story), onboarding review, race/background/equipment selection, guided identity and opening scene, hub-based multi-character management, turn-based play with Social/Scene streaming, combat, quests, spellbook, progression, loot, out-of-character Ask the DM, and packaging with auto-update.
+**Shipped through epic 108**, plus **106** Ask the DM OOC chat, **112** LLM usage metering, and **113** multi-cloud provider settings (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: cascading campaign creation (pantheon, world, regions, NPCs, story), onboarding review, race/background/equipment selection, guided identity and opening scene, hub-based multi-character management, turn-based play with Social/Scene streaming, combat, quests, spellbook, progression, loot, out-of-character Ask the DM, and packaging with auto-update.
 
 **In progress** (`board/in-progress/`):
 
@@ -15,7 +15,6 @@ Each campaign supports **multiple player characters** in one shared world. After
 **Active backlog** (`board/backlog/`):
 
 - **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
-- **113** — Multi-cloud provider settings (Claude / GPT / Gemini / Grok dropdown + model picker)
 
 **Still parked** (`board/backlog/revisit/`):
 
@@ -32,17 +31,18 @@ Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-prog
 1. Place a `.env` file in the same folder as the `.exe` (see below for what it needs).
 2. Double-click `AI-TTRPG.exe`. It's a portable build — no installer, no admin rights, nothing else to install.
 
-**Configuring a Claude API key** (the default, recommended provider):
+**Configuring a cloud API key** (Claude, GPT, Gemini, or Grok):
 
-1. Get an API key from [console.anthropic.com](https://console.anthropic.com).
-2. Create a `.env` file (next to the `.exe` for a packaged build, or at the repo root for a dev checkout) with:
+1. Get an API key from the vendor (Anthropic / OpenAI / Google AI Studio / xAI).
+2. Either paste it in **Settings → Provider** (dropdown + model picker), or create a `.env` file (next to the `.exe` for a packaged build, or at the repo root for a dev checkout) with the matching vars, for example:
    ```
    AGENT_PROVIDER=claude
    CLAUDE_API_KEY=sk-ant-...
    ```
-3. `CLAUDE_MODEL` is optional and defaults to a current Claude model — only set it if you want a specific one.
+   Other cloud providers use `openai` / `gemini` / `grok` for `AGENT_PROVIDER`, with `OPENAI_API_KEY`, `GEMINI_API_KEY`, or `GROK_API_KEY` (alias `XAI_API_KEY`). Optional `*_MODEL` vars override the Settings default; otherwise pick the model in Settings.
+3. Settings is the preferred place to choose **which model** each cloud provider uses (curated list + optional custom id).
 
-**Switching providers**: set `AGENT_PROVIDER` in `.env` to the provider name (`claude` or `player2`) — no code changes or rebuild required. `player2` talks to a locally running [Player2](http://127.0.0.1:4315) app over its OpenAI-compatible chat-completions endpoint; no API key needed, just have Player2 running. `PLAYER2_BASE_URL` is optional and defaults to `http://127.0.0.1:4315`.
+**Switching providers**: use the Provider dropdown in Settings, or set `AGENT_PROVIDER` in `.env` to `claude`, `openai`, `gemini`, `grok`, `player2`, or `llamacpp`. `player2` talks to a locally running [Player2](http://127.0.0.1:4315) app over its OpenAI-compatible chat-completions endpoint; no API key needed, just have Player2 running. `PLAYER2_BASE_URL` is optional and defaults to `http://127.0.0.1:4315`.
 
 **Running from source** (for development): `npm install`, then `npm run dev` boots Electron + the React dev server + a dev SQLite file in one command. `npm run package` produces the distributable `.exe` in `release/`.
 
@@ -51,7 +51,7 @@ Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-prog
 - **Engine and database are the source of truth.** AI agents read state to produce narration and propose actions; a deterministic rules engine validates and resolves everything (dice, checks, damage, death) before it's persisted. Agents never decide outcomes themselves.
 - **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick. Context assembly is slimmed for token cost (epic **040**); semantic RAG over the save selects relevant lore within a hard injection cap (epic **083**).
 - **NPCs have isolated memory.** Each NPC has its own private memory log; it only ever sees its own memories plus world facts explicitly tagged to its region/faction. No NPC can "know" something only another NPC experienced. Speaking style and selective replies keep Social chatter on-character without every NPC answering every line.
-- **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — Claude (Anthropic Messages API) and [Player2](http://127.0.0.1:4315) (local) are both implemented, swappable via runtime config with no code changes required. Local llama.cpp is backlog (**020**).
+- **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — Claude (Anthropic), OpenAI (GPT), Google Gemini, xAI Grok, and [Player2](http://127.0.0.1:4315) (local) are implemented, swappable via Settings or runtime config with no code changes required. Local llama.cpp is backlog (**020**).
 - **Campaign-level world, character-level story.** World name/summary/history, pantheon, regions, NPCs, story threads, events, and `current_state_summary` are shared across all player characters in a campaign. Journal, log book, quest log, known spells, narration/turn history, party roster ownership, `currentRegionId`, and guided-creation state are per character.
 - **Social vs Scene.** Play UI separates a Social stream (player and NPC dialogue, streaming window) from DM Scene exposition so conversation and narration stay readable and independently projected.
 
@@ -83,7 +83,7 @@ Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-prog
                    /guidedCreation  AI-guided identity + opening scene
                    /playView        Scene + Social columns, combat, session chrome, obituary drafting
                    /characterSheet  overlay: stats, equipment, journal, log book, quest log, spellbook
-                   /settings        provider configuration (Claude, Player2, llama.cpp scaffold)
+                   /settings        provider configuration (Claude, GPT, Gemini, Grok, Player2, llama.cpp)
                    /autoUpdate      update banner / ready copy
   /engine        Pure TS, no Electron/LLM deps: rules engine (checks, combat, dice), world-state model
   /agents        Agent orchestration: dm.ts, npc.ts, partyMember.ts, cascading campaign generation, provider adapters

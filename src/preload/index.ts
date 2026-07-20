@@ -339,6 +339,11 @@ const settings = {
     ipcRenderer.invoke('settings:save', input),
   testPlayer2Connection: (baseUrl: string): Promise<ConnectionCheckResult> =>
     ipcRenderer.invoke('settings:testPlayer2Connection', baseUrl),
+  testCloudConnection: (input: {
+    mode: 'claude' | 'openai' | 'gemini' | 'grok'
+    apiKey: string
+    model: string
+  }): Promise<ConnectionCheckResult> => ipcRenderer.invoke('settings:testCloudConnection', input),
   checkLlamaRuntime: (config: ProviderSettings): Promise<ConnectionCheckResult> =>
     ipcRenderer.invoke('settings:checkLlamaRuntime', config)
 }
