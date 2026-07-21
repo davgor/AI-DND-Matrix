@@ -53,15 +53,18 @@ Journal surface also lists “known dossiers”
 | **025** / **044** | Log-book People `relatedEntityId` informs candidate set (not a second entry UX in v1) |
 | **043** | Journal tab / overlay hosts the list + modal open |
 | **030** | Extend FormattedText (or a thin wrapper) so emphasis and person links compose |
+| **128** | Scene/Social person links reuse this epic’s matcher after journal lands |
+| **127** | Relationship web / opinions of others — separate from journal linking |
 
 ## Out of scope (v1)
 
-- Linking names in Scene / Social / narration feed (journal only)
+- Linking names in Scene / Social / narration feed (journal only) — tracked as epic **128**
 - Auto-creating log-book People rows when a dossier is generated
 - Editing, renaming, or merging journal entries from the dossier
 - Party-member or player-character “dossiers”
 - Fuzzy / nickname / alias matching beyond stored NPC `name`
 - RAG / semantic entity linking (**083**)
+- NPC opinions of other characters / relationship web — epic **127**
 
 ## Sub-tickets
 
