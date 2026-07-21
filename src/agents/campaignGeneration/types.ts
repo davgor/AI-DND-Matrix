@@ -67,6 +67,9 @@ export interface GeneratedNpc {
   speakingStyleSpecimen?: string | null
   /** 2–3 example lines — set by post-pass speaking-style generation for speakers (092). */
   speakingStyleExamples?: string[] | null
+  hairColor?: string | null
+  age?: string | null
+  eyeColor?: string | null
 }
 
 export interface NpcCoreBundle {
@@ -77,6 +80,9 @@ export interface NpcCoreBundle {
   alignment?: Alignment
   classKey?: string
   backgroundKey?: string
+  hairColor?: string | null
+  age?: string | null
+  eyeColor?: string | null
 }
 
 export interface GeneratedStoryThread {
@@ -199,4 +205,5 @@ export interface CampaignSetupInput {
   respawnRules?: RespawnRules | null
   regionCount?: number
   npcsPerRegion?: number
+  npcFaceTokenGenerationEnabled?: boolean
 }

@@ -52,9 +52,14 @@ After an engine-successful disengage check, the DM escape-narration call receive
 
 Failed flee consumes the player's Action and advances initiative normally. The player may attempt again on their next turn with no stacking penalty.
 
-## Party members (v1)
+## Party members (v1 + 129.8)
 
-Flee is player-only. AI party members do not automatically flee when the player does. After a full player escape, party members still in the encounter keep resolving their combat turns until the encounter ends on existing terms (all hostiles defeated, etc.). The player immediately returns to free exploration in the current region.
+On a full player escape (`escaped`), living AI party members owned by that player **follow** and are marked exited with the player, unless:
+
+- `life_status` is not `alive`, or HP ≤ 0 (unconscious / dead)
+- `stats.leftBehind === true` (explicit leave-behind flag)
+
+Companions do **not** attempt their own disengage check. Partial success (`pursued`) does not exit companions until the player fully escapes.
 
 ## Interaction with defeat disposition (epic 032)
 

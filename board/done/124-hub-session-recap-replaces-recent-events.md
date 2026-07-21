@@ -65,65 +65,55 @@ Open hub-eligible campaign
 
 ## Sub-tickets
 
-### 124.1 SPEC + persistence / freshness contract
-
-#### Description
+### 124.1 — SPEC + persistence / freshness contract
 
 Document the hub session-recap contract (fields, freshness rule, empty-events behavior, hub boot sequence) under `src/shared/` (e.g. `campaignHub` or `sessionRecap`) so DB, IPC, and UI implement the same gate.
 
 #### Acceptance criteria
 
-- [ ] SPEC defines persisted shape: at minimum `{ text, generatedAt }` campaign-scoped
-- [ ] SPEC locks freshness: generate iff no row **or** `lastPlayedAt > generatedAt`; otherwise return stored text without LLM
-- [ ] SPEC defines empty-events / never-played copy and “no LLM” behavior
-- [ ] SPEC states hub Recent events UI is removed in favor of Session recap
+- [x] SPEC defines persisted shape: at minimum `{ text, generatedAt }` campaign-scoped
+- [x] SPEC locks freshness: generate iff no row **or** `lastPlayedAt > generatedAt`; otherwise return stored text without LLM
+- [x] SPEC defines empty-events / never-played copy and “no LLM” behavior
+- [x] SPEC states hub Recent events UI is removed in favor of Session recap
 
-### 124.2 DB migration + repository
-
-#### Description
+### 124.2 — DB migration + repository
 
 Forward-only migration to store the campaign session recap (column(s) on `campaigns` or a small 1:1 table). Repository get/upsert round-trip; existing saves open cleanly with null/absent recap.
 
 #### Acceptance criteria
 
-- [ ] Migration applies on existing saves; missing recap reads as absent
-- [ ] Repository tests cover upsert, read, and isolation across campaigns
-- [ ] Schema/types exported for IPC/shared use
+- [x] Migration applies on existing saves; missing recap reads as absent
+- [x] Repository tests cover upsert, read, and isolation across campaigns
+- [x] Schema/types exported for IPC/shared use
 
-### 124.3 IPC: load or generate with freshness gate
-
-#### Description
+### 124.3 — IPC: load or generate with freshness gate
 
 Expose a hub-facing API (extend `generateRecap` or add `getOrGenerateSessionRecap`) that: reads `lastPlayedAt` + stored recap; skips LLM when fresh; otherwise generates via existing `generateSessionRecap`, persists, returns text. Meter under `play.recap`.
 
 #### Acceptance criteria
 
-- [ ] Unit/integration tests: fresh skip (stub provider **not** called); stale/missing path calls provider once and persists
-- [ ] Empty events returns start-of-story copy without provider call (match or preserve current empty behavior)
-- [ ] Preload/renderer typings updated for the new/changed channel
+- [x] Unit/integration tests: fresh skip (stub provider **not** called); stale/missing path calls provider once and persists
+- [x] Empty events returns start-of-story copy without provider call (match or preserve current empty behavior)
+- [x] Preload/renderer typings updated for the new/changed channel
 
-### 124.4 Hub UI: replace Recent events + boot loading
-
-#### Description
+### 124.4 — Hub UI: replace Recent events + boot loading
 
 Replace `HubRecentEventsSection` with a Session recap section. On hub mount/boot, resolve recap (124.3) showing a loading affordance, then render text (or empty copy). Drop `recentEvents` from the player-facing hub snapshot if no longer needed (or stop sending it to the preview).
 
 #### Acceptance criteria
 
-- [ ] Hub preview shows “Session recap” (or equivalent title), not “Recent events”
-- [ ] Loading state visible while generation runs; content appears when ready
-- [ ] Cached path renders without a stuck loading spinner
-- [ ] Component tests cover loading → content and empty states
-- [ ] Fixtures/tests that asserted hub `recentEvents` UI updated
+- [x] Hub preview shows “Session recap” (or equivalent title), not “Recent events”
+- [x] Loading state visible while generation runs; content appears when ready
+- [x] Cached path renders without a stuck loading spinner
+- [x] Component tests cover loading → content and empty states
+- [x] Fixtures/tests that asserted hub `recentEvents` UI updated
 
-### 124.5 Verification + smoke notes
-
-#### Description
+### 124.5 — Verification + smoke notes
 
 Wire end-to-end confidence: freshness across restart, hub boot loading, and no double-generate on immediate reopen. Note any manual smoke steps in a short runbook blurb if useful.
 
 #### Acceptance criteria
 
-- [ ] Automated tests cover restart persistence (write → reopen DB → same text, no regenerate when lastPlayed unchanged)
-- [ ] Smoke notes (ticket or `docs/runbooks`) describe: play a turn → leave hub → reopen → new recap; reopen again without play → same recap / no extra generate
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] Automated tests cover restart persistence (write → reopen DB → same text, no regenerate when lastPlayed unchanged)
+- [x] Smoke notes (ticket or `docs/runbooks`) describe: play a turn → leave hub → reopen → new recap; reopen again without play → same recap / no extra generate
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

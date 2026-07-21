@@ -27,7 +27,7 @@ function seedPartyMember(db: ReturnType<typeof createTestDb>, campaignId: string
   })
 }
 
-describe('assemblePartyMemberContext', () => {
+describe('assemblePartyMemberContext relationship events', () => {
   it('includes relationship events from an earlier session alongside a later session', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
@@ -78,6 +78,32 @@ describe('assemblePartyMemberContext', () => {
   })
 })
 
+describe('assemblePartyMemberContext companion order', () => {
+  it('includes an active companion order from stats when present', async () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const character = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Brom',
+      characterClass: 'ranger',
+      kind: 'ai_party_member',
+      stats: {
+        companionOrder: { text: 'Hold the doorway', setAt: '2026-07-21T12:00:00.000Z' }
+      }
+    })
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
+    expect(context.playerOrder?.text).toBe('Hold the doorway')
+  })
+
+  it('omits playerOrder when no companion order is set', async () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const character = seedPartyMember(db, campaign.id)
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
+    expect(context.playerOrder).toBeNull()
+  })
+})
+
 describe('assemblePartyMemberContext: promotion memory carry-forward (011.4)', () => {
   it('carries forward pre-promotion npc_memories when sourceNpcId is set', async () => {
     const db = createTestDb()
@@ -110,7 +136,7 @@ describe('assemblePartyMemberContext: promotion memory carry-forward (011.4)', (
   })
 })
 
-describe('decidePartyMemberAction', () => {
+describe('decidePartyMemberAction generation', () => {
   it('generates an in-character action without any player direction', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
@@ -128,7 +154,9 @@ describe('decidePartyMemberAction', () => {
 
     expect(action).toEqual({ actionText: 'Brom nocks an arrow and covers the rear.' })
   })
+})
 
+describe('decidePartyMemberAction prompt shape', () => {
   it('moves the action schema into systemPrompt — user prompt keeps persona and scene (040.9)', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
@@ -147,7 +175,9 @@ describe('decidePartyMemberAction', () => {
     expect(system).toContain('no markdown fences')
     expect(call.context?.maxTokens).toBe(256)
   })
+})
 
+describe('decidePartyMemberAction fallbacks', () => {
   it('falls back to the raw response text when the schema is malformed', async () => {
     const db = createTestDb()
     const campaign = seedCampaign(db)
@@ -163,5 +193,23 @@ describe('decidePartyMemberAction', () => {
     const action = await decidePartyMemberAction(provider, character, context, 'Nothing happens.')
 
     expect(action).toEqual({ actionText: 'Brom just shrugs.' })
+  })
+
+  it('includes player order text in the generate prompt when present', async () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const character = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Brom',
+      characterClass: 'ranger',
+      kind: 'ai_party_member',
+      stats: {
+        companionOrder: { text: 'Flank left', setAt: '2026-07-21T12:00:00.000Z' }
+      }
+    })
+    const context = await assemblePartyMemberContext(db, campaign.id, character)
+    const provider = createScriptedProvider(['{"actionText":"Brom flanks left."}'])
+    await decidePartyMemberAction(provider, character, context, 'Combat continues.')
+    expect(provider.calls[0]?.prompt).toContain('Flank left')
   })
 })

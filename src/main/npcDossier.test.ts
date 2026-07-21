@@ -1,10 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createCharacter } from '../db/repositories/characters'
 import { createLogEntry } from '../db/repositories/logEntries'
-import { bumpNpcPlayerInteractionAt, createNpc, updateNpcOpinionSummary } from '../db/repositories/npcs'
+import {
+  bumpNpcPlayerInteractionAt,
+  createNpc,
+  updateNpcFaceTokenPath,
+  updateNpcOpinionSummary
+} from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
+import { persistNpcFaceTokenAsset } from './npcFaceTokenAsset'
 import { getNpcDossier } from './npcDossier'
 
 function seedDossierFixture(db: ReturnType<typeof createTestDb>) {
@@ -121,6 +130,48 @@ describe('getNpcDossier: access control', () => {
   })
 })
 
+describe('getNpcDossier: appearance traits', () => {
+  it('includes hair, age, and eye color on traits when set', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    const withAppearance = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: npc.regionId,
+      name: 'Elara',
+      role: 'herbalist',
+      disposition: 'curious',
+      hairColor: 'silver',
+      age: 'elderly',
+      eyeColor: 'blue'
+    })
+
+    const dossier = await getNpcDossier(db, {
+      campaignId: campaign.id,
+      characterId: hero.id,
+      npcId: withAppearance.id
+    })
+
+    expect(dossier?.traits.hairColor).toBe('silver')
+    expect(dossier?.traits.age).toBe('elderly')
+    expect(dossier?.traits.eyeColor).toBe('blue')
+  })
+
+  it('defaults appearance traits to null when unset', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+
+    const dossier = await getNpcDossier(db, {
+      campaignId: campaign.id,
+      characterId: hero.id,
+      npcId: npc.id
+    })
+
+    expect(dossier?.traits.hairColor).toBeNull()
+    expect(dossier?.traits.age).toBeNull()
+    expect(dossier?.traits.eyeColor).toBeNull()
+  })
+})
+
 describe('getNpcDossier: facts', () => {
   it('includes only log entries linked to the NPC for the active character', async () => {
     const db = createTestDb()
@@ -178,6 +229,61 @@ describe('getNpcDossier: opinion watermark', () => {
       stale: false
     })
     expect(second?.opinion).toEqual(first?.opinion)
+  })
+})
+
+describe('getNpcDossier: face token path', () => {
+  it('exposes resolved faceTokenPath when asset exists', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    const baseDir = mkdtempSync(join(tmpdir(), 'dossier-face-token-'))
+    try {
+      const path = persistNpcFaceTokenAsset(db, {
+        npcId: npc.id,
+        campaignId: campaign.id,
+        bytesBase64:
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        mimeType: 'image/png',
+        baseDir
+      })
+
+      const dossier = await getNpcDossier(db, {
+        campaignId: campaign.id,
+        characterId: hero.id,
+        npcId: npc.id
+      })
+
+      expect(dossier?.faceTokenPath).toBe(path)
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('returns null faceTokenPath when DB path points to a missing file', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    updateNpcFaceTokenPath(db, npc.id, '/tmp/missing-face-token.png')
+
+    const dossier = await getNpcDossier(db, {
+      campaignId: campaign.id,
+      characterId: hero.id,
+      npcId: npc.id
+    })
+
+    expect(dossier?.faceTokenPath).toBeNull()
+  })
+
+  it('defaults faceTokenPath to null when unset', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+
+    const dossier = await getNpcDossier(db, {
+      campaignId: campaign.id,
+      characterId: hero.id,
+      npcId: npc.id
+    })
+
+    expect(dossier?.faceTokenPath).toBeNull()
   })
 })
 

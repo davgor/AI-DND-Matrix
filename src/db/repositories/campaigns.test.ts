@@ -10,7 +10,8 @@ import {
   updateCampaignStateSummary,
   updateCampaignWorldHistory,
   updateCampaignWorldSummary,
-  updateCampaignPantheonSummary
+  updateCampaignPantheonSummary,
+  updateCampaignNpcFaceTokenGenerationEnabled
 } from './campaigns'
 
 describe('campaigns repository: create + getById round-trip', () => {
@@ -35,6 +36,7 @@ describe('campaigns repository: create + getById round-trip', () => {
     expect(fetched?.worldSummary).toBe('')
     expect(fetched?.worldHistory).toBe('')
     expect(fetched?.pantheonSummary).toBe('')
+    expect(fetched?.npcFaceTokenGenerationEnabled).toBe(false)
   })
 
   it('round-trips a non-null respawn_rules object', () => {
@@ -55,6 +57,31 @@ describe('campaigns repository: create + getById round-trip', () => {
   it('returns undefined for an unknown id', () => {
     const db = createTestDb()
     expect(getCampaignById(db, 'does-not-exist')).toBeUndefined()
+  })
+})
+
+describe('campaigns repository: npcFaceTokenGenerationEnabled', () => {
+  it('defaults to false when omitted at create', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'No Tokens',
+      premisePrompt: '...',
+      deathMode: 'standard'
+    })
+    expect(created.npcFaceTokenGenerationEnabled).toBe(false)
+    expect(getCampaignById(db, created.id)?.npcFaceTokenGenerationEnabled).toBe(false)
+  })
+
+  it('persists when set at create', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'With Tokens',
+      premisePrompt: '...',
+      deathMode: 'standard',
+      npcFaceTokenGenerationEnabled: true
+    })
+    expect(created.npcFaceTokenGenerationEnabled).toBe(true)
+    expect(getCampaignById(db, created.id)?.npcFaceTokenGenerationEnabled).toBe(true)
   })
 })
 
@@ -175,6 +202,24 @@ describe('campaigns repository: updates', () => {
     expect(afterSecond).toBe(5)
 
     expect(getCampaignById(db, created.id)?.inGameDate).toBe(5)
+  })
+})
+
+describe('campaigns repository: updateCampaignNpcFaceTokenGenerationEnabled', () => {
+  it('toggles the face-token generation flag', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Test',
+      premisePrompt: '...',
+      deathMode: 'standard'
+    })
+    expect(getCampaignById(db, created.id)?.npcFaceTokenGenerationEnabled).toBe(false)
+
+    updateCampaignNpcFaceTokenGenerationEnabled(db, created.id, true)
+    expect(getCampaignById(db, created.id)?.npcFaceTokenGenerationEnabled).toBe(true)
+
+    updateCampaignNpcFaceTokenGenerationEnabled(db, created.id, false)
+    expect(getCampaignById(db, created.id)?.npcFaceTokenGenerationEnabled).toBe(false)
   })
 })
 

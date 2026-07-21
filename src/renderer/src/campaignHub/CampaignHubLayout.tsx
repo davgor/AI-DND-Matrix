@@ -3,10 +3,12 @@ import type { PlayAwareHubSnapshot } from '../../../shared/campaignHub/types'
 import { CampaignHubCastRail } from './CampaignHubCastRail'
 import { CampaignHubHeader, CampaignHubModals } from './CampaignHubLayoutParts'
 import { CampaignHubWorldPreview } from './CampaignHubWorldPreview'
+import type { HubSessionRecapState } from './useHubSessionRecap'
 import './campaignHub.css'
 
 export interface CampaignHubLayoutProps {
   snapshot: PlayAwareHubSnapshot
+  sessionRecap: HubSessionRecapState
   lastPlayed: string
   sidebar?: ReactNode
   actionsDisabled: boolean
@@ -34,6 +36,7 @@ export function CampaignHubLayout(props: CampaignHubLayoutProps): JSX.Element {
           <CampaignHubHeader campaign={campaign ?? null} lastPlayed={props.lastPlayed} />
           <CampaignHubWorldPreview
             snapshot={props.snapshot}
+            sessionRecap={props.sessionRecap}
             onViewWorldHistory={props.onViewWorldHistory}
           />
         </main>

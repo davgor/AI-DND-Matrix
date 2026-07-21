@@ -52,6 +52,9 @@ export function ReadyAppHubView(props: ReadyAppHubViewProps): JSX.Element {
         onBackgroundSelectionBack={() => undefined}
         onEquipmentSelectionComplete={() => undefined}
         onEquipmentSelectionBack={() => undefined}
+        onCompanionsSkip={() => undefined}
+        onCompanionsComplete={() => undefined}
+        onCompanionsBack={() => undefined}
         onGuidedIdentityAdvance={props.onGuidedIdentityAdvance}
         onEnterPlay={props.onEnterPlay}
         enterPlayBlockerMessage={props.enterPlayBlockerMessage}

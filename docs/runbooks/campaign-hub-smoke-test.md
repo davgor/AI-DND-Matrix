@@ -37,3 +37,22 @@ Covers: hub eligibility types, hub gate routing, death persistence, hub snapshot
 | Death drafting | `Drafting your obituary` |
 | Obituary failure | `An obituary could not be written` |
 | Hub generate | Same region modal as campaign review |
+| Session recap loading | `Loading session recap…` |
+| Session recap title | `Session recap` |
+
+## Session recap (epic **124**)
+
+Hub **Recent events** is replaced by auto-generated **Session recap**.
+
+### Automated subset
+
+```bash
+npx vitest run src/shared/sessionRecap src/db/repositories/sessionRecap.test.ts src/main/recapIpc.test.ts src/renderer/src/campaignHub/HubSessionRecapSection.test.tsx src/renderer/src/campaignHub/CampaignHubWorldPreview.test.tsx
+```
+
+### Manual smoke
+
+1. Open a hub-eligible campaign that has play history. Hub boots → **Session recap** section shows loading, then “previously on…” prose (LLM under `play.recap`).
+2. Leave hub and reopen the same campaign **without** playing → same recap text immediately; no new generation feel / same wording.
+3. Resume a character, play at least one turn (touches `last_played_at`), exit to hub → recap regenerates (new prose).
+4. Never-played / empty event log campaign → start-of-story copy, no LLM burn.

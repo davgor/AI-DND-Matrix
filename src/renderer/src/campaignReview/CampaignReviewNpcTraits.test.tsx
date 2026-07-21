@@ -94,6 +94,31 @@ describe('CampaignReviewNpcTraits gender/class rows (052.8)', () => {
   })
 })
 
+describe('CampaignReviewNpcTraits appearance rows (121.2)', () => {
+  it('shows hair, age, and eyes when set', () => {
+    const tree = CampaignReviewNpcTraits({
+      npc: baseNpc({ hairColor: 'auburn', age: 'middle-aged', eyeColor: 'green' })
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Hair')
+    expect(text).toContain('auburn')
+    expect(text).toContain('Age')
+    expect(text).toContain('middle-aged')
+    expect(text).toContain('Eyes')
+    expect(text).toContain('green')
+  })
+
+  it('hides appearance rows when unset', () => {
+    const tree = CampaignReviewNpcTraits({
+      npc: baseNpc({ hairColor: null, age: null, eyeColor: null })
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).not.toContain('Hair')
+    expect(text).not.toContain('Age')
+    expect(text).not.toContain('Eyes')
+  })
+})
+
 describe('CampaignReviewNpcTraits race row (068)', () => {
   it('shows Race when the NPC has a raceKey', () => {
     const tree = CampaignReviewNpcTraits({ npc: baseNpc({ raceKey: 'human' }) })

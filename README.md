@@ -2,7 +2,7 @@
 
 A single-player, text-adventure-style TTRPG desktop app (Electron + React + TypeScript). Two cooperating AI agents run the game — a **DM agent** that sets scenes, drives the plot, and designs encounters, and **NPC/party-member agents** that roleplay individual characters and enemies. Campaigns are generated from a free-text prompt and then played; world state is durable and causally consistent — if you burn down a village, every later scene remembers it's gone.
 
-Each campaign supports **multiple player characters** in one shared world. After the first character finishes guided creation, re-opening the campaign lands on a **Campaign Hub** (world preview + character cast rail) instead of jumping straight into play. New characters follow a layered onboarding path: mechanical setup → race → background → starting equipment → AI-guided identity → opening scene → enter world.
+Each campaign supports **multiple player characters** in one shared world. After the first character finishes guided creation, re-opening the campaign lands on a **Campaign Hub** (world preview + character cast rail) instead of jumping straight into play. New characters follow a layered onboarding path: mechanical setup → race → background → starting equipment → **prompt-generated AI companion (optional skip)** → AI-guided identity → opening scene → enter world.
 
 ## Status
 

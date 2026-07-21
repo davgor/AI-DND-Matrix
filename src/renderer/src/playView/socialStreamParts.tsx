@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { PlayLogEntry } from '../../../main/narrationLog'
 import { FormattedText } from '../shared/FormattedText'
 import { incomingHighlightClassName } from './incomingHighlight'
@@ -22,6 +23,27 @@ export function socialAvatarInitial(name: string): string {
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?'
 }
 
+export function socialFaceTokenSrc(faceTokenPath: string | null | undefined): string | undefined {
+  return faceTokenPath ? `file://${faceTokenPath}` : undefined
+}
+
+type SocialAvatarContent =
+  | { kind: 'initial'; text: string }
+  | { kind: 'image'; src: string }
+
+export function buildSocialAvatarContent(input: {
+  name: string
+  faceTokenPath?: string | null
+  imageFailed?: boolean
+}): SocialAvatarContent {
+  const initial = socialAvatarInitial(input.name)
+  const src = socialFaceTokenSrc(input.faceTokenPath)
+  if (src && input.imageFailed !== true) {
+    return { kind: 'image', src }
+  }
+  return { kind: 'initial', text: initial }
+}
+
 export function socialMessageSide(entry: PlayLogEntry): SocialMessageSide {
   return entry.speaker === 'player' ? 'player' : 'other'
 }
@@ -30,12 +52,35 @@ function socialOpensDossier(entry: PlayLogEntry): entry is PlayLogEntry & { npcI
   return entry.speaker === 'npc' && typeof entry.npcId === 'string'
 }
 
+function renderSocialAvatarContent(content: SocialAvatarContent, onImageError: () => void): JSX.Element | string {
+  if (content.kind === 'image') {
+    return (
+      <img
+        className="social-avatar-image"
+        src={content.src}
+        alt=""
+        onError={onImageError}
+      />
+    )
+  }
+  return content.text
+}
+
 function SocialAvatar(props: {
   name: string
+  faceTokenPath?: string | null
   npcId?: string
   onOpenNpcDossier?: (npcId: string) => void
 }): JSX.Element {
-  const initial = socialAvatarInitial(props.name)
+  const [imageFailed, setImageFailed] = useState(false)
+  const avatarContent = renderSocialAvatarContent(
+    buildSocialAvatarContent({
+      name: props.name,
+      faceTokenPath: props.faceTokenPath,
+      imageFailed
+    }),
+    () => setImageFailed(true)
+  )
   const { npcId, onOpenNpcDossier } = props
   if (npcId && onOpenNpcDossier) {
     return (
@@ -45,13 +90,13 @@ function SocialAvatar(props: {
         aria-label={`Open dossier for ${props.name}`}
         onClick={() => onOpenNpcDossier(npcId)}
       >
-        {initial}
+        {avatarContent}
       </button>
     )
   }
   return (
     <span className="social-avatar" aria-hidden="true" title={props.name}>
-      {initial}
+      {avatarContent}
     </span>
   )
 }
@@ -94,7 +139,12 @@ export function SocialMessage(props: {
   return (
     <div className={`social-message social-message--${side}`} data-entry-id={entry.id}>
       {showAvatar ? (
-        <SocialAvatar name={name} npcId={dossierNpcId} onOpenNpcDossier={props.onOpenNpcDossier} />
+        <SocialAvatar
+          name={name}
+          faceTokenPath={entry.faceTokenPath}
+          npcId={dossierNpcId}
+          onOpenNpcDossier={props.onOpenNpcDossier}
+        />
       ) : null}
       <div className="social-message-body">
         <SocialName name={name} npcId={dossierNpcId} onOpenNpcDossier={props.onOpenNpcDossier} />

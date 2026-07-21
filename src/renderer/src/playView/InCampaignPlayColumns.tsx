@@ -9,6 +9,8 @@ import { useOverlayDismiss } from './useOverlayDismiss'
 import { PlayViewGrid } from './PlayViewGrid'
 import type { usePlayViewController } from './usePlayViewController'
 import type { InCampaignLayoutMode } from '../../../shared/inCampaignLayout/types'
+import { PlayCompanionRoster } from './PlayCompanionRoster'
+import { usePlayCompanionRoster } from './usePlayCompanionRoster'
 
 interface InCampaignPlayColumnsProps {
   layoutMode: InCampaignLayoutMode
@@ -55,6 +57,10 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
     props.characterId,
     controller.characterRefreshToken
   )
+  const companionRoster = usePlayCompanionRoster(
+    props.characterId,
+    controller.characterRefreshToken
+  )
   const onCollapseCampaigns = useCallback(() => {
     if (!campaignsController.collapsed) campaignsController.toggleCollapsed()
   }, [campaignsController])
@@ -76,6 +82,15 @@ export function InCampaignPlayColumns(props: InCampaignPlayColumnsProps): JSX.El
         campaignsCollapsed={campaignsController.collapsed}
         controller={controller}
         onExitToCampaignHub={props.onExitToCampaignHub}
+      />
+      <PlayCompanionRoster
+        entries={companionRoster.entries}
+        selectedId={companionRoster.selectedId}
+        orderDraft={companionRoster.orderDraft}
+        savingOrder={companionRoster.savingOrder}
+        onSelect={companionRoster.onSelect}
+        onOrderDraftChange={companionRoster.onOrderDraftChange}
+        onSaveOrder={companionRoster.onSaveOrder}
       />
       <PlayViewGrid
         {...props}

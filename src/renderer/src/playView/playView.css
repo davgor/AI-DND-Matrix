@@ -95,6 +95,107 @@
   white-space: nowrap;
 }
 
+.play-companion-roster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-inset);
+  flex-shrink: 0;
+}
+
+.play-companion-roster-empty {
+  min-height: 32px;
+}
+
+.play-companion-roster-empty-label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.play-companion-roster-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.play-companion-roster-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.play-companion-roster-item-selected {
+  border-color: var(--border-medium);
+  background: var(--surface-raised, var(--surface-panel));
+}
+
+.play-companion-roster-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.play-companion-roster-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-panel);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.play-companion-roster-name {
+  font-weight: 600;
+}
+
+.play-companion-roster-role {
+  color: var(--text-dim);
+}
+
+.play-companion-order {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.play-companion-order-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.play-companion-order-input {
+  min-width: 160px;
+  max-width: 280px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-panel);
+  color: inherit;
+}
+
+.play-companion-order-save {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .dm-exposition-header {
   flex-shrink: 0;
   margin-bottom: 8px;
@@ -366,12 +467,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   background: var(--surface-inset);
   border: 1px solid var(--border-subtle);
   color: var(--text-accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
+}
+
+.social-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .social-message-body {

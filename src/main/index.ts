@@ -26,6 +26,7 @@ import { registerCombatHandlers } from './combatIpc'
 import { registerQuestHandlers } from './questIpc'
 import { registerSpellbookHandlers } from './spellbookIpc'
 import { registerStartingLoadoutHandlers } from './startingLoadoutIpc'
+import { registerCompanionsHandlers } from './companionsIpc'
 import { registerRaceHandlers } from './raceIpc'
 import { registerBackgroundHandlers } from './backgroundIpc'
 import { registerNpcDossierHandlers } from './npcDossierIpc'
@@ -100,6 +101,7 @@ app.whenReady().then(() => {
   registerQuestHandlers()
   registerSpellbookHandlers()
   registerStartingLoadoutHandlers()
+  registerCompanionsHandlers()
   registerRaceHandlers()
   registerBackgroundHandlers()
   registerNpcDossierHandlers()

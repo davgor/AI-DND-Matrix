@@ -32,6 +32,64 @@ describe('NpcDossierTraitsSection speaking vs non-speaking', () => {
   })
 })
 
+describe('NpcDossierTraitsSection appearance traits when set', () => {
+  it('shows hair, age, and eyes when set', () => {
+    const dossier = baseDossier({
+      traits: {
+        temperament: 'friendly',
+        raceKey: 'human',
+        alignment: 'neutral_good',
+        genderKey: 'woman',
+        classKey: 'fighter',
+        backgroundKey: 'soldier',
+        role: 'innkeeper',
+        hairColor: 'auburn',
+        age: 'middle-aged',
+        eyeColor: 'green'
+      }
+    })
+    const tree = NpcDossierTraitsSection({
+      traits: dossier.traits,
+      canSpeak: dossier.canSpeak
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Hair')
+    expect(text).toContain('auburn')
+    expect(text).toContain('Age')
+    expect(text).toContain('middle-aged')
+    expect(text).toContain('Eyes')
+    expect(text).toContain('green')
+  })
+})
+
+describe('NpcDossierTraitsSection appearance traits when null', () => {
+  it('shows empty placeholder for null appearance traits', () => {
+    const dossier = baseDossier({
+      traits: {
+        temperament: 'friendly',
+        raceKey: 'human',
+        alignment: 'neutral_good',
+        genderKey: 'woman',
+        classKey: 'fighter',
+        backgroundKey: 'soldier',
+        role: 'innkeeper',
+        hairColor: null,
+        age: null,
+        eyeColor: null
+      }
+    })
+    const tree = NpcDossierTraitsSection({
+      traits: dossier.traits,
+      canSpeak: dossier.canSpeak
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Hair')
+    expect(text).toContain('Age')
+    expect(text).toContain('Eyes')
+    expect(text.match(/—/g)?.length).toBeGreaterThanOrEqual(3)
+  })
+})
+
 describe('NpcDossierTraitsSection null identity keys', () => {
   it('shows empty placeholder for null optional identity keys', () => {
     const dossier = baseDossier({
@@ -42,7 +100,10 @@ describe('NpcDossierTraitsSection null identity keys', () => {
         genderKey: null,
         classKey: null,
         backgroundKey: null,
-        role: 'wolf'
+        role: 'wolf',
+        hairColor: null,
+        age: null,
+        eyeColor: null
       }
     })
     const tree = NpcDossierTraitsSection({

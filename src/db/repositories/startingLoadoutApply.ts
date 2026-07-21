@@ -47,7 +47,7 @@ export function commitStartingLoadout(
   updateCharacter(db, characterId, {
     stats: { ...character.stats, ac, knownSpellKeys: plan.spellKeys }
   })
-  setGuidedCreationPhase(db, characterId, 'identity')
+  setGuidedCreationPhase(db, characterId, 'companions')
 }
 
 export function applyValidatedLoadoutInTransaction(

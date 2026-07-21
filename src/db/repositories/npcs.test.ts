@@ -6,6 +6,7 @@ import {
   createNpc,
   getNpcById,
   listNpcsByRegion,
+  listNpcsWithGeneratedOpinion,
   markNpcPromoted,
   updateNpcDisposition,
   updateNpcOpinionSummary,
@@ -20,6 +21,73 @@ function seedRegion(db: ReturnType<typeof createTestDb>) {
     deathMode: 'legendary'
   })
   return createRegion(db, { campaignId: campaign.id, name: 'Oakhollow', description: '...' })
+}
+
+function seedOpinionCampaignNpcs(db: ReturnType<typeof createTestDb>) {
+  const region = seedRegion(db)
+  return {
+    region,
+    withoutOpinion: createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Zed',
+      role: 'villager',
+      disposition: 'friendly'
+    }),
+    mira: createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly'
+    }),
+    ada: createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Ada',
+      role: 'guard',
+      disposition: 'neutral'
+    })
+  }
+}
+
+function seedOtherCampaignOpinionNpc(db: ReturnType<typeof createTestDb>) {
+  const otherCampaign = createCampaign(db, {
+    name: 'Other',
+    premisePrompt: '...',
+    deathMode: 'legendary'
+  })
+  const otherRegion = createRegion(db, {
+    campaignId: otherCampaign.id,
+    name: 'Elsewhere',
+    description: '...'
+  })
+  const otherCampaignNpc = createNpc(db, {
+    campaignId: otherCampaign.id,
+    regionId: otherRegion.id,
+    name: 'Other Mira',
+    role: 'merchant',
+    disposition: 'friendly'
+  })
+  updateNpcOpinionSummary(db, otherCampaignNpc.id, {
+    summary: 'Should not appear.',
+    generatedAt: '2026-07-20T12:00:00.000Z'
+  })
+  return otherCampaignNpc
+}
+
+function seedOpinionListFixtures(db: ReturnType<typeof createTestDb>) {
+  const { region, withoutOpinion, mira, ada } = seedOpinionCampaignNpcs(db)
+  updateNpcOpinionSummary(db, mira.id, {
+    summary: 'Wary but polite.',
+    generatedAt: '2026-07-20T12:00:00.000Z'
+  })
+  updateNpcOpinionSummary(db, ada.id, {
+    summary: 'Trusting.',
+    generatedAt: '2026-07-20T12:00:00.000Z'
+  })
+  const otherCampaignNpc = seedOtherCampaignOpinionNpc(db)
+  return { region, withoutOpinion, mira, ada, otherCampaignNpc }
 }
 
 describe('npcs repository: create + getById round-trip', () => {
@@ -124,7 +192,105 @@ describe('npcs repository: updateStatus + markPromoted', () => {
   })
 })
 
-describe('npcs repository: dossier opinion fields', () => {
+describe('npcs repository: appearance traits', () => {
+  it('defaults appearance columns to null on create', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+    const created = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly'
+    })
+
+    expect(created.hairColor).toBeNull()
+    expect(created.age).toBeNull()
+    expect(created.eyeColor).toBeNull()
+  })
+
+  it('round-trips nullable appearance fields', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+    const created = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly',
+      hairColor: 'auburn',
+      age: 'middle-aged',
+      eyeColor: 'green'
+    })
+
+    const loaded = getNpcById(db, created.id)
+    expect(loaded?.hairColor).toBe('auburn')
+    expect(loaded?.age).toBe('middle-aged')
+    expect(loaded?.eyeColor).toBe('green')
+  })
+})
+
+describe('npcs repository: face token path', () => {
+  it('defaults faceTokenPath to null on create', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+    const created = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly'
+    })
+
+    expect(created.faceTokenPath).toBeNull()
+  })
+})
+
+describe('npcs repository: listNpcsWithGeneratedOpinion filtering', () => {
+  it('includes NPCs with opinionSummary and excludes null, scoped to campaign', () => {
+    const db = createTestDb()
+    const { region, withoutOpinion, mira, ada, otherCampaignNpc } = seedOpinionListFixtures(db)
+    const listed = listNpcsWithGeneratedOpinion(db, region.campaignId)
+    expect(listed.map((n) => n.id)).toEqual(expect.arrayContaining([ada.id, mira.id]))
+    expect(listed.some((n) => n.id === withoutOpinion.id)).toBe(false)
+    expect(listed.some((n) => n.id === otherCampaignNpc.id)).toBe(false)
+  })
+})
+
+describe('npcs repository: listNpcsWithGeneratedOpinion ordering', () => {
+  it('orders results by name ascending', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+    const mira = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly'
+    })
+    const ada = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Ada',
+      role: 'guard',
+      disposition: 'neutral'
+    })
+    updateNpcOpinionSummary(db, mira.id, {
+      summary: 'Wary but polite.',
+      generatedAt: '2026-07-20T12:00:00.000Z'
+    })
+    updateNpcOpinionSummary(db, ada.id, {
+      summary: 'Trusting.',
+      generatedAt: '2026-07-20T12:00:00.000Z'
+    })
+
+    const listed = listNpcsWithGeneratedOpinion(db, region.campaignId)
+    expect(listed.map((n) => n.id)).toEqual([ada.id, mira.id])
+    expect(listed.map((n) => n.name)).toEqual(['Ada', 'Mira'])
+  })
+})
+
+describe('npcs repository: dossier opinion defaults', () => {
   it('defaults opinion columns to null on create', () => {
     const db = createTestDb()
     const region = seedRegion(db)
@@ -140,7 +306,9 @@ describe('npcs repository: dossier opinion fields', () => {
     expect(created.opinionSummaryGeneratedAt).toBeNull()
     expect(created.lastPlayerInteractionAt).toBeNull()
   })
+})
 
+describe('npcs repository: dossier opinion persistence', () => {
   it('persists opinion summary and interaction watermark', () => {
     const db = createTestDb()
     const region = seedRegion(db)

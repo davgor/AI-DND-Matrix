@@ -77,6 +77,9 @@ function baseTraits(overrides: Partial<NpcDossierTraits> = {}): NpcDossierTraits
     classKey: 'fighter',
     backgroundKey: 'soldier',
     role: 'innkeeper',
+    hairColor: null,
+    age: null,
+    eyeColor: null,
     ...overrides
   }
 }
@@ -96,6 +99,7 @@ export function baseDossier(overrides: Partial<NpcDossierDto> = {}): NpcDossierD
     name: 'Mira',
     role: 'innkeeper',
     canSpeak: true,
+    faceTokenPath: null,
     traits: baseTraits(),
     facts: [],
     opinion: baseOpinion(),

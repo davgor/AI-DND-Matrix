@@ -15,6 +15,9 @@ export interface OnboardingStageContentProps {
   onBackgroundSelectionBack: () => void
   onEquipmentSelectionComplete: () => void
   onEquipmentSelectionBack: () => void
+  onCompanionsSkip: () => void
+  onCompanionsComplete: () => void
+  onCompanionsBack: () => void
   onGuidedIdentityAdvance: () => void
   onEnterPlay: () => void
   enterPlayBlockerMessage?: string | null

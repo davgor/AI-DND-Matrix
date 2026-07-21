@@ -12,7 +12,8 @@ export function SettingsIntroModalBody(props: {
       <h2 id="settings-intro-title">Set up your AI provider</h2>
       <p className="settings-intro-lead">
         Before you start a campaign, choose how this app talks to the models that power your DM,
-        NPCs, and party members.
+        NPCs, and party members (prompt-generated companions after equipment, or mid-play
+        promotion).
       </p>
       <p className="settings-intro-settings-callout">
         Open <strong>Settings</strong> with the <strong>gear icon</strong> in the top-right corner

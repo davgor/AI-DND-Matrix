@@ -3,41 +3,18 @@ import { ipcMain } from 'electron'
 import type {
   PlayAwareHubSnapshot,
   HubCastMember,
-  HubRecentEvent,
   HubCharacterQuestSummary,
   HubRegionQuestAvailability
 } from '../shared/campaignHub/types'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listCharactersByCampaign } from '../db/repositories/characters'
 import { listDeitiesByCampaign } from '../db/repositories/deities'
-import { listEventsByCampaign } from '../db/repositories/events'
 import { listNpcsByRegion } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
 import { getMainQuestByCampaign, listCharacterQuests, listQuestsByCampaign } from '../db/repositories/quests'
 import { buildRegionExtras, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
-
-const RECENT_EVENTS_LIMIT = 20
-
-function summarizeEventPayload(type: string, payload: Record<string, unknown>): string {
-  if (typeof payload.narrationText === 'string') {
-    return payload.narrationText
-  }
-  if (typeof payload.playerInput === 'string') {
-    return payload.playerInput
-  }
-  return type.replace(/_/g, ' ')
-}
-
-function buildRecentEvents(db: Database.Database, campaignId: string): HubRecentEvent[] {
-  return listEventsByCampaign(db, campaignId, { limit: RECENT_EVENTS_LIMIT }).map((event) => ({
-    id: event.id,
-    type: event.type,
-    createdAt: event.timestamp,
-    summary: summarizeEventPayload(event.type, event.payload)
-  }))
-}
 
 function regionNameForCharacter(
   db: Database.Database,
@@ -116,7 +93,6 @@ export function buildHubSnapshot(db: Database.Database, campaignId: string): Pla
   return {
     ...detail,
     currentStateSummary: campaign?.currentStateSummary ?? '',
-    recentEvents: buildRecentEvents(db, campaignId),
     cast: buildCast(db, campaignId),
     questSummariesByCharacterId: buildQuestSummaries(db, campaignId),
     regionQuestAvailability: buildRegionQuestAvailability(db, campaignId, regions)

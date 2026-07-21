@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
+import type { PersistedSessionRecap } from '../../shared/sessionRecap'
 
 export type DeathMode = 'legendary' | 'standard' | 'respawn'
 
@@ -22,6 +23,7 @@ export interface Campaign {
   inGameDate: number
   deathMode: DeathMode
   respawnRules: RespawnRules | null
+  npcFaceTokenGenerationEnabled: boolean
 }
 
 export interface CreateCampaignInput {
@@ -34,6 +36,7 @@ export interface CreateCampaignInput {
   worldSummary?: string
   worldHistory?: string
   pantheonSummary?: string
+  npcFaceTokenGenerationEnabled?: boolean
 }
 
 interface CampaignRow {
@@ -49,6 +52,7 @@ interface CampaignRow {
   in_game_date: number
   death_mode: DeathMode
   respawn_rules: string | null
+  npc_face_token_generation_enabled?: number | null
 }
 
 function rowToCampaign(row: CampaignRow): Campaign {
@@ -64,7 +68,8 @@ function rowToCampaign(row: CampaignRow): Campaign {
     pantheonSummary: row.pantheon_summary ?? '',
     inGameDate: row.in_game_date,
     deathMode: row.death_mode,
-    respawnRules: row.respawn_rules ? (JSON.parse(row.respawn_rules) as RespawnRules) : null
+    respawnRules: row.respawn_rules ? (JSON.parse(row.respawn_rules) as RespawnRules) : null,
+    npcFaceTokenGenerationEnabled: row.npc_face_token_generation_enabled === 1
   }
 }
 
@@ -78,6 +83,11 @@ function campaignHasPantheonSummary(db: Database.Database): boolean {
   return columns.some((column) => column.name === 'pantheon_summary')
 }
 
+function campaignHasNpcFaceTokenColumn(db: Database.Database): boolean {
+  const columns = db.prepare('PRAGMA table_info(campaigns)').all() as Array<{ name: string }>
+  return columns.some((column) => column.name === 'npc_face_token_generation_enabled')
+}
+
 interface InsertCampaignRowInput {
   id: string
   name: string
@@ -89,13 +99,45 @@ interface InsertCampaignRowInput {
   worldSummary: string
   worldHistory: string
   pantheonSummary: string
+  npcFaceTokenGenerationEnabled: boolean
 }
 
 function serializeRespawnRules(respawnRules: RespawnRules | null): string | null {
   return respawnRules ? JSON.stringify(respawnRules) : null
 }
 
+function faceTokenFlagSql(enabled: boolean): number {
+  return enabled ? 1 : 0
+}
+
 function insertCampaignWithWorldAndPantheon(db: Database.Database, row: InsertCampaignRowInput): void {
+  if (campaignHasNpcFaceTokenColumn(db)) {
+    db.prepare(
+      `INSERT INTO campaigns (
+         id, name, premise_prompt, created_at, death_mode, respawn_rules,
+         world_name, world_summary, world_history, pantheon_summary,
+         npc_face_token_generation_enabled
+       )
+       VALUES (
+         @id, @name, @premisePrompt, @createdAt, @deathMode, @respawnRules,
+         @worldName, @worldSummary, @worldHistory, @pantheonSummary,
+         @npcFaceTokenGenerationEnabled
+       )`
+    ).run({
+      id: row.id,
+      name: row.name,
+      premisePrompt: row.premisePrompt,
+      createdAt: row.createdAt,
+      deathMode: row.deathMode,
+      respawnRules: serializeRespawnRules(row.respawnRules),
+      worldName: row.worldName,
+      worldSummary: row.worldSummary,
+      worldHistory: row.worldHistory,
+      pantheonSummary: row.pantheonSummary,
+      npcFaceTokenGenerationEnabled: faceTokenFlagSql(row.npcFaceTokenGenerationEnabled)
+    })
+    return
+  }
   db.prepare(
     `INSERT INTO campaigns (
        id, name, premise_prompt, created_at, death_mode, respawn_rules,
@@ -176,6 +218,7 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
   const worldSummary = input.worldSummary ?? ''
   const worldHistory = input.worldHistory ?? ''
   const pantheonSummary = input.pantheonSummary ?? ''
+  const npcFaceTokenGenerationEnabled = input.npcFaceTokenGenerationEnabled === true
 
   insertCampaignRow(db, {
     id,
@@ -187,7 +230,8 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
     worldName,
     worldSummary,
     worldHistory,
-    pantheonSummary
+    pantheonSummary,
+    npcFaceTokenGenerationEnabled
   })
 
   return {
@@ -202,7 +246,8 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
     pantheonSummary,
     inGameDate: 0,
     deathMode: input.deathMode,
-    respawnRules
+    respawnRules,
+    npcFaceTokenGenerationEnabled
   }
 }
 
@@ -287,6 +332,16 @@ export function updateCampaignDeathMode(
   )
 }
 
+export function updateCampaignNpcFaceTokenGenerationEnabled(
+  db: Database.Database,
+  id: string,
+  enabled: boolean
+): void {
+  db.prepare(
+    'UPDATE campaigns SET npc_face_token_generation_enabled = ? WHERE id = ?'
+  ).run(enabled ? 1 : 0, id)
+}
+
 export function advanceInGameDate(db: Database.Database, id: string, days: number): number {
   const row = db
     .prepare(
@@ -294,4 +349,40 @@ export function advanceInGameDate(db: Database.Database, id: string, days: numbe
     )
     .get(days, id) as { in_game_date: number }
   return row.in_game_date
+}
+
+interface SessionRecapRow {
+  session_recap_text: string | null
+  session_recap_generated_at: string | null
+}
+
+/** Campaign-scoped session recap; null when never generated (migration-safe). */
+export function getSessionRecap(
+  db: Database.Database,
+  campaignId: string
+): PersistedSessionRecap | null {
+  const row = db
+    .prepare(
+      'SELECT session_recap_text, session_recap_generated_at FROM campaigns WHERE id = ?'
+    )
+    .get(campaignId) as SessionRecapRow | undefined
+  if (!row?.session_recap_text || !row.session_recap_generated_at) {
+    return null
+  }
+  return {
+    text: row.session_recap_text,
+    generatedAt: row.session_recap_generated_at
+  }
+}
+
+export function upsertSessionRecap(
+  db: Database.Database,
+  campaignId: string,
+  recap: PersistedSessionRecap
+): void {
+  db.prepare(
+    `UPDATE campaigns
+     SET session_recap_text = ?, session_recap_generated_at = ?
+     WHERE id = ?`
+  ).run(recap.text, recap.generatedAt, campaignId)
 }

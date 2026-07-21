@@ -27,7 +27,7 @@ Surfaces
   └── NPC dossier (105) ── portrait slot right of Traits/Facts; empty when no token (no broken image)
 ```
 
-Face tokens are **stable per NPC** once stored; regeneration policy is out of v1 unless traits materially change (see 121.4).
+Face tokens are **stable per NPC** once stored; regeneration policy is out of v1 unless traits materially change (see 122.4).
 
 ## Product decisions (locked)
 
@@ -53,7 +53,7 @@ Face tokens are **stable per NPC** once stored; regeneration policy is out of v1
 - Dossier shows portrait in slot right of Traits/Facts; empty state when no token
 - `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass; **act** CI workflows (`pr-checks`, `deadcode`) succeed
 
-121.1 toggle + provider defaults → 121.2 appearance traits → 121.3 generation contract → 121.4 persist + lifecycle → 121.5 scheduling → 121.6 Social → 121.7 dossier portrait → 121.8 tests + delivery gate
+122.1 toggle + provider defaults → 122.2 appearance traits → 122.3 generation contract → 122.4 persist + lifecycle → 122.5 scheduling → 122.6 Social → 122.7 dossier portrait → 122.8 tests + delivery gate
 
 ## Relationship to other epics
 
@@ -63,14 +63,16 @@ Face tokens are **stable per NPC** once stored; regeneration policy is out of v1
 | **105** | Dossier modal; portrait slot beside Traits/Facts |
 | **085** | Social `social-avatar` surface |
 | **052** / **051** / **068** | Identity trait labeling and Campaign Review patterns |
-| **m001.6** (remaining) | Player-party visuals + shared pipeline; NPC face tokens owned by **122** (legacy body ids **121.x**) |
+| **m001.6** (remaining) | Player-character visuals + shared pipeline; NPC face tokens owned by **122** (sub-tickets **122.x**) |
+| **139** | AI companion face tokens — reuses this pipeline after companions land in **129**; not world-NPC scope |
 | **123** (enemy tokens) | Combat creature tokens—not in scope here |
 
 ## Out of scope (this epic)
 
 - Enemy / combat creature / map tokens (see epic **123**)
 - Full-body character renders
-- Player-party portrait generation (see **m001.6** remaining scope)
+- Player-character portrait generation (see **m001.6** remaining scope)
+- AI party companion portraits (see epic **139**; companions onboarding is **129**)
 - Scene, region, DM exposition, or player-view background images (**m001.2**–**m001.5**)
 - Blocking UI spinners on dossier open or Social row render while images generate
 - Manual "regenerate portrait" button (candidate follow-up)
@@ -78,7 +80,9 @@ Face tokens are **stable per NPC** once stored; regeneration policy is out of v1
 
 ## Sub-tickets
 
-### 121.1 Campaign NPC-image toggle + local-provider defaults
+### 122.1 Campaign NPC-image toggle + local-provider defaults
+
+Parent epic: **122** (NPC face-token image generation).
 
 #### Description
 
@@ -86,12 +90,14 @@ Per-campaign setting: generate NPC face tokens (default **OFF**). Document and e
 
 #### Acceptance criteria
 
-- [ ] Campaign stores NPC face-token generation enabled flag; default false on create
-- [ ] Settings UI (or existing campaign settings surface) exposes toggle with clear copy
-- [ ] Local-provider default OFF is reflected in config/docs; no hard dependency on llamacpp for tests
-- [ ] Unit tests: toggle OFF prevents enqueue hooks from firing (stubbed)
+- [x] Campaign stores NPC face-token generation enabled flag; default false on create
+- [x] Settings UI (or existing campaign settings surface) exposes toggle with clear copy
+- [x] Local-provider default OFF is reflected in config/docs; no hard dependency on llamacpp for tests
+- [x] Unit tests: toggle OFF prevents enqueue hooks from firing (stubbed)
 
-### 121.2 NPC appearance traits — hair, age, eyes (schema, generation, Traits display)
+### 122.2 NPC appearance traits — hair, age, eyes
+
+Parent epic: **122** (NPC face-token image generation).
 
 #### Description
 
@@ -99,12 +105,14 @@ Add `hairColor`, `age`, `eyeColor` for speaking NPCs: DB/schema, NPC create/upda
 
 #### Acceptance criteria
 
-- [ ] Schema + migration for appearance fields on speaking NPCs (nullable where appropriate)
-- [ ] Generation/promote paths can populate fields when available
-- [ ] Dossier Traits section shows hair, age, eyes with empty states when null
-- [ ] Unit tests for serialization and dossier DTO inclusion
+- [x] Schema + migration for appearance fields on speaking NPCs (nullable where appropriate)
+- [x] Generation/promote paths can populate fields when available
+- [x] Dossier Traits section shows hair, age, eyes with empty states when null
+- [x] Unit tests for serialization and dossier DTO inclusion
 
-### 121.3 Face-token generation contract + prompt (typed API, mock provider tests)
+### 122.3 Face-token generation contract + prompt
+
+Parent epic: **122** (NPC face-token image generation).
 
 #### Description
 
@@ -112,25 +120,27 @@ Typed request/response contract for NPC face-token generation: identity + appear
 
 #### Acceptance criteria
 
-- [ ] Shared typed API for face-token generation (entity id, traits, style context)
-- [ ] Prompt enforces head/shoulders face token, not full-body
-- [ ] Mock provider tests cover success and failure payloads
-- [ ] No direct UI coupling in generation module
+- [x] Shared typed API for face-token generation (entity id, traits, style context)
+- [x] Prompt enforces head/shoulders face token, not full-body
+- [x] Mock provider tests cover success and failure payloads
+- [x] No direct UI coupling in generation module
 
-### 121.4 Persist token asset on NPC + lifecycle
+### 122.4 Persist token asset on NPC + lifecycle
+
+Parent epic: **122**.
 
 #### Description
 
-Store generated face-token asset reference (and metadata) on the NPC row or linked asset table; load on campaign open; define v1 lifecycle (write once on success, stable read).
+Store generated face-token asset reference on the NPC row; load on campaign open; v1 lifecycle (write once on success, stable read).
 
 #### Acceptance criteria
 
-- [ ] Successful generation persists asset binding on NPC; survives app restart
-- [ ] IPC or dossier/social DTOs expose token URL/path when present
-- [ ] Missing or corrupt asset does not crash consumers; treated as no token
-- [ ] Unit tests for persist, read, and missing-asset handling
+- [x] Successful generation persists asset binding on NPC; survives app restart
+- [x] IPC or dossier/social DTOs expose token URL/path when present
+- [x] Missing or corrupt asset does not crash consumers; treated as no token
+- [x] Unit tests for persist, read, and missing-asset handling
 
-### 121.5 Generation scheduling when toggle ON (async, non-blocking; OFF skips)
+### 122.5 Generation scheduling when toggle ON (async, non-blocking; OFF skips)
 
 #### Description
 
@@ -138,25 +148,25 @@ When campaign toggle is ON, schedule face-token generation after relevant NPC cr
 
 #### Acceptance criteria
 
-- [ ] Toggle ON enqueues generation for eligible speaking NPCs without blocking create/play IPC
-- [ ] Toggle OFF never enqueues; existing NPCs without tokens keep fallbacks
-- [ ] Failures logged; gameplay state transitions unaffected
-- [ ] Tests with fake queue/provider assert enqueue/skip behavior
+- [x] Toggle ON enqueues generation for eligible speaking NPCs without blocking create/play IPC
+- [x] Toggle OFF never enqueues; existing NPCs without tokens keep fallbacks
+- [x] Failures logged; gameplay state transitions unaffected
+- [x] Tests with fake queue/provider assert enqueue/skip behavior
 
-### 121.6 Social avatar uses face token
-
-#### Description
+### 122.6 Social avatar uses face token
 
 Update Social stream NPC avatar (`social-avatar`): render stored face token when available; otherwise letter initial in circle (**085** behavior preserved).
 
 #### Acceptance criteria
 
-- [ ] Speaking NPC rows show face token image when asset exists
-- [ ] Fallback to letter initial when no token or load error
-- [ ] Component tests for token vs initial paths
-- [ ] No layout shift that blocks reading the stream during async generation
+- [x] Speaking NPC rows show face token image when asset exists
+- [x] Fallback to letter initial when no token or load error
+- [x] Component tests for token vs initial paths
+- [x] No layout shift that blocks reading the stream during async generation
 
-### 121.7 Dossier portrait slot (right of Traits/Facts)
+### 122.7 Dossier portrait slot (right of Traits/Facts)
+
+Parent epic: **122** NPC face-token image generation.
 
 #### Description
 
@@ -164,12 +174,14 @@ Fill **105** portrait reserved area: show face token when stored; empty slot whe
 
 #### Acceptance criteria
 
-- [ ] Portrait renders in dossier layout right of Traits/Facts per **105** shell
-- [ ] Empty state when no token (neutral placeholder or blank—no `<img>` error UI)
-- [ ] Token display uses same asset as Social for consistency
-- [ ] Component tests: with token, without token, load failure
+- [x] Portrait renders in dossier layout right of Traits/Facts per **105** shell
+- [x] Empty state when no token (neutral placeholder or blank—no `<img>` error UI)
+- [x] Token display uses same asset as Social for consistency
+- [x] Component tests: with token, without token, load failure
 
-### 121.8 Tests, smoke, delivery gate
+### 122.8 Tests, smoke, delivery gate
+
+Parent epic: **122**.
 
 #### Description
 
@@ -177,7 +189,7 @@ End-to-end coverage, manual smoke runbook (toggle ON/OFF, Social + dossier), and
 
 #### Acceptance criteria
 
-- [ ] Automated tests cover 121.1–121.7 critical paths
-- [ ] Runbook: enable toggle, converse/create NPC, verify async token + Social + dossier; OFF verifies fallbacks
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
-- [ ] `.github/workflows/pr-checks.yml` and `deadcode.yml` pass via **act**
+- [x] Automated tests cover 122.1–122.7 critical paths
+- [x] Runbook: enable toggle, converse/create NPC, verify async token + Social + dossier; OFF verifies fallbacks
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
+- [x] `.github/workflows/pr-checks.yml` and `deadcode.yml` pass via **act**

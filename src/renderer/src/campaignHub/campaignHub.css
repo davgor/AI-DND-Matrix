@@ -61,14 +61,15 @@
   line-height: 1.55;
 }
 
-.campaign-hub-recent-events ul {
-  margin: 8px 0 0;
-  padding-left: 1.25rem;
+.campaign-hub-session-recap p {
+  margin: 0;
+  line-height: 1.55;
 }
 
-.campaign-hub-recent-events time {
+.campaign-hub-session-recap-loading {
+  margin: 0;
   color: var(--text-secondary, #9ca3af);
-  font-size: 0.9rem;
+  font-style: italic;
 }
 
 .campaign-hub-cast-rail {

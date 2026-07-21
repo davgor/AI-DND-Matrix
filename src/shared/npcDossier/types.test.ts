@@ -87,6 +87,7 @@ describe('dossier DTO guards', () => {
     name: 'Mira',
     role: 'innkeeper',
     canSpeak: true,
+    faceTokenPath: '/data/npc-face-tokens/camp/npc.png',
     traits: {
       temperament: 'friendly',
       raceKey: 'human',
@@ -94,7 +95,10 @@ describe('dossier DTO guards', () => {
       genderKey: 'female',
       classKey: null,
       backgroundKey: 'merchant',
-      role: 'innkeeper'
+      role: 'innkeeper',
+      hairColor: 'auburn',
+      age: 'middle-aged',
+      eyeColor: 'green'
     },
     facts: [{ id: 'log-1', title: 'Mira', content: 'Runs the Oak & Ember.', createdAt: '2026-07-01T00:00:00.000Z' }],
     opinion: {
@@ -115,6 +119,7 @@ describe('dossier DTO guards', () => {
     expect(isNpcDossierFact({ id: 'x', title: 't' })).toBe(false)
     expect(isNpcDossierOpinion({ summary: 'ok', generatedAt: null, stale: 'no' })).toBe(false)
     expect(isNpcDossierDto({ ...validDto, facts: [{ title: 'missing id' }] })).toBe(false)
+    expect(isNpcDossierDto({ ...validDto, faceTokenPath: 123 })).toBe(false)
     expect(parseNpcDossierDto({ ...validDto, npcId: 1 })).toBeUndefined()
   })
 })

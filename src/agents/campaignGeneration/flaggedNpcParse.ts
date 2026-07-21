@@ -4,6 +4,7 @@ import {
   parseTemperament
 } from '../../shared/alignment/types'
 import { parseBackgroundKey } from '../../shared/characterBackground/types'
+import { normalizeNpcAppearance } from '../../shared/npcFaceTokens/appearance'
 import { GENDER_ROSTER, parseGenderKey } from '../../shared/npcGender/types'
 import { NPC_CLASS_ROSTER, parseNpcClassKey } from '../../shared/npcClass/types'
 import type { AvailableRaceOption } from '../../shared/raceSelection/types'
@@ -49,7 +50,12 @@ function parseSpeakingBundleFields(
   if (!raceKey || !genderKey || !classKey || !alignment || !backgroundKey) {
     return undefined
   }
-  return { raceKey, genderKey, alignment, classKey, backgroundKey }
+  const appearance = normalizeNpcAppearance({
+    hairColor: readStringField(record, 'hairColor', 'hair_color'),
+    age: readStringField(record, 'age'),
+    eyeColor: readStringField(record, 'eyeColor', 'eye_color')
+  })
+  return { raceKey, genderKey, alignment, classKey, backgroundKey, ...appearance }
 }
 
 export function parseNpcCoreBundleRecord(

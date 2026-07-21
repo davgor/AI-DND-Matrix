@@ -77,9 +77,27 @@ describe('mapFormToCreateRequest', () => {
     expect(request.regionCount).toBe(1)
     expect(request.npcsPerRegion).toBe(1)
   })
+
+  it('maps npcFaceTokenGenerationEnabled (default false)', () => {
+    const off = mapFormToCreateRequest(
+      { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A quiet village' },
+      'session-3'
+    )
+    expect(off.npcFaceTokenGenerationEnabled).toBe(false)
+
+    const on = mapFormToCreateRequest(
+      {
+        ...DEFAULT_CAMPAIGN_SETUP_FORM,
+        premisePrompt: 'A quiet village',
+        npcFaceTokenGenerationEnabled: true
+      },
+      'session-4'
+    )
+    expect(on.npcFaceTokenGenerationEnabled).toBe(true)
+  })
 })
 
-describe('isValidCreateCampaignRequest', () => {
+describe('isValidCreateCampaignRequest: core fields', () => {
   it('accepts a minimal valid payload with omitted generation counts', () => {
     expect(
       isValidCreateCampaignRequest({ sessionId: 's1', premisePrompt: 'A haunted marsh' })
@@ -119,5 +137,27 @@ describe('isValidCreateCampaignRequest', () => {
         npcsPerRegion: 2.5
       })
     ).toBe(false)
+  })
+})
+
+describe('isValidCreateCampaignRequest: npcFaceTokenGenerationEnabled', () => {
+  it('rejects non-boolean npcFaceTokenGenerationEnabled', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        npcFaceTokenGenerationEnabled: 'yes'
+      })
+    ).toBe(false)
+  })
+
+  it('accepts npcFaceTokenGenerationEnabled boolean', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        npcFaceTokenGenerationEnabled: true
+      })
+    ).toBe(true)
   })
 })

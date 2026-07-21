@@ -32,6 +32,16 @@ Critical paths covered:
 7. Confirm a player Social line and a non-person log entry do **not** open an NPC dossier.
 8. Non-speaking creature (if available): open dossier — same shell; opinion grounds on actions (may be empty-ish early); disposition still shows.
 
+## Journal entry points (epic **121**)
+
+From play mode, open the **Journal** overlay (play sheet → Journal → Open journal). Candidate NPCs are log-book–linked People and/or NPCs with a generated dossier (see `src/shared/journal/SPEC.md`).
+
+1. **Matched name in prose:** With a journal entry that mentions a candidate NPC by name, click/activate the linked name. The same `NpcDossierModal` opens via `modals.openDossier(npcId)` (sibling of the journal overlay in `PlaySheetModals`).
+2. **Known-dossiers list:** In the Journal overlay’s **Known dossiers** section, click a row. Same dossier modal for that `npcId`.
+3. **Close dossier:** Close the dossier with the modal’s close control (or overlay dismiss). Focus/UX matches other play-sheet modals (log book People → dossier); the Journal overlay remains open and usable underneath — no journal-only dossier UI.
+
+Cross-link: [Character journal smoke test](./journal-smoke-test.md) (DB/persist loop).
+
 ## Recorded run (template)
 
 | Date | Mode | Result | Notes |

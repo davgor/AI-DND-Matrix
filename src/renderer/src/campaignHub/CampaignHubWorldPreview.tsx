@@ -7,6 +7,8 @@ import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignRevi
 import { FormattedText } from '../shared/FormattedText'
 import { buildHubRegionBlocks } from './hubUtils'
 import { HubQuestTeaser } from './HubQuestTeaser'
+import { HubSessionRecapSection } from './HubSessionRecapSection'
+import type { HubSessionRecapState } from './useHubSessionRecap'
 
 function HubCurrentStateSection(props: { summary: string }): JSX.Element {
   return (
@@ -15,34 +17,6 @@ function HubCurrentStateSection(props: { summary: string }): JSX.Element {
       {FormattedText({ as: 'p', text: props.summary })}
     </section>
   )
-}
-
-function HubRecentEventsSection(props: { events: PlayAwareHubSnapshot['recentEvents'] }): JSX.Element {
-  if (props.events.length === 0) {
-    return <></>
-  }
-  return (
-    <section className="campaign-hub-section campaign-hub-recent-events">
-      <h2>Recent events</h2>
-      <ul>
-        {props.events.map((event) => (
-          <li key={event.id}>
-            <time dateTime={event.createdAt}>{formatEventDate(event.createdAt)}</time>
-            {' — '}
-            {event.summary}
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-function formatEventDate(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) {
-    return iso
-  }
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function HubRegionsSection(props: {
@@ -69,6 +43,7 @@ function HubRegionsSection(props: {
 
 export interface CampaignHubWorldPreviewProps {
   snapshot: PlayAwareHubSnapshot
+  sessionRecap: HubSessionRecapState
   campaignRaces?: CampaignRace[]
   focusCharacterId?: string | null
   onViewWorldHistory?: () => void
@@ -111,7 +86,7 @@ export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JS
         campaignRaces={props.campaignRaces}
         availabilityByRegion={availabilityByRegion}
       />
-      <HubRecentEventsSection events={snapshot.recentEvents} />
+      <HubSessionRecapSection recap={props.sessionRecap} />
     </div>
   )
 }

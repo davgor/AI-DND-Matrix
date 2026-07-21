@@ -48,6 +48,7 @@ describe('CampaignHub obituary blocking', () => {
 
     const node = CampaignHubLayout({
       snapshot,
+      sessionRecap: { status: 'ready', text: 'Previously, you held the pass.' },
       lastPlayed: 'Jun 1, 2026',
       actionsDisabled: true,
       obituaryCharacterId: 'dead-1',

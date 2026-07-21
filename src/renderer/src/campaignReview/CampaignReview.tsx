@@ -9,6 +9,7 @@ import { CampaignReviewModals } from './CampaignReviewModals'
 import { CampaignReviewFooter, CampaignReviewStory } from './CampaignReviewSections'
 import { CampaignReviewWorldSection } from './CampaignReviewWorldSection'
 import { CampaignReviewPantheonSection } from './CampaignReviewPantheonSection'
+import { CampaignReviewFaceTokenToggle } from './CampaignReviewFaceTokenToggle'
 import { createCampaignReviewSavers } from './campaignReviewSavers'
 import { useCampaignRaces } from './useCampaignRaces'
 import './campaignReview.css'
@@ -51,6 +52,55 @@ function CampaignReviewPantheonBlock(props: {
   )
 }
 
+function CampaignReviewFaceTokenBlock(props: {
+  enabled: boolean
+  onChange: (enabled: boolean) => void
+}): JSX.Element {
+  return (
+    <CampaignReviewFaceTokenToggle
+      enabled={props.enabled}
+      onChange={(enabled) => {
+        void props.onChange(enabled)
+      }}
+    />
+  )
+}
+
+function CampaignReviewMainSections(props: {
+  detail: CampaignDetail
+  campaignId: string
+  regionBlocks: ReturnType<typeof buildRegionBlocks>
+  campaignRaces: ReturnType<typeof useCampaignRaces>
+  savers: ReturnType<typeof createCampaignReviewSavers>
+  onGenerateNpc: (regionId: string) => void
+}): JSX.Element {
+  return (
+    <>
+      {props.detail.campaign ? (
+        <CampaignReviewWorldBlock
+          campaign={props.detail.campaign}
+          campaignId={props.campaignId}
+          onSaveSummary={props.savers.saveWorldSummary}
+          onSaveHistory={props.savers.saveWorldHistory}
+        />
+      ) : null}
+      <CampaignReviewPantheonBlock
+        pantheonSummary={props.detail.campaign?.pantheonSummary ?? ''}
+        deities={props.detail.deities}
+        onSaveSummary={props.savers.savePantheonSummary}
+      />
+      <CampaignReviewStory storyThreads={props.detail.storyThreads} />
+      <CampaignReviewRegions
+        regionBlocks={props.regionBlocks}
+        campaignRaces={props.campaignRaces}
+        onDeleteNpc={props.savers.deleteNpc}
+        onDeleteRegion={props.savers.deleteRegion}
+        onGenerateNpc={props.onGenerateNpc}
+      />
+    </>
+  )
+}
+
 export function CampaignReview(props: CampaignReviewProps): JSX.Element {
   const { detail } = props
   const campaignId = detail.campaign?.id ?? ''
@@ -65,24 +115,17 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
     <div className="campaign-review">
       <CampaignReviewHeader campaignName={detail.campaign?.name} />
       {detail.campaign ? (
-        <CampaignReviewWorldBlock
-          campaign={detail.campaign}
-          campaignId={campaignId}
-          onSaveSummary={savers.saveWorldSummary}
-          onSaveHistory={savers.saveWorldHistory}
+        <CampaignReviewFaceTokenBlock
+          enabled={detail.campaign.npcFaceTokenGenerationEnabled === true}
+          onChange={savers.saveNpcFaceTokenGeneration}
         />
       ) : null}
-      <CampaignReviewPantheonBlock
-        pantheonSummary={detail.campaign?.pantheonSummary ?? ''}
-        deities={detail.deities}
-        onSaveSummary={savers.savePantheonSummary}
-      />
-      <CampaignReviewStory storyThreads={detail.storyThreads} />
-      <CampaignReviewRegions
+      <CampaignReviewMainSections
+        detail={detail}
+        campaignId={campaignId}
         regionBlocks={regionBlocks}
         campaignRaces={campaignRaces}
-        onDeleteNpc={savers.deleteNpc}
-        onDeleteRegion={savers.deleteRegion}
+        savers={savers}
         onGenerateNpc={setGenerateNpcRegionId}
       />
       <CampaignReviewFooter

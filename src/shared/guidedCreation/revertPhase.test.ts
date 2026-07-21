@@ -21,4 +21,10 @@ describe('canRevertGuidedCreationPhase', () => {
     expect(canRevertGuidedCreationPhase('identity', 'equipment')).toBe(false)
     expect(canRevertGuidedCreationPhase('complete', 'race')).toBe(false)
   })
+
+  it('allows reverting from companions to equipment, background, or race', () => {
+    expect(canRevertGuidedCreationPhase('companions', 'equipment')).toBe(true)
+    expect(canRevertGuidedCreationPhase('companions', 'background')).toBe(true)
+    expect(canRevertGuidedCreationPhase('companions', 'race')).toBe(true)
+  })
 })

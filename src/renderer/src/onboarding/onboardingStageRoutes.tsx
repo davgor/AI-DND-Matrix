@@ -4,6 +4,7 @@ import { CampaignReview } from '../campaignReview/CampaignReview'
 import { CharacterSetup } from '../characterSetup/CharacterSetup'
 import { resolveCharacterSetupDraft } from '../characterSetup/characterSetupDraft'
 import { EquipmentSelection } from '../equipmentSelection/EquipmentSelection'
+import { CompanionsSelection } from '../companionsSelection/CompanionsSelection'
 import { RaceSelection } from '../raceSelection/RaceSelection'
 import { BackgroundSelection } from '../backgroundSelection/BackgroundSelection'
 import { GuidedIdentityStage, GuidedOpeningSceneStage } from '../guidedCreation/GuidedCreationStages'
@@ -100,6 +101,41 @@ function EquipmentSelectionStage(props: OnboardingStageContentProps): JSX.Elemen
   )
 }
 
+function CompanionPromptStage(props: OnboardingStageContentProps): JSX.Element {
+  const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
+  const campaign = props.detail?.campaign
+  if (!campaign || !player) {
+    return <MainPanel detail={props.detail} />
+  }
+  const campaignId = campaign.id
+  return (
+    <CompanionsSelection
+      campaignId={campaignId}
+      characterId={player.id}
+      onSkip={props.onCompanionsSkip}
+      onAccepted={props.onCompanionsComplete}
+      onBack={props.onCompanionsBack}
+      onGenerate={(prompt) =>
+        window.companions.generate({
+          campaignId,
+          characterId: player.id,
+          prompt
+        })
+      }
+      onAcceptPreview={async (preview) => {
+        const result = await window.companions.accept({
+          campaignId,
+          characterId: player.id,
+          preview
+        })
+        if (!result.ok) {
+          throw new Error(result.reason)
+        }
+      }}
+    />
+  )
+}
+
 function GuidedIdentityRoute(props: OnboardingStageContentProps): JSX.Element {
   const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
   if (!props.detail?.campaign || !player) {
@@ -143,6 +179,8 @@ export function renderOnboardingStage(stage: OnboardingStage, props: OnboardingS
       return <BackgroundSelectionStage {...props} />
     case 'equipmentSelection':
       return <EquipmentSelectionStage {...props} />
+    case 'companionPrompt':
+      return <CompanionPromptStage {...props} />
     case 'guidedIdentity':
       return <GuidedIdentityRoute {...props} />
     case 'guidedOpeningScene':
