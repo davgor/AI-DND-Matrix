@@ -117,9 +117,54 @@
   align-items: flex-start;
 }
 
-.quest-log-objective input {
-  margin-top: 0.2rem;
+.quest-log-objective input.quest-log-check,
+.quest-log-header-actions input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0.2rem 0 0;
   flex-shrink: 0;
+  border: 1px solid var(--border-medium);
+  border-radius: 3px;
+  background: var(--surface-inset);
+  color: var(--accent-gold);
+  cursor: default;
+  position: relative;
+}
+
+.quest-log-header-actions input[type='checkbox'] {
+  margin-top: 0;
+  cursor: pointer;
+}
+
+.quest-log-objective input.quest-log-check:checked,
+.quest-log-header-actions input[type='checkbox']:checked {
+  background: rgba(201, 166, 107, 0.28);
+  border-color: var(--accent-gold);
+}
+
+.quest-log-objective input.quest-log-check:checked::after,
+.quest-log-header-actions input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 0.28rem;
+  top: 0.08rem;
+  width: 0.28rem;
+  height: 0.55rem;
+  border: solid var(--accent-gold);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.quest-log-header-actions .character-log-book-curate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
 }
 
 .quest-log-objective span {

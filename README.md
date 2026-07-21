@@ -175,7 +175,7 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 
 | Id | Intent |
 |----|--------|
-| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback |
+| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback; NPC face tokens → epic **121** |
 | **m002** | Host-driven multiplayer with host-side AI routing and guest party-member identities |
 | **m003** | Mod packs that seed homebrew catalog content from structured text files |
 | **m004** | Pixel/sprite grid campaign type (FF + Pokémon-style exploration/combat) forked from the narrative create pipeline |

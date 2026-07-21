@@ -1,9 +1,17 @@
 export function QuestAcceptButton(props: { onAccept?: () => void }): JSX.Element | null {
-  return props.onAccept ? <button type="button" onClick={props.onAccept}>Track quest</button> : null
+  return props.onAccept ? (
+    <button type="button" className="btn" onClick={props.onAccept}>
+      Track quest
+    </button>
+  ) : null
 }
 
 export function QuestAbandonButton(props: { onAbandon?: () => void }): JSX.Element | null {
-  return props.onAbandon ? <button type="button" onClick={props.onAbandon}>Abandon</button> : null
+  return props.onAbandon ? (
+    <button type="button" className="btn" onClick={props.onAbandon}>
+      Abandon
+    </button>
+  ) : null
 }
 
 export function QuestCurateButtons(props: {
@@ -16,8 +24,16 @@ export function QuestCurateButtons(props: {
   }
   return (
     <>
-      {props.onEdit ? <button type="button" onClick={props.onEdit}>Edit</button> : null}
-      {props.onForceComplete ? <button type="button" onClick={props.onForceComplete}>Force complete</button> : null}
+      {props.onEdit ? (
+        <button type="button" className="btn" onClick={props.onEdit}>
+          Edit
+        </button>
+      ) : null}
+      {props.onForceComplete ? (
+        <button type="button" className="btn" onClick={props.onForceComplete}>
+          Force complete
+        </button>
+      ) : null}
     </>
   )
 }

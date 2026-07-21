@@ -74,7 +74,7 @@ function QuestCuratePanel(props: {
           <option value="minor">Minor</option>
           <option value="major">Major</option>
         </select>
-        <button type="button" onClick={handleCreate} disabled={!title.trim()}>
+        <button type="button" className="btn" onClick={handleCreate} disabled={!title.trim()}>
           Create active quest
         </button>
       </div>
