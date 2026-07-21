@@ -7,14 +7,22 @@ export function useHubSnapshot(stage: OnboardingStage, campaignId: string | unde
   const [hubLastPlayed, setHubLastPlayed] = useState('')
 
   useEffect(() => {
-    if (stage !== 'campaignHub' || !campaignId || hubSnapshot) {
+    if (stage !== 'campaignHub' || !campaignId) {
       return
     }
+    let cancelled = false
+    setHubSnapshot((prev) => (prev?.campaign?.id === campaignId ? prev : null))
     void window.campaigns.getHubSnapshot(campaignId).then((snapshot) => {
+      if (cancelled) {
+        return
+      }
       setHubSnapshot(snapshot)
       setHubLastPlayed(createdAt)
     })
-  }, [stage, campaignId, hubSnapshot, createdAt])
+    return () => {
+      cancelled = true
+    }
+  }, [stage, campaignId, createdAt])
 
   async function refreshHubSnapshot(targetCampaignId: string): Promise<void> {
     const snapshot = await window.campaigns.getHubSnapshot(targetCampaignId)

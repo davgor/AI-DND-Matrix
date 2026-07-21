@@ -43,11 +43,24 @@
 .settings-provider-mode {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 10px;
   background: var(--surface-inset);
+}
+
+.settings-provider-mode label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.settings-provider-mode select {
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
 }
 
 .settings-provider-mode-option {
@@ -152,4 +165,32 @@
   margin: 0;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.settings-usage-section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+}
+
+.settings-usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-usage-table th,
+.settings-usage-table td {
+  text-align: left;
+  padding: 4px 6px 4px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-usage-table th {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-usage-export {
+  align-self: flex-start;
 }

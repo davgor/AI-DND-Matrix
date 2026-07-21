@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../testUtils'
 import { createCampaign } from './campaigns'
-import { createNpc, getNpcById, listNpcsByRegion, markNpcPromoted, updateNpcDisposition, updateNpcStatus } from './npcs'
+import {
+  bumpNpcPlayerInteractionAt,
+  createNpc,
+  getNpcById,
+  listNpcsByRegion,
+  markNpcPromoted,
+  updateNpcDisposition,
+  updateNpcOpinionSummary,
+  updateNpcStatus
+} from './npcs'
 import { createRegion } from './regions'
 
 function seedRegion(db: ReturnType<typeof createTestDb>) {
@@ -112,5 +121,46 @@ describe('npcs repository: updateStatus + markPromoted', () => {
     updateNpcDisposition(db, created.id, 'wary, after the bandit raid')
 
     expect(getNpcById(db, created.id)?.disposition).toBe('wary, after the bandit raid')
+  })
+})
+
+describe('npcs repository: dossier opinion fields', () => {
+  it('defaults opinion columns to null on create', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+    const created = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly'
+    })
+
+    expect(created.opinionSummary).toBeNull()
+    expect(created.opinionSummaryGeneratedAt).toBeNull()
+    expect(created.lastPlayerInteractionAt).toBeNull()
+  })
+
+  it('persists opinion summary and interaction watermark', () => {
+    const db = createTestDb()
+    const region = seedRegion(db)
+    const created = createNpc(db, {
+      campaignId: region.campaignId,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly'
+    })
+
+    updateNpcOpinionSummary(db, created.id, {
+      summary: 'Wary but polite.',
+      generatedAt: '2026-07-20T12:00:00.000Z'
+    })
+    bumpNpcPlayerInteractionAt(db, created.id, '2026-07-20T13:00:00.000Z')
+
+    const loaded = getNpcById(db, created.id)
+    expect(loaded?.opinionSummary).toBe('Wary but polite.')
+    expect(loaded?.opinionSummaryGeneratedAt).toBe('2026-07-20T12:00:00.000Z')
+    expect(loaded?.lastPlayerInteractionAt).toBe('2026-07-20T13:00:00.000Z')
   })
 })

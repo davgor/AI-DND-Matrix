@@ -63,6 +63,10 @@ Social column uses `filterSocialEntries` (player raw + NPC/party lines) as a cha
 
 Log book opens from Character or Gear via existing modal pattern.
 
+## Ask the DM (OOC)
+
+Out-of-character player ↔ DM chat (epic **106**) opens from the Journal tab action list **directly under** “Open spellbook”. Full contract: [`ASK_THE_DM_OOC_SPEC.md`](./ASK_THE_DM_OOC_SPEC.md). Hard rule: OOC send never invokes `turn:resolve` / `resolvePlayerTurn`.
+
 ## Overlay z-index stack
 
 Lowest → highest (implementation in CSS):
@@ -70,11 +74,13 @@ Lowest → highest (implementation in CSS):
 | Layer | z-index | Notes |
 |-------|---------|-------|
 | Grid columns | 0 | Base play layout |
-| In-campaign overlays container | 5 | Recap, promotion (pointer-events on children) |
+| In-campaign overlays container | 5 | Recap, promotion, D20 overlay (pointer-events on children; D20 forces none) |
 | Recap / promotion banners | 10 | Centered top; light scrim optional |
+| Animated D20 roll overlay | 12 | Non-blocking spectacle; `pointer-events: none` |
 | Sheet overlay rail (`sheet-overlay`, `compact`) | 20–25 | Right rail when expanded |
 | Campaigns overlay rail (`compact`) | 30 | Left rail when expanded |
 | Overlay backdrop | 15 | Semi-transparent; click/Escape dismiss |
+| Ask the DM / Spellbook / Recap dialog / journal notes | 200 | Shared `.modal-overlay` (see Ask the DM spec) |
 | Level-up modal | 1000 | Full-screen scrim + dialog |
 | Obituary drafting modal | 1100 | Above level-up when both could appear |
 
@@ -91,6 +97,47 @@ At `sheet-overlay` and `compact`:
 ## Status alerts
 
 `PlayStatusAlerts` consolidates alignment shift, imprisoned, defeat disposition, XP, and loot banners. Max 2 visible + expander. XP/loot auto-dismiss after 8 seconds.
+
+## Animated D20 roll overlay (epic 118)
+
+When a live DM check resolves with a natural d20 (`TurnResult.check.roll`), a stylized D20 tumbles across the play view and settles on that face. Module: `playView/d20Overlay/`.
+
+| Rule | Behavior |
+|------|----------|
+| Trigger | New `lastCheck` after play view mount (`observeLiveCheck`) — not on first paint / hydrate |
+| Face | Natural `check.roll` (1–20); total/DC stay in the Scene `formatRoll` line when Show rolls is on |
+| Show rolls on | Settled face label readable through settle hold; text roll line unchanged |
+| Show rolls off | Animation still runs; face uses **brief-then-clear** (no persistent numeric spoil) |
+| Concurrency | One die at a time — a newer check replaces the in-flight overlay |
+| Reduced motion | No travel tumble; brief centered fade/pop then clear |
+| Input | Overlay is `pointer-events: none`; never blocks play controls |
+
+### Manual smoke
+
+1. Enter play with an existing `lastCheck` in session state — no D20 on first paint.
+2. Resolve a check (Show rolls on) — die travels, settles on natural roll; Scene still shows `formatRoll`.
+3. Toggle Show rolls off, resolve another check — animation plays; face does not linger as a persistent label.
+4. With OS reduced-motion enabled — brief flash only, no long travel.
+
+## Incoming text highlight (epic 117)
+
+Short-lived glow (`incoming-highlight`, ~2.5s) draws the eye to live play-view updates. Shared hook + CSS under `playView/incomingHighlight/`.
+
+| Trigger | Surface |
+|---------|---------|
+| Scene summary text changes (`pickSceneSummary`) | Scene header summary block |
+| New DM log entry with `sceneSetting: true` | That Scene feed row |
+| New NPC `dialogue` Social line | That Social message bubble |
+
+**No flash on hydrate:** highlights fire only for live appends/changes after the play view has mounted — campaign load, log hydration, and Social history window paging do not re-glow old entries.
+
+**Reduced motion:** `prefers-reduced-motion: reduce` keeps a static gold accent (no pulse animation).
+
+### Manual smoke
+
+1. Enter play mid-session with existing Scene summary / setting lines / NPC dialogue — nothing should glow on first paint.
+2. Trigger a scene setting change — summary and new setting feed row glow, then clear.
+3. Receive NPC dialogue in Social — that bubble glows; player lines and NPC/creature actions do not.
 
 ## Open decisions (resolved)
 

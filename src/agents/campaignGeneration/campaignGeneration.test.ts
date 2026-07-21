@@ -45,6 +45,7 @@ import {
   VALID_PANTHEON_RESPONSE,
   buildCascadingSeedResponses,
   buildShieldHeroCascadingSeedResponses,
+  makeBestiarySeedResponse,
   makeNpcs,
   makeRegion,
   RACE_LORE_RESPONSE,
@@ -171,6 +172,7 @@ describe('generateCampaignSeed NPC slot retries', () => {
       JSON.stringify({ npc: firstNpc }),
       JSON.stringify({ npc: duplicateNpc }),
       JSON.stringify({ npc: uniqueNpc }),
+      makeBestiarySeedResponse(),
       JSON.stringify({ storyThread: { title: 'Arc', state: 'starting', summary: 'S' } })
     ])
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 2 })
@@ -205,8 +207,10 @@ describe('generateCampaignSeed progress', () => {
     expect(stages.indexOf('regions')).toBeGreaterThan(stages.indexOf('world'))
     expect(stages).toContain('regions')
     expect(stages.filter((stage) => stage === 'npcs').length).toBeGreaterThanOrEqual(2)
+    expect(stages).toContain('bestiary')
+    expect(stages.indexOf('bestiary')).toBeGreaterThan(stages.lastIndexOf('npcs'))
     expect(stages).toContain('story')
-    expect(stages.indexOf('story')).toBeGreaterThan(stages.lastIndexOf('npcs'))
+    expect(stages.indexOf('story')).toBeGreaterThan(stages.indexOf('bestiary'))
   })
 })
 
@@ -222,6 +226,10 @@ describe('fandom canon-recall seeding (070)', () => {
     )
     expect(result.regions.map((region) => region.name)).toContain('Melromarc')
     expect(result.npcs.map((npc) => npc.name)).toContain('Raphtalia')
+    const foeNames = result.bestiary.foes.map((foe) => foe.name.toLowerCase()).join(' ')
+    const foeTags = result.bestiary.foes.flatMap((foe) => foe.tags ?? []).join(' ').toLowerCase()
+    expect(foeNames.includes('slime') || foeTags.includes('slime')).toBe(true)
+    expect(foeNames.includes('rift') || foeTags.includes('rift')).toBe(true)
   })
 
   it('prefers known setting deities in the pantheon roster', async () => {
@@ -250,6 +258,8 @@ describe('generateCampaignSeed counts (007.1, 039.4, 054.3)', () => {
     expect(result.regions[0]?.recentHistory).toBeTruthy()
     expect(result.regions[0]?.potentialQuests.length).toBeGreaterThanOrEqual(2)
     expect(result.npcs.length).toBe(6)
+    expect(result.bestiary.foes.length).toBeGreaterThanOrEqual(3)
+    expect(result.bestiary.foes.every((foe) => foe.lore.trim().length > 0)).toBe(true)
     expect(result.storyThread.title).toBe('The Crown Beneath the Waves')
   })
 
@@ -754,6 +764,7 @@ function buildShortfallSeedPrelude(region: ReturnType<typeof makeRegion>, npcsPe
     JSON.stringify(VALID_WORLD),
     JSON.stringify({ regions: [region] }),
     ...Array.from({ length: npcsPerRegion * MAX_GENERATION_ATTEMPTS }, () => 'invalid npc slot response'),
+    makeBestiarySeedResponse(),
     JSON.stringify({ storyThread: { title: 'Shortfall Arc', state: 'starting', summary: 'Fill the cast.' } })
   ]
 }
@@ -814,8 +825,8 @@ describe('one-shot NPC generation call-count guards (040.13)', () => {
     const provider = createScriptedProvider(responses)
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 2, npcsPerRegion: 3 })
     expect(result.npcs).toHaveLength(6)
-    // canon + pantheon + world + regions + one call per NPC (6) + story thread = 11
-    expect(provider.calls).toHaveLength(11)
+    // canon + pantheon + world + regions + one call per NPC (6) + bestiary + story = 12
+    expect(provider.calls).toHaveLength(12)
     expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
   })
 

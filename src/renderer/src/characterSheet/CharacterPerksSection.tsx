@@ -1,8 +1,10 @@
 import type { AppliedPerk } from '../../../shared/progression/types'
 import './characterPerks.css'
 
-export function CharacterPerksSection(props: { stats: Record<string, unknown> }): JSX.Element | null {
-  const perks = (props.stats.perks as AppliedPerk[] | undefined) ?? []
+export function CharacterPerksSection(props: {
+  stats: Record<string, unknown> | null | undefined
+}): JSX.Element | null {
+  const perks = (props.stats?.perks as AppliedPerk[] | undefined) ?? []
   if (perks.length === 0) {
     return null
   }

@@ -5,7 +5,10 @@ import type { IdentityFoundationsStatus } from '../shared/guidedCreation/types'
 import type { RaceLore } from '../shared/raceSelection/types'
 
 // 512 — one conversational player turn (a few sentences), not a scene dump.
-const GUIDED_PLAYER_REPLY_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512 }
+const GUIDED_PLAYER_REPLY_GENERATE_CONTEXT: GenerateContext = {
+  maxTokens: 512,
+  purpose: 'onboarding.guided_identity'
+}
 
 export interface GuidedPlayerReplyInput {
   phase: 'identity' | 'opening_scene'

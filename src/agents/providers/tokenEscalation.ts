@@ -1,3 +1,5 @@
+import { sumUsageSnapshots } from '../../shared/llmUsage'
+import type { ProviderUsageSnapshot } from '../../shared/llmUsage'
 import type { GenerateContext, Provider } from './types'
 
 /**
@@ -41,22 +43,56 @@ function escalatedContext(context: GenerateContext | undefined, cap: number): Ge
   return { ...context, maxTokens: cap }
 }
 
+function contextWithUsageAggregation(
+  context: GenerateContext | undefined,
+  aggregate: (usage: ProviderUsageSnapshot) => void
+): GenerateContext | undefined {
+  if (!context) {
+    return undefined
+  }
+  return {
+    ...context,
+    onUsage: aggregate
+  }
+}
+
 function nextCap(currentCap: number): number {
   return Math.min(currentCap * 2, TOKEN_ESCALATION_CEILING)
+}
+
+function shouldStopTokenEscalation(error: unknown, escalation: number, cap: number): boolean {
+  if (!isTruncationError(error)) {
+    return true
+  }
+  if (escalation >= MAX_TOKEN_ESCALATIONS) {
+    return true
+  }
+  return cap <= ESCALATION_MIN_CAP
 }
 
 export function withTokenEscalation(provider: Provider): Provider {
   return {
     async generate(prompt: string, context?: GenerateContext): Promise<string> {
+      // Token escalation aggregates all attempts under one purpose: intercept
+      // per-attempt onUsage from the inner provider, sum snapshots, and emit
+      // a single metering callback after the successful final attempt.
       let cap = context?.maxTokens ?? DEFAULT_ESCALATION_BASE
       let attemptContext = context
+      let aggregatedUsage: ProviderUsageSnapshot | null = null
+      const recordUsage = (usage: ProviderUsageSnapshot): void => {
+        aggregatedUsage = sumUsageSnapshots(aggregatedUsage, usage)
+      }
 
       for (let escalation = 0; ; escalation += 1) {
         try {
-          return await provider.generate(prompt, attemptContext)
+          const innerContext = contextWithUsageAggregation(attemptContext, recordUsage)
+          const result = await provider.generate(prompt, innerContext)
+          if (context?.onUsage && aggregatedUsage) {
+            context.onUsage(aggregatedUsage)
+          }
+          return result
         } catch (error) {
-          const exhausted = escalation >= MAX_TOKEN_ESCALATIONS
-          if (!isTruncationError(error) || exhausted || cap <= ESCALATION_MIN_CAP) {
+          if (shouldStopTokenEscalation(error, escalation, cap)) {
             throw error
           }
           cap = nextCap(cap)

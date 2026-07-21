@@ -1,30 +1,101 @@
 import { CheckForUpdatesButton } from '../autoUpdate/CheckForUpdatesButton'
 import { useAppUpdate } from '../autoUpdate/UpdateBanner'
 import { ApiKeySection } from './ApiKeySection'
+import { CloudProviderSection, type CloudProviderKind } from './CloudProviderSection'
 import { LlamaLocalSection } from './LlamaLocalSection'
 import { Player2Section } from './Player2Section'
 import { ProviderModeSelector } from './ProviderModeSelector'
-import { useSettings } from './useSettings'
+import { providerSectionKind } from './providerSectionKind'
+import { useSettings, type SettingsController } from './useSettings'
+import { LlmUsageSection } from './LlmUsageSection'
+import { useLlmUsageSettings } from './useLlmUsageSettings'
 import './settings.css'
 
-export interface SettingsViewProps {
+interface SettingsViewProps {
   onClose: () => void
 }
 
-function ProviderSection(props: { controller: ReturnType<typeof useSettings> }): JSX.Element {
+function cloudDraftFields(
+  controller: SettingsController,
+  kind: CloudProviderKind
+): { apiKey: string; apiKeySet: boolean; model: string } {
+  if (kind === 'openai') {
+    return {
+      apiKey: controller.draft.openaiApiKey,
+      apiKeySet: controller.openaiApiKeySet,
+      model: controller.draft.openaiModel
+    }
+  }
+  if (kind === 'gemini') {
+    return {
+      apiKey: controller.draft.geminiApiKey,
+      apiKeySet: controller.geminiApiKeySet,
+      model: controller.draft.geminiModel
+    }
+  }
+  return {
+    apiKey: controller.draft.grokApiKey,
+    apiKeySet: controller.grokApiKeySet,
+    model: controller.draft.grokModel
+  }
+}
+
+function applyCloudPatch(
+  controller: SettingsController,
+  kind: CloudProviderKind,
+  patch: { apiKey?: string; model?: string }
+): void {
+  if (kind === 'openai') {
+    controller.updateDraft({ openaiApiKey: patch.apiKey, openaiModel: patch.model })
+    return
+  }
+  if (kind === 'gemini') {
+    controller.updateDraft({ geminiApiKey: patch.apiKey, geminiModel: patch.model })
+    return
+  }
+  controller.updateDraft({ grokApiKey: patch.apiKey, grokModel: patch.model })
+}
+
+function CloudSection(props: {
+  controller: SettingsController
+  kind: CloudProviderKind
+}): JSX.Element {
+  const fields = cloudDraftFields(props.controller, props.kind)
+  return (
+    <CloudProviderSection
+      kind={props.kind}
+      apiKey={fields.apiKey}
+      apiKeySet={fields.apiKeySet}
+      model={fields.model}
+      errors={props.controller.errors}
+      connectionResult={props.controller.cloudConnectionResult}
+      onChange={(patch) => applyCloudPatch(props.controller, props.kind, patch)}
+      onTestConnection={props.controller.testCloud}
+    />
+  )
+}
+
+function ProviderSection(props: { controller: SettingsController }): JSX.Element {
   const { controller } = props
-  if (controller.draft.mode === 'claude') {
+  const kind = providerSectionKind(controller.draft.mode)
+
+  if (kind === 'claude') {
     return (
       <ApiKeySection
         claudeApiKey={controller.draft.claudeApiKey}
         claudeApiKeySet={controller.claudeApiKeySet}
         claudeModel={controller.draft.claudeModel}
         errors={controller.errors}
+        connectionResult={controller.cloudConnectionResult}
         onChange={controller.updateDraft}
+        onTestConnection={controller.testCloud}
       />
     )
   }
-  if (controller.draft.mode === 'llamacpp') {
+  if (kind === 'openai' || kind === 'gemini' || kind === 'grok') {
+    return <CloudSection controller={controller} kind={kind} />
+  }
+  if (kind === 'llamacpp') {
     return (
       <LlamaLocalSection
         draft={controller.draft}
@@ -60,8 +131,8 @@ function DiscardConfirmation(props: { onConfirm: () => void; onCancel: () => voi
   )
 }
 
-function canSave(controller: ReturnType<typeof useSettings>): boolean {
-  if (!controller.dirty || controller.saving) {
+function canSave(controller: SettingsController): boolean {
+  if (!controller.dirty || controller.saving || !controller.draftValid) {
     return false
   }
   if (controller.draft.mode === 'llamacpp') {
@@ -72,6 +143,7 @@ function canSave(controller: ReturnType<typeof useSettings>): boolean {
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
   const controller = useSettings(props.onClose)
+  const llmUsage = useLlmUsageSettings()
   const { currentVersion } = useAppUpdate()
 
   return (
@@ -88,6 +160,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         )}
         <ProviderModeSelector mode={controller.draft.mode} onChange={(mode) => controller.updateDraft({ mode })} />
         <ProviderSection controller={controller} />
+        <LlmUsageSection controller={llmUsage} />
         {controller.saveFailed && <p className="settings-field-error">Could not save settings. Please try again.</p>}
         <footer className="settings-footer">
           <div className="settings-version-row">

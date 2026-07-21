@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3'
 import { isQuestRewardEligibleStatus, storyThreadStateToQuestStatus, validateObjectiveUpdate } from '../engine/quests'
 import { objectiveTextsToChecklist } from '../engine/quests'
 import { getCampaignById } from '../db/repositories/campaigns'
+import { getCharacterById } from '../db/repositories/characters'
 import {
   createQuest,
   getCharacterQuest,
@@ -16,7 +17,9 @@ import { updateStoryThreadStateAndSummary } from '../db/repositories/storyThread
 import { getWorldFactById } from '../db/repositories/worldFacts'
 import type { QuestScale } from '../shared/loot/types'
 import type { QuestKind, UpdateQuestInput } from '../shared/quests/types'
+import { assignQuestFoes } from './bestiary/assignQuestFoes'
 import type { NarrationResult } from './dm'
+import type { Provider } from './providers/types'
 
 export interface QuestProposal {
   kind: QuestKind
@@ -45,6 +48,8 @@ interface QuestProposalPersistInput {
   characterId: string
   proposal: QuestProposal
   inGameDate: number
+  provider?: Provider
+  playerLevel?: number
 }
 
 function resolveExistingRegionId(db: Database.Database, regionId: string | undefined): string | null {
@@ -97,8 +102,8 @@ function buildProposalQuestUpdate(db: Database.Database, proposal: QuestProposal
   return updates
 }
 
-function persistQuestProposal(input: QuestProposalPersistInput): string | null {
-  const { db, characterId, proposal, inGameDate } = input
+async function persistQuestProposal(input: QuestProposalPersistInput): Promise<string | null> {
+  const { db, campaignId, characterId, proposal, inGameDate, provider, playerLevel } = input
   const questId = resolveQuestIdFromProposal(input)
   if (proposal.relatedWorldFactId && proposal.summary) {
     updateQuest(db, questId, buildProposalQuestUpdate(db, proposal))
@@ -110,6 +115,15 @@ function persistQuestProposal(input: QuestProposalPersistInput): string | null {
     status,
     acceptedInGameDate: status === 'active' ? inGameDate : null
   })
+  if (provider) {
+    await assignQuestFoes(db, provider, {
+      campaignId,
+      questId,
+      title: proposal.title,
+      summary: proposal.summary,
+      ...(typeof playerLevel === 'number' ? { playerLevel } : {})
+    })
+  }
   return questId
 }
 
@@ -226,46 +240,106 @@ function collectCompletedQuestIds(
   return completed
 }
 
-export function persistQuestNarrationSideEffects(
-  db: Database.Database,
-  result: NarrationResult,
-  input: { campaignId: string; characterId: string }
-): QuestSideEffectResult {
-  const inGameDate = getCampaignById(db, input.campaignId)?.inGameDate ?? 0
-  const completedQuestIds: string[] = []
+function applyStoryThreadSideEffect(input: {
+  db: Database.Database
+  campaignId: string
+  characterId: string
+  inGameDate: number
+  update: NonNullable<NarrationResult['storyThreadUpdate']>
+}): string | null {
+  updateStoryThreadStateAndSummary(
+    input.db,
+    input.update.threadId,
+    input.update.state,
+    input.update.summary
+  )
+  return syncMainQuestFromStoryThread({
+    db: input.db,
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    threadId: input.update.threadId,
+    state: input.update.state,
+    summary: input.update.summary,
+    inGameDate: input.inGameDate
+  })
+}
 
-  if (result.storyThreadUpdate) {
-    updateStoryThreadStateAndSummary(
-      db,
-      result.storyThreadUpdate.threadId,
-      result.storyThreadUpdate.state,
-      result.storyThreadUpdate.summary
-    )
-    const syncedId = syncMainQuestFromStoryThread({
-      db,
+async function persistAllQuestProposals(input: {
+  db: Database.Database
+  campaignId: string
+  characterId: string
+  inGameDate: number
+  proposals: QuestProposal[]
+  provider?: Provider
+  playerLevel?: number
+}): Promise<void> {
+  for (const proposal of input.proposals) {
+    await persistQuestProposal({
+      db: input.db,
       campaignId: input.campaignId,
       characterId: input.characterId,
-      threadId: result.storyThreadUpdate.threadId,
-      state: result.storyThreadUpdate.state,
-      summary: result.storyThreadUpdate.summary,
-      inGameDate
+      proposal,
+      inGameDate: input.inGameDate,
+      provider: input.provider,
+      playerLevel: input.playerLevel
     })
-    if (syncedId) {
-      completedQuestIds.push(syncedId)
-    }
   }
+}
 
-  for (const proposal of result.questProposals ?? []) {
-    persistQuestProposal({ db, campaignId: input.campaignId, characterId: input.characterId, proposal, inGameDate })
+function completedIdsFromStoryThread(input: {
+  db: Database.Database
+  campaignId: string
+  characterId: string
+  inGameDate: number
+  update: NarrationResult['storyThreadUpdate']
+}): string[] {
+  if (!input.update) {
+    return []
   }
+  const syncedId = applyStoryThreadSideEffect({
+    db: input.db,
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    inGameDate: input.inGameDate,
+    update: input.update
+  })
+  return syncedId ? [syncedId] : []
+}
+
+export async function persistQuestNarrationSideEffects(
+  db: Database.Database,
+  result: NarrationResult,
+  input: { campaignId: string; characterId: string; provider?: Provider; playerLevel?: number }
+): Promise<QuestSideEffectResult> {
+  const inGameDate = getCampaignById(db, input.campaignId)?.inGameDate ?? 0
+  const playerLevel = input.playerLevel ?? getCharacterById(db, input.characterId)?.level
+  const completedFromThread = completedIdsFromStoryThread({
+    db,
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    inGameDate,
+    update: result.storyThreadUpdate
+  })
+
+  await persistAllQuestProposals({
+    db,
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    inGameDate,
+    proposals: result.questProposals ?? [],
+    provider: input.provider,
+    playerLevel
+  })
   for (const update of result.questUpdates ?? []) {
     persistQuestUpdate(db, input.characterId, update)
   }
-  completedQuestIds.push(
-    ...collectCompletedQuestIds(db, input.characterId, result.questCompletions ?? [], inGameDate)
-  )
 
-  return { completedQuestIds }
+  return {
+    completedQuestIds: [
+      ...completedFromThread,
+      ...collectCompletedQuestIds(db, input.characterId, result.questCompletions ?? [], inGameDate)
+    ]
+  }
 }
 
 export function isValidQuestProposal(value: unknown): value is QuestProposal {

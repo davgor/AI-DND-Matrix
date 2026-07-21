@@ -8,7 +8,7 @@ import { loadKnownSpellsForNarration, persistSpellGrants } from './narrationSpel
 import { createRegion } from '../db/repositories/regions'
 
 describe('persistSpellGrants', () => {
-  it('appends valid catalog spell keys', () => {
+  it('appends valid catalog spell keys', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Spells', premisePrompt: 'Hook', deathMode: 'legendary' })
     const hero = createCharacter(db, {
@@ -22,7 +22,7 @@ describe('persistSpellGrants', () => {
     expect((updated.stats as { knownSpellKeys?: string[] }).knownSpellKeys).toEqual(['firebolt'])
   })
 
-  it('ignores invalid keys without corrupting stats', () => {
+  it('ignores invalid keys without corrupting stats', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Spells', premisePrompt: 'Hook', deathMode: 'legendary' })
     const hero = createCharacter(db, {
@@ -39,7 +39,7 @@ describe('persistSpellGrants', () => {
 })
 
 describe('persistNarrationSideEffects spellGrants', () => {
-  it('persists validated spell grants from narration result', () => {
+  it('persists validated spell grants from narration result', async () => {
     const db = createTestDb()
     const campaign = createCampaign(db, { name: 'Spells', premisePrompt: 'Hook', deathMode: 'legendary' })
     const region = createRegion(db, { campaignId: campaign.id, name: 'Tower', description: 'Arcane' })
@@ -49,7 +49,7 @@ describe('persistNarrationSideEffects spellGrants', () => {
       characterClass: 'mage',
       kind: 'player'
     })
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       { narrationText: 'You learn a spell.', spellGrants: [{ catalogSpellKey: 'firebolt' }] },
       { campaignId: campaign.id, regionId: region.id, characterId: hero.id }

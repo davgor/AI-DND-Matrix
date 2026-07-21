@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
 import type { Alignment, Temperament } from '../../shared/alignment/types'
+import type { Bucket } from '../../shared/catalogTaxonomy'
 import {
   DEFAULT_ADDITIONAL_REGION_NPC_COUNT,
   DEFAULT_NPCS_PER_REGION,
@@ -84,6 +85,18 @@ export interface GeneratedStoryThread {
   summary: string
 }
 
+/** Slim LLM foe proposal for the prepped bestiary stage (116.6). Stats via retrieve-first later. */
+export interface GeneratedBestiaryFoe {
+  name: string
+  lore: string
+  buckets?: Bucket[]
+  tags?: string[]
+}
+
+export interface GeneratedBestiaryRoster {
+  foes: GeneratedBestiaryFoe[]
+}
+
 export interface GeneratedWorld {
   worldName: string
   worldSummary: string
@@ -132,6 +145,7 @@ export interface CampaignGenerationResult {
   pantheon: GeneratedPantheon
   regions: GeneratedRegion[]
   npcs: GeneratedNpc[]
+  bestiary: GeneratedBestiaryRoster
   storyThread: GeneratedStoryThread
 }
 

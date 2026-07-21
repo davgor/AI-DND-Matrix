@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import { tryParseJson } from '../jsonResponse'
 import type { Provider } from '../providers/types'
+import type { LlmPurposeId } from '../../shared/llmUsage'
 import {
   meetsRegionTropeDiversity,
   meetsPremiseTropeDiversity,
@@ -15,6 +16,7 @@ import {
   isValidGenerationResult,
   needsNpcTopUp,
   nextPreferredCanonName,
+  normalizeBestiaryGeneration,
   normalizeCanonRecall,
   normalizeGeneratedPantheon,
   normalizeGeneratedWorld,
@@ -33,6 +35,12 @@ import {
   buildStoryThreadGenerationPrompt,
   buildWorldGenerationPrompt
 } from './prompts'
+import {
+  BESTIARY_STAGE_MAX_TOKENS,
+  buildBestiaryStagePrompt,
+  ensureSignatureBestiaryFoes,
+  isValidBestiaryRoster
+} from './bestiaryStage'
 import { persistGeneratedCampaign, enrichNpcWithSpeakingStyle } from './persist'
 import { mapWithConcurrency } from './concurrency'
 import { buildAvailableRaceOptions } from '../raceLore'
@@ -52,6 +60,7 @@ import type {
   CampaignGenerationResult,
   CanonRecall,
   CampaignSetupInput,
+  GeneratedBestiaryRoster,
   GeneratedDeity,
   GeneratedNpc,
   GeneratedPantheon,
@@ -83,12 +92,16 @@ async function generateWithRetries<T>(input: {
   provider: Provider
   buildPrompt: () => string
   maxTokens: number
+  purpose: LlmPurposeId
   normalize: (parsed: unknown) => T | undefined
   isValid: (value: T) => boolean
   errorMessage: string
 }): Promise<T> {
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await input.provider.generate(input.buildPrompt(), { maxTokens: input.maxTokens })
+    const raw = await input.provider.generate(input.buildPrompt(), {
+      maxTokens: input.maxTokens,
+      purpose: input.purpose
+    })
     const parsed = tryParseJson(raw)
     const normalized = input.normalize(parsed)
     if (normalized && input.isValid(normalized)) {
@@ -107,6 +120,7 @@ export async function generateCampaignWorld(
     provider,
     buildPrompt: () => buildWorldGenerationPrompt(premisePrompt, pantheon),
     maxTokens: WORLD_MAX_TOKENS,
+    purpose: 'campaign.world',
     normalize: normalizeGeneratedWorld,
     isValid: (world) => isValidGeneratedWorld(world) && meetsWorldTropeDiversity(world, premisePrompt),
     errorMessage: 'DM agent did not return a valid world schema after retries'
@@ -127,6 +141,7 @@ export async function generateCanonRecall(
       provider,
       buildPrompt: () => buildCanonRecallPrompt(premisePrompt, world),
       maxTokens: CANON_MAX_TOKENS,
+      purpose: 'campaign.world',
       normalize: normalizeCanonRecall,
       isValid: isValidCanonRecall,
       errorMessage: 'DM agent did not return a valid canon recall schema after retries'
@@ -145,6 +160,7 @@ export async function generateCampaignPantheon(
     provider,
     buildPrompt: () => buildPantheonGenerationPrompt(premisePrompt, canon),
     maxTokens: PANTHEON_MAX_TOKENS,
+    purpose: 'campaign.pantheon',
     normalize: normalizeGeneratedPantheon,
     isValid: isValidGeneratedPantheon,
     errorMessage: 'DM agent did not return a valid pantheon schema after retries'
@@ -167,6 +183,7 @@ export async function generateCampaignRegions(input: {
     buildPrompt: () =>
       buildRegionsGenerationPrompt(input.premisePrompt, input.world, input.counts, canon),
     maxTokens: REGIONS_MAX_TOKENS,
+    purpose: 'campaign.region',
     normalize: (parsed) => normalizeRegionsGeneration(parsed, input.counts),
     isValid: (regions) =>
       regions.length === input.counts.regionCount &&
@@ -194,6 +211,7 @@ export async function generateCampaignStoryThread(
         input.deities ?? []
       ),
     maxTokens: STORY_THREAD_MAX_TOKENS,
+    purpose: 'campaign.story',
     normalize: normalizeStoryThreadGeneration,
     isValid: (thread) =>
       typeof thread.title === 'string' &&
@@ -203,6 +221,33 @@ export async function generateCampaignStoryThread(
     errorMessage: 'DM agent did not return a valid story thread schema after retries'
   })
   return storyThread
+}
+
+async function generateCampaignBestiary(
+  provider: Provider,
+  premisePrompt: string,
+  input: {
+    world: GeneratedWorld
+    regions: GeneratedRegion[]
+    deities?: GeneratedDeity[]
+  }
+): Promise<GeneratedBestiaryRoster> {
+  return generateWithRetries({
+    provider,
+    buildPrompt: () =>
+      buildBestiaryStagePrompt(premisePrompt, input.world, input.regions, input.deities ?? []),
+    maxTokens: BESTIARY_STAGE_MAX_TOKENS,
+    purpose: 'campaign.npc',
+    normalize: (parsed) => {
+      const normalized = normalizeBestiaryGeneration(parsed)
+      if (!normalized) {
+        return undefined
+      }
+      return ensureSignatureBestiaryFoes(premisePrompt, normalized)
+    },
+    isValid: isValidBestiaryRoster,
+    errorMessage: 'DM agent did not return a valid bestiary roster after retries'
+  })
 }
 
 /** In-flight cap for parallel shortfall single-NPC requests (rate-limit friendly). */
@@ -516,6 +561,29 @@ async function generateSeedNpcs(input: {
   })
 }
 
+async function generateBestiaryAndStory(input: {
+  provider: Provider
+  premisePrompt: string
+  world: GeneratedWorld
+  regions: GeneratedRegion[]
+  deities: GeneratedDeity[]
+  onProgress?: CreateCampaignProgressCallback
+}): Promise<{ bestiary: GeneratedBestiaryRoster; storyThread: GeneratedStoryThread }> {
+  input.onProgress?.('bestiary')
+  const bestiary = await generateCampaignBestiary(input.provider, input.premisePrompt, {
+    world: input.world,
+    regions: input.regions,
+    deities: input.deities
+  })
+  input.onProgress?.('story')
+  const storyThread = await generateCampaignStoryThread(input.provider, input.premisePrompt, {
+    world: input.world,
+    regions: input.regions,
+    deities: input.deities
+  })
+  return { bestiary, storyThread }
+}
+
 async function runCampaignSeedAttempt(input: {
   provider: Provider
   premisePrompt: string
@@ -549,16 +617,18 @@ async function runCampaignSeedAttempt(input: {
     deities: pantheon.deities,
     onNpcRegionStart: () => input.onProgress?.('npcs')
   })
-  input.onProgress?.('story')
-  const storyThread = await generateCampaignStoryThread(input.provider, input.premisePrompt, {
+  const { bestiary, storyThread } = await generateBestiaryAndStory({
+    provider: input.provider,
+    premisePrompt: input.premisePrompt,
     world,
     regions,
-    deities: pantheon.deities
+    deities: pantheon.deities,
+    onProgress: input.onProgress
   })
   return repairNpcShortfall({
     provider: input.provider,
     premisePrompt: input.premisePrompt,
-    normalized: { world, pantheon, regions, npcs, storyThread },
+    normalized: { world, pantheon, regions, npcs, bestiary, storyThread },
     counts: input.counts,
     availableRaces: input.availableRaces,
     canon
@@ -660,7 +730,7 @@ export async function generateAdditionalRegion(
         history: request.history,
         deities: request.deities
       }, availableRaces),
-      { maxTokens: ADDITIONAL_REGION_MAX_TOKENS }
+      { maxTokens: ADDITIONAL_REGION_MAX_TOKENS, purpose: 'campaign.region' }
     )
     const parsed = tryParseJson(raw)
     const normalized = normalizeAdditionalRegion(parsed, npcCount)
@@ -702,7 +772,8 @@ async function attemptGenerateSingleNpc(
   }
 ): Promise<GeneratedSingleNpcResult | undefined> {
   const raw = await provider.generate(buildSingleNpcPrompt(input), {
-    maxTokens: SINGLE_NPC_MAX_TOKENS
+    maxTokens: SINGLE_NPC_MAX_TOKENS,
+    purpose: 'campaign.npc'
   })
   const parsed = tryParseJson(raw)
   const normalized = normalizeGeneratedSingleNpc(parsed, input.regionName)

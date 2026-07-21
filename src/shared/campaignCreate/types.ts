@@ -27,15 +27,18 @@ export type CreateCampaignStage =
   | 'world'
   | 'regions'
   | 'npcs'
+  | 'bestiary'
   | 'story'
   | 'persist'
 
+/** Bestiary after npcs so signature foes exist before story hooks; before persist. */
 export const CREATE_CAMPAIGN_STAGE_ORDER: readonly CreateCampaignStage[] = [
   'canon',
   'pantheon',
   'world',
   'regions',
   'npcs',
+  'bestiary',
   'story',
   'persist'
 ]

@@ -48,7 +48,12 @@ export async function resolveXpAward(provider: Provider, ctx: XPContext): Promis
     prompt,
     (parsed) => parseXpDifficultyAgentResponse(parsed)?.difficulty ?? undefined,
     {
-      context: { maxTokens: XP_DIFFICULTY_MAX_TOKENS },
+      context: {
+        maxTokens: XP_DIFFICULTY_MAX_TOKENS,
+        purpose: 'play.loot_xp',
+        campaignId: ctx.campaignId,
+        characterId: ctx.playerCharacterId
+      },
       fallback: () => null
     }
   )

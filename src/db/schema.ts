@@ -582,5 +582,115 @@ export const migrations: Migration[] = [
     up: (db) => {
       migrateRagChunksV37(db)
     }
+  },
+  {
+    version: 38,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS bestiary_species (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL,
+          species_key TEXT NOT NULL,
+          name TEXT NOT NULL,
+          base_lore TEXT NOT NULL,
+          buckets_json TEXT NOT NULL,
+          tags_json TEXT NOT NULL,
+          default_catalog_key TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          UNIQUE(campaign_id, species_key),
+          FOREIGN KEY (campaign_id) REFERENCES campaigns(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_bestiary_species_campaign
+          ON bestiary_species(campaign_id);
+
+        CREATE TABLE IF NOT EXISTS bestiary_variants (
+          id TEXT PRIMARY KEY,
+          species_id TEXT NOT NULL,
+          variant_key TEXT NOT NULL,
+          catalog_key_override TEXT,
+          modifier_profile_id TEXT,
+          flavor_blurb TEXT,
+          UNIQUE(species_id, variant_key),
+          FOREIGN KEY (species_id) REFERENCES bestiary_species(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_bestiary_variants_species
+          ON bestiary_variants(species_id);
+
+        CREATE TABLE IF NOT EXISTS quest_foe_assignments (
+          id TEXT PRIMARY KEY,
+          quest_id TEXT NOT NULL,
+          species_id TEXT NOT NULL,
+          planned_composition_json TEXT,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (quest_id) REFERENCES quests(id),
+          FOREIGN KEY (species_id) REFERENCES bestiary_species(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_quest_foe_assignments_quest
+          ON quest_foe_assignments(quest_id);
+      `)
+      addColumnIfMissing(db, 'npcs', 'bestiary_species_id', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'bestiary_variant_key', 'TEXT')
+    }
+  },
+  {
+    version: 39,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'opinion_summary', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'opinion_summary_generated_at', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'last_player_interaction_at', 'TEXT')
+    }
+  },
+  {
+    version: 40,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE ask_dm_messages (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+          character_id TEXT NOT NULL REFERENCES characters(id),
+          role TEXT NOT NULL CHECK (role IN ('player', 'dm')),
+          content TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        );
+
+        CREATE INDEX idx_ask_dm_messages_character ON ask_dm_messages(character_id);
+      `)
+    }
+  },
+  {
+    version: 41,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS llm_usage_events (
+          id TEXT PRIMARY KEY,
+          provider_name TEXT NOT NULL,
+          model_id TEXT NOT NULL,
+          input_tokens INTEGER,
+          output_tokens INTEGER,
+          total_tokens INTEGER,
+          purpose TEXT NOT NULL,
+          bucket TEXT NOT NULL,
+          campaign_id TEXT,
+          character_id TEXT,
+          created_at TEXT NOT NULL,
+          outcome TEXT NOT NULL,
+          error_message TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_purpose
+          ON llm_usage_events(purpose);
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_bucket
+          ON llm_usage_events(bucket);
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_campaign_id
+          ON llm_usage_events(campaign_id);
+        CREATE INDEX IF NOT EXISTS idx_llm_usage_events_created_at
+          ON llm_usage_events(created_at);
+      `)
+    }
   }
 ]

@@ -43,13 +43,14 @@ Existing fixtures to reuse:
 
 ## 2. Pipeline invariants (do not break silently)
 
-Initial create runs **world → regions → per-slot NPCs → story → persist**. Keep these behaviors unless the ticket explicitly changes them:
+Initial create runs **world → regions → per-slot NPCs → bestiary → story → persist**. Keep these behaviors unless the ticket explicitly changes them:
 
 | Stage | Failure mode if wrong |
 |-------|------------------------|
 | World | Short prose rejected or padded — see `normalizeGeneratedWorld` / `padWorldProse` |
 | Regions | Exact `regionCount`; names must match NPC `regionName` after normalize |
 | NPCs | Each slot retries on duplicate names; shortfall top-up runs **before** final validation (`repairNpcShortfall`) |
+| Bestiary | Prepped roster (`MIN_PREPPED_BESTIARY_SPECIES = 3`); see `bestiaryStage.ts` / `docs/runbooks/bestiary-efficiency.md` |
 | Story | `storyThread` or `story_thread` wrapper |
 | Persist | Region lookup is fuzzy (`resolveGeneratedRegionName`); race keys must map to roster (`normalizeRaceKeyForRoster`) |
 
@@ -88,7 +89,7 @@ Vitest uses system Node and scripted JSON. **One real create** catches ABI, prov
 3. Create a campaign with **default counts** (2 regions, 3 NPCs) and a premise similar to recent failures, e.g.:
    - *"After a failed harvest, survivors gather in a mountain pass and face bandits who now wear the faces of the dead."*
 4. Confirm:
-   - Progress labels mention world → regions → NPCs → story → save (no generic hang)
+   - Progress labels mention world → regions → NPCs → **bestiary** → story → save (no generic hang)
    - **No** "The narrative engine returned an invalid campaign"
    - Campaign Review shows World section + regions + NPCs
 5. If it fails, check main-process logs for `CampaignGenerationSchemaError` or persist region/race errors before loosening validation blindly.

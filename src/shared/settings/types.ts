@@ -1,9 +1,15 @@
-export type ProviderMode = 'claude' | 'llamacpp' | 'player2'
+export type ProviderMode = 'claude' | 'openai' | 'gemini' | 'grok' | 'player2' | 'llamacpp'
 
 export interface ProviderSettings {
   mode: ProviderMode
   claudeApiKey: string
   claudeModel: string
+  openaiApiKey: string
+  openaiModel: string
+  geminiApiKey: string
+  geminiModel: string
+  grokApiKey: string
+  grokModel: string
   llamaCppBaseUrl: string
   llamaCppServerPath: string
   llamaCppModelPath: string
@@ -17,6 +23,12 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   mode: 'player2',
   claudeApiKey: '',
   claudeModel: 'claude-sonnet-4-6',
+  openaiApiKey: '',
+  openaiModel: 'gpt-4.1-mini',
+  geminiApiKey: '',
+  geminiModel: 'gemini-2.5-flash',
+  grokApiKey: '',
+  grokModel: 'grok-3',
   llamaCppBaseUrl: 'http://127.0.0.1:8080',
   llamaCppServerPath: '',
   llamaCppModelPath: '',
@@ -26,8 +38,14 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   player2BaseUrl: 'http://127.0.0.1:4315'
 }
 
-export interface RedactedProviderSettings extends Omit<ProviderSettings, 'claudeApiKey'> {
+type ProviderApiKeyField = 'claudeApiKey' | 'openaiApiKey' | 'geminiApiKey' | 'grokApiKey'
+
+export interface RedactedProviderSettings
+  extends Omit<ProviderSettings, ProviderApiKeyField> {
   claudeApiKeySet: boolean
+  openaiApiKeySet: boolean
+  geminiApiKeySet: boolean
+  grokApiKeySet: boolean
 }
 
 export interface SettingsValidationError {
@@ -35,8 +53,19 @@ export interface SettingsValidationError {
   message: string
 }
 
-export interface SaveProviderSettingsInput extends Omit<ProviderSettings, 'claudeApiKey'> {
+export interface SaveProviderSettingsInput
+  extends Omit<ProviderSettings, ProviderApiKeyField> {
   claudeApiKey?: string
+  openaiApiKey?: string
+  geminiApiKey?: string
+  grokApiKey?: string
+}
+
+export interface ProviderValidationContext {
+  claudeApiKeySet?: boolean
+  openaiApiKeySet?: boolean
+  geminiApiKeySet?: boolean
+  grokApiKeySet?: boolean
 }
 
 export interface ConnectionCheckResult {

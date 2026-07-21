@@ -62,7 +62,23 @@ async function checkClaudeReadiness(config: AppConfig): Promise<BootStageResult>
     return {
       ok: false,
       category: 'config',
-      message: 'Claude API key missing. Add CLAUDE_API_KEY to your .env file.',
+      message: 'Claude API key missing. Add CLAUDE_API_KEY to your .env file or Settings.',
+      recoverable: true
+    }
+  }
+  return { ok: true }
+}
+
+async function checkCloudKeyReadiness(
+  key: string | undefined,
+  label: string,
+  envVar: string
+): Promise<BootStageResult> {
+  if (!key) {
+    return {
+      ok: false,
+      category: 'config',
+      message: `${label} API key missing. Add ${envVar} to your .env file or Settings.`,
       recoverable: true
     }
   }
@@ -122,6 +138,15 @@ export function createLlmBootStage(config: AppConfig, lifecycle?: LlamaCppLifecy
     async run(onStatus) {
       if (config.agentProvider === 'claude') {
         return checkClaudeReadiness(config)
+      }
+      if (config.agentProvider === 'openai') {
+        return checkCloudKeyReadiness(config.openaiApiKey, 'OpenAI', 'OPENAI_API_KEY')
+      }
+      if (config.agentProvider === 'gemini') {
+        return checkCloudKeyReadiness(config.geminiApiKey, 'Gemini', 'GEMINI_API_KEY')
+      }
+      if (config.agentProvider === 'grok') {
+        return checkCloudKeyReadiness(config.grokApiKey, 'Grok', 'GROK_API_KEY')
       }
       if (config.agentProvider === 'player2') {
         return checkPlayer2Readiness(config, onStatus)

@@ -35,6 +35,24 @@ describe('pickSceneSummary', () => {
     ).toBe('The barkeep slides a mug forward.')
   })
 
+  it('skips scene-setting entries with missing text and falls back', () => {
+    const entries = [
+      {
+        id: '1',
+        timestamp: 't1',
+        speaker: 'dm' as const,
+        text: undefined as unknown as string,
+        sceneSetting: true
+      }
+    ]
+    expect(
+      pickSceneSummary(entries, {
+        regionName: 'Oakhollow',
+        regionBlurb: 'A quiet logging village.'
+      })
+    ).toBe('A quiet logging village.')
+  })
+
   it('falls back to region blurb when no scene-setting DM line exists', () => {
     const withoutSceneSetting = ENTRIES.filter((entry) => !entry.sceneSetting)
     expect(

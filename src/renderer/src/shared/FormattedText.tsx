@@ -19,6 +19,6 @@ function renderToken(token: EmphasisToken, index: number): JSX.Element | string 
 
 export function FormattedText(props: FormattedTextProps): JSX.Element {
   const Tag = props.as ?? 'span'
-  const tokens = tokenizeTextEmphasis(props.text)
+  const tokens = tokenizeTextEmphasis(props.text ?? '')
   return <Tag className={props.className}>{tokens.map(renderToken)}</Tag>
 }

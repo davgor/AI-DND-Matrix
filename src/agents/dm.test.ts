@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
+import { createBestiarySpecies } from '../db/repositories/bestiary'
+import { appendBestiaryDiscoveredFact } from '../db/repositories/bestiaryKnowledge'
 import { createNpc, markNpcPromoted } from '../db/repositories/npcs'
 import { createRegion, updateRegionStatus } from '../db/repositories/regions'
 import { createStoryThread } from '../db/repositories/storyThreads'
@@ -100,7 +102,7 @@ describe('interpretIntent (006.1 schema validation/retry + 006.2 DC clamp)', () 
   })
 })
 
-describe('interpretIntent: shared systemPrompt (040.9)', () => {
+describe('interpretIntent: shared systemPrompt (040.9)', async () => {
   it('moves the intent schema and guidance into systemPrompt — user prompt keeps the player input only', async () => {
     const provider = createScriptedProvider(['{"checkNeeded":false}'])
 
@@ -131,7 +133,7 @@ describe('interpretIntent: shared systemPrompt (040.9)', () => {
   })
 })
 
-describe('assembleNarrationContext + narrate (006.3)', () => {
+describe('assembleNarrationContext + narrate (006.3)', async () => {
   it('pulls region status, recent events, and story thread state fresh from the DB at call time', async () => {
     const { db, campaign, region, player } = seedCampaignWithRegion()
     createStoryThread(db, { campaignId: campaign.id, title: 'Main Arc', state: 'rising', summary: 'so far...' })
@@ -156,7 +158,7 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
     })
 
     const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
-    expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira' }])
+    expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira', isHostile: false }])
   })
 
   it('excludes already-promoted NPCs from presentNpcs, since they are now party members', async () => {
@@ -176,7 +178,59 @@ describe('assembleNarrationContext + narrate (006.3)', () => {
   })
 })
 
-describe('narration context slimming (040.4)', () => {
+describe('bestiary recall in narration context (116.10)', () => {
+  it('includes spawned bestiary instances in presentNpcs with slim lore/facts recall', async () => {
+    const { db, campaign, region, player } = seedCampaignWithRegion()
+    const species = createBestiarySpecies(db, {
+      campaignId: campaign.id,
+      key: 'rift-beast',
+      name: 'Rift-beast',
+      baseLore:
+        'Rift-beasts pour from tears in the sky and hunt by freezing the marrow of travelers.',
+      buckets: ['beast'],
+      tags: ['rift']
+    })
+    appendBestiaryDiscoveredFact(db, {
+      campaignId: campaign.id,
+      characterId: player.id,
+      speciesId: species.id,
+      title: 'Moonlight hide',
+      content: 'Their hide drinks moonlight.'
+    })
+    const instance = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Rift-beast',
+      role: 'enemy',
+      disposition: 'hostile',
+      bestiarySpeciesId: species.id,
+      bestiaryVariantKey: 'standard',
+      skipCombatHydration: true
+    })
+
+    const context = await assembleNarrationContext({
+      db,
+      campaignId: campaign.id,
+      regionId: region.id,
+      characterId: player.id,
+      playerInput: 'I study the beast'
+    })
+
+    expect(context.presentNpcs).toEqual([
+      { id: instance.id, name: 'Rift-beast', isHostile: true }
+    ])
+    expect(context.bestiaryRecall).toEqual([
+      expect.objectContaining({
+        speciesId: species.id,
+        speciesName: 'Rift-beast',
+        discoveredFactTitles: ['Moonlight hide']
+      })
+    ])
+    expect(context.bestiaryRecall?.[0]?.baseLoreExcerpt).toContain('Rift-beasts')
+  })
+})
+
+describe('narration context slimming (040.4)', async () => {
   it('sends slim recent events — no event ids, campaign ids, or raw payload blobs in the prompt', async () => {
     const { db, campaign, region, player } = seedCampaignWithRegion()
     const flavorEvent = appendEvent(db, {
@@ -220,7 +274,7 @@ describe('narration context slimming (040.4)', () => {
   })
 })
 
-describe('narrate: optional schema fields (006.3, 011.1)', () => {
+describe('narrate: optional schema fields (006.3, 011.1)', async () => {
   it('parses an optional reactingNpcIds field from the narration response', async () => {
     const { db, campaign, region, player } = seedCampaignWithRegion()
     const npc = createNpc(db, {
@@ -271,7 +325,7 @@ describe('narrate: optional schema fields (006.3, 011.1)', () => {
   })
 })
 
-describe('narrate: shared systemPrompt (040.9)', () => {
+describe('narrate: shared systemPrompt (040.9)', async () => {
   it('moves the narration schema, guidance, and emphasis rules into systemPrompt', async () => {
     const { db, campaign, region, player } = seedCampaignWithRegion()
     const provider = createScriptedProvider(['{"narrationText":"The door creaks open."}'])
@@ -293,23 +347,23 @@ describe('narrate: shared systemPrompt (040.9)', () => {
   })
 })
 
-describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', () => {
-  it('persists a world_fact tagged to the authoritative current region, ignoring anything the agent might claim', () => {
+describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', async () => {
+  it('persists a world_fact tagged to the authoritative current region, ignoring anything the agent might claim', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
-    persistNarrationSideEffects(db, {
+    await persistNarrationSideEffects(db, {
       narrationText: 'The village burns.',
       worldFact: { content: 'Oakhollow burned down' }
     }, { campaignId: campaign.id, regionId: region.id })
     expect(listWorldFactsByRegionOrFaction(db, campaign.id, region.id)).toHaveLength(1)
   })
 
-  it('creates no world_fact row when the narration response omits one', () => {
+  it('creates no world_fact row when the narration response omits one', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
-    persistNarrationSideEffects(db, { narrationText: 'Nothing of note happens.' }, { campaignId: campaign.id, regionId: region.id })
+    await persistNarrationSideEffects(db, { narrationText: 'Nothing of note happens.' }, { campaignId: campaign.id, regionId: region.id })
     expect(listWorldFactsByRegionOrFaction(db, campaign.id, region.id)).toHaveLength(0)
   })
 
-  it('updates a story_thread when the narration response includes an update', () => {
+  it('updates a story_thread when the narration response includes an update', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
     const thread = createStoryThread(db, {
       campaignId: campaign.id,
@@ -317,7 +371,7 @@ describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', 
       state: 'rising',
       summary: 'so far...'
     })
-    persistNarrationSideEffects(db, {
+    await persistNarrationSideEffects(db, {
       narrationText: 'The plot thickens.',
       storyThreadUpdate: { threadId: thread.id, state: 'climax', summary: 'updated summary' }
     }, { campaignId: campaign.id, regionId: region.id })
@@ -325,7 +379,7 @@ describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', 
     expect(updated).toMatchObject({ state: 'climax', summary: 'updated summary' })
   })
 
-  it('leaves the story_thread unchanged when the narration response omits an update', () => {
+  it('leaves the story_thread unchanged when the narration response omits an update', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
     const thread = createStoryThread(db, {
       campaignId: campaign.id,
@@ -333,14 +387,14 @@ describe('persistNarrationSideEffects (006.4 world_fact + 006.5 story_thread)', 
       state: 'rising',
       summary: 'so far...'
     })
-    persistNarrationSideEffects(db, { narrationText: 'Nothing changes the plot.' }, { campaignId: campaign.id, regionId: region.id })
+    await persistNarrationSideEffects(db, { narrationText: 'Nothing changes the plot.' }, { campaignId: campaign.id, regionId: region.id })
     const [unchanged] = listStoryThreadsByCampaign(db, campaign.id)
     expect(unchanged).toEqual(thread)
   })
 })
 
 describe('persistNarrationSideEffects item grants (024.7)', () => {
-  it('persists valid catalog and proposed item grants for the acting character', () => {
+  it('persists valid catalog and proposed item grants for the acting character', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
     const character = createCharacter(db, {
       campaignId: campaign.id,
@@ -353,7 +407,7 @@ describe('persistNarrationSideEffects item grants (024.7)', () => {
       throw new Error('expected seeded catalog item')
     }
 
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'You find loot.',
@@ -377,7 +431,7 @@ describe('persistNarrationSideEffects item grants (024.7)', () => {
 })
 
 describe('persistNarrationSideEffects journal entry (027.2)', () => {
-  it('persists a proposed journal entry for the acting character', () => {
+  it('persists a proposed journal entry for the acting character', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
     const character = createCharacter(db, {
       campaignId: campaign.id,
@@ -386,7 +440,7 @@ describe('persistNarrationSideEffects journal entry (027.2)', () => {
       kind: 'player'
     })
 
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'The miller thanks you warmly.',
@@ -401,7 +455,7 @@ describe('persistNarrationSideEffects journal entry (027.2)', () => {
     expect(entries[0]?.content).toContain('miller')
   })
 
-  it('does not create a journal entry when none is proposed', () => {
+  it('does not create a journal entry when none is proposed', async () => {
     const { db, campaign, region } = seedCampaignWithRegion()
     const character = createCharacter(db, {
       campaignId: campaign.id,
@@ -410,7 +464,7 @@ describe('persistNarrationSideEffects journal entry (027.2)', () => {
       kind: 'player'
     })
 
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       { narrationText: 'You parry and strike again.' },
       { campaignId: campaign.id, regionId: region.id, characterId: character.id }

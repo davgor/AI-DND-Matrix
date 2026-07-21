@@ -1,4 +1,4 @@
-import type { GeneratedNpc } from '../../agents/campaignGeneration/types'
+import type { GeneratedBestiaryFoe, GeneratedNpc } from '../../agents/campaignGeneration/types'
 
 export function makeRegion(name: string, suffix: string) {
   return {
@@ -114,6 +114,60 @@ export const VALID_PANTHEON = {
 
 export const VALID_PANTHEON_RESPONSE = JSON.stringify(VALID_PANTHEON)
 
+/** Default prepped bestiary roster (N>=3 per 116.6). */
+export const DEFAULT_BESTIARY_FOES: GeneratedBestiaryFoe[] = [
+  {
+    name: 'Ash Wolf',
+    tags: ['wolf', 'beast'],
+    buckets: ['beast'],
+    lore:
+      'Ash wolves haunt burnt ridgelines where smoke still clings to the scrub. Packs learn caravan schedules faster than scouts admit.'
+  },
+  {
+    name: 'Cave Crawler',
+    tags: ['ambush'],
+    buckets: ['beast'],
+    lore:
+      'Cave crawlers cling to damp ceilings and drop when torchlight wobbles. Miners nail iron chimes above shafts so the clicking arrives first.'
+  },
+  {
+    name: 'Bog Wight',
+    tags: ['undead', 'mire'],
+    buckets: ['undead'],
+    lore:
+      'Bog wights rise where travelers drowned with unpaid debts still clutched in their fists. Their fog smells like wet coins and regret.'
+  }
+]
+
+/** Shield Hero / rift fantasy signature foes for cascading fixtures. */
+export const SHIELD_HERO_BESTIARY_FOES: GeneratedBestiaryFoe[] = [
+  {
+    name: 'Blue Slime',
+    tags: ['slime'],
+    buckets: ['elemental'],
+    lore:
+      'Blue slimes pool in Wave-scarred ditches, dissolving gear and pride alike. Locals learn to watch for translucent blobs before they learn which gods to curse.'
+  },
+  {
+    name: 'Rift-beast',
+    tags: ['rift', 'beast'],
+    buckets: ['beast'],
+    lore:
+      'Rift-beasts claw through dimensional tears when Waves crest, all fang and wrong geometry. Survivors swear their howls arrive a heartbeat before the air splits open.'
+  },
+  {
+    name: 'Wave Spawn',
+    tags: ['wave', 'rift'],
+    buckets: ['fiend'],
+    lore:
+      'Wave spawn drip from the same calamities that summon Heroes, half-formed and hungry. They forget nothing of the last Wave except mercy.'
+  }
+]
+
+export function makeBestiarySeedResponse(foes: GeneratedBestiaryFoe[] = DEFAULT_BESTIARY_FOES): string {
+  return JSON.stringify({ foes })
+}
+
 /** Shield Hero–shaped pantheon preferring knownDeities names. */
 export const SHIELD_HERO_PANTHEON = {
   pantheonSummary:
@@ -189,6 +243,7 @@ export function buildCrimsonReachCascadingResponses(input: {
       npcIndex += 1
     }
   }
+  responses.push(makeBestiarySeedResponse())
   responses.push(
     JSON.stringify({
       storyThread: {
@@ -223,6 +278,7 @@ export function buildRealisticLlmCascadingSeedResponses(input: {
       npcIndex += 1
     }
   }
+  responses.push(makeBestiarySeedResponse())
   responses.push(
     JSON.stringify({
       story_thread: {
@@ -244,6 +300,7 @@ export function buildCascadingSeedResponses(input: {
   npcsPerRegion: number
   regions?: ReturnType<typeof makeRegion>[]
   storyThread?: { title: string; state: string; summary: string }
+  bestiaryFoes?: GeneratedBestiaryFoe[]
   canon?: {
     recognizedSetting: boolean
     settingLabel: string
@@ -284,6 +341,7 @@ export function buildCascadingSeedResponses(input: {
       responses.push(makeSingleNpcPayload(region.name, npcTemplates[index]!))
     }
   }
+  responses.push(makeBestiarySeedResponse(input.bestiaryFoes))
   responses.push(JSON.stringify({ storyThread }))
   return responses
 }
@@ -320,6 +378,7 @@ export function buildShieldHeroCascadingSeedResponses(input: {
       npcIndex += 1
     }
   }
+  responses.push(makeBestiarySeedResponse(SHIELD_HERO_BESTIARY_FOES))
   responses.push(
     JSON.stringify({
       storyThread: {

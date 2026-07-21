@@ -138,7 +138,8 @@ const INACTIVE_PLAYER_GENERATE_CONTEXT: GenerateContext = {
       'Decide how this inactive character reacts in the shared world — dialogue, gesture, or brief action.'
     ]
   }),
-  maxTokens: 256
+  maxTokens: 256,
+  purpose: 'play.inactive_proxy'
 }
 
 function buildInactivePlayerPrompt(
@@ -167,7 +168,11 @@ export async function decideInactivePlayerAction(
 ): Promise<InactivePlayerAction> {
   const raw = await provider.generate(
     buildInactivePlayerPrompt(inactiveCharacter, context, sceneNarration),
-    INACTIVE_PLAYER_GENERATE_CONTEXT
+    {
+      ...INACTIVE_PLAYER_GENERATE_CONTEXT,
+      campaignId: inactiveCharacter.campaignId,
+      characterId: inactiveCharacter.id
+    }
   )
   const parsed = tryParseJson(raw)
   return isValidInactivePlayerAction(parsed) ? parsed : { actionText: raw }

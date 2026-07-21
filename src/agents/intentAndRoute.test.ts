@@ -446,6 +446,74 @@ describe('buildIntentAndRoutePrompt', () => {
   })
 })
 
+describe('hostile present intent guidance (116.10)', () => {
+  it('strengthens attack-over-startEncounter guidance when hostiles are present', async () => {
+    const { db, campaign, region, player, narrationContext } = await seedRouteContext()
+    const goblin = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Goblin',
+      role: 'enemy',
+      disposition: 'hostile',
+      skipCombatHydration: true
+    })
+    const withHostile = await assembleNarrationContext({
+      db,
+      campaignId: campaign.id,
+      regionId: region.id,
+      characterId: player.id,
+      playerInput: 'I attack the goblin'
+    })
+
+    const beforeCombat = buildIntentAndRoutePrompt({
+      ...withHostile,
+      combat: { encounterActive: false, playerCanAct: true }
+    })
+    expect(beforeCombat).toContain(goblin.id)
+    expect(beforeCombat.toLowerCase()).toMatch(/hostile/)
+    expect(beforeCombat).toMatch(/attack/i)
+    expect(beforeCombat).toMatch(/startEncounter/)
+
+    const duringCombat = buildIntentAndRoutePrompt({
+      ...withHostile,
+      combat: {
+        encounterActive: true,
+        playerCanAct: true,
+        visibleCombatants: [{ id: goblin.id, name: 'Goblin', hp: 8, maxHp: 8 }]
+      }
+    })
+    expect(duringCombat).toMatch(/prefer.*attack|attack.*targetNpcId/i)
+    expect(duringCombat).toMatch(/Do not emit startEncounter again/)
+    expect(buildIntentAndRoutePrompt(narrationContext)).not.toMatch(/Hostile NPCs are already/)
+  })
+})
+
+describe('interpretIntentAndRoute: attack on bestiary instance (116.10)', () => {
+  it('accepts attack with targetNpcId of a prepared hostile instance', async () => {
+    const { narrationContext } = await seedRouteContext()
+    const instanceId = 'bestiary-instance-1'
+    const combat = {
+      encounterActive: true,
+      activeCombatantName: 'Kael',
+      visibleCombatants: [{ id: instanceId, name: 'Rift-beast', hp: 12, maxHp: 12 }],
+      playerCanAct: true
+    }
+    const provider = createScriptedProvider([
+      mergedResponse({
+        checkNeeded: false,
+        combatIntent: 'attack',
+        targetNpcId: instanceId
+      })
+    ])
+
+    const result = await interpretIntentAndRoute(provider, { ...narrationContext, combat })
+
+    expect(result.intent.combatIntent).toBe('attack')
+    expect(result.intent.targetNpcId).toBe(instanceId)
+    expect(provider.calls).toHaveLength(1)
+  })
+})
+
 describe('shared systemPrompt adoption (040.9)', () => {
   it('carries the JSON contract, both schemas, and the pre-roll narration rule in the systemPrompt', () => {
     expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('no markdown fences')
@@ -459,6 +527,11 @@ describe('shared systemPrompt adoption (040.9)', () => {
   it('instructs the DM to pick targeted NPC respondents, not the full roster by default (090)', () => {
     expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('not every present NPC by default')
     expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toContain('smallest relevant set')
+  })
+
+  it('guides preferring attack with targetNpcId over redundant startEncounter (116.10)', () => {
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toMatch(/hostile NPCs are already present/i)
+    expect(INTENT_AND_ROUTE_SYSTEM_PROMPT).toMatch(/attack.*targetNpcId/i)
   })
 
   it('sends the systemPrompt via GenerateContext on the merged call', async () => {

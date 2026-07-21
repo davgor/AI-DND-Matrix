@@ -95,7 +95,8 @@ const LOOT_GENERATE_CONTEXT: GenerateContext = {
       'Do not invent mechanical stats — only name, description, itemType, rarityTier for proposeNew.'
     ]
   }),
-  maxTokens: 384
+  maxTokens: 384,
+  purpose: 'play.loot_xp'
 }
 
 export function buildLootPrompt(ctx: LootContext, policy: LootPolicy, candidates: CatalogItem[]): string {
@@ -127,7 +128,11 @@ export async function resolveLoot(
     prompt,
     (parsed) => parseLootAgentResponse(parsed, policy.maxGrantCount) ?? undefined,
     {
-      context: LOOT_GENERATE_CONTEXT,
+      context: {
+        ...LOOT_GENERATE_CONTEXT,
+        campaignId: ctx.campaignId,
+        characterId: ctx.playerCharacterId
+      },
       fallback: () => ({
         narrationText: 'You search the scene but find nothing of value.',
         itemGrants: [],

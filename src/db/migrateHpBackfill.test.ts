@@ -24,6 +24,9 @@ function createPreHpMigrationDb(): Database.Database {
   runMigrations(db, migrations.filter((migration) => migration.version === 34))
   runMigrations(db, migrations.filter((migration) => migration.version === 35))
   runMigrations(db, migrations.filter((migration) => migration.version === 36))
+  // createNpc inserts bestiary columns added in v38; keep this fixture usable without full bestiary tables.
+  db.exec(`ALTER TABLE npcs ADD COLUMN bestiary_species_id TEXT`)
+  db.exec(`ALTER TABLE npcs ADD COLUMN bestiary_variant_key TEXT`)
   return db
 }
 

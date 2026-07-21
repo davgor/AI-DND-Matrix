@@ -75,11 +75,11 @@ describe('assembleNarrationContext log book entries', () => {
   })
 })
 
-describe('persistNarrationSideEffects log book proposals', () => {
-  it('persists valid log book proposals for the acting character', () => {
+describe('persistNarrationSideEffects log book proposals', async () => {
+  it('persists valid log book proposals for the acting character', async () => {
     const db = createTestDb()
     const { campaign, region, player } = seedCampaignWithPlayer(db)
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'You meet someone new.',

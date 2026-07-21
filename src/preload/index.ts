@@ -59,6 +59,14 @@ import type {
   BackgroundGenerateStoryInput,
   BackgroundRosterEntry
 } from '../shared/characterBackground/types'
+import type { NpcDossierDto } from '../shared/npcDossier/types'
+import type {
+  AskDmListHistoryInput,
+  AskDmMessage,
+  AskDmSendMessageInput,
+  AskDmSendMessageResult
+} from '../shared/askDm/types'
+import type { LlmUsageExportResult, LlmUsageRecentTotals } from '../shared/llmUsage'
 
 const windowControls = {
   minimize: (): void => ipcRenderer.send('window:minimize'),
@@ -176,6 +184,21 @@ const logBook = {
   }): Promise<LogEntry | null> => ipcRenderer.invoke('logBook:updateEntry', input),
   deleteEntry: (input: { characterId: string; entryId: string }): Promise<boolean> =>
     ipcRenderer.invoke('logBook:deleteEntry', input)
+}
+
+const npcDossier = {
+  get: (input: {
+    campaignId: string
+    characterId: string
+    npcId: string
+  }): Promise<NpcDossierDto | null> => ipcRenderer.invoke('npcDossier:get', input)
+}
+
+const askDm = {
+  listHistory: (input: AskDmListHistoryInput): Promise<AskDmMessage[]> =>
+    ipcRenderer.invoke('askDm:listHistory', input),
+  sendMessage: (input: AskDmSendMessageInput): Promise<AskDmSendMessageResult> =>
+    ipcRenderer.invoke('askDm:sendMessage', input)
 }
 
 const quests = {
@@ -316,8 +339,19 @@ const settings = {
     ipcRenderer.invoke('settings:save', input),
   testPlayer2Connection: (baseUrl: string): Promise<ConnectionCheckResult> =>
     ipcRenderer.invoke('settings:testPlayer2Connection', baseUrl),
+  testCloudConnection: (input: {
+    mode: 'claude' | 'openai' | 'gemini' | 'grok'
+    apiKey: string
+    model: string
+  }): Promise<ConnectionCheckResult> => ipcRenderer.invoke('settings:testCloudConnection', input),
   checkLlamaRuntime: (config: ProviderSettings): Promise<ConnectionCheckResult> =>
     ipcRenderer.invoke('settings:checkLlamaRuntime', config)
+}
+
+const llmUsage = {
+  getRecentTotals: (): Promise<LlmUsageRecentTotals> => ipcRenderer.invoke('llmUsage:getRecentTotals'),
+  exportLog: (campaignId?: string | null): Promise<LlmUsageExportResult> =>
+    ipcRenderer.invoke('llmUsage:export', campaignId ?? null)
 }
 
 const settingsIntro = {
@@ -345,6 +379,8 @@ contextBridge.exposeInMainWorld('campaigns', campaigns)
 contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('logBook', logBook)
+contextBridge.exposeInMainWorld('npcDossier', npcDossier)
+contextBridge.exposeInMainWorld('askDm', askDm)
 contextBridge.exposeInMainWorld('quests', quests)
 contextBridge.exposeInMainWorld('spellbook', spellbook)
 contextBridge.exposeInMainWorld('turn', turn)
@@ -356,6 +392,7 @@ contextBridge.exposeInMainWorld('startingLoadout', startingLoadout)
 contextBridge.exposeInMainWorld('race', race)
 contextBridge.exposeInMainWorld('background', background)
 contextBridge.exposeInMainWorld('settings', settings)
+contextBridge.exposeInMainWorld('llmUsage', llmUsage)
 contextBridge.exposeInMainWorld('settingsIntro', settingsIntro)
 contextBridge.exposeInMainWorld('autoUpdate', autoUpdate)
 
@@ -364,6 +401,8 @@ export type CampaignsApi = typeof campaigns
 export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type LogBookApi = typeof logBook
+export type NpcDossierApi = typeof npcDossier
+export type AskDmApi = typeof askDm
 export type QuestsApi = typeof quests
 export type SpellbookApi = typeof spellbook
 export type TurnApi = typeof turn
@@ -375,5 +414,6 @@ export type StartingLoadoutApi = typeof startingLoadout
 export type RaceApi = typeof race
 export type BackgroundApi = typeof background
 export type SettingsApi = typeof settings
+export type LlmUsageApi = typeof llmUsage
 export type SettingsIntroApi = typeof settingsIntro
 export type AutoUpdateApi = typeof autoUpdate

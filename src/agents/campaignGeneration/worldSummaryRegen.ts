@@ -66,7 +66,7 @@ export async function generateWorldSummaryFromHistory(
     (parsed) => normalizeSummaryPayloadWithPremise(parsed, input.premisePrompt) ?? undefined,
     {
       attempts: MAX_GENERATION_ATTEMPTS,
-      context: { maxTokens: 2048 },
+      context: { maxTokens: 2048, purpose: 'campaign.world' },
       exhaustedError: () =>
         new CampaignGenerationSchemaError(
           'DM agent did not return a valid world summary schema after retries'

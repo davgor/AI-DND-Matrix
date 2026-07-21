@@ -23,7 +23,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-describe('loadSettings', () => {
+describe('loadSettings: basics', () => {
   it('returns the provided fallback when no settings file exists yet', () => {
     const settings = loadSettings(filePath, passthroughCodec, DEFAULT_PROVIDER_SETTINGS)
     expect(settings).toEqual(DEFAULT_PROVIDER_SETTINGS)
@@ -55,13 +55,40 @@ describe('loadSettings', () => {
     expect(loaded.player2BaseUrl).toBe('http://custom:9999')
     expect(loaded.llamaCppCtxSize).toBe(4096)
   })
+})
 
-  it('never stores the API key in plain text on disk', () => {
-    saveSettings(filePath, passthroughCodec, { ...DEFAULT_PROVIDER_SETTINGS, claudeApiKey: 'sk-ant-super-secret' })
+describe('loadSettings: multi-cloud secrets', () => {
+  it('never stores API keys in plain text on disk', () => {
+    saveSettings(filePath, passthroughCodec, {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      claudeApiKey: 'sk-ant-super-secret',
+      openaiApiKey: 'sk-openai-secret',
+      geminiApiKey: 'gem-secret',
+      grokApiKey: 'grok-secret'
+    })
 
     const raw = readFileSync(filePath, 'utf-8')
     expect(raw).not.toContain('sk-ant-super-secret')
+    expect(raw).not.toContain('sk-openai-secret')
+    expect(raw).not.toContain('gem-secret')
+    expect(raw).not.toContain('grok-secret')
     expect(raw).toContain(Buffer.from('sk-ant-super-secret', 'utf-8').toString('base64'))
+    expect(raw).toContain(Buffer.from('sk-openai-secret', 'utf-8').toString('base64'))
+  })
+
+  it('round-trips openai/gemini/grok encrypted keys', () => {
+    saveSettings(filePath, passthroughCodec, {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'openai',
+      openaiApiKey: 'sk-openai-roundtrip',
+      geminiApiKey: 'gem-roundtrip',
+      grokApiKey: 'grok-roundtrip'
+    })
+
+    const loaded = loadSettings(filePath, passthroughCodec, DEFAULT_PROVIDER_SETTINGS)
+    expect(loaded.openaiApiKey).toBe('sk-openai-roundtrip')
+    expect(loaded.geminiApiKey).toBe('gem-roundtrip')
+    expect(loaded.grokApiKey).toBe('grok-roundtrip')
   })
 })
 

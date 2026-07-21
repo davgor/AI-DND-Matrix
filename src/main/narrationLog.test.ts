@@ -100,6 +100,31 @@ describe('buildNarrationLog: expression without utterance', () => {
   })
 })
 
+describe('buildNarrationLog: npc npcId', () => {
+  it('copies npcId from npc_reaction payload when present', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'npc_reaction',
+      payload: {
+        dialogue: 'Welcome, traveler.',
+        npcName: 'Mira',
+        npcId: 'npc-mira'
+      }
+    })
+
+    expect(buildNarrationLog(db, campaign.id)).toEqual([
+      expect.objectContaining({
+        speaker: 'npc',
+        text: 'Welcome, traveler.',
+        speakerName: 'Mira',
+        npcId: 'npc-mira'
+      })
+    ])
+  })
+})
+
 describe('buildNarrationLog: npc and party mapping', () => {
   it('maps npc_reaction and party_member_action events to single entries', () => {
     const db = createTestDb()

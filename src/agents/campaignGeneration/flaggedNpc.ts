@@ -46,7 +46,8 @@ const CORE_BUNDLE_GENERATE_CONTEXT: GenerateContext = {
       'Beasts and mindless undead use canSpeak false and omit race, gender, alignment, class, and background.'
     ]
   }),
-  maxTokens: 384
+  maxTokens: 384,
+  purpose: 'campaign.npc'
 }
 
 // Phase 2 writes the prose backstory; kept at 4096 (040.1) pending a measured cut.
@@ -57,7 +58,8 @@ const FINAL_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
     schemaFragment: '{"name":string,"role":string,"disposition":string,"backstory":string}',
     guidanceLines: ['backstory must be two short paragraphs tying the NPC to its region.']
   }),
-  maxTokens: FINAL_NPC_MAX_TOKENS
+  maxTokens: FINAL_NPC_MAX_TOKENS,
+  purpose: 'campaign.npc'
 }
 
 const FINAL_NON_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
@@ -65,7 +67,8 @@ const FINAL_NON_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
     schemaFragment: '{"name":string,"role":string,"disposition":string}',
     guidanceLines: ['Omit backstory entirely (canSpeak is false).']
   }),
-  maxTokens: FINAL_NPC_MAX_TOKENS
+  maxTokens: FINAL_NPC_MAX_TOKENS,
+  purpose: 'campaign.npc'
 }
 
 export async function generateNpcCoreBundle(

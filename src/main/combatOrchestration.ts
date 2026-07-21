@@ -18,7 +18,6 @@ import {
 import { appendEvent } from '../db/repositories/events'
 import { ensureNpcCombatStats, hydrateNpcWithFallback } from '../db/repositories/npcCombatHydration'
 import {
-  createNpc,
   getNpcById,
   isHostileNpc,
   isNpcOutOfFight,
@@ -29,57 +28,24 @@ import {
 } from '../db/repositories/npcs'
 import type { NpcYieldOutcome } from '../shared/combat/types'
 import { listPartyMembersForPlayer, getCharacterById, type Character } from '../db/repositories/characters'
+import { getRegionById } from '../db/repositories/regions'
+import type { Provider } from '../agents/providers/types'
+import {
+  spawnOnDemandEncounterHostiles,
+  spawnQuestPreparedHostiles
+} from './bestiaryEncounterSpawn'
 
-export interface StartEncounterInput {
+interface StartEncounterInput {
   db: Database.Database
   campaignId: string
   regionId: string
   player: Character
   participantNpcIds?: string[]
-  /** Used to name a provisional hostile when the region has none. */
+  /** Used to name / resolve on-demand foes when the region has none. */
   playerInput?: string
+  /** Required for on-demand bestiary generation; omit → provisional villager fallback. */
+  provider?: Provider
   rng: RandomFn
-}
-
-const PROVISIONAL_HOSTILE_FALLBACK_NAME = 'Hostile creature'
-
-/**
- * Pull a short foe label from common attack phrasing ("at the nearest beast").
- * Falls back when no usable target phrase is present.
- */
-function deriveProvisionalHostileName(playerInput: string): string {
-  const cleaned = playerInput.replace(/^\*+|\*+$/g, '').trim()
-  const atMatch = cleaned.match(
-    /\b(?:at|toward|towards|against)\s+(?:the\s+|a\s+|an\s+)?(.+?)(?:[.!?]|$)/i
-  )
-  const raw = atMatch?.[1]?.trim()
-  if (!raw) {
-    return PROVISIONAL_HOSTILE_FALLBACK_NAME
-  }
-  const withoutNearest = raw.replace(/^(?:nearest|closest|nearest\s+of\s+the)\s+/i, '').trim()
-  const label = withoutNearest.replace(/^(?:the|a|an)\s+/i, '').trim()
-  if (label.length < 2) {
-    return PROVISIONAL_HOSTILE_FALLBACK_NAME
-  }
-  const clipped = label.slice(0, 48)
-  return clipped.charAt(0).toUpperCase() + clipped.slice(1)
-}
-
-function spawnProvisionalHostile(
-  db: Database.Database,
-  input: { campaignId: string; regionId: string; playerInput?: string }
-): Npc {
-  const name = deriveProvisionalHostileName(input.playerInput ?? '')
-  return createNpc(db, {
-    campaignId: input.campaignId,
-    regionId: input.regionId,
-    name,
-    role: 'enemy',
-    disposition: 'hostile',
-    canSpeak: false,
-    temperament: 'aggressive',
-    backstory: 'Provisional combatant spawned when an encounter started with no region hostiles.'
-  })
 }
 
 export function collectEncounterCombatants(
@@ -106,37 +72,71 @@ export function collectEncounterCombatants(
   return refs
 }
 
-function ensureNpcParticipants(
+async function ensureNpcParticipants(
   db: Database.Database,
   input: StartEncounterInput,
   participantRefs: CombatantRef[]
-): CombatantRef[] {
+): Promise<CombatantRef[]> {
   if (participantRefs.some((ref) => ref.kind === 'npc')) {
     return participantRefs
   }
-  const spawned = spawnProvisionalHostile(db, {
+  const partySize = 1 + listPartyMembersForPlayer(db, input.player.id).length
+  const questIds = tryQuestPrepNpcIds(db, input, partySize)
+  if (questIds) {
+    return [...participantRefs, ...questIds.map((id) => ({ kind: 'npc' as const, id }))]
+  }
+  const region = getRegionById(db, input.regionId)
+  const outcome = await spawnOnDemandEncounterHostiles({
+    db,
+    provider: input.provider,
     campaignId: input.campaignId,
     regionId: input.regionId,
-    playerInput: input.playerInput
+    playerLevel: input.player.level,
+    partySize,
+    playerInput: input.playerInput,
+    regionText: region?.description
   })
-  return [...participantRefs, { kind: 'npc', id: spawned.id }]
+  const ids = outcome.kind === 'failed' ? [] : outcome.instanceNpcIds
+  return [...participantRefs, ...ids.map((id) => ({ kind: 'npc' as const, id }))]
 }
 
-export function startEncounter(input: StartEncounterInput): CombatEncounter {
+function tryQuestPrepNpcIds(
+  db: Database.Database,
+  input: StartEncounterInput,
+  partySize: number
+): string[] | null {
+  const questOutcome = spawnQuestPreparedHostiles({
+    db,
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    playerCharacterId: input.player.id,
+    playerLevel: input.player.level,
+    partySize
+  })
+  if (questOutcome?.kind === 'success' && questOutcome.instanceNpcIds.length > 0) {
+    return questOutcome.instanceNpcIds
+  }
+  return null
+}
+
+function hydrateEncounterNpcs(db: Database.Database, participantRefs: CombatantRef[]): void {
+  for (const ref of participantRefs) {
+    if (ref.kind !== 'npc') continue
+    const npc = getNpcById(db, ref.id)
+    if (npc) {
+      hydrateNpcWithFallback(db, npc.id)
+    }
+  }
+}
+
+export async function startEncounter(input: StartEncounterInput): Promise<CombatEncounter> {
   const { db, campaignId, regionId, player, participantNpcIds, rng } = input
-  const participantRefs = ensureNpcParticipants(
+  const participantRefs = await ensureNpcParticipants(
     db,
     input,
     collectEncounterCombatants(db, regionId, player, participantNpcIds)
   )
-  for (const ref of participantRefs) {
-    if (ref.kind === 'npc') {
-      const npc = getNpcById(db, ref.id)
-      if (npc) {
-        hydrateNpcWithFallback(db, npc.id)
-      }
-    }
-  }
+  hydrateEncounterNpcs(db, participantRefs)
 
   const kindById = new Map(participantRefs.map((ref) => [ref.id, ref.kind]))
   const engineCombatants: Combatant[] = participantRefs.map((ref) => ({
@@ -178,7 +178,7 @@ function resolveAgilityScore(db: Database.Database, ref: CombatantRef, player: C
   return 10
 }
 
-export function isCombatantSkipped(db: Database.Database, ref: CombatantRef, encounter?: StoredEncounter): boolean {
+function isCombatantSkipped(db: Database.Database, ref: CombatantRef, encounter?: StoredEncounter): boolean {
   if (encounter && hasCombatantExited(encounter, ref)) {
     return true
   }

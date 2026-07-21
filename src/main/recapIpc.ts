@@ -7,7 +7,7 @@ import { buildAgentProvider } from './campaignIpc'
 import { getDb } from './db'
 
 // 040.1: 256 — the prompt asks for a 2-4 sentence recap.
-const RECAP_GENERATE_CONTEXT: GenerateContext = { maxTokens: 256 }
+const RECAP_GENERATE_CONTEXT: GenerateContext = { maxTokens: 256, purpose: 'play.recap' }
 
 function buildRecapPrompt(recentEvents: Event[]): string {
   return [
@@ -25,7 +25,10 @@ export async function generateSessionRecap(
   if (recentEvents.length === 0) {
     return 'This is the start of your story — nothing has happened yet.'
   }
-  return provider.generate(buildRecapPrompt(recentEvents), RECAP_GENERATE_CONTEXT)
+  return provider.generate(buildRecapPrompt(recentEvents), {
+    ...RECAP_GENERATE_CONTEXT,
+    campaignId
+  })
 }
 
 export function registerRecapHandlers(): void {

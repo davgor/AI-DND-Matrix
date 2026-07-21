@@ -228,7 +228,8 @@ export async function runIdentityInterviewKickoff(
 ): Promise<IdentityKickoffResponse> {
   const generateContext = {
     systemPrompt: buildIdentityKickoffSystemPrompt(context),
-    maxTokens: IDENTITY_REPLY_MAX_TOKENS
+    maxTokens: IDENTITY_REPLY_MAX_TOKENS,
+    purpose: 'onboarding.guided_identity' as const
   }
   return generateJsonWithRetry(
     provider,
@@ -273,7 +274,8 @@ export async function runIdentityInterviewTurn(
 ): Promise<IdentityInterviewResponse> {
   const generateContext = {
     systemPrompt: buildIdentityInterviewSystemPrompt(context),
-    maxTokens: IDENTITY_REPLY_MAX_TOKENS
+    maxTokens: IDENTITY_REPLY_MAX_TOKENS,
+    purpose: 'onboarding.guided_identity' as const
   }
   const prompt = buildIdentityInterviewPrompt(context, playerMessage)
   return generateJsonWithRetry(

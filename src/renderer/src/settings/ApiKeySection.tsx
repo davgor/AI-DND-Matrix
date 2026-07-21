@@ -1,11 +1,14 @@
-import type { SettingsValidationError } from '../../../shared/settings/types'
+import type { ConnectionCheckResult, SettingsValidationError } from '../../../shared/settings/types'
+import { ModelPicker } from './ModelPicker'
 
-export interface ApiKeySectionProps {
+interface ApiKeySectionProps {
   claudeApiKey: string
   claudeApiKeySet: boolean
   claudeModel: string
   errors: SettingsValidationError[]
+  connectionResult: ConnectionCheckResult | null
   onChange: (patch: { claudeApiKey?: string; claudeModel?: string }) => void
+  onTestConnection: () => Promise<void>
 }
 
 function fieldError(errors: SettingsValidationError[], field: string): string | undefined {
@@ -14,6 +17,7 @@ function fieldError(errors: SettingsValidationError[], field: string): string | 
 
 export function ApiKeySection(props: ApiKeySectionProps): JSX.Element {
   const apiKeyError = fieldError(props.errors, 'claudeApiKey')
+  const modelError = fieldError(props.errors, 'claudeModel')
 
   return (
     <section className="settings-section" aria-label="Claude API key">
@@ -30,13 +34,21 @@ export function ApiKeySection(props: ApiKeySectionProps): JSX.Element {
         onChange={(event) => props.onChange({ claudeApiKey: event.target.value })}
       />
       {apiKeyError && <p className="settings-field-error">{apiKeyError}</p>}
-      <label htmlFor="settings-claude-model">Model</label>
-      <input
-        id="settings-claude-model"
-        type="text"
-        value={props.claudeModel}
-        onChange={(event) => props.onChange({ claudeModel: event.target.value })}
+      <ModelPicker
+        provider="claude"
+        modelId={props.claudeModel}
+        error={modelError}
+        idPrefix="settings-claude"
+        onChange={(claudeModel) => props.onChange({ claudeModel })}
       />
+      <button type="button" onClick={() => void props.onTestConnection()}>
+        Test connection
+      </button>
+      {props.connectionResult && (
+        <p className={props.connectionResult.ok ? 'settings-check-ok' : 'settings-check-failed'}>
+          {props.connectionResult.message}
+        </p>
+      )}
     </section>
   )
 }

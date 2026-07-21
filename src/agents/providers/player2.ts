@@ -1,4 +1,5 @@
 import type { GenerateContext, Provider } from './types'
+import { parseOpenAiCompatibleUsage } from './usageParse'
 
 export class Player2RequestError extends Error {
   readonly status?: number
@@ -38,7 +39,11 @@ interface Player2ChatChoice {
 
 interface Player2ChatCompletionResponse {
   choices: Player2ChatChoice[]
+  model?: string
+  usage?: { prompt_tokens?: number; completion_tokens?: number }
 }
+
+const DEFAULT_PLAYER2_MODEL_ID = 'player2'
 
 function buildMessages(prompt: string, context?: GenerateContext): Player2ChatMessage[] {
   const messages: Player2ChatMessage[] = []
@@ -79,7 +84,11 @@ export function createPlayer2Provider(config: Player2AdapterConfig): Provider {
           'Player2 response was truncated at the max_tokens cap — partial output discarded'
         )
       }
-      return choice?.message.content ?? ''
+      const text = choice?.message.content ?? ''
+      const modelId = data.model ?? DEFAULT_PLAYER2_MODEL_ID
+      const usage = parseOpenAiCompatibleUsage(data.usage, modelId)
+      context?.onUsage?.(usage)
+      return text
     }
   }
 }

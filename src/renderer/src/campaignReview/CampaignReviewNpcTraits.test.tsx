@@ -53,8 +53,10 @@ function baseNpc(overrides: Partial<Npc> = {}): Npc {
     classKey: null,
     speakingStyleSpecimen: null,
     speakingStyleExamples: null,
+    bestiarySpeciesId: null,
+    bestiaryVariantKey: null,
     ...overrides
-  }
+  } as Npc
 }
 
 describe('CampaignReviewNpcTraits background row (051.6)', () => {

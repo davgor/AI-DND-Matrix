@@ -1,4 +1,5 @@
 import type { GenerateContext, Provider } from './types'
+import { parseClaudeUsage } from './usageParse'
 
 export class ClaudeConfigError extends Error {}
 
@@ -41,6 +42,7 @@ interface AnthropicContentBlock {
 interface AnthropicMessagesResponse {
   content: AnthropicContentBlock[]
   stop_reason?: string
+  usage?: { input_tokens?: number; output_tokens?: number }
 }
 
 async function callAnthropic(
@@ -87,7 +89,10 @@ export function createClaudeProvider(config: ClaudeAdapterConfig): Provider {
         )
       }
       const textBlock = data.content.find((block) => block.type === 'text')
-      return textBlock?.text ?? ''
+      const text = textBlock?.text ?? ''
+      const usage = parseClaudeUsage(data.usage, config.model)
+      context?.onUsage?.(usage)
+      return text
     }
   }
 }

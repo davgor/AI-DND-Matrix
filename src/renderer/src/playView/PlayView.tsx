@@ -8,6 +8,7 @@ import { InCampaignPlayColumns, type PlayViewCampaignProps } from './InCampaignP
 import { LevelUpModal } from './LevelUpModal'
 import { ObituaryDraftingModal } from './ObituaryDraftingModal'
 import { usePlayViewController } from './usePlayViewController'
+import { D20Overlay } from './d20Overlay/D20Overlay'
 import './playView.css'
 
 export interface PlayViewProps extends PlayViewCampaignProps {
@@ -47,6 +48,7 @@ export function PlayView(props: PlayViewProps): JSX.Element {
       onExitToCampaignHub={props.onExitToCampaignHub}
       overlays={
         <>
+          <D20Overlay lastCheck={controller.lastCheck ?? null} showRolls={controller.showRolls} />
           <RecapBanner recap={controller.recap} />
           <PromotionPrompt promotion={controller.promotion} />
           <LevelUpModal

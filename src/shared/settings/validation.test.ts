@@ -11,7 +11,24 @@ describe('validateProviderSettings: claude mode', () => {
   it('requires a claude API key', () => {
     const settings = { ...DEFAULT_PROVIDER_SETTINGS, mode: 'claude' as const, claudeApiKey: '' }
     const errors = validateProviderSettings(settings)
-    expect(errors).toEqual([{ field: 'claudeApiKey', message: 'A Claude API key is required.' }])
+    expect(errors).toEqual([{ field: 'claudeApiKey', message: 'Claude API key is required.' }])
+  })
+
+  it('allows an empty draft key when claudeApiKeySet is true', () => {
+    const settings = { ...DEFAULT_PROVIDER_SETTINGS, mode: 'claude' as const, claudeApiKey: '' }
+    expect(validateProviderSettings(settings, { claudeApiKeySet: true })).toEqual([])
+  })
+
+  it('requires a claude model', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'claude' as const,
+      claudeApiKey: 'sk-ant-test',
+      claudeModel: ''
+    }
+    expect(validateProviderSettings(settings)).toEqual([
+      { field: 'claudeModel', message: 'Claude model is required.' }
+    ])
   })
 
   it('does not validate fields belonging to a mode that is not selected', () => {
@@ -23,6 +40,51 @@ describe('validateProviderSettings: claude mode', () => {
       llamaCppBaseUrl: ''
     }
     expect(validateProviderSettings(settings)).toEqual([])
+  })
+})
+
+describe('validateProviderSettings: openai mode', () => {
+  it('requires an API key and model', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'openai' as const,
+      openaiApiKey: '',
+      openaiModel: ''
+    }
+    expect(validateProviderSettings(settings)).toEqual([
+      { field: 'openaiApiKey', message: 'OpenAI API key is required.' },
+      { field: 'openaiModel', message: 'OpenAI model is required.' }
+    ])
+  })
+
+  it('passes with key and model', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'openai' as const,
+      openaiApiKey: 'sk-test',
+      openaiModel: 'gpt-4.1-mini'
+    }
+    expect(validateProviderSettings(settings)).toEqual([])
+  })
+})
+
+describe('validateProviderSettings: gemini mode', () => {
+  it('requires an API key', () => {
+    const settings = { ...DEFAULT_PROVIDER_SETTINGS, mode: 'gemini' as const, geminiApiKey: '' }
+    expect(validateProviderSettings(settings)).toContainEqual({
+      field: 'geminiApiKey',
+      message: 'Gemini API key is required.'
+    })
+  })
+})
+
+describe('validateProviderSettings: grok mode', () => {
+  it('requires an API key', () => {
+    const settings = { ...DEFAULT_PROVIDER_SETTINGS, mode: 'grok' as const, grokApiKey: '' }
+    expect(validateProviderSettings(settings)).toContainEqual({
+      field: 'grokApiKey',
+      message: 'Grok API key is required.'
+    })
   })
 })
 
@@ -76,12 +138,24 @@ describe('validateProviderSettings: llamacpp mode', () => {
 })
 
 describe('redactProviderSettings', () => {
-  it('replaces claudeApiKey with a boolean flag and keeps every other field', () => {
-    const settings = { ...DEFAULT_PROVIDER_SETTINGS, claudeApiKey: 'sk-ant-super-secret' }
+  it('replaces all API keys with boolean flags and keeps every other field', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      claudeApiKey: 'sk-ant-super-secret',
+      openaiApiKey: 'sk-openai',
+      geminiApiKey: 'gem-key',
+      grokApiKey: 'grok-key'
+    }
     const redacted = redactProviderSettings(settings)
 
     expect(redacted).not.toHaveProperty('claudeApiKey')
+    expect(redacted).not.toHaveProperty('openaiApiKey')
+    expect(redacted).not.toHaveProperty('geminiApiKey')
+    expect(redacted).not.toHaveProperty('grokApiKey')
     expect(redacted.claudeApiKeySet).toBe(true)
+    expect(redacted.openaiApiKeySet).toBe(true)
+    expect(redacted.geminiApiKeySet).toBe(true)
+    expect(redacted.grokApiKeySet).toBe(true)
     expect(redacted.claudeModel).toBe(settings.claudeModel)
   })
 

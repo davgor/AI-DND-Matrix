@@ -1,5 +1,6 @@
 import type { Character } from '../../../db/repositories/characters'
-import { PlaySheetModals, usePlaySheetModals } from './PlaySheetModals'
+import { PlaySheetModals } from './PlaySheetModals'
+import type { usePlaySheetModals } from './usePlaySheetModals'
 import {
   PLAY_SHEET_TAB_LABELS,
   PlaySheetTabPanel,
@@ -11,9 +12,8 @@ export function PlaySheetRailBody(props: {
   activeTab: PlaySheetTab
   onSelectTab: (tab: PlaySheetTab) => void
   refreshToken: number
+  modals: ReturnType<typeof usePlaySheetModals>
 }): JSX.Element {
-  const modals = usePlaySheetModals()
-
   function handleTabSelect(tab: PlaySheetTab): void {
     props.onSelectTab(tab)
   }
@@ -39,17 +39,18 @@ export function PlaySheetRailBody(props: {
         activeTab={props.activeTab}
         character={props.character}
         refreshToken={props.refreshToken}
-        onOpenLogBook={modals.openLogBook}
-        onOpenQuestLog={modals.openQuestLog}
-        onOpenInventory={() => modals.openInventory(null)}
-        onOpenJournal={modals.openJournal}
-        onOpenSpellbook={modals.openSpellbook}
+        onOpenLogBook={props.modals.openLogBook}
+        onOpenQuestLog={props.modals.openQuestLog}
+        onOpenInventory={() => props.modals.openInventory(null)}
+        onOpenJournal={props.modals.openJournal}
+        onOpenSpellbook={props.modals.openSpellbook}
+        onOpenAskDm={props.modals.openAskDm}
       />
       <PlaySheetModals
         character={props.character}
         campaignId={props.character.campaignId}
         refreshToken={props.refreshToken}
-        modals={modals}
+        modals={props.modals}
       />
     </div>
   )

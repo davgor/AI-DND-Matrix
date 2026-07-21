@@ -37,25 +37,25 @@ function seedCampaign(db: ReturnType<typeof createTestDb>) {
 }
 
 describe('character journal end-to-end smoke', () => {
-  it('persists a major-beat journal entry but not routine turns', () => {
+  it('persists a major-beat journal entry but not routine turns', async () => {
     const db = createTestDb()
     const { campaign, region, player } = seedCampaign(db)
 
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'You parry and strike again.',
       },
       { campaignId: campaign.id, regionId: region.id, characterId: player.id }
     )
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'You explore a side path.',
       },
       { campaignId: campaign.id, regionId: region.id, characterId: player.id }
     )
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'The miller thanks you warmly.',
@@ -70,7 +70,7 @@ describe('character journal end-to-end smoke', () => {
     expect(entries[0]?.content).toContain('miller')
   })
 
-  it('returns an empty list for a character with no journal entries', () => {
+  it('returns an empty list for a character with no journal entries', async () => {
     const db = createTestDb()
     const { player } = seedCampaign(db)
     expect(listCharacterJournalEntries(db, player.id)).toEqual([])
@@ -90,7 +90,7 @@ describe('character journal persistence smoke', () => {
     }
   })
 
-  it('preserves journal entries and order after reopening the database file', () => {
+  it('preserves journal entries and order after reopening the database file', async () => {
     dir = mkdtempSync(join(tmpdir(), 'journal-smoke-'))
     db = openFileTestDb(join(dir, 'save.sqlite'))
     runMigrations(db, migrations)

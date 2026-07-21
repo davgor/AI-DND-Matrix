@@ -34,9 +34,9 @@ function seedTwoPlayers() {
 }
 
 describe('persistNarrationSideEffects paired cross-character log (038.15)', () => {
-  it('persists paired entries to both character ids in one transaction', () => {
+  it('persists paired entries to both character ids in one transaction', async () => {
     const { db, campaign, region, active, inactive } = seedTwoPlayers()
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'The two heroes meet at the market.',
@@ -72,9 +72,9 @@ describe('persistNarrationSideEffects paired cross-character log (038.15)', () =
 })
 
 describe('persistNarrationSideEffects isolated cross-character log (038.15)', () => {
-  it('isolates each character list API to its own entries', () => {
+  it('isolates each character list API to its own entries', async () => {
     const { db, campaign, region, active, inactive } = seedTwoPlayers()
-    persistNarrationSideEffects(
+    await persistNarrationSideEffects(
       db,
       {
         narrationText: 'Brief exchange.',

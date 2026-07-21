@@ -5,8 +5,12 @@ import { ALIGNMENT_LABELS, type Alignment } from '../../../shared/alignment/type
 import type { SceneSummaryInput } from '../../../shared/inCampaignLayout/sceneContext'
 import { pickSceneSummary } from '../../../shared/inCampaignLayout/sceneContext'
 import { FormattedText } from '../shared/FormattedText'
+import {
+  incomingHighlightClassName,
+  useIncomingHighlight
+} from './incomingHighlight'
 
-export interface AlignmentShiftWarningBannerProps {
+interface AlignmentShiftWarningBannerProps {
   pending: PendingAlignmentShift
   playerAlignment: string | null
 }
@@ -65,7 +69,7 @@ export function ImprisonedStatusBanner(): JSX.Element {
   )
 }
 
-export interface DmExpositionSceneHeaderProps {
+interface DmExpositionSceneHeaderProps {
   entries: PlayLogEntry[]
   sceneContext: SceneSummaryInput
   expositionStatus: ExpositionStatus
@@ -74,6 +78,7 @@ export interface DmExpositionSceneHeaderProps {
 
 export function DmExpositionSceneHeader(props: DmExpositionSceneHeaderProps): JSX.Element {
   const sceneText = pickSceneSummary(props.entries, props.sceneContext)
+  const summaryHighlighted = useIncomingHighlight(sceneText)
   const isLoading = props.expositionStatus.state === 'loading'
   return (
     <header className="dm-exposition-header">
@@ -87,7 +92,10 @@ export function DmExpositionSceneHeader(props: DmExpositionSceneHeaderProps): JS
           </button>
         </div>
       ) : null}
-      <div className="dm-exposition-scene" aria-live="polite">
+      <div
+        className={incomingHighlightClassName(summaryHighlighted, 'dm-exposition-scene')}
+        aria-live="polite"
+      >
         {FormattedText({ as: 'p', className: 'dm-exposition-scene-text', text: sceneText })}
       </div>
     </header>

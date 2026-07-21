@@ -21,6 +21,7 @@ import { startEncounter } from './combatOrchestration'
 import { PROVOKE_HOSTILE_DISPOSITION } from '../shared/npcCombat/types'
 import type { Character } from '../db/repositories/characters'
 import { appendEvent } from '../db/repositories/events'
+import { recordNpcPlayerInteraction } from './npcInteractionWatermark'
 
 export class NpcAttackTargetError extends Error {}
 
@@ -83,14 +84,14 @@ export interface ProvokeAttackResult {
   encounterStarted: boolean
 }
 
-export function provokeAndAttackNpc(input: {
+export async function provokeAndAttackNpc(input: {
   db: Database.Database
   campaignId: string
   regionId: string
   player: Character
   targetNpcId: string
   rng: RandomFn
-}): ProvokeAttackResult {
+}): Promise<ProvokeAttackResult> {
   const { db, campaignId, regionId, player, targetNpcId, rng } = input
   let npc = ensureNpcCombatStats(db, getNpcById(db, targetNpcId) as Npc)
   if (!isNpcAttackableInRegion(npc, regionId)) {
@@ -102,7 +103,7 @@ export function provokeAndAttackNpc(input: {
 
   let encounterStarted = false
   if (!getActiveEncounter(db, campaignId)) {
-    startEncounter({
+    await startEncounter({
       db,
       campaignId,
       regionId,
@@ -123,6 +124,7 @@ export function provokeAndAttackNpc(input: {
       provoked: true
     }
   })
+  recordNpcPlayerInteraction(db, npc.id)
 
   return {
     npc,

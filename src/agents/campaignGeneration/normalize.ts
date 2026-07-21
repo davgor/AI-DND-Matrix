@@ -8,6 +8,8 @@ import type {
   AdditionalRegionResult,
   CampaignGenerationResult,
   CanonRecall,
+  GeneratedBestiaryFoe,
+  GeneratedBestiaryRoster,
   GeneratedDeity,
   GeneratedNpc,
   GeneratedPantheon,
@@ -18,6 +20,12 @@ import type {
   GenerationCounts
 } from './types'
 import { EMPTY_CANON_RECALL, resolveInitialGenerationCounts } from './types'
+import {
+  isValidBestiaryRoster,
+  MAX_PREPPED_BESTIARY_SPECIES,
+  MIN_PREPPED_BESTIARY_SPECIES
+} from './bestiaryStage'
+import { isBucket } from '../../shared/catalogTaxonomy'
 
 const MIN_NPCS_PER_REGION_WHEN_NONZERO = 1
 const MIN_QUEST_HOOKS = 1
@@ -292,6 +300,50 @@ export function normalizeStoryThreadGeneration(value: unknown): GeneratedStoryTh
   return normalizeGeneratedStoryThread(
     record['storyThread'] ?? record['story_thread'] ?? record['mainStoryThread'] ?? record
   )
+}
+
+function normalizeGeneratedBestiaryFoe(value: unknown): GeneratedBestiaryFoe | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const name = readString(record, 'name')
+  const lore = readString(record, 'lore', 'baseLore', 'base_lore')
+  if (!name || !lore) {
+    return undefined
+  }
+  const bucketsRaw = record['buckets']
+  const buckets = Array.isArray(bucketsRaw)
+    ? bucketsRaw.filter((entry): entry is string => typeof entry === 'string').filter(isBucket)
+    : undefined
+  const tags = readStringArray(record, 'tags')
+  const foe: GeneratedBestiaryFoe = { name, lore }
+  if (buckets && buckets.length > 0) {
+    foe.buckets = buckets
+  }
+  if (tags.length > 0) {
+    foe.tags = tags
+  }
+  return foe
+}
+
+export function normalizeBestiaryGeneration(value: unknown): GeneratedBestiaryRoster | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const foesRaw = record['foes'] ?? record['species'] ?? record['bestiary']
+  if (!Array.isArray(foesRaw)) {
+    return undefined
+  }
+  const foes = foesRaw
+    .map((entry) => normalizeGeneratedBestiaryFoe(entry))
+    .filter((entry): entry is GeneratedBestiaryFoe => entry !== undefined)
+    .slice(0, MAX_PREPPED_BESTIARY_SPECIES)
+  if (foes.length < MIN_PREPPED_BESTIARY_SPECIES) {
+    return undefined
+  }
+  return { foes }
 }
 
 // ---------------------------------------------------------------------------
@@ -839,6 +891,14 @@ export function isValidGenerationResult(
     return false
   }
   if (!isValidGeneratedWorld(candidate['world'])) {
+    return false
+  }
+  const bestiary = candidate['bestiary']
+  if (
+    typeof bestiary !== 'object' ||
+    bestiary === null ||
+    !isValidBestiaryRoster(bestiary as GeneratedBestiaryRoster)
+  ) {
     return false
   }
   return isGeneratedStoryThread(candidate['storyThread'])

@@ -5,6 +5,7 @@ import { createRegion } from '../db/repositories/regions'
 import { createCharacter } from '../db/repositories/characters'
 import { createNpc, getNpcById, listNpcsByRegion, setNpcCombatStats } from '../db/repositories/npcs'
 import { getActiveEncounter } from '../db/repositories/combatEncounters'
+import { createBestiarySpecies } from '../db/repositories/bestiary'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { resolvePlayerTurn } from './turnIpc'
 import {
@@ -12,6 +13,9 @@ import {
   collectEncounterCombatants,
   startEncounter
 } from './combatOrchestration'
+
+const WOLF_LORE =
+  'Wolves hunt the borderlands in packs, circling travelers before the first bite falls.'
 
 function seedPlayerOnlyScene() {
   const db = createTestDb()
@@ -83,9 +87,9 @@ describe('collectEncounterCombatants', () => {
 })
 
 describe('deriveProvisionalHostileName (via spawn)', () => {
-  it('names the provisional foe from attack-at phrasing', () => {
+  it('names the provisional foe from attack-at phrasing when generation is unavailable', async () => {
     const { db, campaign, region, player } = seedPlayerOnlyScene()
-    startEncounter({
+    await startEncounter({
       db,
       campaignId: campaign.id,
       regionId: region.id,
@@ -96,9 +100,9 @@ describe('deriveProvisionalHostileName (via spawn)', () => {
     expect(listNpcsByRegion(db, region.id)[0]?.name.toLowerCase()).toContain('beast')
   })
 
-  it('falls back when no target phrase is present', () => {
+  it('falls back when no target phrase is present', async () => {
     const { db, campaign, region, player } = seedPlayerOnlyScene()
-    startEncounter({
+    await startEncounter({
       db,
       campaignId: campaign.id,
       regionId: region.id,
@@ -110,12 +114,38 @@ describe('deriveProvisionalHostileName (via spawn)', () => {
   })
 })
 
-describe('startEncounter without hostiles (115)', () => {
-  it('spawns a provisional hostile so the encounter stays active', () => {
+describe('startEncounter without hostiles (116.8 / 115 fallback)', () => {
+  it('spawns catalog-tier hostiles when retrieval matches (wolf → dire-wolf)', async () => {
     const { db, campaign, region, player } = seedPlayerOnlyScene()
     expect(listNpcsByRegion(db, region.id)).toHaveLength(0)
+    const provider = createScriptedProvider([JSON.stringify({ baseLore: WOLF_LORE })])
 
-    const encounter = startEncounter({
+    const encounter = await startEncounter({
+      db,
+      campaignId: campaign.id,
+      regionId: region.id,
+      player,
+      playerInput: 'I swing my sword at the nearest wolf',
+      provider,
+      rng: () => 0.5
+    })
+
+    expect(encounter.phase).toBe('active')
+    expect(encounter.participantIds.some((ref) => ref.kind === 'npc')).toBe(true)
+    expect(allHostilesDefeated(db, encounter)).toBe(false)
+    const spawned = listNpcsByRegion(db, region.id)
+    expect(spawned.length).toBeGreaterThan(0)
+    expect(spawned[0]?.disposition.toLowerCase().startsWith('hostile')).toBe(true)
+    const first = getNpcById(db, spawned[0]!.id)
+    expect(first?.combatTier).toBe('catalog')
+    expect(first?.catalogCreatureKey).toBe('dire-wolf')
+    expect(first?.hp).toBeGreaterThan(0)
+  })
+
+  it('keeps provisional villager only when generation is unavailable', async () => {
+    const { db, campaign, region, player } = seedPlayerOnlyScene()
+
+    const encounter = await startEncounter({
       db,
       campaignId: campaign.id,
       regionId: region.id,
@@ -125,19 +155,26 @@ describe('startEncounter without hostiles (115)', () => {
     })
 
     expect(encounter.phase).toBe('active')
-    expect(encounter.participantIds.some((ref) => ref.kind === 'npc')).toBe(true)
-    expect(allHostilesDefeated(db, encounter)).toBe(false)
     const spawned = listNpcsByRegion(db, region.id)
     expect(spawned).toHaveLength(1)
-    expect(spawned[0]?.disposition.toLowerCase().startsWith('hostile')).toBe(true)
+    expect(getNpcById(db, spawned[0]!.id)?.combatTier).toBe('villager')
     expect(spawned[0]?.name.toLowerCase()).toContain('beast')
-    expect(getNpcById(db, spawned[0]!.id)?.hp).toBeGreaterThan(0)
   })
 })
 
-describe('resolvePlayerTurn startEncounter without hostiles (115)', () => {
-  it('returns active combatState instead of a silent defeated noop', async () => {
-    const { db, campaign, player } = seedPlayerOnlyScene()
+describe('resolvePlayerTurn startEncounter without hostiles (116.8)', () => {
+  it('returns active combatState with catalog foes when bestiary already seeded', async () => {
+    const { db, campaign, region, player } = seedPlayerOnlyScene()
+    createBestiarySpecies(db, {
+      campaignId: campaign.id,
+      key: 'rift-beast',
+      name: 'Rift-beast',
+      baseLore: WOLF_LORE,
+      buckets: ['beast'],
+      tags: ['pack-hunter'],
+      defaultCatalogKey: 'dire-wolf',
+      variants: [{ variantKey: 'standard', flavorBlurb: 'Typical rift-beast' }]
+    })
     const provider = createScriptedProvider([
       '{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}'
     ])
@@ -156,5 +193,8 @@ describe('resolvePlayerTurn startEncounter without hostiles (115)', () => {
     expect(result.combatState).not.toBeNull()
     expect(result.combatState?.combatants.some((c) => c.ref.kind === 'npc')).toBe(true)
     expect(getActiveEncounter(db, campaign.id)?.phase).toBe('active')
+    const spawned = listNpcsByRegion(db, region.id)
+    expect(getNpcById(db, spawned[0]!.id)?.combatTier).toBe('catalog')
+    expect(provider.calls).toHaveLength(1)
   })
 })

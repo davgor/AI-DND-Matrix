@@ -171,9 +171,30 @@ export const INTENT_GUIDANCE_LINES: readonly string[] = [
   'Set "actionType" to "restShort" for a short rest (e.g. catching your breath), "restLong" for a long rest (e.g. making camp for the night), or "travel" with an estimated "travelDays" for traveling between regions — and set "checkNeeded" to false for all three, since rest/travel are resolved deterministically by the engine, not by a check.',
   'Set "actionType" to "modifyItem" with "checkNeeded" false when the player clearly enchants, infuses, or renames their owned weapon (e.g. "I enchant my sword with fire") — not for buying new gear or vague magic.',
   'Use combatIntent "startEncounter" only when combat should begin and no encounter is active. Use "attack" with targetNpcId during an active encounter on the player\'s turn. Use "flee" when the player clearly tries to escape (e.g. "I run for the door", "we need to get out") — not for repositioning within the same room. Use "endEncounter" to narratively end combat without a flee attempt.',
+  'When hostile NPCs are already present in the region, prefer starting combat once with those existing ids (participantNpcIds when known) — do not invent new foes. Once an encounter is active, prefer "attack" with an exact targetNpcId from present/visible hostiles; never emit another startEncounter while those hostiles remain engaged.',
   'Set "lethality" to "non_lethal" when the player clearly intends to subdue/knock out/incapacitate rather than kill (e.g. "I punch him to knock him out", "I want to spare them"). Omit or use "lethal" otherwise.',
   'Set "acceptSurrender" to true when the player explicitly accepts a yielding NPC\'s surrender (e.g. "stay down, I won\'t kill you", "I lower my weapon"). Set "offerMercy" to true when the player proactively offers mercy before the NPC has yielded.'
 ]
+
+/**
+ * Turn-specific reinforcement when hostiles are already in the scene (116.10).
+ * Complements the static INTENT_GUIDANCE_LINES so the model prefers attack + targetNpcId
+ * over a redundant startEncounter once foes exist.
+ */
+export function buildHostilePresentGuidance(
+  presentNpcs: Array<{ isHostile?: boolean }>,
+  combat?: CombatIntentContext
+): string {
+  const regionHasHostiles = presentNpcs.some((npc) => npc.isHostile === true)
+  const visibleHostiles = (combat?.visibleCombatants?.length ?? 0) > 0
+  if (!regionHasHostiles && !visibleHostiles) {
+    return ''
+  }
+  if (combat?.encounterActive) {
+    return 'Hostile NPCs are already engaged. Prefer combatIntent "attack" with an exact targetNpcId from visible combatants / present NPCs. Do not emit startEncounter again.'
+  }
+  return 'Hostile NPCs are already present in this region. Use combatIntent "startEncounter" once to begin (optionally with their participantNpcIds). After combat starts, prefer "attack" with targetNpcId — do not call startEncounter again while those hostiles remain.'
+}
 
 export function buildCombatIntentSection(combat?: CombatIntentContext): string {
   if (!combat) {
@@ -187,7 +208,9 @@ export function buildCombatIntentSection(combat?: CombatIntentContext): string {
       : '',
     `Player can act this turn: ${combat.playerCanAct}.`,
     'Attack outcomes are resolved by the engine after intent is parsed — never invent hit/miss or damage.'
-  ].join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
 }
 
 // 040.9: schema + static guidance ride in systemPrompt once per call; the one
@@ -200,7 +223,8 @@ const INTENT_GENERATE_CONTEXT: GenerateContext = {
     schemaFragment: INTENT_SCHEMA_FIELDS,
     guidanceLines: INTENT_GUIDANCE_LINES
   }),
-  maxTokens: 384
+  maxTokens: 384,
+  purpose: 'play.intent_route'
 }
 
 function buildIntentPrompt(playerInput: string, combat?: CombatIntentContext): string {
@@ -331,7 +355,14 @@ export interface NarrationContext {
   /** RAG-selected region history content strings for the current region scope. */
   regionHistory: string[]
   storyThreadState: { id: string; state: string; summary: string } | null
-  presentNpcs: { id: string; name: string }[]
+  presentNpcs: { id: string; name: string; isHostile: boolean }[]
+  /** Slim bestiary lore/facts for present instances with bestiarySpeciesId (116.10). */
+  bestiaryRecall?: Array<{
+    speciesId: string
+    speciesName: string
+    baseLoreExcerpt: string
+    discoveredFactTitles: string[]
+  }>
   logBookEntries: SlimLogEntry[]
   playerAlignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
@@ -348,7 +379,7 @@ export interface NarrationContext {
   knownSpells: KnownSpellContext[]
 }
 
-export interface ProposedItemGrant {
+interface ProposedItemGrant {
   name: string
   description: string
   itemType: ItemType
@@ -430,6 +461,11 @@ function buildOptionalNarrationSections(context: NarrationContext): string[] {
       `Inactive living player characters in this region (cross-character encounters — use crossCharacterLogBookEntries for paired log-book writes): ${JSON.stringify(context.inactiveLivingPlayersInRegion)}`
     )
   }
+  if (context.bestiaryRecall && context.bestiaryRecall.length > 0) {
+    sections.push(
+      `Bestiary recall for present foes (base lore + discovered fact titles — do not invent combat stats): ${JSON.stringify(context.bestiaryRecall)}`
+    )
+  }
   return sections
 }
 
@@ -467,7 +503,8 @@ const NARRATION_GENERATE_CONTEXT: GenerateContext = {
     guidanceLines: NARRATION_GUIDANCE_LINES,
     emphasisGuidance: NARRATIVE_EMPHASIS_GUIDANCE
   }),
-  maxTokens: 1024
+  maxTokens: 1024,
+  purpose: 'play.narration'
 }
 
 function buildNarrationPrompt(outcome: CheckOutcome, context: NarrationContext): string {
@@ -536,17 +573,19 @@ export async function narrate(
 
 // === 006.4 + 006.5: persist the narration response's optional world_fact / story_thread fields ===
 
-export interface NarrationSideEffectInput {
+interface NarrationSideEffectInput {
   campaignId: string
   regionId: string
   characterId?: string
+  provider?: Provider
+  playerLevel?: number
 }
 
-export function persistNarrationSideEffects(
+export async function persistNarrationSideEffects(
   db: Database.Database,
   result: NarrationResult,
   input: NarrationSideEffectInput
-): { commerce?: CommerceSideEffect; completedQuestIds?: string[] } {
+): Promise<{ commerce?: CommerceSideEffect; completedQuestIds?: string[] }> {
   if (result.worldFact) {
     createWorldFact(db, {
       campaignId: input.campaignId,
@@ -564,9 +603,11 @@ export function persistNarrationSideEffects(
     )
   }
   if (input.characterId) {
-    const questEffects = persistQuestNarrationSideEffects(db, result, {
+    const questEffects = await persistQuestNarrationSideEffects(db, result, {
       campaignId: input.campaignId,
-      characterId: input.characterId
+      characterId: input.characterId,
+      ...(input.provider !== undefined ? { provider: input.provider } : {}),
+      ...(typeof input.playerLevel === 'number' ? { playerLevel: input.playerLevel } : {})
     })
     const commerce = persistNarrationCommerce(db, input.characterId, result)
     persistItemGrants(db, input.characterId, result.itemGrants)

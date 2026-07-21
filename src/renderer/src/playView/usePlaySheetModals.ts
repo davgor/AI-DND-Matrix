@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { EquipSlot } from '../../../shared/items/types'
+import { buildPlaySheetModalControls, type PlaySheetModalControls } from './playSheetModalControls'
+import { useDossierModalTarget } from './useDossierModalTarget'
 
 function useModalFlag(): {
   isOpen: boolean
@@ -36,53 +38,19 @@ function useInventoryModalState(): {
   }
 }
 
-export function usePlaySheetModals(): {
-  sheetOpen: boolean
-  inventoryOpen: boolean
-  logBookOpen: boolean
-  journalOpen: boolean
-  questLogOpen: boolean
-  spellbookOpen: boolean
-  inventoryFilterSlot: EquipSlot | null
-  openSheet: () => void
-  closeSheet: () => void
-  openInventory: (slot: EquipSlot | null) => void
-  closeInventory: () => void
-  openLogBook: () => void
-  closeLogBook: () => void
-  openJournal: () => void
-  closeJournal: () => void
-  openQuestLog: () => void
-  closeQuestLog: () => void
-  openSpellbook: () => void
-  closeSpellbook: () => void
-} {
-  const sheet = useModalFlag()
-  const inventory = useInventoryModalState()
-  const logBook = useModalFlag()
-  const journal = useModalFlag()
-  const questLog = useModalFlag()
-  const spellbook = useModalFlag()
-
+function usePlaySheetModalFlags(): Parameters<typeof buildPlaySheetModalControls>[0] {
   return {
-    sheetOpen: sheet.isOpen,
-    inventoryOpen: inventory.inventoryOpen,
-    logBookOpen: logBook.isOpen,
-    journalOpen: journal.isOpen,
-    questLogOpen: questLog.isOpen,
-    spellbookOpen: spellbook.isOpen,
-    inventoryFilterSlot: inventory.inventoryFilterSlot,
-    openSheet: sheet.open,
-    closeSheet: sheet.close,
-    openInventory: inventory.openInventory,
-    closeInventory: inventory.closeInventory,
-    openLogBook: logBook.open,
-    closeLogBook: logBook.close,
-    openJournal: journal.open,
-    closeJournal: journal.close,
-    openQuestLog: questLog.open,
-    closeQuestLog: questLog.close,
-    openSpellbook: spellbook.open,
-    closeSpellbook: spellbook.close
+    sheet: useModalFlag(),
+    inventory: useInventoryModalState(),
+    logBook: useModalFlag(),
+    journal: useModalFlag(),
+    questLog: useModalFlag(),
+    spellbook: useModalFlag(),
+    askDm: useModalFlag(),
+    dossier: useDossierModalTarget()
   }
+}
+
+export function usePlaySheetModals(): PlaySheetModalControls {
+  return buildPlaySheetModalControls(usePlaySheetModalFlags())
 }

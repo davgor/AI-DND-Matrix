@@ -3,7 +3,7 @@ import { generateJsonWithRetry } from './jsonResponse'
 import type { GenerateContext, Provider } from './providers/types'
 
 // 040: specimen (~400 chars) + up to 3 example lines (~160 chars each) — bounded JSON band.
-const SPEAKING_STYLE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512 }
+const SPEAKING_STYLE_GENERATE_CONTEXT: GenerateContext = { maxTokens: 512, purpose: 'campaign.npc' }
 
 export interface NpcSpeakingStyleIdentity {
   name: string

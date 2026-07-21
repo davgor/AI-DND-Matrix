@@ -13,7 +13,7 @@ import { seedAlignmentSmokeCampaign } from './alignmentSmokeFixtures'
 import { appendEvent } from './repositories/events'
 
 describe('alignment smoke: setup and shift flow', () => {
-  it('persists alignment from character setup', () => {
+  it('persists alignment from character setup', async () => {
     const { player } = seedAlignmentSmokeCampaign()
     expect(player.alignment).toBe('lawful_good')
   })
@@ -67,7 +67,7 @@ describe('alignment smoke: setup and shift flow', () => {
   })
 })
 
-describe('alignment smoke: non-speaking creatures', () => {
+describe('alignment smoke: non-speaking creatures', async () => {
   it('renders non-speaking NPC actions as action kind in narration log', async () => {
     const { db, campaign, player, wolfNpc } = seedAlignmentSmokeCampaign()
     const context = await assembleNpcContext(db, wolfNpc)
@@ -109,7 +109,7 @@ describe('alignment smoke: non-speaking creatures', () => {
   })
 })
 
-describe('alignment smoke: narration context', () => {
+describe('alignment smoke: narration context', async () => {
   it('includes alignment and pending shift in narration context', async () => {
     const { db, campaign, region, player } = seedAlignmentSmokeCampaign()
     const context = await assembleNarrationContext({
@@ -134,7 +134,7 @@ describe('alignment smoke: narration context', () => {
       { success: true, total: 12, dc: 10 },
       context
     )
-    persistNarrationSideEffects(db, result, {
+    await persistNarrationSideEffects(db, result, {
       campaignId: campaign.id,
       regionId: region.id,
       characterId: player.id

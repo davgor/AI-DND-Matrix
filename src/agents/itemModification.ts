@@ -6,7 +6,7 @@ import type { WeaponDamageProfile } from '../shared/weaponModifications/types'
 import type { CharacterItemView } from '../shared/items/types'
 
 // 040.1: 256 — a narration line plus one small modification object.
-const ITEM_MODIFICATION_GENERATE_CONTEXT: GenerateContext = { maxTokens: 256 }
+const ITEM_MODIFICATION_GENERATE_CONTEXT: GenerateContext = { maxTokens: 256, purpose: 'play.loot_xp' }
 
 export interface ItemModificationContext {
   playerInput: string

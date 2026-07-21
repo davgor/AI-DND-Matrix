@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ClaudeRequestError, ClaudeTruncationError } from './claude'
 import { Player2RequestError, Player2TruncationError } from './player2'
 import {
@@ -14,6 +14,20 @@ import type { GenerateContext, Provider } from './types'
 interface RecordedCall {
   prompt: string
   context: GenerateContext | undefined
+}
+
+function expectMatchingContext(
+  actual: GenerateContext | undefined,
+  expected: GenerateContext,
+  options?: { allowUsageWrapper?: boolean }
+): void {
+  expect(actual?.systemPrompt).toBe(expected.systemPrompt)
+  expect(actual?.maxTokens).toBe(expected.maxTokens)
+  if (options?.allowUsageWrapper) {
+    expect(typeof actual?.onUsage).toBe('function')
+  } else {
+    expect(actual?.onUsage).toBe(expected.onUsage)
+  }
 }
 
 function truncatingProvider(truncationsBeforeSuccess: number): Provider & { calls: RecordedCall[] } {
@@ -55,7 +69,7 @@ describe('withTokenEscalation', () => {
 
     expect(result).toBe('{"ok":true}')
     expect(inner.calls).toHaveLength(1)
-    expect(inner.calls[0]?.context).toBe(context)
+    expectMatchingContext(inner.calls[0]?.context, context, { allowUsageWrapper: true })
   })
 
   it('retries a truncated call with a doubled cap and the identical prompt + systemPrompt', async () => {
@@ -79,8 +93,9 @@ describe('withTokenEscalation', () => {
     await provider.generate('hello', shared)
 
     expect(shared.maxTokens).toBe(512)
-    expect(inner.calls[0]?.context).toBe(shared)
+    expectMatchingContext(inner.calls[0]?.context, shared, { allowUsageWrapper: true })
     expect(inner.calls[1]?.context).not.toBe(shared)
+    expect(inner.calls[1]?.context?.maxTokens).toBe(1024)
   })
 
 })
@@ -140,5 +155,68 @@ describe('withTokenEscalation bounds', () => {
 
     await expect(provider.generate('hello', { maxTokens: 512 })).rejects.toBe(failure)
     expect(calls).toHaveLength(1)
+  })
+})
+
+describe('withTokenEscalation: usage aggregation on success', () => {
+  it('aggregates inner onUsage snapshots and invokes the outer callback once on success', async () => {
+    let attempt = 0
+    const inner: Provider = {
+      async generate(_prompt, context) {
+        attempt += 1
+        context?.onUsage?.({
+          inputTokens: attempt * 10,
+          outputTokens: attempt,
+          totalTokens: attempt * 11,
+          modelId: 'inner-model'
+        })
+        if (attempt < 2) {
+          throw new ClaudeTruncationError('truncated')
+        }
+        return 'ok'
+      }
+    }
+
+    const onUsage = vi.fn()
+    const provider = withTokenEscalation(inner)
+    const result = await provider.generate('hello', { maxTokens: 1024, onUsage })
+
+    expect(result).toBe('ok')
+    expect(onUsage).toHaveBeenCalledOnce()
+    expect(onUsage).toHaveBeenCalledWith({
+      inputTokens: 30,
+      outputTokens: 3,
+      totalTokens: 33,
+      modelId: 'inner-model'
+    })
+  })
+})
+
+describe('withTokenEscalation: usage aggregation on failure', () => {
+  it('does not invoke outer onUsage when all escalated attempts fail', async () => {
+    const inner = truncatingProvider(Number.POSITIVE_INFINITY)
+    const onUsage = vi.fn()
+    const provider = withTokenEscalation(inner)
+
+    await expect(provider.generate('hello', { maxTokens: 1024, onUsage })).rejects.toBeInstanceOf(
+      ClaudeTruncationError
+    )
+    expect(onUsage).not.toHaveBeenCalled()
+  })
+})
+
+describe('withTokenEscalation: usage wrapper', () => {
+  it('passes a wrapped onUsage to the inner provider instead of the caller callback', async () => {
+    const onUsage = vi.fn()
+    const inner: Provider = {
+      async generate(_prompt, context) {
+        expect(context?.onUsage).not.toBe(onUsage)
+        context?.onUsage?.({ inputTokens: 1, outputTokens: 2, totalTokens: 3, modelId: 'm' })
+        return 'ok'
+      }
+    }
+
+    await withTokenEscalation(inner).generate('hello', { onUsage })
+    expect(onUsage).toHaveBeenCalledOnce()
   })
 })

@@ -12,6 +12,7 @@ export interface CharacterLogBookModalProps {
   isOpen: boolean
   refreshToken?: number
   onClose: () => void
+  onOpenNpcDossier?: (npcId: string) => void
 }
 
 function LogBookModalHeader(props: {
@@ -84,6 +85,7 @@ export function CharacterLogBookModal(props: CharacterLogBookModalProps): JSX.El
           onEditContent={setEditContent}
           onSetEditingId={setEditingId}
           onRefresh={() => void logBook.refresh()}
+          onOpenNpcDossier={props.onOpenNpcDossier}
         />
       </div>
     </div>

@@ -2,6 +2,7 @@ import '../characterSheet/playerSheetRail.css'
 import './playSheetRail.css'
 import { PlaySheetRailBody } from './PlaySheetRailBody'
 import { usePlaySheetRailState } from './usePlaySheetRailState'
+import type { usePlaySheetModals } from './usePlaySheetModals'
 import { useState } from 'react'
 import { setPlayerSheetCollapsed } from '../characterSheet/playerSheetPreferences'
 export type { PlaySheetTab } from './playSheetRailTabs'
@@ -13,6 +14,7 @@ export interface PlaySheetRailProps {
   collapsed: boolean
   onToggleCollapsed: () => void
   refreshToken: number
+  modals: ReturnType<typeof usePlaySheetModals>
 }
 
 export function PlaySheetRail(props: PlaySheetRailProps): JSX.Element {
@@ -41,6 +43,7 @@ export function PlaySheetRail(props: PlaySheetRailProps): JSX.Element {
           activeTab={railState.activeTab}
           onSelectTab={railState.setActiveTab}
           refreshToken={props.refreshToken}
+          modals={props.modals}
         />
       ) : null}
       {!props.collapsed && !railState.character ? (
