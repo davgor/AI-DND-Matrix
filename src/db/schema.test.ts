@@ -134,6 +134,113 @@ describe('schema migration 40', () => {
   })
 })
 
+describe('schema migration 42', () => {
+  it('migration 42 adds npc_face_token_generation_enabled on campaigns', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 41)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 42)
+    )
+
+    const campaignColumns = db
+      .prepare('PRAGMA table_info(campaigns)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(campaignColumns).toContain('npc_face_token_generation_enabled')
+  })
+})
+
+describe('schema migration 46', () => {
+  it('migration 46 adds face_token_path on npcs', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 45)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 46)
+    )
+
+    const npcColumns = db
+      .prepare('PRAGMA table_info(npcs)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(npcColumns).toContain('face_token_path')
+  })
+})
+
+describe('schema migration 45', () => {
+  it('migration 45 adds npc appearance trait columns', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 44)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 45)
+    )
+
+    const npcColumns = db
+      .prepare('PRAGMA table_info(npcs)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(npcColumns).toContain('hair_color')
+    expect(npcColumns).toContain('age')
+    expect(npcColumns).toContain('eye_color')
+  })
+})
+
+describe('schema migration 43', () => {
+  it('migration 43 adds campaign session recap columns', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 42)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 43)
+    )
+
+    const campaignColumns = db
+      .prepare('PRAGMA table_info(campaigns)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(campaignColumns).toContain('session_recap_text')
+    expect(campaignColumns).toContain('session_recap_generated_at')
+  })
+})
+
+describe('schema migration 44', () => {
+  it('migration 44 allows companions guided-creation phase on characters', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 43)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 44)
+    )
+
+    const row = db
+      .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'characters'")
+      .get() as { sql: string }
+    expect(row.sql).toContain("'companions'")
+  })
+})
+
 describe('schema migration 17', () => {
   it('migration 17 adds alignment and temperament columns', () => {
     const db = new Database(':memory:')

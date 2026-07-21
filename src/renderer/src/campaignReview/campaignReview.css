@@ -10,6 +10,27 @@
   margin-bottom: 24px;
 }
 
+.campaign-review-face-token-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-review-face-token-toggle input {
+  margin-top: 0.2rem;
+}
+
+.campaign-review-face-token-hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
 .campaign-review-lead {
   margin: 8px 0 0;
   color: var(--text-secondary, #9ca3af);

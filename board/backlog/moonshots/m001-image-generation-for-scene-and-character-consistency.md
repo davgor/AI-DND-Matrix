@@ -19,7 +19,8 @@ Moonshot **m001** character and token imagery is split by surface so each epic s
 | **NPC face tokens** (Social avatar + dossier portrait) | Implementable epic **122** — first slice promoted from m001 (file `122-…`; body still uses legacy **121.x** sub-ids) |
 | **Enemy / combat creature tokens** | Implementable sibling epic **123** |
 | **Scene / region / DM / player backgrounds** | Remains **m001.2**–**m001.5** (and related m001 sub-tickets) |
-| **Player-party character visuals** | **m001.6** remaining scope + shared pipeline with m001.7–m001.9 |
+| **Player-character visuals** | **m001.6** remaining scope + shared pipeline with m001.7–m001.9 |
+| **AI companion face tokens (onboarding)** | Epic **139** (after **122** / m001.1 primitives; companions onboarding is **129**) |
 
 Epic **122** owns NPC face-token generation, persistence, and UI surfaces only. Epic **123** owns enemy/combat creature tokens.
 

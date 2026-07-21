@@ -9,7 +9,7 @@ import {
 } from '../agents/guidedIdentity'
 import type { Provider } from '../agents/providers/types'
 import { getCampaignById } from '../db/repositories/campaigns'
-import { getCharacterById, updateCharacter } from '../db/repositories/characters'
+import { getCharacterById, listPartyMembersForPlayer, updateCharacter } from '../db/repositories/characters'
 import { getCampaignRaceByKey } from '../db/repositories/campaignRaces'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { findRosterEntry } from '../engine/raceSelection/roster'
@@ -27,6 +27,7 @@ import {
   listGuidedCreationMessagesByPhase
 } from '../db/repositories/guidedCreationMessages'
 import type { GuidedCreationKickoffInput, GuidedCreationKickoffResult } from '../shared/guidedCreation/types'
+import { companionIdentityDigestFromMember } from '../shared/partyMembers/types'
 import { resolveCharacterStartingGear } from './guidedCreationStartingGear'
 
 function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
@@ -77,6 +78,12 @@ export function resolveCharacterRaceContext(
   return { raceName: roster?.label ?? null, raceLore: null }
 }
 
+function companionDigestsForPlayer(db: Database.Database, playerCharacterId: string) {
+  return listPartyMembersForPlayer(db, playerCharacterId).map((member) =>
+    companionIdentityDigestFromMember(member)
+  )
+}
+
 function buildKickoffInterviewContext(
   db: Database.Database,
   campaignId: string,
@@ -106,6 +113,7 @@ function buildKickoffInterviewContext(
     backgroundStory: backgroundContext.backgroundStory,
     startingGear: gearContext.startingGear,
     knownSpellNames: gearContext.knownSpellNames,
+    companions: companionDigestsForPlayer(db, character.id),
     regions: regionsForCampaign(db, campaignId)
   }
 }

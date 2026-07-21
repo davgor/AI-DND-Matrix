@@ -39,7 +39,10 @@ function identityRows(traits: NpcDossierTraits, campaignRaces: CampaignRace[]): 
       'Background',
       traits.backgroundKey,
       (key) => resolveBackgroundDisplayLabel(key) ?? NPC_DOSSIER_EMPTY_PLACEHOLDER
-    )
+    ),
+    optionalTraitLabel('Hair', traits.hairColor, (value) => value),
+    optionalTraitLabel('Age', traits.age, (value) => value),
+    optionalTraitLabel('Eyes', traits.eyeColor, (value) => value)
   ]
 }
 

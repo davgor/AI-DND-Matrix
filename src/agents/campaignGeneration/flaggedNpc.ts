@@ -40,9 +40,10 @@ export { buildFlaggedNpcFinalPrompt, buildNpcCoreBundlePrompt } from './flaggedN
 const CORE_BUNDLE_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
     schemaFragment:
-      '{"canSpeak":boolean,"temperament":string,"race"?:string,"gender"?:string,"alignment"?:string,"class"?:string,"background"?:string}',
+      '{"canSpeak":boolean,"temperament":string,"race"?:string,"gender"?:string,"alignment"?:string,"class"?:string,"background"?:string,"hairColor"?:string,"age"?:string,"eyeColor"?:string}',
     guidanceLines: [
       'Speaking NPCs (canSpeak true) must pick race, gender, alignment, class, and background from the available option lists in the user message.',
+      'For speaking NPCs, optionally include short hairColor, age, and eyeColor strings when obvious from the seed.',
       'Beasts and mindless undead use canSpeak false and omit race, gender, alignment, class, and background.'
     ]
   }),
@@ -190,7 +191,10 @@ function assembleGeneratedNpc(
     raceKey: input.bundle.raceKey,
     genderKey: input.bundle.genderKey,
     classKey: input.bundle.classKey,
-    backgroundKey: input.bundle.backgroundKey
+    backgroundKey: input.bundle.backgroundKey,
+    hairColor: input.bundle.hairColor ?? null,
+    age: input.bundle.age ?? null,
+    eyeColor: input.bundle.eyeColor ?? null
   }
 }
 

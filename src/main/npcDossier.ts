@@ -12,7 +12,7 @@ import {
   type NpcDossierOpinion,
   type NpcDossierTraits
 } from '../shared/npcDossier/types'
-
+import { resolveNpcFaceTokenPath } from './npcFaceTokenAsset'
 export interface GetNpcDossierInput {
   campaignId: string
   characterId: string
@@ -38,7 +38,10 @@ function mapTraits(npc: Npc): NpcDossierTraits {
     genderKey: npc.genderKey,
     classKey: npc.classKey,
     backgroundKey: npc.backgroundKey,
-    role: npc.role
+    role: npc.role,
+    hairColor: npc.hairColor,
+    age: npc.age,
+    eyeColor: npc.eyeColor
   }
 }
 
@@ -114,6 +117,7 @@ export async function getNpcDossier(
     name: npc.name,
     role: npc.role,
     canSpeak: npc.canSpeak,
+    faceTokenPath: resolveNpcFaceTokenPath(npc.faceTokenPath),
     traits: mapTraits(npc),
     facts: mapFacts(db, input.characterId, input.npcId),
     opinion,

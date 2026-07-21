@@ -22,6 +22,7 @@ function normalizeChildren(children: unknown): JSX.Element[] {
 function layoutProps(overrides: Partial<Parameters<typeof CampaignHubLayout>[0]> = {}) {
   return {
     snapshot: makeTestHubSnapshot(),
+    sessionRecap: { status: 'ready' as const, text: 'Previously, you held the pass.' },
     lastPlayed: 'Jun 1, 2026',
     actionsDisabled: false,
     obituaryCharacterId: null,

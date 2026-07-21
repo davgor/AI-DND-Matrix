@@ -1,5 +1,6 @@
 import { parseAlignment, parseTemperament, type Temperament } from '../../shared/alignment/types'
 import { parseBackgroundKey } from '../../shared/characterBackground/types'
+import { normalizeNpcAppearance } from '../../shared/npcFaceTokens/appearance'
 import { parseGenderKey } from '../../shared/npcGender/types'
 import { parseNpcClassKey } from '../../shared/npcClass/types'
 import { isPresetRaceKey, RACE_ROSTER } from '../../engine/raceSelection/roster'
@@ -484,6 +485,14 @@ function readNpcBackgroundKey(record: Record<string, unknown>): string | undefin
   return raw ? parseBackgroundKey(raw) : undefined
 }
 
+function readNpcAppearanceFields(record: Record<string, unknown>): Pick<GeneratedNpc, 'hairColor' | 'age' | 'eyeColor'> {
+  return normalizeNpcAppearance({
+    hairColor: readString(record, 'hairColor', 'hair_color') ?? undefined,
+    age: readString(record, 'age') ?? undefined,
+    eyeColor: readString(record, 'eyeColor', 'eye_color') ?? undefined
+  })
+}
+
 function readSpeakingNpcBehaviorFields(
   record: Record<string, unknown>
 ): Pick<
@@ -549,11 +558,12 @@ export function normalizeGeneratedNpc(value: unknown): GeneratedNpc | undefined 
       disposition,
       regionName,
       ...behavior,
+      ...readNpcAppearanceFields(record),
       speakingStyleSpecimen: null,
       speakingStyleExamples: null
     }
   }
-  return { name, role, disposition, regionName, ...behavior }
+  return { name, role, disposition, regionName, ...behavior, ...readNpcAppearanceFields(record) }
 }
 
 /** Asserts enriched NPCs carry valid speaking-style samples; not wired into one-shot LLM parse (092.3). */

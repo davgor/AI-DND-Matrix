@@ -46,7 +46,8 @@ export function buildNpcCoreBundlePrompt(input: {
     'Available classes (exact key required when canSpeak is true):',
     formatClassOptions(input.availableClasses),
     'Available backgrounds (exact key required when canSpeak is true):',
-    formatBackgroundOptions()
+    formatBackgroundOptions(),
+    'When canSpeak is true, optionally add short hairColor, age, and eyeColor strings for portrait use.'
     // JSON contract + field-presence rules ride in the shared systemPrompt
     // (flaggedNpc.ts CORE_BUNDLE_GENERATE_CONTEXT) since 040.13.
   ].join('\n')

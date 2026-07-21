@@ -64,7 +64,9 @@ Narration schema supports `crossCharacterLogBookEntries: CrossCharacterLogWrite[
 
 ## Play-aware hub snapshot
 
-`PlayAwareHubSnapshot` extends campaign detail with `currentStateSummary`, story-thread live state/summary, region extras from `region_history`, capped recent events, and cast entries with life status and obituary presence.
+`PlayAwareHubSnapshot` extends campaign detail with `currentStateSummary`, story-thread live state/summary, region extras from `region_history`, and cast entries with life status and obituary presence.
+
+**Session leave-off (epic 124):** the hub world preview shows a **Session recap** section (auto-generated “previously on…” prose), not a raw Recent events list. Contract, freshness gate, and empty-events copy live in `src/shared/sessionRecap/`. Recap text is loaded via `campaigns:getOrGenerateSessionRecap` on hub boot — not via `PlayAwareHubSnapshot`.
 
 ## Ungenerated travel
 

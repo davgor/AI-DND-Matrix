@@ -55,6 +55,7 @@ describe('guided creation stage routing', () => {
     expect(stageForGuidedPhase('race')).toBe('raceSelection')
     expect(stageForGuidedPhase('background')).toBe('backgroundSelection')
     expect(stageForGuidedPhase('equipment')).toBe('equipmentSelection')
+    expect(stageForGuidedPhase('companions')).toBe('companionPrompt')
   })
 
   it('resumes the correct onboarding stage after campaign select', () => {
@@ -62,6 +63,7 @@ describe('guided creation stage routing', () => {
     expect(stageAfterCampaignSelect([player('race')])).toBe('raceSelection')
     expect(stageAfterCampaignSelect([player('background')])).toBe('backgroundSelection')
     expect(stageAfterCampaignSelect([player('equipment')])).toBe('equipmentSelection')
+    expect(stageAfterCampaignSelect([player('companions')])).toBe('companionPrompt')
     expect(stageAfterCampaignSelect([player('identity')])).toBe('guidedIdentity')
     expect(stageAfterCampaignSelect([player('opening_scene')])).toBe('guidedOpeningScene')
     expect(stageAfterCampaignSelect([player('complete')])).toBe('campaignHub')
@@ -82,11 +84,17 @@ describe('guided creation stage routing', () => {
     expect(findGuidedCreationPlayer(characters)?.guidedCreationPhase).toBe('equipment')
   })
 
-  it('finds setup-phase players across race, background, and equipment', () => {
+  it('prefers the companions-phase player when earlier setup phases are done', () => {
+    const characters = [player('complete'), player('companions')]
+    expect(findGuidedCreationPlayer(characters)?.guidedCreationPhase).toBe('companions')
+  })
+
+  it('finds setup-phase players across race, background, equipment, and companions', () => {
     expect(findSetupPhasePlayer([player('complete'), player('background')])?.guidedCreationPhase).toBe(
       'background'
     )
     expect(findSetupPhasePlayer([player('race')])?.guidedCreationPhase).toBe('race')
+    expect(findSetupPhasePlayer([player('companions')])?.guidedCreationPhase).toBe('companions')
     expect(findSetupPhasePlayer([player('identity')])?.guidedCreationPhase).toBeUndefined()
   })
 })

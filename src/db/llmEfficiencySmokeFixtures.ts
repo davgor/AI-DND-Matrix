@@ -270,6 +270,7 @@ function buildIdentityContext(
       'Sylwen left the grove after the wardens fell silent. Two seasons of tracking the silence led her to the frontier, where she now guides travelers for coin and rumors.',
     startingGear: [{ name: 'Shortbow', equippedSlot: 'mainHand' }],
     knownSpellNames: [],
+    companions: [],
     regions: [
       { id: 'region-frontier', name: 'Frontier March', description: 'A rebuilt borderland.' }
     ],

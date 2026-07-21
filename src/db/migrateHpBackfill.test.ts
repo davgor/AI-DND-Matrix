@@ -27,6 +27,10 @@ function createPreHpMigrationDb(): Database.Database {
   // createNpc inserts bestiary columns added in v38; keep this fixture usable without full bestiary tables.
   db.exec(`ALTER TABLE npcs ADD COLUMN bestiary_species_id TEXT`)
   db.exec(`ALTER TABLE npcs ADD COLUMN bestiary_variant_key TEXT`)
+  // createNpc inserts appearance columns added in v45.
+  db.exec(`ALTER TABLE npcs ADD COLUMN hair_color TEXT`)
+  db.exec(`ALTER TABLE npcs ADD COLUMN age TEXT`)
+  db.exec(`ALTER TABLE npcs ADD COLUMN eye_color TEXT`)
   return db
 }
 

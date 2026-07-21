@@ -100,6 +100,27 @@
   color: var(--text-secondary);
 }
 
+.campaign-start-checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.campaign-start-checkbox-field input {
+  margin-top: 0.2rem;
+}
+
+.campaign-start-field-hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
 .campaign-start-actions {
   display: flex;
   gap: 0.5rem;

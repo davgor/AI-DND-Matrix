@@ -27,6 +27,7 @@ import { buildCombatStateSnapshot, summarizeHostilesInEncounter } from './combat
 import { enrichTurnWithEncounterRewards } from './progressionPipeline'
 import { encounterEligibleForRewards } from './encounterRewards'
 import type { TurnResult } from './turnIpc'
+import { markOwnedCompanionsExitedOnFlee } from './companionFleeFollow'
 
 const DEFAULT_AGILITY_SCORE = 10
 const DEFAULT_ATTACK_BONUS = 0
@@ -157,6 +158,8 @@ async function resolveEscapedFleeTurn(input: {
   const { db, provider, campaignId, characterId, playerRef, check, narrationText, runCatchUp } = input
   let encounter = input.encounter
   markCombatantExited(db, encounter.id, playerRef, encounter.exitedCombatantIds)
+  encounter = getActiveEncounter(db, campaignId) ?? encounter
+  markOwnedCompanionsExitedOnFlee(db, encounter, characterId)
   setEncounterPursuitState(db, encounter.id, 'engaged')
   encounter = getActiveEncounter(db, campaignId) ?? encounter
   const catchUp = await runCatchUp(encounter)

@@ -46,13 +46,6 @@ export interface HubCastMember {
   obituary?: CharacterObituary
 }
 
-export interface HubRecentEvent {
-  id: string
-  type: string
-  createdAt: string
-  summary: string
-}
-
 export interface HubCharacterQuestSummary {
   characterId: string
   mainQuestHookLine: string | null
@@ -75,7 +68,6 @@ export interface PlayAwareHubSnapshot {
   characters: Character[]
   deities: Deity[]
   currentStateSummary: string
-  recentEvents: HubRecentEvent[]
   cast: HubCastMember[]
   questSummariesByCharacterId: HubCharacterQuestSummary[]
   regionQuestAvailability: HubRegionQuestAvailability[]

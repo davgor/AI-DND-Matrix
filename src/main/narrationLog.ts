@@ -3,7 +3,9 @@ import type Database from 'better-sqlite3'
 import type { NpcReactionKind } from '../shared/alignment/types'
 import { stripActionMarkers } from '../shared/alignment/types'
 import { listEventsByCampaign, type Event } from '../db/repositories/events'
+import { getNpcById } from '../db/repositories/npcs'
 import { getDb } from './db'
+import { resolveNpcFaceTokenPath } from './npcFaceTokenAsset'
 
 export type LogSpeaker = 'dm' | 'player' | 'npc' | 'partyMember'
 export type PlayerLineKind = 'raw' | 'actionExpression'
@@ -18,6 +20,7 @@ export interface PlayLogEntry {
   sceneSetting?: boolean
   speakerName?: string
   npcId?: string
+  faceTokenPath?: string | null
 }
 
 function legacyPlayerInputAndNarrationEntries(event: Event): PlayLogEntry[] {
@@ -236,6 +239,22 @@ function eventToLogEntries(event: Event): PlayLogEntry[] {
   return []
 }
 
+function enrichNpcFaceTokens(db: Database.Database, entries: PlayLogEntry[]): PlayLogEntry[] {
+  const cache = new Map<string, string | null>()
+  return entries.map((entry) => {
+    if (entry.speaker !== 'npc' || !entry.npcId) {
+      return entry
+    }
+    let faceTokenPath = cache.get(entry.npcId)
+    if (faceTokenPath === undefined) {
+      const npc = getNpcById(db, entry.npcId)
+      faceTokenPath = resolveNpcFaceTokenPath(npc?.faceTokenPath ?? null)
+      cache.set(entry.npcId, faceTokenPath)
+    }
+    return faceTokenPath ? { ...entry, faceTokenPath } : entry
+  })
+}
+
 export function buildNarrationLog(
   db: Database.Database,
   campaignId: string,
@@ -248,7 +267,7 @@ export function buildNarrationLog(
         return payloadCharacterId === undefined || payloadCharacterId === characterId
       })
     : events
-  return scoped.flatMap(eventToLogEntries)
+  return enrichNpcFaceTokens(db, scoped.flatMap(eventToLogEntries))
 }
 
 export function registerNarrationLogHandlers(): void {

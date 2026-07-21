@@ -64,6 +64,7 @@ describe('character background integration identity omit', () => {
       backgroundStory: null,
       startingGear: [],
       knownSpellNames: [],
+      companions: [],
       regions: []
     })
     expect(provider.calls[0]?.prompt).not.toContain('backgroundDescription')

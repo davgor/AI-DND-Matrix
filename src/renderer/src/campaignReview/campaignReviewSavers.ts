@@ -24,6 +24,10 @@ export function createCampaignReviewSavers(
     savePantheonSummary: async (pantheonSummary: string): Promise<void> => {
       const next = await window.campaigns.editPantheonSummary({ campaignId, pantheonSummary })
       onDetailChange(next)
+    },
+    saveNpcFaceTokenGeneration: async (enabled: boolean): Promise<void> => {
+      const next = await window.campaigns.editNpcFaceTokenGeneration({ campaignId, enabled })
+      onDetailChange(next)
     }
   }
 }

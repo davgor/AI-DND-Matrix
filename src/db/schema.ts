@@ -8,6 +8,7 @@ import { migrateQuestsV25 } from './migrateQuestsV25'
 import { migrateGuidedCreationEquipmentPhaseV26 } from './migrateGuidedCreationEquipmentPhaseV26'
 import { migrateRaceSelectionCharactersV29 } from './migrateRaceSelectionCharactersV29'
 import { migrateCharacterBackgroundCharactersV31 } from './migrateCharacterBackgroundCharactersV31'
+import { migrateCompanionsGuidedPhaseV44 } from './migrateCompanionsGuidedPhaseV44'
 import { seedStarterItemCatalog } from './seedStarterItems'
 import { migrateRagChunksV37 } from './rag/migrateRagChunksV37'
 
@@ -691,6 +692,45 @@ export const migrations: Migration[] = [
         CREATE INDEX IF NOT EXISTS idx_llm_usage_events_created_at
           ON llm_usage_events(created_at);
       `)
+    }
+  },
+  {
+    version: 42,
+    up: (db) => {
+      addColumnIfMissing(
+        db,
+        'campaigns',
+        'npc_face_token_generation_enabled',
+        'INTEGER NOT NULL DEFAULT 0'
+      )
+    }
+  },
+  {
+    version: 43,
+    up: (db) => {
+      addColumnIfMissing(db, 'campaigns', 'session_recap_text', 'TEXT')
+      addColumnIfMissing(db, 'campaigns', 'session_recap_generated_at', 'TEXT')
+    }
+  },
+  {
+    version: 44,
+    disableTransaction: true,
+    up: (db) => {
+      migrateCompanionsGuidedPhaseV44(db)
+    }
+  },
+  {
+    version: 45,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'hair_color', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'age', 'TEXT')
+      addColumnIfMissing(db, 'npcs', 'eye_color', 'TEXT')
+    }
+  },
+  {
+    version: 46,
+    up: (db) => {
+      addColumnIfMissing(db, 'npcs', 'face_token_path', 'TEXT')
     }
   }
 ]

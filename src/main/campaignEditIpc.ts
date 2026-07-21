@@ -17,11 +17,12 @@ import {
   getCampaignById,
   updateCampaignWorldHistory,
   updateCampaignWorldSummary,
-  updateCampaignPantheonSummary
+  updateCampaignPantheonSummary,
+  updateCampaignNpcFaceTokenGenerationEnabled
 } from '../db/repositories/campaigns'
 import { deleteNpcCascade } from '../db/repositories/deleteNpc'
 import { deleteRegionCascade } from '../db/repositories/deleteRegion'
-import { getNpcById, listNpcsByRegion, updateNpcDisposition, updateNpcTraits } from '../db/repositories/npcs'
+import { getNpcById, listNpcsByRegion, updateNpcDisposition, updateNpcTraits, type Npc } from '../db/repositories/npcs'
 import { getRegionById, listRegionsByCampaign, updateRegionDescription } from '../db/repositories/regions'
 import { listCampaignRaces } from '../db/repositories/campaignRaces'
 import { listDeitiesByCampaign } from '../db/repositories/deities'
@@ -31,6 +32,12 @@ import {
 } from '../shared/campaignCreate/types'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
+import {
+  createNpcFaceTokenSchedulerDeps,
+  maybeEnqueueNpcFaceTokenAfterCreate,
+  maybeEnqueueNpcFaceTokensForNpcs,
+  type NpcFaceTokenSchedulerDeps
+} from './npcFaceTokenScheduler'
 
 export interface EditRegionDescriptionInput {
   campaignId: string
@@ -103,6 +110,19 @@ export function editPantheonSummary(
   input: EditPantheonSummaryInput
 ): CampaignDetail {
   updateCampaignPantheonSummary(db, input.campaignId, input.pantheonSummary)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface EditNpcFaceTokenGenerationInput {
+  campaignId: string
+  enabled: boolean
+}
+
+export function editNpcFaceTokenGeneration(
+  db: Database.Database,
+  input: EditNpcFaceTokenGenerationInput
+): CampaignDetail {
+  updateCampaignNpcFaceTokenGenerationEnabled(db, input.campaignId, input.enabled)
   return getCampaignDetail(db, input.campaignId)
 }
 
@@ -184,10 +204,51 @@ function isValidAdditionalRegionNpcCount(value: unknown): value is number | unde
   )
 }
 
+function buildAdditionalRegionGenerationOptions(
+  db: Database.Database,
+  campaignId: string,
+  seed: string,
+  npcCount: number
+) {
+  const history = assembleCampaignHistoryContext(db, campaignId)
+  return {
+    seedPrompt: seed,
+    npcCount,
+    history,
+    availableRaces: buildAvailableRaceOptions(listCampaignRaces(db, campaignId)),
+    deities: listDeitiesByCampaign(db, campaignId).map((deity) => ({
+      name: deity.name,
+      epithet: deity.epithet,
+      domains: deity.domains,
+      tenets: deity.tenets,
+      blurb: deity.blurb,
+      isForgotten: deity.isForgotten
+    }))
+  }
+}
+
+function enqueueFaceTokensForGeneratedRegion(
+  db: Database.Database,
+  campaignId: string,
+  regionName: string,
+  faceTokenSchedulerDeps?: NpcFaceTokenSchedulerDeps
+): void {
+  const schedulerDeps = faceTokenSchedulerDeps ?? createNpcFaceTokenSchedulerDeps(db)
+  const newRegion = listRegionsByCampaign(db, campaignId).find((region) => region.name === regionName)
+  if (newRegion) {
+    maybeEnqueueNpcFaceTokensForNpcs(
+      schedulerDeps,
+      campaignId,
+      listNpcsByRegion(db, newRegion.id)
+    )
+  }
+}
+
 export async function generateRegionForCampaign(
   db: Database.Database,
   provider: ReturnType<typeof buildAgentProvider>,
-  input: GenerateRegionInput
+  input: GenerateRegionInput,
+  faceTokenSchedulerDeps?: NpcFaceTokenSchedulerDeps
 ): Promise<CampaignDetail> {
   const campaign = getCampaignById(db, input.campaignId)
   if (!campaign) {
@@ -203,25 +264,11 @@ export async function generateRegionForCampaign(
 
   const npcCount = resolveAdditionalRegionNpcCount(input.npcCount)
   const existingNames = listRegionsByCampaign(db, input.campaignId).map((region) => region.name)
-  const history = assembleCampaignHistoryContext(db, input.campaignId)
   const generation = await generateAdditionalRegion(
     provider,
     campaign.premisePrompt,
     existingNames,
-    {
-      seedPrompt: seed,
-      npcCount,
-      history,
-      availableRaces: buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId)),
-      deities: listDeitiesByCampaign(db, input.campaignId).map((deity) => ({
-        name: deity.name,
-        epithet: deity.epithet,
-        domains: deity.domains,
-        tenets: deity.tenets,
-        blurb: deity.blurb,
-        isForgotten: deity.isForgotten
-      }))
-    }
+    buildAdditionalRegionGenerationOptions(db, input.campaignId, seed, npcCount)
   )
 
   await persistRegionWithNpcs({
@@ -231,6 +278,13 @@ export async function generateRegionForCampaign(
     generatedRegion: generation.region,
     generatedNpcs: generation.npcs
   })
+
+  enqueueFaceTokensForGeneratedRegion(
+    db,
+    input.campaignId,
+    generation.region.name,
+    faceTokenSchedulerDeps
+  )
 
   return getCampaignDetail(db, input.campaignId)
 }
@@ -247,9 +301,9 @@ async function persistGeneratedNpcForCampaign(input: {
   campaignId: string
   regionId: string
   generatedNpc: Awaited<ReturnType<typeof generateFlaggedNpc>>['npc']
-}): Promise<void> {
+}): Promise<Npc> {
   const { db, provider, campaignId, regionId, generatedNpc } = input
-  await createNpcWithCombatReview(db, provider, {
+  return createNpcWithCombatReview(db, provider, {
     campaignId,
     regionId,
     name: generatedNpc.name,
@@ -271,7 +325,8 @@ async function persistGeneratedNpcForCampaign(input: {
 export async function generateNpcForCampaign(
   db: Database.Database,
   provider: ReturnType<typeof buildAgentProvider>,
-  input: GenerateNpcInput
+  input: GenerateNpcInput,
+  faceTokenSchedulerDeps?: NpcFaceTokenSchedulerDeps
 ): Promise<CampaignDetail> {
   const campaign = getCampaignById(db, input.campaignId)
   if (!campaign) {
@@ -296,7 +351,7 @@ export async function generateNpcForCampaign(
     existingNpcNames
   })
 
-  await persistGeneratedNpcForCampaign({
+  const npc = await persistGeneratedNpcForCampaign({
     db,
     provider,
     campaignId: input.campaignId,
@@ -304,42 +359,16 @@ export async function generateNpcForCampaign(
     generatedNpc: generation.npc
   })
 
+  maybeEnqueueNpcFaceTokenAfterCreate(
+    faceTokenSchedulerDeps ?? createNpcFaceTokenSchedulerDeps(db),
+    input.campaignId,
+    npc.id
+  )
+
   return getCampaignDetail(db, input.campaignId)
 }
 
-export function registerCampaignEditHandlers(): void {
-  ipcMain.handle('campaigns:editRegionDescription', (_event, input: EditRegionDescriptionInput) =>
-    editRegionDescription(getDb(), input)
-  )
-
-  ipcMain.handle('campaigns:deleteRegion', (_event, input: DeleteRegionInput) =>
-    deleteRegionForCampaign(getDb(), input)
-  )
-
-  ipcMain.handle('campaigns:editWorldSummary', (_event, input: EditWorldSummaryInput) =>
-    editWorldSummary(getDb(), input)
-  )
-
-  ipcMain.handle('campaigns:editPantheonSummary', (_event, input: EditPantheonSummaryInput) =>
-    editPantheonSummary(getDb(), input)
-  )
-
-  ipcMain.handle('campaigns:editWorldHistory', async (_event, input: EditWorldHistoryInput) =>
-    editWorldHistory(getDb(), buildAgentProvider(), input)
-  )
-
-  ipcMain.handle('campaigns:editNpcDisposition', (_event, input: EditNpcDispositionInput) =>
-    editNpcDisposition(getDb(), input)
-  )
-
-  ipcMain.handle('campaigns:editNpcTraits', (_event, input: EditNpcTraitsInput) =>
-    editNpcTraits(getDb(), input)
-  )
-
-  ipcMain.handle('campaigns:deleteNpc', (_event, input: DeleteNpcInput) =>
-    deleteNpcForCampaign(getDb(), input)
-  )
-
+function registerCampaignEditGenerationHandlers(): void {
   ipcMain.handle('campaigns:generateRegion', async (_event, input: GenerateRegionInput) => {
     try {
       return { ok: true as const, detail: await generateRegionForCampaign(getDb(), buildAgentProvider(), input) }
@@ -363,4 +392,45 @@ export function registerCampaignEditHandlers(): void {
       return { ok: false as const, message }
     }
   })
+}
+
+export function registerCampaignEditHandlers(): void {
+  ipcMain.handle('campaigns:editRegionDescription', (_event, input: EditRegionDescriptionInput) =>
+    editRegionDescription(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:deleteRegion', (_event, input: DeleteRegionInput) =>
+    deleteRegionForCampaign(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:editWorldSummary', (_event, input: EditWorldSummaryInput) =>
+    editWorldSummary(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:editPantheonSummary', (_event, input: EditPantheonSummaryInput) =>
+    editPantheonSummary(getDb(), input)
+  )
+
+  ipcMain.handle(
+    'campaigns:editNpcFaceTokenGeneration',
+    (_event, input: EditNpcFaceTokenGenerationInput) => editNpcFaceTokenGeneration(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:editWorldHistory', async (_event, input: EditWorldHistoryInput) =>
+    editWorldHistory(getDb(), buildAgentProvider(), input)
+  )
+
+  ipcMain.handle('campaigns:editNpcDisposition', (_event, input: EditNpcDispositionInput) =>
+    editNpcDisposition(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:editNpcTraits', (_event, input: EditNpcTraitsInput) =>
+    editNpcTraits(getDb(), input)
+  )
+
+  ipcMain.handle('campaigns:deleteNpc', (_event, input: DeleteNpcInput) =>
+    deleteNpcForCampaign(getDb(), input)
+  )
+
+  registerCampaignEditGenerationHandlers()
 }

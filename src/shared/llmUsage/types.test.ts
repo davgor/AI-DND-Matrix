@@ -11,7 +11,7 @@ import {
 } from './types'
 
 describe('LLM purpose taxonomy: ids', () => {
-  it('locks the v1 purpose id set from epic 112', () => {
+  it('locks the purpose id set (112 + 129 companion generate)', () => {
     expect([...LLM_PURPOSE_IDS]).toEqual([
       'campaign.pantheon',
       'campaign.world',
@@ -21,6 +21,7 @@ describe('LLM purpose taxonomy: ids', () => {
       'onboarding.race_lore',
       'onboarding.background',
       'onboarding.guided_identity',
+      'onboarding.companion_generate',
       'onboarding.opening_scene',
       'play.intent_route',
       'play.narration',
@@ -47,6 +48,7 @@ describe('LLM purpose taxonomy: buckets', () => {
 
   it('puts campaign/onboarding in setup, play.* in play, meta for ping/unclassified', () => {
     expect(bucketForPurpose('campaign.world')).toBe('setup')
+    expect(bucketForPurpose('onboarding.companion_generate')).toBe('setup')
     expect(bucketForPurpose('onboarding.opening_scene')).toBe('setup')
     expect(bucketForPurpose('play.npc_reaction')).toBe('play')
     expect(bucketForPurpose('system.ping')).toBe('meta')

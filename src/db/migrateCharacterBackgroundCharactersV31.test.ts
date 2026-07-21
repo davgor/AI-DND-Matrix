@@ -11,6 +11,7 @@ describe('character background migration phase list (050.2)', () => {
       'race',
       'background',
       'equipment',
+      'companions',
       'identity',
       'opening_scene',
       'complete'

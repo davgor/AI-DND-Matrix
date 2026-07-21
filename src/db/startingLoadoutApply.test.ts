@@ -38,7 +38,7 @@ describe('applyStartingLoadout fighter', () => {
       spellKeys: ['rallying-strike']
     })
     expect(result).toEqual({ ok: true })
-    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('identity')
+    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('companions')
     expect(listEquippedAfterLoadout(db, player.id).map((row) => row.item.name).sort()).toEqual(
       ['Chain Hauberk', 'Longsword', 'Wooden Shield'].sort()
     )

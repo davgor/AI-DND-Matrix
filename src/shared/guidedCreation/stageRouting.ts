@@ -9,6 +9,7 @@ export type OnboardingStage =
   | 'raceSelection'
   | 'backgroundSelection'
   | 'equipmentSelection'
+  | 'companionPrompt'
   | 'guidedIdentity'
   | 'guidedOpeningScene'
   | 'campaignHub'
@@ -44,11 +45,18 @@ export function findEquipmentPhasePlayer(characters: Character[]): Character | u
   )
 }
 
+export function findCompanionsPhasePlayer(characters: Character[]): Character | undefined {
+  return characters.find(
+    (character) => character.kind === 'player' && character.guidedCreationPhase === 'companions'
+  )
+}
+
 export function findSetupPhasePlayer(characters: Character[]): Character | undefined {
   return (
     findRacePhasePlayer(characters) ??
     findBackgroundPhasePlayer(characters) ??
-    findEquipmentPhasePlayer(characters)
+    findEquipmentPhasePlayer(characters) ??
+    findCompanionsPhasePlayer(characters)
   )
 }
 
@@ -57,6 +65,7 @@ export function findGuidedCreationPlayer(characters: Character[]): Character | u
     findRacePhasePlayer(characters) ??
     findBackgroundPhasePlayer(characters) ??
     findEquipmentPhasePlayer(characters) ??
+    findCompanionsPhasePlayer(characters) ??
     findIncompletePlayerCharacter(characters) ??
     findPlayerCharacter(characters)
   )
@@ -79,6 +88,9 @@ export function stageForGuidedPhase(phase: GuidedCreationPhase | undefined): Onb
   }
   if (phase === 'equipment') {
     return 'equipmentSelection'
+  }
+  if (phase === 'companions') {
+    return 'companionPrompt'
   }
   if (phase === 'identity') {
     return 'guidedIdentity'

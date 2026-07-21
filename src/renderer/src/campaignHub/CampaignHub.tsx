@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { PlayAwareHubSnapshot } from '../../../shared/campaignHub/types'
 import { CampaignHubLayout } from './CampaignHubLayout'
+import { useHubSessionRecap } from './useHubSessionRecap'
 
 export interface CampaignHubProps {
   snapshot: PlayAwareHubSnapshot
@@ -13,10 +14,12 @@ export interface CampaignHubProps {
 export function CampaignHub(props: CampaignHubProps): JSX.Element {
   const [obituaryCharacterId, setObituaryCharacterId] = useState<string | null>(null)
   const [worldHistoryOpen, setWorldHistoryOpen] = useState(false)
+  const sessionRecap = useHubSessionRecap(props.snapshot.campaign?.id)
 
   return (
     <CampaignHubLayout
       snapshot={props.snapshot}
+      sessionRecap={sessionRecap}
       lastPlayed={props.lastPlayed}
       actionsDisabled={obituaryCharacterId !== null}
       obituaryCharacterId={obituaryCharacterId}

@@ -40,7 +40,10 @@ function speakingIdentityRows(npc: Npc, campaignRaces: CampaignRace[]): Array<JS
       'Class',
       npc.classKey ? findNpcClassRosterEntry(npc.classKey)?.label : null
     ),
-    optionalTraitRow('Background', resolveBackgroundDisplayLabel(npc.backgroundKey))
+    optionalTraitRow('Background', resolveBackgroundDisplayLabel(npc.backgroundKey)),
+    optionalTraitRow('Hair', npc.hairColor),
+    optionalTraitRow('Age', npc.age),
+    optionalTraitRow('Eyes', npc.eyeColor)
   ]
 }
 

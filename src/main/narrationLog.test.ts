@@ -1,8 +1,17 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
+import { createNpc } from '../db/repositories/npcs'
+import { createRegion } from '../db/repositories/regions'
 import { appendEvent } from '../db/repositories/events'
 import { buildNarrationLog } from './narrationLog'
+import { writeNpcFaceTokenAsset } from './npcFaceTokenAsset'
+
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 describe('buildNarrationLog: player_action mapping', () => {
   it('maps legacy player_action events with playerInput and narrationText', () => {
@@ -122,6 +131,56 @@ describe('buildNarrationLog: npc npcId', () => {
         npcId: 'npc-mira'
       })
     ])
+  })
+})
+
+describe('buildNarrationLog: npc face token', () => {
+  it('includes faceTokenPath when the NPC has a stored face token asset', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+    const region = createRegion(db, {
+      campaignId: campaign.id,
+      name: 'Oakhollow',
+      description: 'A village.'
+    })
+    const npc = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: region.id,
+      name: 'Mira',
+      role: 'innkeeper',
+      disposition: 'friendly'
+    })
+    const baseDir = mkdtempSync(join(tmpdir(), 'narration-log-face-token-'))
+    try {
+      const tokenPath = writeNpcFaceTokenAsset({
+        baseDir,
+        campaignId: campaign.id,
+        npcId: npc.id,
+        bytesBase64: PNG_BASE64,
+        mimeType: 'image/png'
+      })
+      expect(tokenPath).toBeTruthy()
+      db.prepare('UPDATE npcs SET face_token_path = ? WHERE id = ?').run(tokenPath, npc.id)
+      appendEvent(db, {
+        campaignId: campaign.id,
+        type: 'npc_reaction',
+        payload: {
+          dialogue: 'Welcome, traveler.',
+          npcName: 'Mira',
+          npcId: npc.id
+        }
+      })
+
+      expect(buildNarrationLog(db, campaign.id)).toEqual([
+        expect.objectContaining({
+          speaker: 'npc',
+          npcId: npc.id,
+          faceTokenPath: tokenPath
+        })
+      ])
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
   })
 })
 

@@ -11,6 +11,9 @@ export interface NpcDossierTraits {
   classKey: string | null
   backgroundKey: string | null
   role: string
+  hairColor: string | null
+  age: string | null
+  eyeColor: string | null
 }
 
 /** Player-known fact from the active character's log book (`relatedEntityId = npcId`). */
@@ -39,6 +42,8 @@ export interface NpcDossierDto {
   name: string
   role: string
   canSpeak: boolean
+  /** Resolved absolute path when the asset exists on disk; null otherwise. */
+  faceTokenPath: string | null
   traits: NpcDossierTraits
   facts: NpcDossierFact[]
   opinion: NpcDossierOpinion
@@ -83,11 +88,7 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string'
 }
 
-export function isNpcDossierTraits(value: unknown): value is NpcDossierTraits {
-  if (value === null || typeof value !== 'object') {
-    return false
-  }
-  const row = value as Record<string, unknown>
+function hasValidNpcDossierIdentityTraits(row: Record<string, unknown>): boolean {
   return (
     typeof row['temperament'] === 'string' &&
     isNullableString(row['raceKey']) &&
@@ -97,6 +98,22 @@ export function isNpcDossierTraits(value: unknown): value is NpcDossierTraits {
     isNullableString(row['backgroundKey']) &&
     typeof row['role'] === 'string'
   )
+}
+
+function hasValidNpcDossierAppearanceTraits(row: Record<string, unknown>): boolean {
+  return (
+    isNullableString(row['hairColor']) &&
+    isNullableString(row['age']) &&
+    isNullableString(row['eyeColor'])
+  )
+}
+
+export function isNpcDossierTraits(value: unknown): value is NpcDossierTraits {
+  if (value === null || typeof value !== 'object') {
+    return false
+  }
+  const row = value as Record<string, unknown>
+  return hasValidNpcDossierIdentityTraits(row) && hasValidNpcDossierAppearanceTraits(row)
 }
 
 export function isNpcDossierFact(value: unknown): value is NpcDossierFact {
@@ -141,6 +158,7 @@ function hasValidNpcDossierHeader(row: Record<string, unknown>): boolean {
     typeof row['name'] === 'string' &&
     typeof row['role'] === 'string' &&
     typeof row['canSpeak'] === 'boolean' &&
+    isNullableString(row['faceTokenPath']) &&
     typeof row['disposition'] === 'string' &&
     isNpcDossierTraits(row['traits']) &&
     isNpcDossierOpinion(row['opinion'])

@@ -17,6 +17,7 @@ export function makeTestCampaign(overrides: Partial<Campaign> = {}): Campaign {
     inGameDate: 12,
     deathMode: 'standard',
     respawnRules: null,
+    npcFaceTokenGenerationEnabled: false,
     ...overrides
   }
 }
@@ -76,14 +77,6 @@ export function makeTestHubSnapshot(overrides: Partial<PlayAwareHubSnapshot> = {
     characters: [],
     deities: [],
     currentStateSummary: 'Tension rises along the northern border.',
-    recentEvents: [
-      {
-        id: 'evt-1',
-        type: 'travel',
-        createdAt: '2026-06-01T12:00:00.000Z',
-        summary: 'Kael reached Greywatch at dusk.'
-      }
-    ],
     cast: [makeTestCastMember()],
     questSummariesByCharacterId: [
       {

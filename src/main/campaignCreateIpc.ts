@@ -15,6 +15,11 @@ import { touchLastPlayed } from '../db/repositories/sessions'
 import type { DeathMode, RespawnRules } from '../db/repositories/campaigns'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
+import {
+  createNpcFaceTokenSchedulerDeps,
+  maybeEnqueueNpcFaceTokensForNpcs,
+  type NpcFaceTokenSchedulerDeps
+} from './npcFaceTokenScheduler'
 
 export interface CreateCampaignSuccess {
   ok: true
@@ -44,7 +49,8 @@ function toSetupInput(request: CreateCampaignRequest): CampaignSetupInput {
     deathMode: (request.deathMode ?? 'standard') as DeathMode,
     respawnRules: (request.respawnRules ?? null) as RespawnRules | null,
     regionCount: resolveRegionCount(request.regionCount),
-    npcsPerRegion: resolveNpcsPerRegion(request.npcsPerRegion)
+    npcsPerRegion: resolveNpcsPerRegion(request.npcsPerRegion),
+    npcFaceTokenGenerationEnabled: request.npcFaceTokenGenerationEnabled === true
   }
 }
 
@@ -58,7 +64,8 @@ function failure(
 export async function createCampaignFromRequest(
   db: Database.Database,
   provider: Provider,
-  request: CreateCampaignRequest
+  request: CreateCampaignRequest,
+  faceTokenSchedulerDeps?: NpcFaceTokenSchedulerDeps
 ): Promise<CreateCampaignResult> {
   const input = toSetupInput(request)
   try {
@@ -71,7 +78,13 @@ export async function createCampaignFromRequest(
     emitProgress(buildCreateProgress('persist'))
     const campaign = await persistGeneratedCampaign({ db, provider, input, generation })
     touchLastPlayed(db, campaign.id)
-    return { ok: true, detail: getCampaignDetail(db, campaign.id) }
+    const detail = getCampaignDetail(db, campaign.id)
+    maybeEnqueueNpcFaceTokensForNpcs(
+      faceTokenSchedulerDeps ?? createNpcFaceTokenSchedulerDeps(db),
+      campaign.id,
+      detail.npcs
+    )
+    return { ok: true, detail }
   } catch (error) {
     if (error instanceof CampaignGenerationSchemaError) {
       return failure('generation', 'The narrative engine returned an invalid campaign. Try again or simplify your premise.')

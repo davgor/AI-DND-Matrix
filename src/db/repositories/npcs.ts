@@ -52,6 +52,10 @@ export interface Npc {
   opinionSummary: string | null
   opinionSummaryGeneratedAt: string | null
   lastPlayerInteractionAt: string | null
+  hairColor: string | null
+  age: string | null
+  eyeColor: string | null
+  faceTokenPath: string | null
 }
 
 export interface CreateNpcInput {
@@ -75,6 +79,9 @@ export interface CreateNpcInput {
   speakingStyleExamples?: string[] | null
   bestiarySpeciesId?: string | null
   bestiaryVariantKey?: string | null
+  hairColor?: string | null
+  age?: string | null
+  eyeColor?: string | null
 }
 
 interface NpcRow {
@@ -111,6 +118,10 @@ interface NpcRow {
   opinion_summary: string | null
   opinion_summary_generated_at: string | null
   last_player_interaction_at: string | null
+  hair_color: string | null
+  age: string | null
+  eye_color: string | null
+  face_token_path: string | null
 }
 
 function parseSpeakingStyleExamples(raw: string | null): string[] | null {
@@ -189,6 +200,17 @@ function opinionFieldsFromRow(
   }
 }
 
+function appearanceFieldsFromRow(
+  row: NpcRow
+): Pick<Npc, 'hairColor' | 'age' | 'eyeColor' | 'faceTokenPath'> {
+  return {
+    hairColor: row.hair_color ?? null,
+    age: row.age ?? null,
+    eyeColor: row.eye_color ?? null,
+    faceTokenPath: row.face_token_path ?? null
+  }
+}
+
 function rowToNpc(row: NpcRow): Npc {
   const combatTier = isNpcCombatTier(row.combat_tier) ? row.combat_tier : 'villager'
   const profile = row.retired_adventurer_profile as RetiredAdventurerProfile | null
@@ -218,7 +240,8 @@ function rowToNpc(row: NpcRow): Npc {
     ...identityKeyFieldsFromRow(row),
     ...speakingStyleFieldsFromRow(row),
     ...bestiaryLinkFieldsFromRow(row),
-    ...opinionFieldsFromRow(row)
+    ...opinionFieldsFromRow(row),
+    ...appearanceFieldsFromRow(row)
   }
 }
 
@@ -288,16 +311,37 @@ export function applyRetiredAdventurerUpgrade(
   applyTierStatsToRow(db, id, 'retired_adventurer', profile)
 }
 
-function resolveNpcKeyDefaults(input: CreateNpcInput) {
+function resolveNpcIdentityKeyDefaults(input: CreateNpcInput) {
   return {
     raceKey: input.raceKey ?? null,
     backgroundKey: input.backgroundKey ?? null,
     genderKey: input.genderKey ?? null,
-    classKey: input.classKey ?? null,
+    classKey: input.classKey ?? null
+  }
+}
+
+function resolveNpcSpeakingStyleDefaults(input: CreateNpcInput) {
+  return {
     speakingStyleSpecimen: input.speakingStyleSpecimen ?? null,
     speakingStyleExamples: input.speakingStyleExamples ?? null,
     bestiarySpeciesId: input.bestiarySpeciesId ?? null,
     bestiaryVariantKey: input.bestiaryVariantKey ?? null
+  }
+}
+
+function resolveNpcAppearanceDefaults(input: CreateNpcInput) {
+  return {
+    hairColor: input.hairColor ?? null,
+    age: input.age ?? null,
+    eyeColor: input.eyeColor ?? null
+  }
+}
+
+function resolveNpcKeyDefaults(input: CreateNpcInput) {
+  return {
+    ...resolveNpcIdentityKeyDefaults(input),
+    ...resolveNpcSpeakingStyleDefaults(input),
+    ...resolveNpcAppearanceDefaults(input)
   }
 }
 
@@ -323,13 +367,15 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
       can_speak, status, is_party_member, backstory, catalog_creature_key, combat_tier,
       race_key, background_key, gender_key, class_key,
       speaking_style_specimen, speaking_style_examples_json,
-      bestiary_species_id, bestiary_variant_key
+      bestiary_species_id, bestiary_variant_key,
+      hair_color, age, eye_color
     ) VALUES (
       @id, @campaignId, @regionId, @name, @role, @disposition, @alignment, @temperament,
       @canSpeak, @status, 0, @backstory, @catalogCreatureKey, 'villager',
       @raceKey, @backgroundKey, @genderKey, @classKey,
       @speakingStyleSpecimen, @speakingStyleExamplesJson,
-      @bestiarySpeciesId, @bestiaryVariantKey
+      @bestiarySpeciesId, @bestiaryVariantKey,
+      @hairColor, @age, @eyeColor
     )`
   ).run({
     id,
@@ -351,7 +397,10 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
     speakingStyleSpecimen: defaults.speakingStyleSpecimen,
     speakingStyleExamplesJson: serializeSpeakingStyleExamples(defaults.speakingStyleExamples),
     bestiarySpeciesId: defaults.bestiarySpeciesId,
-    bestiaryVariantKey: defaults.bestiaryVariantKey
+    bestiaryVariantKey: defaults.bestiaryVariantKey,
+    hairColor: defaults.hairColor,
+    age: defaults.age,
+    eyeColor: defaults.eyeColor
   })
 
   if (!input.skipCombatHydration && !input.catalogCreatureKey) {
@@ -373,6 +422,17 @@ export function listNpcsByRegion(db: Database.Database, regionId: string): Npc[]
   return rows.map(rowToNpc)
 }
 
+export function listNpcsWithGeneratedOpinion(db: Database.Database, campaignId: string): Npc[] {
+  const rows = db
+    .prepare(
+      `SELECT * FROM npcs
+       WHERE campaign_id = ? AND opinion_summary IS NOT NULL
+       ORDER BY name ASC`
+    )
+    .all(campaignId) as NpcRow[]
+  return rows.map(rowToNpc)
+}
+
 export function updateNpcStatus(db: Database.Database, id: string, status: NpcStatus): void {
   db.prepare('UPDATE npcs SET status = ? WHERE id = ?').run(JSON.stringify(status), id)
 }
@@ -383,6 +443,14 @@ export function markNpcPromoted(db: Database.Database, id: string): void {
 
 export function updateNpcDisposition(db: Database.Database, id: string, disposition: string): void {
   db.prepare('UPDATE npcs SET disposition = ? WHERE id = ?').run(disposition, id)
+}
+
+export function updateNpcFaceTokenPath(
+  db: Database.Database,
+  npcId: string,
+  path: string | null
+): void {
+  db.prepare('UPDATE npcs SET face_token_path = ? WHERE id = ?').run(path, npcId)
 }
 
 export interface UpdateNpcOpinionSummaryInput {

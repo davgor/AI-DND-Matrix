@@ -68,69 +68,69 @@ Journal surface also lists “known dossiers”
 
 ## Sub-tickets
 
-### 121.1 Match + candidate-set SPEC
+### 121.1 — Match + candidate-set SPEC
 
-#### Description
+Document who is eligible to match, how names are matched, ambiguity rules, and how "dossier generated" is defined for the journal list (`opinionSummary` present). Place SPEC under `src/shared/journal/` (alongside existing types; same pattern as npcDossier).
 
-Document who is eligible to match, how names are matched, ambiguity rules, and how “dossier generated” is defined for the journal list (`opinionSummary` present). Place SPEC under `docs/` or `src/shared/journal/` (or adjacent to `npcDossier` if shared).
+Parent epic: **121**.
 
 #### Acceptance criteria
 
-- [ ] SPEC defines the candidate NPC set (at minimum: log-book-linked People and/or dossier-generated NPCs; explicit non-goals for full-cast linking)
-- [ ] SPEC defines whole-word / boundary-safe matching, longest-name-first, and ambiguity → no link
-- [ ] SPEC defines “dossier generated” = persisted opinion summary present, and that those NPCs appear in the journal list
-- [ ] SPEC states reuse of the **105** dossier open path
+- [x] SPEC defines the candidate NPC set (at minimum: log-book-linked People and/or dossier-generated NPCs; explicit non-goals for full-cast linking)
+- [x] SPEC defines whole-word / boundary-safe matching, longest-name-first, and ambiguity → no link
+- [x] SPEC defines "dossier generated" = persisted opinion summary present, and that those NPCs appear in the journal list
+- [x] SPEC states reuse of the **105** dossier open path
 
-### 121.2 Name matcher (pure logic + tests)
-
-#### Description
+### 121.2 — Name matcher (pure logic + tests)
 
 Pure function(s): given journal text + candidate `{ npcId, name }[]`, return non-overlapping match spans (start/end + `npcId`). TDD-first.
 
+Parent epic: **121**. Depends on **121.1**.
+
 #### Acceptance criteria
 
-- [ ] Matcher returns spans for case-insensitive boundary-safe name hits
-- [ ] Longest-name-first prevents partial overlaps (e.g. “Ann” vs “Anna”)
-- [ ] Ambiguous duplicate names in the candidate set produce no link for that token
-- [ ] Unit tests cover hits, misses, overlap, empty candidates, and empty text
+- [x] Matcher returns spans for case-insensitive boundary-safe name hits
+- [x] Longest-name-first prevents partial overlaps (e.g. "Ann" vs "Anna")
+- [x] Ambiguous duplicate names in the candidate set produce no link for that token
+- [x] Unit tests cover hits, misses, overlap, empty candidates, and empty text
 
-### 121.3 Journal entry render + open dossier
-
-#### Description
+### 121.3 — Journal entry render + open dossier
 
 Render journal entry content with interactive person matches (compose with existing emphasis formatting). Activating a match opens the dossier for that `npcId`.
 
+Parent epic: **121**. Depends on **121.2**.
+
 #### Acceptance criteria
 
-- [ ] Matched names are keyboard- and pointer-activatable and open the existing dossier modal
-- [ ] Emphasis markers and person links compose without raw marker leakage
-- [ ] Unmatched text renders as today
-- [ ] Component tests: match present → open called with correct `npcId`; no false open on plain text
+- [x] Matched names are keyboard- and pointer-activatable and open the existing dossier modal
+- [x] Emphasis markers and person links compose without raw marker leakage
+- [x] Unmatched text renders as today
+- [x] Component tests: match present → open called with correct `npcId`; no false open on plain text
 
-### 121.4 Dossier-known NPCs appear in the journal surface
-
-#### Description
+### 121.4 — Dossier-known NPCs appear in the journal surface
 
 When an NPC has a generated dossier (persisted opinion summary), list them on the journal surface (sheet section and/or Journal overlay) so the player can reopen the dossier without Social or a log-book People row.
 
+Parent epic: **121**. Depends on **121.1**; can parallel **121.3**.
+
 #### Acceptance criteria
 
-- [ ] NPCs with `opinionSummary` set appear in the journal-side known-people / dossiers list
-- [ ] NPCs without a generated dossier do not appear in that list solely from existing somewhere in the campaign
-- [ ] Choosing a list row opens the same dossier modal for that `npcId`
-- [ ] Empty state when no dossiers have been generated yet
-- [ ] Unit/IPC or component tests cover inclusion/exclusion by opinion-summary presence
+- [x] NPCs with `opinionSummary` set appear in the journal-side known-people / dossiers list
+- [x] NPCs without a generated dossier do not appear in that list solely from existing somewhere in the campaign
+- [x] Choosing a list row opens the same dossier modal for that `npcId`
+- [x] Empty state when no dossiers have been generated yet
+- [x] Unit/IPC or component tests cover inclusion/exclusion by opinion-summary presence
 
-### 121.5 Play-sheet wiring + smoke
-
-#### Description
+### 121.5 — Play-sheet wiring + smoke
 
 Wire candidate loading + dossier open through play-sheet / journal overlay controls; add a short smoke note to the dossier or journal runbook.
 
+Parent epic: **121**. Depends on **121.3** and **121.4**.
+
 #### Acceptance criteria
 
-- [ ] From play mode Journal, a matched name in a journal entry opens the dossier
-- [ ] From play mode Journal, a dossier-known list row opens the dossier
-- [ ] Closing the dossier returns focus/UX consistent with other play-sheet modals
-- [ ] Smoke/runbook step documents both paths
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass when implemented
+- [x] From play mode Journal, a matched name in a journal entry opens the dossier
+- [x] From play mode Journal, a dossier-known list row opens the dossier
+- [x] Closing the dossier returns focus/UX consistent with other play-sheet modals
+- [x] Smoke/runbook step documents both paths
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass when implemented

@@ -65,6 +65,8 @@ export interface CreateCampaignRequest {
   regionCount?: number
   /** Initial generation NPCs per region (0–10). Defaults to {@link DEFAULT_NPCS_PER_REGION}. */
   npcsPerRegion?: number
+  /** Per-campaign NPC face-token generation; default false (epic 122 / 121.1). */
+  npcFaceTokenGenerationEnabled?: boolean
 }
 
 export interface CampaignSetupFormValues {
@@ -76,6 +78,7 @@ export interface CampaignSetupFormValues {
   respawnLimit: number | ''
   regionCount: number
   npcsPerRegion: number
+  npcFaceTokenGenerationEnabled: boolean
 }
 
 export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
@@ -86,5 +89,6 @@ export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
   respawnCost: 0,
   respawnLimit: '',
   regionCount: DEFAULT_REGION_COUNT,
-  npcsPerRegion: DEFAULT_NPCS_PER_REGION
+  npcsPerRegion: DEFAULT_NPCS_PER_REGION,
+  npcFaceTokenGenerationEnabled: false
 }

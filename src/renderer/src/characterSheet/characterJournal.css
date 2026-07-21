@@ -43,3 +43,61 @@
 .character-journal .character-sheet-empty {
   margin: 10px 12px;
 }
+
+.character-journal-known-dossiers {
+  margin: 0 0 0.75rem;
+}
+
+.character-journal-known-dossiers h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.character-journal-known-dossiers-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 2px;
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--surface-scene);
+}
+
+.character-journal-known-dossiers-row {
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.character-journal-known-dossiers-row:last-child {
+  border-bottom: none;
+}
+
+.character-journal-known-dossiers-open {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.character-journal-known-dossiers-open:hover,
+.character-journal-known-dossiers-open:focus-visible {
+  color: var(--text-accent);
+  background: var(--surface-raised, transparent);
+}
+
+.character-journal-known-dossiers .character-sheet-empty {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}

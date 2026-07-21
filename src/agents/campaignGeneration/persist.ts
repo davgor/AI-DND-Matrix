@@ -130,11 +130,20 @@ interface PersistGeneratedNpcInput {
   ctx: SpeakingStylePersistContext
 }
 
-async function persistGeneratedNpc(input: PersistGeneratedNpcInput): Promise<void> {
-  const { db, provider, campaignId, regionId, generatedNpc, ctx } = input
-  await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
-  const enriched = await enrichNpcForPersist(provider, generatedNpc, ctx)
-  await createNpcWithCombatReview(db, provider, {
+function buildGeneratedNpcAppearanceFields(enriched: GeneratedNpc) {
+  return {
+    hairColor: enriched.hairColor ?? null,
+    age: enriched.age ?? null,
+    eyeColor: enriched.eyeColor ?? null
+  }
+}
+
+function buildCreateNpcInputFromGenerated(
+  campaignId: string,
+  regionId: string,
+  enriched: GeneratedNpc
+): Parameters<typeof createNpcWithCombatReview>[2] {
+  return {
     campaignId,
     regionId,
     name: enriched.name,
@@ -149,8 +158,20 @@ async function persistGeneratedNpc(input: PersistGeneratedNpcInput): Promise<voi
     genderKey: enriched.genderKey ?? null,
     classKey: enriched.classKey ?? null,
     speakingStyleSpecimen: enriched.speakingStyleSpecimen ?? null,
-    speakingStyleExamples: enriched.speakingStyleExamples ?? null
-  })
+    speakingStyleExamples: enriched.speakingStyleExamples ?? null,
+    ...buildGeneratedNpcAppearanceFields(enriched)
+  }
+}
+
+async function persistGeneratedNpc(input: PersistGeneratedNpcInput): Promise<void> {
+  const { db, provider, campaignId, regionId, generatedNpc, ctx } = input
+  await resolveNpcRaceIfSpeaking(db, provider, campaignId, generatedNpc)
+  const enriched = await enrichNpcForPersist(provider, generatedNpc, ctx)
+  await createNpcWithCombatReview(
+    db,
+    provider,
+    buildCreateNpcInputFromGenerated(campaignId, regionId, enriched)
+  )
 }
 
 export async function persistRegionWithNpcs(input: PersistRegionWithNpcsInput): Promise<void> {
@@ -339,7 +360,8 @@ export async function persistGeneratedCampaign(args: {
     worldName: generation.world.worldName,
     worldSummary: generation.world.worldSummary,
     worldHistory: generation.world.worldHistory,
-    pantheonSummary: generation.pantheon.pantheonSummary
+    pantheonSummary: generation.pantheon.pantheonSummary,
+    npcFaceTokenGenerationEnabled: input.npcFaceTokenGenerationEnabled === true
   })
 
   persistGeneratedPantheon(db, campaign.id, generation.pantheon)

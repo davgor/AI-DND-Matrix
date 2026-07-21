@@ -38,6 +38,7 @@ const IDENTITY_INTERVIEW_CONTEXT = {
     { name: 'Chain Hauberk', equippedSlot: 'armor' }
   ],
   knownSpellNames: ['Rallying Strike'],
+  companions: [],
   regions: SAMPLE_REGIONS,
   transcript: [] as Array<{ role: 'player' | 'dm'; content: string }>,
   currentFoundations: defaultIdentityFoundations()
@@ -81,6 +82,7 @@ describe('runIdentityInterviewKickoff', () => {
       backgroundStory: IDENTITY_INTERVIEW_CONTEXT.backgroundStory,
       startingGear: IDENTITY_INTERVIEW_CONTEXT.startingGear,
       knownSpellNames: IDENTITY_INTERVIEW_CONTEXT.knownSpellNames,
+      companions: [],
       regions: IDENTITY_INTERVIEW_CONTEXT.regions
     })
     expect(result.dmReply.toLowerCase()).toContain('who')
@@ -130,6 +132,7 @@ describe('runIdentityInterviewKickoff background context', () => {
       backgroundStory: 'I marched on the northern border.',
       startingGear: [],
       knownSpellNames: [],
+      companions: [],
       regions: IDENTITY_INTERVIEW_CONTEXT.regions
     })
     const systemPrompt = provider.calls[0]?.context?.systemPrompt ?? ''

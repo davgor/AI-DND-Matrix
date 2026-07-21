@@ -24,7 +24,6 @@ function hubFor(campaignId: string): PlayAwareHubSnapshot {
     characters: [],
     deities: [],
     currentStateSummary: '',
-    recentEvents: [],
     cast: [],
     questSummariesByCharacterId: [],
     regionQuestAvailability: []

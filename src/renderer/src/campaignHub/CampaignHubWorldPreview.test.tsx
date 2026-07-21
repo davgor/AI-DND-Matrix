@@ -4,6 +4,7 @@ import { CampaignReviewWorldContent } from '../campaignReview/CampaignReviewWorl
 import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { CampaignHubWorldPreview } from './CampaignHubWorldPreview'
+import { HubSessionRecapSection } from './HubSessionRecapSection'
 import { makeTestHubSnapshot } from './hubTestFixtures'
 
 function sectionByClass(node: JSX.Element | undefined, className: string): JSX.Element | undefined {
@@ -60,14 +61,19 @@ function findByType(node: JSX.Element, type: unknown): JSX.Element | undefined {
 describe('CampaignHubWorldPreview', () => {
   it('renders read-only world content without editable fields', () => {
     const snapshot = makeTestHubSnapshot()
-    const node = CampaignHubWorldPreview({ snapshot })
+    const node = CampaignHubWorldPreview({
+      snapshot,
+      sessionRecap: { status: 'ready', text: 'Previously, you held the pass.' }
+    })
 
     expect(node.props.className).toBe('campaign-hub-world-preview')
     expect(
       normalizeChildren(node.props.children).some((child) => child.type === CampaignReviewWorldContent)
     ).toBe(true)
     expect(sectionByClass(node, 'campaign-hub-current-state')).toBeDefined()
-    expect(sectionByClass(node, 'campaign-hub-recent-events')).toBeDefined()
+    expect(
+      normalizeChildren(node.props.children).some((child) => child.type === HubSessionRecapSection)
+    ).toBe(true)
 
     const story = normalizeChildren(node.props.children).find((child) => child.type === CampaignReviewStory)
     expect(story?.props.playAware).toBe(true)
@@ -83,20 +89,16 @@ describe('CampaignHubWorldPreview', () => {
     expect(findByType(readOnlyCard, EditableField)).toBeUndefined()
   })
 
-  it('renders recent events from the hub snapshot', () => {
-    const snapshot = makeTestHubSnapshot({
-      recentEvents: [
-        {
-          id: 'evt-2',
-          type: 'combat',
-          createdAt: '2026-06-02T08:00:00.000Z',
-          summary: 'A skirmish broke out at the gate.'
-        }
-      ]
+  it('passes session recap state into HubSessionRecapSection (not Recent events)', () => {
+    const snapshot = makeTestHubSnapshot()
+    const node = CampaignHubWorldPreview({
+      snapshot,
+      sessionRecap: { status: 'loading' }
     })
-    const node = CampaignHubWorldPreview({ snapshot })
-    const recent = sectionByClass(node, 'campaign-hub-recent-events')!
-    const listItem = normalizeChildren(normalizeChildren(recent.props.children)[1].props.children)[0]
-    expect(listItem.props.children[2]).toBe('A skirmish broke out at the gate.')
+    const recap = normalizeChildren(node.props.children).find(
+      (child) => child.type === HubSessionRecapSection
+    )!
+    expect(recap.props.recap).toEqual({ status: 'loading' })
+    expect(sectionByClass(node, 'campaign-hub-recent-events')).toBeUndefined()
   })
 })

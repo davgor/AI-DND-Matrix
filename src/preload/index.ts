@@ -10,10 +10,12 @@ import type {
   EditWorldHistoryInput,
   EditWorldSummaryInput,
   EditPantheonSummaryInput,
+  EditNpcFaceTokenGenerationInput,
   GenerateRegionInput,
   GenerateNpcInput
 } from '../main/campaignEditIpc'
 import type { PlayAwareHubSnapshot } from '../shared/campaignHub/types'
+import type { SessionRecapResult } from '../shared/sessionRecap'
 import type { CampaignDetail } from '../main/campaignIpc'
 import type { CreateCampaignRequest, CreateCampaignProgress } from '../shared/campaignCreate/types'
 import type {
@@ -30,7 +32,11 @@ import type { GenerateObituaryInput, GenerateObituaryResult } from '../main/obit
 import type { CharacterQuestView, CreateQuestInput, QuestIpcError, QuestStatus, UpdateQuestInput } from '../shared/quests/types'
 import type { LogEntry, UpdateLogEntryInput } from '../shared/logBook/types'
 import type { LogCategory } from '../shared/logBook/types'
-import type { CharacterJournalEntry } from '../shared/journal/types'
+import type {
+  CharacterJournalEntry,
+  JournalKnownDossier,
+  PersonMatchCandidate
+} from '../shared/journal/types'
 import type { CharacterItemView } from '../shared/items/types'
 import type { EquipSlot } from '../shared/items/types'
 import type { PlayLogEntry } from '../main/narrationLog'
@@ -99,6 +105,8 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:editWorldSummary', input),
   editPantheonSummary: (input: EditPantheonSummaryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editPantheonSummary', input),
+  editNpcFaceTokenGeneration: (input: EditNpcFaceTokenGenerationInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editNpcFaceTokenGeneration', input),
   editWorldHistory: (input: EditWorldHistoryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldHistory', input),
   editNpcDisposition: (input: EditNpcDispositionInput): Promise<CampaignDetail> =>
@@ -117,6 +125,8 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:generateNpc', input),
   generateRecap: (campaignId: string): Promise<string> =>
     ipcRenderer.invoke('campaigns:generateRecap', campaignId),
+  getOrGenerateSessionRecap: (campaignId: string): Promise<SessionRecapResult> =>
+    ipcRenderer.invoke('campaigns:getOrGenerateSessionRecap', campaignId),
   getNarrationLog: (campaignId: string, characterId?: string): Promise<PlayLogEntry[]> =>
     ipcRenderer.invoke('campaigns:getNarrationLog', campaignId, characterId),
   confirmPromotion: (input: PromoteNpcInput): Promise<CampaignDetail> =>
@@ -192,6 +202,16 @@ const npcDossier = {
     characterId: string
     npcId: string
   }): Promise<NpcDossierDto | null> => ipcRenderer.invoke('npcDossier:get', input)
+}
+
+const journal = {
+  listKnownDossiers: (campaignId: string): Promise<JournalKnownDossier[]> =>
+    ipcRenderer.invoke('journal:listKnownDossiers', campaignId),
+  listPersonMatchCandidates: (input: {
+    campaignId: string
+    characterId: string
+  }): Promise<PersonMatchCandidate[]> =>
+    ipcRenderer.invoke('journal:listPersonMatchCandidates', input)
 }
 
 const askDm = {
@@ -333,6 +353,27 @@ const guidedCreation = {
   > => ipcRenderer.invoke('guidedCreation:revertPhase', input)
 }
 
+const companions = {
+  skip: (input: { characterId: string }): Promise<{ ok: true } | { ok: false; reason: string }> =>
+    ipcRenderer.invoke('companions:skip', input),
+  generate: (
+    input: import('../main/companionsIpc').CompanionsGenerateInput
+  ): Promise<import('../shared/partyMembers/types').CompanionPreviewDto> =>
+    ipcRenderer.invoke('companions:generate', input),
+  accept: (
+    input: import('../main/companionsIpc').CompanionsAcceptInput
+  ): Promise<import('../main/companionsIpc').CompanionsAcceptResult> =>
+    ipcRenderer.invoke('companions:accept', input),
+  setOrder: (
+    input: import('../main/companionsIpc').CompanionsSetOrderInput
+  ): Promise<import('../main/companionsIpc').CompanionsSetOrderResult> =>
+    ipcRenderer.invoke('companions:setOrder', input),
+  listRoster: (
+    input: import('../main/companionsIpc').CompanionsListRosterInput
+  ): Promise<import('../shared/partyMembers/types').CompanionRosterEntry[]> =>
+    ipcRenderer.invoke('companions:listRoster', input)
+}
+
 const settings = {
   get: (): Promise<RedactedProviderSettings> => ipcRenderer.invoke('settings:get'),
   save: (input: SaveProviderSettingsInput): Promise<RedactedProviderSettings> =>
@@ -380,6 +421,7 @@ contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('logBook', logBook)
 contextBridge.exposeInMainWorld('npcDossier', npcDossier)
+contextBridge.exposeInMainWorld('journal', journal)
 contextBridge.exposeInMainWorld('askDm', askDm)
 contextBridge.exposeInMainWorld('quests', quests)
 contextBridge.exposeInMainWorld('spellbook', spellbook)
@@ -388,6 +430,7 @@ contextBridge.exposeInMainWorld('combat', combat)
 contextBridge.exposeInMainWorld('progression', progression)
 contextBridge.exposeInMainWorld('startup', startup)
 contextBridge.exposeInMainWorld('guidedCreation', guidedCreation)
+contextBridge.exposeInMainWorld('companions', companions)
 contextBridge.exposeInMainWorld('startingLoadout', startingLoadout)
 contextBridge.exposeInMainWorld('race', race)
 contextBridge.exposeInMainWorld('background', background)
@@ -402,6 +445,7 @@ export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type LogBookApi = typeof logBook
 export type NpcDossierApi = typeof npcDossier
+export type JournalApi = typeof journal
 export type AskDmApi = typeof askDm
 export type QuestsApi = typeof quests
 export type SpellbookApi = typeof spellbook
@@ -410,6 +454,7 @@ export type CombatApi = typeof combat
 export type ProgressionApi = typeof progression
 export type StartupApi = typeof startup
 export type GuidedCreationApi = typeof guidedCreation
+export type CompanionsApi = typeof companions
 export type StartingLoadoutApi = typeof startingLoadout
 export type RaceApi = typeof race
 export type BackgroundApi = typeof background

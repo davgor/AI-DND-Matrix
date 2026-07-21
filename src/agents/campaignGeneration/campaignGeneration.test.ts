@@ -132,7 +132,7 @@ describe('normalizeGeneratedWorld', () => {
   })
 })
 
-describe('normalizeGeneratedNpc live-model coercions', () => {
+describe('normalizeGeneratedNpc temperament and race', () => {
   it('coerces unknown temperament labels to neutral', () => {
     expect(coerceNpcTemperament('friendly')).toBe('neutral')
   })
@@ -155,6 +155,51 @@ describe('normalizeGeneratedNpc live-model coercions', () => {
     })
     expect(npc?.temperament).toBe('neutral')
     expect(npc?.raceKey).toBe('human')
+  })
+})
+
+describe('normalizeGeneratedNpc appearance fields', () => {
+  it('defaults optional appearance fields to null', () => {
+    const withoutAppearance = normalizeGeneratedNpc({
+      name: 'Mara',
+      role: 'scout',
+      disposition: 'wary',
+      regionName: 'Pass',
+      temperament: 'neutral',
+      canSpeak: true,
+      alignment: 'neutral_good',
+      race: 'human',
+      background: 'folk_hero',
+      gender: 'woman',
+      class: 'commoner',
+      backstory: 'Mara grew up in the pass.'
+    })
+    expect(withoutAppearance?.hairColor).toBeNull()
+    expect(withoutAppearance?.age).toBeNull()
+    expect(withoutAppearance?.eyeColor).toBeNull()
+  })
+
+  it('coerces and trims optional appearance fields when provided', () => {
+    const withAppearance = normalizeGeneratedNpc({
+      name: 'Mara',
+      role: 'scout',
+      disposition: 'wary',
+      regionName: 'Pass',
+      temperament: 'neutral',
+      canSpeak: true,
+      alignment: 'neutral_good',
+      race: 'human',
+      background: 'folk_hero',
+      gender: 'woman',
+      class: 'commoner',
+      backstory: 'Mara grew up in the pass.',
+      hairColor: '  auburn ',
+      age: 'young adult',
+      eyeColor: 'green'
+    })
+    expect(withAppearance?.hairColor).toBe('auburn')
+    expect(withAppearance?.age).toBe('young adult')
+    expect(withAppearance?.eyeColor).toBe('green')
   })
 })
 

@@ -2,6 +2,7 @@ import type { NpcDossierDto } from '../../../shared/npcDossier/types'
 import { NpcDossierDispositionSection } from './NpcDossierDispositionSection'
 import { NpcDossierFactsSection } from './NpcDossierFactsSection'
 import { NpcDossierOpinionSection } from './NpcDossierOpinionSection'
+import { NpcDossierPortrait } from './NpcDossierPortrait'
 import { NpcDossierTraitsSection } from './NpcDossierTraitsSection'
 import { NPC_DOSSIER_LOADING } from './npcDossierCopy'
 
@@ -14,8 +15,16 @@ export interface NpcDossierModalBodyProps {
 function DossierSections(props: { dossier: NpcDossierDto }): JSX.Element {
   return (
     <div className="npc-dossier-sections">
-      {NpcDossierTraitsSection({ traits: props.dossier.traits, canSpeak: props.dossier.canSpeak })}
-      {NpcDossierFactsSection({ facts: props.dossier.facts })}
+      <div className="npc-dossier-top-row">
+        <div className="npc-dossier-top-main">
+          {NpcDossierTraitsSection({
+            traits: props.dossier.traits,
+            canSpeak: props.dossier.canSpeak
+          })}
+          {NpcDossierFactsSection({ facts: props.dossier.facts })}
+        </div>
+        <NpcDossierPortrait faceTokenPath={props.dossier.faceTokenPath} />
+      </div>
       {NpcDossierOpinionSection({ opinion: props.dossier.opinion })}
       {NpcDossierDispositionSection({ disposition: props.dossier.disposition })}
     </div>

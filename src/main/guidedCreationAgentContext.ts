@@ -3,8 +3,10 @@ import type { IdentityInterviewContext } from '../agents/guidedIdentity'
 import type { Character } from '../db/repositories/characters'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import type { IdentityFoundationsStatus } from '../shared/guidedCreation/types'
+import { companionIdentityDigestFromMember } from '../shared/partyMembers/types'
 import { resolveCharacterBackgroundContext, resolveCharacterRaceContext } from './guidedCreationIdentity'
 import { resolveCharacterStartingGear } from './guidedCreationStartingGear'
+import { listPartyMembersForPlayer } from '../db/repositories/characters'
 
 export function abilityScoresFromCharacter(stats: Record<string, unknown>): Record<string, number> {
   const scores = stats.abilityScores as Record<string, number> | undefined
@@ -51,6 +53,9 @@ export function buildIdentityInterviewAgentContext(
     backgroundStory: backgroundContext.backgroundStory,
     startingGear: gearContext.startingGear,
     knownSpellNames: gearContext.knownSpellNames,
+    companions: listPartyMembersForPlayer(input.db, input.character.id).map((member) =>
+      companionIdentityDigestFromMember(member)
+    ),
     regions,
     transcript: input.transcript,
     currentFoundations: input.currentFoundations

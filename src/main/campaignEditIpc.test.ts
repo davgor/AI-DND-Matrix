@@ -5,7 +5,7 @@ import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
-import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editNpcFaceTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 
 function makeRegion(name: string) {
   return {
@@ -141,6 +141,25 @@ describe('editNpcTraits', () => {
     expect(updated?.temperament).toBe('cautious')
     expect(updated?.alignment).toBe('lawful_neutral')
     expect(updated?.canSpeak).toBe(false)
+  })
+})
+
+describe('editNpcFaceTokenGeneration', () => {
+  it('persists the face-token toggle and returns refreshed detail', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Test Campaign',
+      premisePrompt: 'A flooded kingdom.',
+      deathMode: 'legendary'
+    })
+    expect(campaign.npcFaceTokenGenerationEnabled).toBe(false)
+
+    const detail = editNpcFaceTokenGeneration(db, {
+      campaignId: campaign.id,
+      enabled: true
+    })
+
+    expect(detail.campaign?.npcFaceTokenGenerationEnabled).toBe(true)
   })
 })
 

@@ -106,6 +106,7 @@ describe('kickoffGuidedCreationIdentity prior setup context', () => {
         spellKeys: ['rallying-strike']
       })
     ).toEqual({ ok: true })
+    setGuidedCreationPhase(db, player.id, 'identity')
     const spellName = getSpellByKey(db, 'rallying-strike')?.name
     expect(spellName).toBeTruthy()
 

@@ -8,12 +8,13 @@ const PHASE_ORDER: GuidedCreationPhase[] = [
   'race',
   'background',
   'equipment',
+  'companions',
   'identity',
   'opening_scene',
   'complete'
 ]
 
-const REVERT_SOURCE_PHASES: GuidedCreationPhase[] = ['background', 'equipment']
+const REVERT_SOURCE_PHASES: GuidedCreationPhase[] = ['background', 'equipment', 'companions']
 
 export function canRevertGuidedCreationPhase(
   current: GuidedCreationPhase,

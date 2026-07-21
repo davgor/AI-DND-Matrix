@@ -83,8 +83,10 @@ export function PlaySheetOverlayModals(props: {
       <PlaySheetSheetModals {...props} />
       <PlaySheetJournalTab
         character={props.character}
+        campaignId={props.campaignId}
         isOpen={props.modals.journalOpen}
         onClose={props.modals.closeJournal}
+        onOpenNpcDossier={props.modals.openDossier}
       />
       <PlaySheetKnowledgeModals {...props} />
     </>

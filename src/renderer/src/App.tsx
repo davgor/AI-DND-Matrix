@@ -49,7 +49,7 @@ function createRefreshAndAdvanceHandler(
 
 function createRevertRefreshAndAdvanceHandler(
   props: ReadyAppShellProps,
-  targetPhase: 'race' | 'background',
+  targetPhase: 'race' | 'background' | 'equipment',
   nextStage: OnboardingStage
 ): () => Promise<void> {
   return async () => {
@@ -62,12 +62,28 @@ function createRevertRefreshAndAdvanceHandler(
 }
 
 async function handleEquipmentSelectionComplete(props: ReadyAppShellProps): Promise<void> {
+  await createRefreshAndAdvanceHandler(props, 'companionPrompt')()
+}
+
+async function handleCompanionsSkip(props: ReadyAppShellProps): Promise<void> {
+  const player = findGuidedCreationPlayer(props.detail?.characters ?? [])
+  if (player?.id && window.companions?.skip) {
+    await window.companions.skip({ characterId: player.id })
+  }
   await createRefreshAndAdvanceHandler(props, 'guidedIdentity')()
+}
+
+async function handleCompanionsComplete(props: ReadyAppShellProps): Promise<void> {
+  await createRefreshAndAdvanceHandler(props, 'guidedIdentity')()
+}
+
+async function handleCompanionsBack(props: ReadyAppShellProps): Promise<void> {
+  await createRevertRefreshAndAdvanceHandler(props, 'equipment', 'equipmentSelection')()
 }
 
 async function revertOnboardingPhase(
   characters: CampaignDetail['characters'],
-  targetPhase: 'race' | 'background'
+  targetPhase: 'race' | 'background' | 'equipment'
 ): Promise<void> {
   const player = findGuidedCreationPlayer(characters)
   if (player?.id && window.guidedCreation?.revertPhase) {
@@ -100,6 +116,9 @@ function renderOnboarding(props: ReadyAppShellProps, body: ReturnType<typeof use
       onBackgroundSelectionBack={() => void handleBackgroundSelectionBack(props)()}
       onEquipmentSelectionComplete={() => void handleEquipmentSelectionComplete(props)}
       onEquipmentSelectionBack={() => void handleEquipmentSelectionBack(props)}
+      onCompanionsSkip={() => void handleCompanionsSkip(props)}
+      onCompanionsComplete={() => void handleCompanionsComplete(props)}
+      onCompanionsBack={() => void handleCompanionsBack(props)}
       onGuidedIdentityAdvance={() => props.setStage('guidedOpeningScene')}
       onEnterPlay={() => body.handleEnterPlay()}
       enterPlayBlockerMessage={body.enterPlayBlockerMessage}
