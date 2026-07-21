@@ -28,7 +28,13 @@ function QuestObjectives(props: { view: CharacterQuestView }): JSX.Element {
     <ul className="quest-log-objectives">
       {props.view.quest.objectives.map((objective) => (
         <li key={objective.id} className={`quest-log-objective${objective.done ? ' done' : ''}`}>
-          <input type="checkbox" checked={objective.done} readOnly aria-label={objective.text} />
+          <input
+            type="checkbox"
+            className="quest-log-check"
+            checked={objective.done}
+            readOnly
+            aria-label={objective.text}
+          />
           <span>{objective.text}</span>
         </li>
       ))}

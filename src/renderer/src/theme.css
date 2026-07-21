@@ -184,7 +184,9 @@ body {
   color: var(--text-dim);
 }
 
-/* Themed action buttons — default for all app buttons except chrome/nav controls */
+/* Themed action buttons — default for all app buttons except chrome/nav controls.
+   ModalPortal mounts overlays on document.body (outside .app-root), so .modal-overlay
+   must repeat the same rules. */
 .app-root .btn,
 .app-root button:not(
   .titlebar-button,
@@ -203,7 +205,14 @@ body {
   .field-random-dice,
   .equipment-selection-option
 ),
-.modal-overlay .btn {
+.modal-overlay .btn,
+.modal-overlay button:not(
+  .titlebar-button,
+  .character-sheet-close,
+  .character-log-book-close,
+  .btn-ghost,
+  .character-sheet-overlay-close
+) {
   border: 1px solid var(--accent-gold);
   background: rgba(201, 166, 107, 0.12);
   color: var(--text-primary);
@@ -233,7 +242,14 @@ body {
   .field-random-dice,
   .equipment-selection-option
 ):hover:not(:disabled),
-.modal-overlay .btn:hover:not(:disabled) {
+.modal-overlay .btn:hover:not(:disabled),
+.modal-overlay button:not(
+  .titlebar-button,
+  .character-sheet-close,
+  .character-log-book-close,
+  .btn-ghost,
+  .character-sheet-overlay-close
+):hover:not(:disabled) {
   background: rgba(201, 166, 107, 0.22);
   border-color: var(--accent-bronze-light);
 }
@@ -256,7 +272,14 @@ body {
   .field-random-dice,
   .equipment-selection-option
 ):disabled,
-.modal-overlay .btn:disabled {
+.modal-overlay .btn:disabled,
+.modal-overlay button:not(
+  .titlebar-button,
+  .character-sheet-close,
+  .character-log-book-close,
+  .btn-ghost,
+  .character-sheet-overlay-close
+):disabled {
   opacity: 0.55;
   cursor: wait;
 }

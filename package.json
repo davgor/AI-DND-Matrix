@@ -9,7 +9,8 @@
   },
   "main": "./out/main/index.js",
   "scripts": {
-    "predev": "npm run rebuild:electron",
+    "postinstall": "node node_modules/electron/install.js",
+    "predev": "node node_modules/electron/install.js && npm run rebuild:electron",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "prepackage": "npm run rebuild:electron",

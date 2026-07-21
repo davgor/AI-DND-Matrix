@@ -1,5 +1,6 @@
 import type { Character } from '../../../db/repositories/characters'
 import { CharacterJournalSection } from '../characterSheet/CharacterJournalSection'
+import './playSheetJournalOverlay.css'
 
 export function PlaySheetJournalTab(props: {
   character: Character
@@ -10,9 +11,13 @@ export function PlaySheetJournalTab(props: {
     return null
   }
   return (
-    <div className="character-sheet-overlay modal-overlay" role="presentation" onClick={props.onClose}>
-      <div className="character-sheet-overlay-panel modal-panel" role="dialog" onClick={(event) => event.stopPropagation()}>
-        <header className="character-sheet-overlay-header">
+    <div className="play-sheet-journal-overlay modal-overlay" role="presentation" onClick={props.onClose}>
+      <div
+        className="play-sheet-journal-modal modal-panel"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="play-sheet-journal-header">
           <h2>Journal</h2>
           <button type="button" aria-label="Close journal" onClick={props.onClose}>
             ×
