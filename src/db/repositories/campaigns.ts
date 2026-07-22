@@ -26,7 +26,11 @@ export interface Campaign {
   inGameDate: number
   deathMode: DeathMode
   respawnRules: RespawnRules | null
+  /** Unified generative-tokens flag (epic 144). Legacy NPC/enemy fields mirror this value. */
+  generativeTokensEnabled: boolean
+  /** @deprecated Prefer generativeTokensEnabled — kept in sync for readers. */
   npcFaceTokenGenerationEnabled: boolean
+  /** @deprecated Prefer generativeTokensEnabled — kept in sync for readers. */
   enemyTokenGenerationEnabled: boolean
 }
 
@@ -42,7 +46,10 @@ export interface CreateCampaignInput {
   pantheonSummary?: string
   factionsSummary?: string
   factionPressure?: FactionPressure
+  generativeTokensEnabled?: boolean
+  /** Legacy alias — OR'd into generativeTokensEnabled when unified flag omitted. */
   npcFaceTokenGenerationEnabled?: boolean
+  /** Legacy alias — OR'd into generativeTokensEnabled when unified flag omitted. */
   enemyTokenGenerationEnabled?: boolean
 }
 
@@ -61,8 +68,34 @@ interface CampaignRow {
   in_game_date: number
   death_mode: DeathMode
   respawn_rules: string | null
+  generative_tokens_enabled?: number | null
   npc_face_token_generation_enabled?: number | null
   enemy_token_generation_enabled?: number | null
+}
+
+function resolveGenerativeTokensEnabled(input: {
+  generativeTokensEnabled?: boolean
+  npcFaceTokenGenerationEnabled?: boolean
+  enemyTokenGenerationEnabled?: boolean
+}): boolean {
+  if (input.generativeTokensEnabled === true) {
+    return true
+  }
+  if (input.generativeTokensEnabled === false) {
+    return false
+  }
+  return (
+    input.npcFaceTokenGenerationEnabled === true || input.enemyTokenGenerationEnabled === true
+  )
+}
+
+function readGenerativeTokensEnabled(row: CampaignRow): boolean {
+  if (row.generative_tokens_enabled != null) {
+    return row.generative_tokens_enabled === 1
+  }
+  return (
+    row.npc_face_token_generation_enabled === 1 || row.enemy_token_generation_enabled === 1
+  )
 }
 
 function resolveFactionPressure(value: string | null | undefined): FactionPressure {
@@ -85,8 +118,9 @@ function rowToCampaign(row: CampaignRow): Campaign {
     inGameDate: row.in_game_date,
     deathMode: row.death_mode,
     respawnRules: row.respawn_rules ? (JSON.parse(row.respawn_rules) as RespawnRules) : null,
-    npcFaceTokenGenerationEnabled: row.npc_face_token_generation_enabled === 1,
-    enemyTokenGenerationEnabled: row.enemy_token_generation_enabled === 1
+    generativeTokensEnabled: readGenerativeTokensEnabled(row),
+    npcFaceTokenGenerationEnabled: readGenerativeTokensEnabled(row),
+    enemyTokenGenerationEnabled: readGenerativeTokensEnabled(row)
   }
 }
 
@@ -110,6 +144,11 @@ function campaignHasEnemyTokenColumn(db: Database.Database): boolean {
   return columns.some((column) => column.name === 'enemy_token_generation_enabled')
 }
 
+function campaignHasGenerativeTokensColumn(db: Database.Database): boolean {
+  const columns = db.prepare('PRAGMA table_info(campaigns)').all() as Array<{ name: string }>
+  return columns.some((column) => column.name === 'generative_tokens_enabled')
+}
+
 function campaignHasFactionsColumns(db: Database.Database): boolean {
   const columns = db.prepare('PRAGMA table_info(campaigns)').all() as Array<{ name: string }>
   return columns.some((column) => column.name === 'factions_summary')
@@ -128,8 +167,7 @@ interface InsertCampaignRowInput {
   pantheonSummary: string
   factionsSummary: string
   factionPressure: FactionPressure
-  npcFaceTokenGenerationEnabled: boolean
-  enemyTokenGenerationEnabled: boolean
+  generativeTokensEnabled: boolean
 }
 
 function serializeRespawnRules(respawnRules: RespawnRules | null): string | null {
@@ -154,15 +192,21 @@ function buildInsertCampaignParams(row: InsertCampaignRowInput): Record<string, 
     pantheonSummary: row.pantheonSummary,
     factionsSummary: row.factionsSummary,
     factionPressure: row.factionPressure,
-    npcFaceTokenGenerationEnabled: faceTokenFlagSql(row.npcFaceTokenGenerationEnabled),
-    enemyTokenGenerationEnabled: faceTokenFlagSql(row.enemyTokenGenerationEnabled)
+    generativeTokensEnabled: faceTokenFlagSql(row.generativeTokensEnabled),
+    npcFaceTokenGenerationEnabled: faceTokenFlagSql(row.generativeTokensEnabled),
+    enemyTokenGenerationEnabled: faceTokenFlagSql(row.generativeTokensEnabled)
   }
 }
 
 function pushOptionalCampaignColumns(
   columns: string[],
   params: string[],
-  flags: { hasNpcFace: boolean; hasEnemy: boolean; hasFactions: boolean }
+  flags: {
+    hasNpcFace: boolean
+    hasEnemy: boolean
+    hasGenerative: boolean
+    hasFactions: boolean
+  }
 ): void {
   if (flags.hasNpcFace) {
     columns.push('npc_face_token_generation_enabled')
@@ -171,6 +215,10 @@ function pushOptionalCampaignColumns(
   if (flags.hasEnemy) {
     columns.push('enemy_token_generation_enabled')
     params.push('@enemyTokenGenerationEnabled')
+  }
+  if (flags.hasGenerative) {
+    columns.push('generative_tokens_enabled')
+    params.push('@generativeTokensEnabled')
   }
   if (flags.hasFactions) {
     columns.push('factions_summary', 'faction_pressure')
@@ -206,6 +254,7 @@ function insertCampaignWithOptionalColumns(db: Database.Database, row: InsertCam
   pushOptionalCampaignColumns(columns, params, {
     hasNpcFace: campaignHasNpcFaceTokenColumn(db),
     hasEnemy: campaignHasEnemyTokenColumn(db),
+    hasGenerative: campaignHasGenerativeTokensColumn(db),
     hasFactions: campaignHasFactionsColumns(db)
   })
   db.prepare(
@@ -306,8 +355,7 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
   const pantheonSummary = input.pantheonSummary ?? ''
   const factionsSummary = input.factionsSummary ?? ''
   const factionPressure = parseFactionPressure(input.factionPressure) ?? 'light'
-  const npcFaceTokenGenerationEnabled = input.npcFaceTokenGenerationEnabled === true
-  const enemyTokenGenerationEnabled = input.enemyTokenGenerationEnabled === true
+  const generativeTokensEnabled = resolveGenerativeTokensEnabled(input)
 
   insertCampaignRow(db, {
     id,
@@ -322,8 +370,7 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
     pantheonSummary,
     factionsSummary,
     factionPressure,
-    npcFaceTokenGenerationEnabled,
-    enemyTokenGenerationEnabled
+    generativeTokensEnabled
   })
 
   return {
@@ -341,8 +388,9 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
     inGameDate: 0,
     deathMode: input.deathMode,
     respawnRules,
-    npcFaceTokenGenerationEnabled,
-    enemyTokenGenerationEnabled
+    generativeTokensEnabled,
+    npcFaceTokenGenerationEnabled: generativeTokensEnabled,
+    enemyTokenGenerationEnabled: generativeTokensEnabled
   }
 }
 
@@ -453,25 +501,45 @@ export function updateCampaignDeathMode(
   )
 }
 
+export function updateCampaignGenerativeTokensEnabled(
+  db: Database.Database,
+  id: string,
+  enabled: boolean
+): void {
+  const flag = enabled ? 1 : 0
+  const sets: string[] = []
+  if (campaignHasNpcFaceTokenColumn(db)) {
+    sets.push('npc_face_token_generation_enabled = ?')
+  }
+  if (campaignHasEnemyTokenColumn(db)) {
+    sets.push('enemy_token_generation_enabled = ?')
+  }
+  if (campaignHasGenerativeTokensColumn(db)) {
+    sets.push('generative_tokens_enabled = ?')
+  }
+  if (sets.length === 0) {
+    return
+  }
+  const values = sets.map(() => flag)
+  db.prepare(`UPDATE campaigns SET ${sets.join(', ')} WHERE id = ?`).run(...values, id)
+}
+
+/** @deprecated Prefer updateCampaignGenerativeTokensEnabled — syncs all token flags. */
 export function updateCampaignNpcFaceTokenGenerationEnabled(
   db: Database.Database,
   id: string,
   enabled: boolean
 ): void {
-  db.prepare(
-    'UPDATE campaigns SET npc_face_token_generation_enabled = ? WHERE id = ?'
-  ).run(enabled ? 1 : 0, id)
+  updateCampaignGenerativeTokensEnabled(db, id, enabled)
 }
 
+/** @deprecated Prefer updateCampaignGenerativeTokensEnabled — syncs all token flags. */
 export function updateCampaignEnemyTokenGenerationEnabled(
   db: Database.Database,
   id: string,
   enabled: boolean
 ): void {
-  db.prepare('UPDATE campaigns SET enemy_token_generation_enabled = ? WHERE id = ?').run(
-    enabled ? 1 : 0,
-    id
-  )
+  updateCampaignGenerativeTokensEnabled(db, id, enabled)
 }
 
 export function advanceInGameDate(db: Database.Database, id: string, days: number): number {

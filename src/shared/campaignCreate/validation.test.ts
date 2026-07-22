@@ -80,40 +80,22 @@ describe('mapFormToCreateRequest: premise and counts', () => {
 })
 
 describe('mapFormToCreateRequest: token flags', () => {
-  it('maps npcFaceTokenGenerationEnabled (default false)', () => {
+  it('maps generativeTokensEnabled (default false)', () => {
     const off = mapFormToCreateRequest(
       { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A quiet village' },
       'session-3'
     )
-    expect(off.npcFaceTokenGenerationEnabled).toBe(false)
+    expect(off.generativeTokensEnabled).toBe(false)
 
     const on = mapFormToCreateRequest(
       {
         ...DEFAULT_CAMPAIGN_SETUP_FORM,
         premisePrompt: 'A quiet village',
-        npcFaceTokenGenerationEnabled: true
+        generativeTokensEnabled: true
       },
       'session-4'
     )
-    expect(on.npcFaceTokenGenerationEnabled).toBe(true)
-  })
-
-  it('maps enemyTokenGenerationEnabled (default false)', () => {
-    const off = mapFormToCreateRequest(
-      { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A quiet village' },
-      'session-5'
-    )
-    expect(off.enemyTokenGenerationEnabled).toBe(false)
-
-    const on = mapFormToCreateRequest(
-      {
-        ...DEFAULT_CAMPAIGN_SETUP_FORM,
-        premisePrompt: 'A quiet village',
-        enemyTokenGenerationEnabled: true
-      },
-      'session-6'
-    )
-    expect(on.enemyTokenGenerationEnabled).toBe(true)
+    expect(on.generativeTokensEnabled).toBe(true)
   })
 })
 
@@ -157,6 +139,28 @@ describe('isValidCreateCampaignRequest: core fields', () => {
         npcsPerRegion: 2.5
       })
     ).toBe(false)
+  })
+})
+
+describe('isValidCreateCampaignRequest: generativeTokensEnabled', () => {
+  it('rejects non-boolean generativeTokensEnabled', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        generativeTokensEnabled: 'yes'
+      })
+    ).toBe(false)
+  })
+
+  it('accepts generativeTokensEnabled boolean', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        generativeTokensEnabled: true
+      })
+    ).toBe(true)
   })
 })
 

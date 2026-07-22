@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { CampaignReviewFaceTokenToggle } from './CampaignReviewFaceTokenToggle'
+import { CampaignReviewGenerativeTokensToggle } from './CampaignReviewGenerativeTokensToggle'
 
-describe('CampaignReviewFaceTokenToggle', () => {
+describe('CampaignReviewGenerativeTokensToggle', () => {
   it('renders unchecked by default copy and fires onChange', () => {
     const onChange = vi.fn()
-    const tree = CampaignReviewFaceTokenToggle({ enabled: false, onChange })
-    expect(tree.props.className).toBe('campaign-review-face-token-toggle')
+    const tree = CampaignReviewGenerativeTokensToggle({ enabled: false, onChange })
+    expect(tree.props.className).toBe('campaign-review-generative-tokens-toggle')
     const input = tree.props.children[0] as JSX.Element
     expect(input.props.checked).toBe(false)
     input.props.onChange({ target: { checked: true } })

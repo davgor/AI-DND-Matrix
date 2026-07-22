@@ -6,10 +6,10 @@ Speaking-NPC head/shoulders portraits for Social avatars and the dossier portrai
 
 | Setting | Default | Notes |
 |---------|---------|--------|
-| Campaign `npcFaceTokenGenerationEnabled` | **OFF** | No enqueue when false |
+| Campaign `generativeTokensEnabled` ("Use generative tokens?") | **OFF** | Unified flag (epic **144**). No NPC enqueue when false; also gates companions (**139**) and enemy tokens (**123**) |
 | Local image provider (llamacpp paint path) | **OFF** | v1 uses mock/cloud per m001.1; tests must not require llamacpp |
 
-See `types.ts` for `shouldEnqueueNpcFaceToken` and entity kind `speaking_npc`.
+See `types.ts` for `shouldEnqueueNpcFaceToken` and entity kind `speaking_npc`. Legacy columns `npc_face_token_generation_enabled` / `enemy_token_generation_enabled` stay in sync with the unified flag.
 
 ## Generation contract (122.3)
 
@@ -26,7 +26,7 @@ Companions reuse this pipeline — they do **not** fork a second image stack.
 | Concern | Rule |
 |---------|------|
 | Entity kind | `ai_party_member` (`COMPANION_FACE_TOKEN_ENTITY_KIND` in `src/shared/partyMembers/`) |
-| Toggle | Same campaign flag: `npcFaceTokenGenerationEnabled` |
+| Toggle | Campaign `generativeTokensEnabled` ("Use generative tokens?" — epic **144**; was `npcFaceTokenGenerationEnabled`) |
 | Enqueue | On companion Accept when toggle ON — `maybeEnqueueCompanionFaceTokenAfterAccept` in `src/main/companionFaceTokenScheduler.ts` |
 | Persist | File under `companion-face-tokens/`; path stored on character `portrait_path` |
 | Orchestration | Calls shared `generateNpcFaceToken` with companion identity/appearance |

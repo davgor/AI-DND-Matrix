@@ -481,6 +481,7 @@ export async function persistGeneratedCampaign(args: {
     worldSummary: generation.world.worldSummary,
     worldHistory: generation.world.worldHistory,
     pantheonSummary: generation.pantheon.pantheonSummary,
+    generativeTokensEnabled: input.generativeTokensEnabled === true,
     npcFaceTokenGenerationEnabled: input.npcFaceTokenGenerationEnabled === true,
     enemyTokenGenerationEnabled: input.enemyTokenGenerationEnabled === true
   })

@@ -264,3 +264,49 @@
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
+
+.character-setup-portrait {
+  margin: 1rem 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.character-setup-portrait-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-medium);
+  background: var(--surface-inset);
+  display: grid;
+  place-items: center;
+}
+
+.character-setup-portrait-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.character-setup-portrait-fallback {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.character-setup-portrait-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.character-setup-portrait textarea {
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  padding: 0.55rem 0.65rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}

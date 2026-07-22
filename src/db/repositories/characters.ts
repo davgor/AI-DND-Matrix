@@ -29,6 +29,8 @@ export interface Character extends CharacterGuidedCreationFields {
   kind: CharacterKind
   sourceNpcId: string | null
   portraitPath: string | null
+  /** Last appearance prompt used for a generated player icon (null after clean upload). */
+  portraitPrompt?: string | null
   sheetBackgroundPath: string | null
   alignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
@@ -58,6 +60,7 @@ export interface CreateCharacterInput {
   currency?: number
   sourceNpcId?: string | null
   portraitPath?: string | null
+  portraitPrompt?: string | null
   sheetBackgroundPath?: string | null
   alignment?: Alignment | null
   ownerPlayerCharacterId?: string | null
@@ -90,6 +93,7 @@ interface CharacterRow {
   kind: CharacterKind
   source_npc_id: string | null
   portrait_path: string | null
+  portrait_prompt?: string | null
   sheet_background_path: string | null
   identity_who: string | null
   identity_why: string | null
@@ -168,6 +172,7 @@ function rowToCharacter(row: CharacterRow): Character {
     kind: row.kind,
     sourceNpcId: row.source_npc_id,
     portraitPath: row.portrait_path,
+    portraitPrompt: row.portrait_prompt ?? null,
     sheetBackgroundPath: row.sheet_background_path,
     ...rowToCharacterIdentityFields(row),
     // EPIC-133
@@ -204,6 +209,7 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     kind: input.kind,
     sourceNpcId: values.sourceNpcId,
     portraitPath: values.portraitPath,
+    portraitPrompt: input.portraitPrompt ?? null,
     sheetBackgroundPath: values.sheetBackgroundPath,
     identityWho: null,
     identityWhy: null,
@@ -288,8 +294,18 @@ export function createCharacter(db: Database.Database, input: CreateCharacterInp
   }
 
   insertCharacterRow(db, id, input, values)
-
+  applyPortraitPromptAfterCreate(db, id, input.portraitPrompt)
   return buildCharacterRecord(id, input, values)
+}
+
+function applyPortraitPromptAfterCreate(
+  db: Database.Database,
+  id: string,
+  portraitPrompt: string | null | undefined
+): void {
+  if (portraitPrompt != null) {
+    updateCharacterPortraitPrompt(db, id, portraitPrompt)
+  }
 }
 
 export function getCharacterById(db: Database.Database, id: string): Character | undefined {
@@ -408,13 +424,50 @@ export function transferPartyMemberOwnership(
   )
 }
 
-/** Persist generated companion face-token path onto `portrait_path` (epic 139). */
+/** Persist portrait path (generated or uploaded). */
 export function updateCharacterPortraitPath(
   db: Database.Database,
   characterId: string,
   path: string | null
 ): void {
   db.prepare('UPDATE characters SET portrait_path = ? WHERE id = ?').run(path, characterId)
+}
+
+/** Store or clear the last generated appearance prompt (epic 144). */
+function updateCharacterPortraitPrompt(
+  db: Database.Database,
+  characterId: string,
+  prompt: string | null
+): void {
+  db.prepare('UPDATE characters SET portrait_prompt = ? WHERE id = ?').run(prompt, characterId)
+}
+
+/**
+ * Bind a generated icon path and keep the appearance prompt for regenerate prefills.
+ * Call only after successful generation — never on failure.
+ */
+export function persistGeneratedCharacterPortrait(
+  db: Database.Database,
+  characterId: string,
+  path: string,
+  appearancePrompt: string
+): void {
+  db.prepare(
+    'UPDATE characters SET portrait_path = ?, portrait_prompt = ? WHERE id = ?'
+  ).run(path, appearancePrompt, characterId)
+}
+
+/**
+ * Replace portrait with a clean upload and clear generated-prompt provenance.
+ */
+export function replaceCharacterPortraitWithUpload(
+  db: Database.Database,
+  characterId: string,
+  path: string
+): void {
+  db.prepare(
+    'UPDATE characters SET portrait_path = ?, portrait_prompt = NULL WHERE id = ?'
+  ).run(path, characterId)
 }
 
 export function listPlayerCharacters(db: Database.Database, campaignId: string): Character[] {

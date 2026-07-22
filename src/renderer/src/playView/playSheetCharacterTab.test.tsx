@@ -59,7 +59,9 @@ describe('PlaySheetCharacterTab blank-screen crash', () => {
   it('does not throw when character.stats is null', () => {
     expect(() => {
       act(() => {
-        root.render(<PlaySheetCharacterTab character={characterWithNullStats()} />)
+        root.render(
+          <PlaySheetCharacterTab character={characterWithNullStats()} onCharacterUpdated={() => undefined} />
+        )
       })
     }).not.toThrow()
     expect(container.textContent).toContain('Kael')

@@ -245,6 +245,69 @@ describe('schema migration 47', () => {
   })
 })
 
+describe('schema migration 54', () => {
+  it('adds generative_tokens_enabled and ORs legacy NPC/enemy flags', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 53)
+    )
+    db.prepare(
+      `INSERT INTO campaigns (
+         id, name, premise_prompt, created_at, death_mode, respawn_rules,
+         npc_face_token_generation_enabled, enemy_token_generation_enabled
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('c-or', 'OR', 'p', '2020-01-01', 'standard', null, 1, 0)
+    db.prepare(
+      `INSERT INTO campaigns (
+         id, name, premise_prompt, created_at, death_mode, respawn_rules,
+         npc_face_token_generation_enabled, enemy_token_generation_enabled
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('c-off', 'OFF', 'p', '2020-01-01', 'standard', null, 0, 0)
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 54)
+    )
+
+    const columns = db
+      .prepare('PRAGMA table_info(campaigns)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(columns).toContain('generative_tokens_enabled')
+
+    const onRow = db
+      .prepare('SELECT generative_tokens_enabled AS v FROM campaigns WHERE id = ?')
+      .get('c-or') as { v: number }
+    const offRow = db
+      .prepare('SELECT generative_tokens_enabled AS v FROM campaigns WHERE id = ?')
+      .get('c-off') as { v: number }
+    expect(onRow.v).toBe(1)
+    expect(offRow.v).toBe(0)
+  })
+})
+
+describe('schema migration 55', () => {
+  it('adds portrait_prompt on characters', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 54)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 55)
+    )
+
+    const columns = db
+      .prepare('PRAGMA table_info(characters)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(columns).toContain('portrait_prompt')
+  })
+})
+
 describe('schema migration 46', () => {
   it('migration 46 adds face_token_path on npcs', () => {
     const db = new Database(':memory:')

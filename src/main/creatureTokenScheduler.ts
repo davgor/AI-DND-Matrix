@@ -83,7 +83,7 @@ function shouldScheduleCreatureToken(
     return false
   }
   return shouldEnqueueCreatureToken(
-    campaign.enemyTokenGenerationEnabled === true,
+    campaign.generativeTokensEnabled === true,
     creatureTokenEligibility(species)
   )
 }

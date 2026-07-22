@@ -1,6 +1,7 @@
 import type { Archetype } from '../../../engine/hp'
 import { AbilityScoreAssignment } from './AbilityScoreAssignment'
 import { CharacterSetupCoreFields } from './CharacterSetupFields'
+import { CharacterSetupPortraitFields } from './CharacterSetupPortraitFields'
 import type { CharacterSetupDraft } from './characterSetupDraft'
 import { useCharacterSetup } from './useCharacterSetup'
 import { ProceedButton } from '../onboarding/ProceedButton'
@@ -23,6 +24,8 @@ export function CharacterSetup(props: CharacterSetupProps): JSX.Element {
       <h1>Create Your Character</h1>
 
       <CharacterSetupCoreFields setup={setup} archetypes={ARCHETYPES} />
+
+      <CharacterSetupPortraitFields portrait={setup.portrait} characterName={setup.name} />
 
       <AbilityScoreAssignment
         key={formKey}

@@ -67,9 +67,11 @@ export interface CreateCampaignRequest {
   regionCount?: number
   /** Initial generation NPCs per region (0–10). Defaults to {@link DEFAULT_NPCS_PER_REGION}. */
   npcsPerRegion?: number
-  /** Per-campaign NPC face-token generation; default false (epic 122 / 121.1). */
+  /** Per-campaign generative tokens (NPC/companion/enemy); default false (epic 144). */
+  generativeTokensEnabled?: boolean
+  /** @deprecated Prefer generativeTokensEnabled. */
   npcFaceTokenGenerationEnabled?: boolean
-  /** Per-campaign enemy creature-token generation; default false (epic 123.1). */
+  /** @deprecated Prefer generativeTokensEnabled. */
   enemyTokenGenerationEnabled?: boolean
 }
 
@@ -82,8 +84,7 @@ export interface CampaignSetupFormValues {
   respawnLimit: number | ''
   regionCount: number
   npcsPerRegion: number
-  npcFaceTokenGenerationEnabled: boolean
-  enemyTokenGenerationEnabled: boolean
+  generativeTokensEnabled: boolean
 }
 
 export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
@@ -95,6 +96,5 @@ export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
   respawnLimit: '',
   regionCount: DEFAULT_REGION_COUNT,
   npcsPerRegion: DEFAULT_NPCS_PER_REGION,
-  npcFaceTokenGenerationEnabled: false,
-  enemyTokenGenerationEnabled: false
+  generativeTokensEnabled: false
 }

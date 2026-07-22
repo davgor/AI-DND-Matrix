@@ -10,6 +10,7 @@ import { SLOT_LABELS } from '../characterSheet/acBreakdown'
 import { CharacterPerksSection } from '../characterSheet/CharacterPerksSection'
 import { useCharacterInventory } from '../characterSheet/useCharacterInventory'
 import { equippedItemLabel } from './playSheetEquipLabels'
+import { PlaySheetPortraitSlot } from './PlaySheetPortraitSlot'
 
 export type PlaySheetTab = 'character' | 'inventory' | 'journal'
 
@@ -104,6 +105,7 @@ function PlaySheetVitals(props: { character: Character; stats: CharacterTabStats
 
 export function PlaySheetCharacterTab(props: {
   character: Character
+  onCharacterUpdated: (character: Character) => void
 }): JSX.Element {
   const stats = (props.character.stats ?? {}) as CharacterTabStats
   const alignmentLabel = props.character.alignment
@@ -112,6 +114,11 @@ export function PlaySheetCharacterTab(props: {
 
   return (
     <div className="play-sheet-tab-content" role="tabpanel">
+      <PlaySheetPortraitSlot
+        character={props.character}
+        campaignId={props.character.campaignId}
+        onCharacterUpdated={props.onCharacterUpdated}
+      />
       <h2 className="play-sheet-character-name">{props.character.name}</h2>
       <p className="play-sheet-identity-line">
         {props.character.characterClass} — Level {props.character.level}
@@ -193,6 +200,7 @@ export function PlaySheetJournalTab(props: {
 export function PlaySheetTabPanel(props: {
   activeTab: PlaySheetTab
   character: Character
+  onCharacterUpdated: (character: Character) => void
   refreshToken: number
   onOpenLogBook: () => void
   onOpenQuestLog: () => void
@@ -216,6 +224,9 @@ export function PlaySheetTabPanel(props: {
     )
   }
   return (
-    <PlaySheetCharacterTab character={props.character} />
+    <PlaySheetCharacterTab
+      character={props.character}
+      onCharacterUpdated={props.onCharacterUpdated}
+    />
   )
 }

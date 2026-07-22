@@ -9,6 +9,7 @@ import {
 
 export function PlaySheetRailBody(props: {
   character: Character
+  onCharacterUpdated: (character: Character) => void
   activeTab: PlaySheetTab
   onSelectTab: (tab: PlaySheetTab) => void
   refreshToken: number
@@ -38,6 +39,7 @@ export function PlaySheetRailBody(props: {
       <PlaySheetTabPanel
         activeTab={props.activeTab}
         character={props.character}
+        onCharacterUpdated={props.onCharacterUpdated}
         refreshToken={props.refreshToken}
         onOpenLogBook={props.modals.openLogBook}
         onOpenQuestLog={props.modals.openQuestLog}

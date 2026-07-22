@@ -21,7 +21,7 @@ Shared DTOs and clamp helpers live in `src/shared/partyMembers/types.ts`. Phase 
 | 9 | **Race keys.** Unknown / non-catalog race keys rewrite to `human` (`COMPANION_FALLBACK_RACE_KEY`). Blank names reject the proposal (`null` preview). |
 | 10 | **Inventory.** Optional catalog item ids on the proposal; unknown ids dropped at clamp. Starter loadout templates may still apply on Accept (**129.7**). |
 | 11 | **Identity digest.** When roster non-empty, identity kickoff gets `CompanionIdentityDigest` (name, role, raceKey, characterClass) — no full sheet dump. |
-| 12 | **Face tokens.** Entity kind `ai_party_member` + `shouldEnqueueCompanionFaceToken` live here. **Implementation is epic 139** (reuses **122** / m001 stack + campaign `npcFaceTokenGenerationEnabled`). Persist on companion `portraitPath`; Social + roster prefer token with letter-initial fallback. **129** DoD does not require images. |
+| 12 | **Face tokens.** Entity kind `ai_party_member` + `shouldEnqueueCompanionFaceToken` live here. **Implementation is epic 139** (reuses **122** / m001 stack + campaign `generativeTokensEnabled` from epic **144**). Persist on companion `portraitPath`; Social + roster prefer token with letter-initial fallback. **129** DoD does not require images. |
 | 13 | **Metering.** Generate calls use purpose `onboarding.companion_generate` (setup bucket). |
 | 14 | **Player orders (play).** Short natural-language stance, max `COMPANION_ORDER_MAX_CHARS` (200), grounds `decidePartyMemberAction` (**129.6**). |
 | 15 | **Flee / leave follow.** Living companions follow the PC on successful flee/scene-leave unless SPEC exceptions (unconscious, explicitly left behind) — updates flee SPEC in **129.8**. |
@@ -76,7 +76,7 @@ Preview is **not** persisted. Regenerate must not leave orphan DB rows (**129.3*
 | Concern | Rule |
 |---------|------|
 | Entity | `ai_party_member` companion id (not world `npcId`) |
-| When | Accept, and campaign `npcFaceTokenGenerationEnabled` ON |
+| When | Accept, and campaign `generativeTokensEnabled` ON |
 | Blocking | Never — Accept → identity proceeds even if provider throws |
 | Surfaces | Social party lines + roster/sheet avatar; letter fallback when missing |
 | Pipeline | Shared **122** / **m001.1** (`generateNpcFaceToken`); scheduler in `companionFaceTokenScheduler.ts`; asset → `portrait_path` |

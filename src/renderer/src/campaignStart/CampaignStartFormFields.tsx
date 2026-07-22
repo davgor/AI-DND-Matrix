@@ -158,48 +158,23 @@ function CampaignStartDeathModeFields(props: { flow: CampaignStartFlow }): JSX.E
   )
 }
 
-function CampaignStartFaceTokenFields(props: { flow: CampaignStartFlow }): JSX.Element {
+function CampaignStartGenerativeTokensFields(props: { flow: CampaignStartFlow }): JSX.Element {
   const { flow } = props
   const disabled = flow.submitting
   return (
     <label className="campaign-start-checkbox-field">
       <input
         type="checkbox"
-        checked={flow.form.npcFaceTokenGenerationEnabled}
+        checked={flow.form.generativeTokensEnabled}
         disabled={disabled}
-        onChange={(event) =>
-          flow.updateForm({ npcFaceTokenGenerationEnabled: event.target.checked })
-        }
+        onChange={(event) => flow.updateForm({ generativeTokensEnabled: event.target.checked })}
       />
       <span>
-        Generate NPC face tokens
+        Use generative tokens?
         <span className="campaign-start-field-hint">
-          Off by default. When on, speaking NPCs get head-and-shoulders portraits for Social and
-          dossiers (async; never blocks play). Local image models stay optional.
-        </span>
-      </span>
-    </label>
-  )
-}
-
-function CampaignStartEnemyTokenFields(props: { flow: CampaignStartFlow }): JSX.Element {
-  const { flow } = props
-  const disabled = flow.submitting
-  return (
-    <label className="campaign-start-checkbox-field">
-      <input
-        type="checkbox"
-        checked={flow.form.enemyTokenGenerationEnabled}
-        disabled={disabled}
-        onChange={(event) =>
-          flow.updateForm({ enemyTokenGenerationEnabled: event.target.checked })
-        }
-      />
-      <span>
-        Generate enemy tokens
-        <span className="campaign-start-field-hint">
-          Off by default and independent of NPC face tokens. When on, combat creatures get async
-          creature portraits for Social and dossiers. Generation never blocks play.
+          Off by default. When on, speaking NPCs, AI companions, and combat creatures get async
+          portraits for Social / dossiers / roster (never blocks play). Local image models stay
+          optional.
         </span>
       </span>
     </label>
@@ -218,8 +193,7 @@ export function CampaignStartFormFields(props: {
       <CampaignStartIdentityFields flow={flow} />
       <CampaignStartGenerationFields flow={flow} />
       <CampaignStartDeathModeFields flow={flow} />
-      <CampaignStartFaceTokenFields flow={flow} />
-      <CampaignStartEnemyTokenFields flow={flow} />
+      <CampaignStartGenerativeTokensFields flow={flow} />
     </>
   )
 }

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
 import { PlaySessionChromeRecapButton } from './PlaySessionChromeRecapButton'
 import { combatBadgeSummary, isCombatActive } from './usePlaySessionChromeData'
@@ -38,6 +39,30 @@ function handleHubExit(props: PlaySessionChromeProps): void {
   requestHubExit(isCombatActive(props.combatState), props.onExitToCampaignHub)
 }
 
+function ChromePortrait(props: { portraitPath: string | null; characterName: string }): JSX.Element {
+  const [loadFailed, setLoadFailed] = useState(false)
+  useEffect(() => {
+    setLoadFailed(false)
+  }, [props.portraitPath])
+  const src = portraitSrc(props.portraitPath)
+  const showImage = src !== undefined && !loadFailed
+  if (showImage) {
+    return (
+      <img
+        className="play-session-chrome-portrait"
+        src={src}
+        alt=""
+        onError={() => setLoadFailed(true)}
+      />
+    )
+  }
+  return (
+    <span className="play-session-chrome-portrait play-session-chrome-portrait-fallback" aria-hidden="true">
+      {props.characterName.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
 export function PlaySessionChrome(props: PlaySessionChromeProps): JSX.Element {
   const combatActive = isCombatActive(props.combatState)
   const showCampaignName = props.campaignsCollapsed && props.campaignName
@@ -45,17 +70,7 @@ export function PlaySessionChrome(props: PlaySessionChromeProps): JSX.Element {
   return (
     <header className="play-session-chrome" aria-label="Play session">
       <div className="play-session-chrome-identity">
-        {props.portraitPath ? (
-          <img
-            className="play-session-chrome-portrait"
-            src={portraitSrc(props.portraitPath)}
-            alt=""
-          />
-        ) : (
-          <span className="play-session-chrome-portrait play-session-chrome-portrait-fallback" aria-hidden="true">
-            {props.characterName.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <ChromePortrait portraitPath={props.portraitPath} characterName={props.characterName} />
         <span className="play-session-chrome-character">{props.characterName}</span>
         {showCampaignName ? (
           <span className="play-session-chrome-campaign">{props.campaignName}</span>

@@ -19,6 +19,7 @@ export function makeTestCampaign(overrides: Partial<Campaign> = {}): Campaign {
     inGameDate: 12,
     deathMode: 'standard',
     respawnRules: null,
+    generativeTokensEnabled: false,
     npcFaceTokenGenerationEnabled: false,
     enemyTokenGenerationEnabled: false,
     ...overrides

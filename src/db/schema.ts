@@ -921,5 +921,30 @@ export const migrations: Migration[] = [
     up: (db) => {
       addColumnIfMissing(db, 'characters', 'last_active_in_game_date', 'INTEGER NOT NULL DEFAULT 0')
     }
+  },
+  // EPIC-144 — unify NPC + enemy generative-token toggles
+  {
+    version: 54,
+    up: (db) => {
+      addColumnIfMissing(
+        db,
+        'campaigns',
+        'generative_tokens_enabled',
+        'INTEGER NOT NULL DEFAULT 0'
+      )
+      db.prepare(
+        `UPDATE campaigns
+         SET generative_tokens_enabled = 1
+         WHERE npc_face_token_generation_enabled = 1
+            OR enemy_token_generation_enabled = 1`
+      ).run()
+    }
+  },
+  // EPIC-144 — last player-icon generation prompt for regenerate prefills
+  {
+    version: 55,
+    up: (db) => {
+      addColumnIfMissing(db, 'characters', 'portrait_prompt', 'TEXT')
+    }
   }
 ]

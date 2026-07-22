@@ -6,10 +6,10 @@ Species-stable combat-creature portraits for Social avatars and the enemy dossie
 
 | Setting | Default | Notes |
 |---------|---------|--------|
-| Campaign `enemyTokenGenerationEnabled` | **OFF** | No enqueue when false; independent of NPC face-token toggle |
+| Campaign `generativeTokensEnabled` ("Use generative tokens?") | **OFF** | No enqueue when false; unified with NPC/companion tokens (epic **144**) |
 | Local image provider (llamacpp paint path) | **OFF** | v1 uses mock/cloud per m001.1; tests must not require llamacpp |
 
-See `types.ts` for `shouldEnqueueCreatureToken` and entity kind `enemy_creature`.
+See `types.ts` for `shouldEnqueueCreatureToken` and entity kind `enemy_creature`. Legacy `enemyTokenGenerationEnabled` mirrors the unified flag.
 
 ## Appearance fields (locked)
 

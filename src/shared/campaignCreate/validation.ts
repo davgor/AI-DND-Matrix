@@ -96,8 +96,7 @@ export function mapFormToCreateRequest(
     respawnRules: buildRespawnRules(form),
     regionCount: form.regionCount,
     npcsPerRegion: form.npcsPerRegion,
-    npcFaceTokenGenerationEnabled: form.npcFaceTokenGenerationEnabled === true,
-    enemyTokenGenerationEnabled: form.enemyTokenGenerationEnabled === true
+    generativeTokensEnabled: form.generativeTokensEnabled === true
   }
 }
 
@@ -126,6 +125,9 @@ function hasValidCreateCampaignCore(candidate: Record<string, unknown>): boolean
     return false
   }
   if (candidate['deathMode'] !== undefined && !isValidDeathMode(candidate['deathMode'])) {
+    return false
+  }
+  if (!isOptionalBooleanField(candidate, 'generativeTokensEnabled')) {
     return false
   }
   if (!isOptionalBooleanField(candidate, 'npcFaceTokenGenerationEnabled')) {

@@ -29,12 +29,8 @@ export function createCampaignReviewSavers(
       const next = await window.campaigns.editFactionsSummary({ campaignId, factionsSummary })
       onDetailChange(next)
     },
-    saveNpcFaceTokenGeneration: async (enabled: boolean): Promise<void> => {
-      const next = await window.campaigns.editNpcFaceTokenGeneration({ campaignId, enabled })
-      onDetailChange(next)
-    },
-    saveEnemyTokenGeneration: async (enabled: boolean): Promise<void> => {
-      const next = await window.campaigns.editEnemyTokenGeneration({ campaignId, enabled })
+    saveGenerativeTokens: async (enabled: boolean): Promise<void> => {
+      const next = await window.campaigns.editGenerativeTokens({ campaignId, enabled })
       onDetailChange(next)
     }
   }

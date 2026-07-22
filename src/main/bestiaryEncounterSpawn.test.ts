@@ -204,12 +204,20 @@ describe('spawnOnDemand provisional fallback', () => {
   })
 })
 
+function enableGenerativeTokens(db: ReturnType<typeof createTestDb>, campaignId: string): void {
+  db.prepare(
+    `UPDATE campaigns
+     SET enemy_token_generation_enabled = 1,
+         npc_face_token_generation_enabled = 1,
+         generative_tokens_enabled = 1
+     WHERE id = ?`
+  ).run(campaignId)
+}
+
 describe('spawnOnDemand creature token scheduling', () => {
   it('enqueues after new species create and spawn when toggle is ON', async () => {
     const scene = seedScene()
-    scene.db
-      .prepare('UPDATE campaigns SET enemy_token_generation_enabled = 1 WHERE id = ?')
-      .run(scene.campaign.id)
+    enableGenerativeTokens(scene.db, scene.campaign.id)
     const baseDir = mkdtempSync(join(tmpdir(), 'spawn-creature-token-'))
     const deps = buildCreatureTokenDeps(scene.db, baseDir)
     const provider = createScriptedProvider([

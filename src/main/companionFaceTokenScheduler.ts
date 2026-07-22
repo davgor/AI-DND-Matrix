@@ -124,7 +124,7 @@ function shouldScheduleCompanionFaceToken(
   if (!campaign || !companion || companion.kind !== 'ai_party_member') {
     return false
   }
-  return shouldEnqueueCompanionFaceToken(campaign.npcFaceTokenGenerationEnabled === true, {
+  return shouldEnqueueCompanionFaceToken(campaign.generativeTokensEnabled === true, {
     hasFaceToken: companion.portraitPath != null
   })
 }

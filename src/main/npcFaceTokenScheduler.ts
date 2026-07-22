@@ -84,7 +84,7 @@ function shouldScheduleNpcFaceToken(
     return false
   }
   return shouldEnqueueNpcFaceToken(
-    campaign.npcFaceTokenGenerationEnabled === true,
+    campaign.generativeTokensEnabled === true,
     npcFaceTokenEligibility(npc)
   )
 }

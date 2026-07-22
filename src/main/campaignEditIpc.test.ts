@@ -5,7 +5,7 @@ import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
-import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editFactionsSummary, editNpcFaceTokenGeneration, editEnemyTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editFactionsSummary, editGenerativeTokens, editNpcFaceTokenGeneration, editEnemyTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 
 function makeRegion(name: string) {
   return {
@@ -141,6 +141,27 @@ describe('editNpcTraits', () => {
     expect(updated?.temperament).toBe('cautious')
     expect(updated?.alignment).toBe('lawful_neutral')
     expect(updated?.canSpeak).toBe(false)
+  })
+})
+
+describe('editGenerativeTokens', () => {
+  it('persists the unified generative-tokens toggle and returns refreshed detail', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Test Campaign',
+      premisePrompt: 'A flooded kingdom.',
+      deathMode: 'legendary'
+    })
+    expect(campaign.generativeTokensEnabled).toBe(false)
+
+    const detail = editGenerativeTokens(db, {
+      campaignId: campaign.id,
+      enabled: true
+    })
+
+    expect(detail.campaign?.generativeTokensEnabled).toBe(true)
+    expect(detail.campaign?.npcFaceTokenGenerationEnabled).toBe(true)
+    expect(detail.campaign?.enemyTokenGenerationEnabled).toBe(true)
   })
 })
 

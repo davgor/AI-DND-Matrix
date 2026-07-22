@@ -29,6 +29,7 @@ export interface CreatePlayerCharacterInput {
   abilityScoreMethod?: AbilityScoreMethod
   alignment: Alignment
   portraitPath?: string | null
+  portraitPrompt?: string | null
   sheetBackgroundPath?: string | null
 }
 
@@ -55,6 +56,7 @@ export function createPlayerCharacter(
     level: STARTING_LEVEL,
     currency: STARTING_CURRENCY,
     portraitPath: input.portraitPath ?? null,
+    portraitPrompt: input.portraitPrompt ?? null,
     sheetBackgroundPath: input.sheetBackgroundPath ?? null,
     alignment: input.alignment
   })
@@ -148,6 +150,7 @@ export interface UpdatePlayerCharacterSetupInput {
   abilityScoreMethod: AbilityScoreMethod
   alignment: Alignment
   portraitPath?: string | null
+  portraitPrompt?: string | null
   sheetBackgroundPath?: string | null
 }
 
@@ -178,13 +181,14 @@ export function updatePlayerCharacterSetup(
 
   db.prepare(
     `UPDATE characters
-     SET name = ?, class = ?, alignment = ?, portrait_path = ?, sheet_background_path = ?, stats = ?, hp = ?
+     SET name = ?, class = ?, alignment = ?, portrait_path = ?, portrait_prompt = ?, sheet_background_path = ?, stats = ?, hp = ?
      WHERE id = ?`
   ).run(
     input.name,
     input.archetype,
     input.alignment,
     input.portraitPath ?? null,
+    input.portraitPrompt ?? null,
     input.sheetBackgroundPath ?? null,
     JSON.stringify(nextStats),
     maxHp,

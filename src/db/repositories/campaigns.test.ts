@@ -12,7 +12,8 @@ import {
   updateCampaignWorldSummary,
   updateCampaignPantheonSummary,
   updateCampaignNpcFaceTokenGenerationEnabled,
-  updateCampaignEnemyTokenGenerationEnabled
+  updateCampaignEnemyTokenGenerationEnabled,
+  updateCampaignGenerativeTokensEnabled
 } from './campaigns'
 
 function expectDefaultCampaignFields(
@@ -70,6 +71,54 @@ describe('campaigns repository: create + getById round-trip', () => {
   it('returns undefined for an unknown id', () => {
     const db = createTestDb()
     expect(getCampaignById(db, 'does-not-exist')).toBeUndefined()
+  })
+})
+
+describe('campaigns repository: generativeTokensEnabled', () => {
+  it('defaults to false when omitted at create', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'No Tokens',
+      premisePrompt: '...',
+      deathMode: 'standard'
+    })
+    expect(created.generativeTokensEnabled).toBe(false)
+    expect(created.npcFaceTokenGenerationEnabled).toBe(false)
+    expect(created.enemyTokenGenerationEnabled).toBe(false)
+    expect(getCampaignById(db, created.id)?.generativeTokensEnabled).toBe(false)
+  })
+
+  it('persists when set at create', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'With Tokens',
+      premisePrompt: '...',
+      deathMode: 'standard',
+      generativeTokensEnabled: true
+    })
+    expect(created.generativeTokensEnabled).toBe(true)
+    expect(created.npcFaceTokenGenerationEnabled).toBe(true)
+    expect(created.enemyTokenGenerationEnabled).toBe(true)
+    expect(getCampaignById(db, created.id)?.generativeTokensEnabled).toBe(true)
+  })
+
+  it('ORs legacy NPC/enemy flags when unified flag omitted', () => {
+    const db = createTestDb()
+    const fromNpc = createCampaign(db, {
+      name: 'Legacy NPC',
+      premisePrompt: '...',
+      deathMode: 'standard',
+      npcFaceTokenGenerationEnabled: true
+    })
+    expect(fromNpc.generativeTokensEnabled).toBe(true)
+
+    const fromEnemy = createCampaign(db, {
+      name: 'Legacy Enemy',
+      premisePrompt: '...',
+      deathMode: 'standard',
+      enemyTokenGenerationEnabled: true
+    })
+    expect(fromEnemy.generativeTokensEnabled).toBe(true)
   })
 })
 
@@ -215,6 +264,27 @@ describe('campaigns repository: updates', () => {
     expect(afterSecond).toBe(5)
 
     expect(getCampaignById(db, created.id)?.inGameDate).toBe(5)
+  })
+})
+
+describe('campaigns repository: updateCampaignGenerativeTokensEnabled', () => {
+  it('toggles the unified generative-tokens flag and mirrors legacy columns', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Test',
+      premisePrompt: '...',
+      deathMode: 'standard'
+    })
+    expect(getCampaignById(db, created.id)?.generativeTokensEnabled).toBe(false)
+
+    updateCampaignGenerativeTokensEnabled(db, created.id, true)
+    const on = getCampaignById(db, created.id)
+    expect(on?.generativeTokensEnabled).toBe(true)
+    expect(on?.npcFaceTokenGenerationEnabled).toBe(true)
+    expect(on?.enemyTokenGenerationEnabled).toBe(true)
+
+    updateCampaignGenerativeTokensEnabled(db, created.id, false)
+    expect(getCampaignById(db, created.id)?.generativeTokensEnabled).toBe(false)
   })
 })
 

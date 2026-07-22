@@ -10,8 +10,7 @@ import { CampaignReviewFooter, CampaignReviewStory } from './CampaignReviewSecti
 import { CampaignReviewWorldSection } from './CampaignReviewWorldSection'
 import { CampaignReviewPantheonSection } from './CampaignReviewPantheonSection'
 import { CampaignReviewFactionsSection } from './CampaignReviewFactionsSection'
-import { CampaignReviewFaceTokenToggle } from './CampaignReviewFaceTokenToggle'
-import { CampaignReviewEnemyTokenToggle } from './CampaignReviewEnemyTokenToggle'
+import { CampaignReviewGenerativeTokensToggle } from './CampaignReviewGenerativeTokensToggle'
 import { CampaignReviewBestiarySection } from './CampaignReviewBestiarySection'
 import { createCampaignReviewSavers } from './campaignReviewSavers'
 import { useCampaignRaces } from './useCampaignRaces'
@@ -75,26 +74,12 @@ function CampaignReviewFactionsBlock(props: {
   )
 }
 
-function CampaignReviewFaceTokenBlock(props: {
+function CampaignReviewGenerativeTokensBlock(props: {
   enabled: boolean
   onChange: (enabled: boolean) => void
 }): JSX.Element {
   return (
-    <CampaignReviewFaceTokenToggle
-      enabled={props.enabled}
-      onChange={(enabled) => {
-        void props.onChange(enabled)
-      }}
-    />
-  )
-}
-
-function CampaignReviewEnemyTokenBlock(props: {
-  enabled: boolean
-  onChange: (enabled: boolean) => void
-}): JSX.Element {
-  return (
-    <CampaignReviewEnemyTokenToggle
+    <CampaignReviewGenerativeTokensToggle
       enabled={props.enabled}
       onChange={(enabled) => {
         void props.onChange(enabled)
@@ -161,16 +146,10 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
     <div className="campaign-review">
       <CampaignReviewHeader campaignName={detail.campaign?.name} />
       {detail.campaign ? (
-        <>
-          <CampaignReviewFaceTokenBlock
-            enabled={detail.campaign.npcFaceTokenGenerationEnabled === true}
-            onChange={savers.saveNpcFaceTokenGeneration}
-          />
-          <CampaignReviewEnemyTokenBlock
-            enabled={detail.campaign.enemyTokenGenerationEnabled === true}
-            onChange={savers.saveEnemyTokenGeneration}
-          />
-        </>
+        <CampaignReviewGenerativeTokensBlock
+          enabled={detail.campaign.generativeTokensEnabled === true}
+          onChange={savers.saveGenerativeTokens}
+        />
       ) : null}
       <CampaignReviewMainSections
         detail={detail}

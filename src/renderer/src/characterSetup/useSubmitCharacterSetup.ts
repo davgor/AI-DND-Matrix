@@ -8,6 +8,7 @@ import { validatePartyMembers, type PartyMemberDraft } from './PartyMemberSetup'
 
 export interface SubmissionExtras {
   portraitPath: string | null
+  portraitPrompt: string | null
   sheetBackgroundPath: string | null
   abilityScoreMethod: AbilityScoreMethod
 }
@@ -39,6 +40,7 @@ async function createCharacterSetup(
     abilityScoreMethod: extras.abilityScoreMethod,
     alignment: state.alignment as Alignment,
     portraitPath: extras.portraitPath,
+    portraitPrompt: extras.portraitPrompt,
     sheetBackgroundPath: extras.sheetBackgroundPath
   })
   if (partyMembers.length > 0) {
@@ -64,6 +66,7 @@ async function updateCharacterSetup(input: {
     abilityScoreMethod: input.extras.abilityScoreMethod,
     alignment: input.state.alignment as Alignment,
     portraitPath: input.extras.portraitPath,
+    portraitPrompt: input.extras.portraitPrompt,
     sheetBackgroundPath: input.extras.sheetBackgroundPath
   })
   await window.characters.replaceSetupPartyMembers({

@@ -40,6 +40,7 @@ export function PlaySheetRail(props: PlaySheetRailProps): JSX.Element {
       {!props.collapsed && railState.character ? (
         <PlaySheetRailBody
           character={railState.character}
+          onCharacterUpdated={railState.setCharacter}
           activeTab={railState.activeTab}
           onSelectTab={railState.setActiveTab}
           refreshToken={props.refreshToken}

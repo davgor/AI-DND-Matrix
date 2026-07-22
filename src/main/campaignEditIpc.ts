@@ -19,8 +19,7 @@ import {
   updateCampaignWorldSummary,
   updateCampaignPantheonSummary,
   updateCampaignFactionsSummary,
-  updateCampaignNpcFaceTokenGenerationEnabled,
-  updateCampaignEnemyTokenGenerationEnabled
+  updateCampaignGenerativeTokensEnabled
 } from '../db/repositories/campaigns'
 import { deleteNpcCascade } from '../db/repositories/deleteNpc'
 import { deleteRegionCascade } from '../db/repositories/deleteRegion'
@@ -129,30 +128,39 @@ export function editFactionsSummary(
   return getCampaignDetail(db, input.campaignId)
 }
 
-export interface EditNpcFaceTokenGenerationInput {
+export interface EditGenerativeTokensInput {
   campaignId: string
   enabled: boolean
 }
 
+export function editGenerativeTokens(
+  db: Database.Database,
+  input: EditGenerativeTokensInput
+): CampaignDetail {
+  updateCampaignGenerativeTokensEnabled(db, input.campaignId, input.enabled)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+/** @deprecated Prefer editGenerativeTokens. */
+export type EditNpcFaceTokenGenerationInput = EditGenerativeTokensInput
+
+/** @deprecated Prefer editGenerativeTokens. */
 export function editNpcFaceTokenGeneration(
   db: Database.Database,
   input: EditNpcFaceTokenGenerationInput
 ): CampaignDetail {
-  updateCampaignNpcFaceTokenGenerationEnabled(db, input.campaignId, input.enabled)
-  return getCampaignDetail(db, input.campaignId)
+  return editGenerativeTokens(db, input)
 }
 
-export interface EditEnemyTokenGenerationInput {
-  campaignId: string
-  enabled: boolean
-}
+/** @deprecated Prefer editGenerativeTokens. */
+export type EditEnemyTokenGenerationInput = EditGenerativeTokensInput
 
+/** @deprecated Prefer editGenerativeTokens. */
 export function editEnemyTokenGeneration(
   db: Database.Database,
   input: EditEnemyTokenGenerationInput
 ): CampaignDetail {
-  updateCampaignEnemyTokenGenerationEnabled(db, input.campaignId, input.enabled)
-  return getCampaignDetail(db, input.campaignId)
+  return editGenerativeTokens(db, input)
 }
 
 export interface EditWorldHistoryInput {
@@ -462,6 +470,11 @@ export function registerCampaignEditHandlers(): void {
 
   ipcMain.handle('campaigns:editFactionsSummary', (_event, input: EditFactionsSummaryInput) =>
     editFactionsSummary(getDb(), input)
+  )
+
+  ipcMain.handle(
+    'campaigns:editGenerativeTokens',
+    (_event, input: EditGenerativeTokensInput) => editGenerativeTokens(getDb(), input)
   )
 
   ipcMain.handle(

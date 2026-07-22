@@ -6,13 +6,13 @@ Each campaign supports **multiple player characters** in one shared world. After
 
 ## Status
 
-**Shipped through epic 141** (plus polish tickets through **120** and a done **142** oxlint split — see [Roadmap](#roadmap)). The core loop is playable end-to-end: cascading campaign creation, onboarding review, race/background/equipment, prompt-generated companions (with optional face tokens), guided identity and opening scene, hub multi-character play, Social/Scene streaming, combat, factions/reputation, world mutations, live NPC/place population, commerce/travel intents, shared multi-PC time, play-shell resilience, Ask the DM, LLM metering, multi-cloud Settings, NPC/enemy face tokens, and packaging with auto-update.
+**Shipped through epic 144** (plus polish tickets through **120** and a done **142** oxlint split — see [Roadmap](#roadmap)). The core loop is playable end-to-end: cascading campaign creation, onboarding review, race/background/equipment, prompt-generated companions (with optional face tokens), guided identity and opening scene, hub multi-character play, Social/Scene streaming, combat, factions/reputation, world mutations, live NPC/place population, commerce/travel intents, shared multi-PC time, play-shell resilience, Ask the DM, LLM metering, multi-cloud Settings, unified generative tokens (NPC/companion/enemy) plus player-icon Generate/Regenerate, and packaging with auto-update.
 
 **In progress** (`board/in-progress/`): none
 
 **Active backlog** (`board/backlog/`):
 
-- **142** — world grid spatial data model *(filename id; distinct from done polish ticket `142-oxlint-…`)*
+- **143** — world grid spatial data model
 
 **Revisit** (`board/backlog/revisit/`):
 
@@ -170,16 +170,17 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | 139 | **Companion face tokens** — non-blocking `ai_party_member` portraits reusing **122** pipeline |
 | 141 | **Play place mint** — typed `placeProposals` → idempotent region create (deferred from **134**) |
 | 142*(done)* | **Oxlint max-lines-per-function splits** — engineering polish *(same numeric id as open backlog world-grid epic; different files)* |
+| 144 | **Player character icons** — prompt Generate/Regenerate + Upload/Replace; unified **"Use generative tokens?"** campaign flag for NPC/companion/enemy auto tokens |
 
 ### In progress
 
-None (`board/in-progress/` empty aside from `.gitkeep`).
+None (`board/in-progress/` empty aside from `.gitkeep` and unrelated work).
 
 ### Active backlog
 
 | Epic | Intent |
 |------|--------|
-| **142** | World grid — spatial data model for persistent world locations (data/APIs first; not m004 sprite play) |
+| **143** | World grid — spatial data model for persistent world locations (data/APIs first; not m004 sprite play) |
 
 ### Revisit backlog
 
@@ -193,7 +194,7 @@ None (`board/in-progress/` empty aside from `.gitkeep`).
 
 | Id | Intent |
 |----|--------|
-| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback; face-token follow-ups → epics **122** / **123** / **139** |
+| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback; face-token follow-ups → epics **122** / **123** / **139** / **144** |
 | **m002** | Host-driven multiplayer with host-side AI routing and guest party-member identities |
 | **m003** | Mod packs that seed homebrew catalog content from structured text files |
 | **m004** | Pixel/sprite grid campaign type (FF + Pokémon-style exploration/combat) forked from the narrative create pipeline |

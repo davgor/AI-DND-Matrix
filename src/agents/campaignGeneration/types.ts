@@ -241,6 +241,7 @@ export interface CampaignSetupInput {
   respawnRules?: RespawnRules | null
   regionCount?: number
   npcsPerRegion?: number
+  generativeTokensEnabled?: boolean
   npcFaceTokenGenerationEnabled?: boolean
   enemyTokenGenerationEnabled?: boolean
 }

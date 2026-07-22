@@ -5,6 +5,8 @@ import {
   createCharacter,
   getCharacterById,
   listCharactersByCampaign,
+  persistGeneratedCharacterPortrait,
+  replaceCharacterPortraitWithUpload,
   updateCharacter,
   updateCharacterPortraitPath
 } from './characters'
@@ -140,5 +142,48 @@ describe('characters repository: updateCharacterPortraitPath', () => {
     )
     updateCharacterPortraitPath(db, created.id, null)
     expect(getCharacterById(db, created.id)?.portraitPath).toBeNull()
+  })
+})
+
+describe('characters repository: generated portrait prompt lifecycle', () => {
+  it('persists path + prompt and clears prompt on clean upload replace', () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const created = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      characterClass: 'ranger',
+      kind: 'player'
+    })
+    persistGeneratedCharacterPortrait(
+      db,
+      created.id,
+      '/data/portraits/kael.png',
+      'scarred ash-blond ranger'
+    )
+    const generated = getCharacterById(db, created.id)
+    expect(generated?.portraitPath).toBe('/data/portraits/kael.png')
+    expect(generated?.portraitPrompt).toBe('scarred ash-blond ranger')
+
+    replaceCharacterPortraitWithUpload(db, created.id, '/data/portraits/upload.png')
+    const replaced = getCharacterById(db, created.id)
+    expect(replaced?.portraitPath).toBe('/data/portraits/upload.png')
+    expect(replaced?.portraitPrompt).toBeNull()
+  })
+
+  it('failed regen path: leave existing portrait when only a failed attempt occurs', () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const created = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Kael',
+      characterClass: 'ranger',
+      kind: 'player',
+      portraitPath: '/data/portraits/good.png',
+      portraitPrompt: 'keep me'
+    })
+    // Simulate failed regen by not calling persistGeneratedCharacterPortrait
+    expect(getCharacterById(db, created.id)?.portraitPath).toBe('/data/portraits/good.png')
+    expect(getCharacterById(db, created.id)?.portraitPrompt).toBe('keep me')
   })
 })

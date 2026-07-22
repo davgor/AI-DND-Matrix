@@ -8,6 +8,7 @@ import { registerCampaignCreateHandlers } from './campaignCreateIpc'
 import { registerCampaignHandlers } from './campaignIpc'
 import { registerCampaignHubHandlers } from './campaignHubIpc'
 import { registerCharacterCreationHandlers } from './characterCreationIpc'
+import { registerPlayerCharacterIconHandlers } from './playerCharacterIconIpc'
 import { registerGuidedCreationHandlers } from './guidedCreationIpc'
 import { registerItemHandlers } from './itemIpc'
 import { registerJournalHandlers } from './journalIpc'
@@ -97,6 +98,7 @@ app.whenReady().then(() => {
   registerCampaignEditHandlers()
   registerFileUploadHandlers()
   registerCharacterCreationHandlers()
+  registerPlayerCharacterIconHandlers()
   registerItemHandlers()
   registerJournalHandlers()
   registerLogBookHandlers()

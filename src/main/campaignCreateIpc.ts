@@ -61,6 +61,7 @@ function toSetupInput(request: CreateCampaignRequest): CampaignSetupInput {
     respawnRules: (request.respawnRules ?? null) as RespawnRules | null,
     regionCount: resolveRegionCount(request.regionCount),
     npcsPerRegion: resolveNpcsPerRegion(request.npcsPerRegion),
+    generativeTokensEnabled: request.generativeTokensEnabled === true,
     npcFaceTokenGenerationEnabled: request.npcFaceTokenGenerationEnabled === true,
     enemyTokenGenerationEnabled: request.enemyTokenGenerationEnabled === true
   }

@@ -16,6 +16,7 @@ import type {
   EditWorldSummaryInput,
   EditPantheonSummaryInput,
   EditFactionsSummaryInput,
+  EditGenerativeTokensInput,
   EditNpcFaceTokenGenerationInput,
   EditEnemyTokenGenerationInput,
   GenerateRegionInput,
@@ -31,6 +32,11 @@ import type {
   ReplaceSetupPartyMembersInput,
   UpdatePlayerCharacterSetupInput
 } from '../main/characterCreationIpc'
+import type {
+  GeneratePlayerCharacterIconInput,
+  GeneratePlayerCharacterIconResult,
+  ReplacePlayerCharacterPortraitInput
+} from '../main/playerCharacterIconIpc'
 import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { CombatStateSnapshot } from '../shared/combat/types'
@@ -120,6 +126,8 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:editPantheonSummary', input),
   editFactionsSummary: (input: EditFactionsSummaryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editFactionsSummary', input),
+  editGenerativeTokens: (input: EditGenerativeTokensInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editGenerativeTokens', input),
   editNpcFaceTokenGeneration: (input: EditNpcFaceTokenGenerationInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editNpcFaceTokenGeneration', input),
   editEnemyTokenGeneration: (input: EditEnemyTokenGenerationInput): Promise<CampaignDetail> =>
@@ -197,7 +205,13 @@ const characters = {
   listLogEntries: (characterId: string): Promise<LogEntry[]> =>
     ipcRenderer.invoke('characters:listLogEntries', characterId),
   listJournalEntries: (characterId: string): Promise<CharacterJournalEntry[]> =>
-    ipcRenderer.invoke('characters:listJournalEntries', characterId)
+    ipcRenderer.invoke('characters:listJournalEntries', characterId),
+  generatePlayerIcon: (
+    input: GeneratePlayerCharacterIconInput
+  ): Promise<GeneratePlayerCharacterIconResult> =>
+    ipcRenderer.invoke('characters:generatePlayerIcon', input),
+  replacePlayerPortrait: (input: ReplacePlayerCharacterPortraitInput): Promise<Character | undefined> =>
+    ipcRenderer.invoke('characters:replacePlayerPortrait', input)
 }
 
 const logBook = {
