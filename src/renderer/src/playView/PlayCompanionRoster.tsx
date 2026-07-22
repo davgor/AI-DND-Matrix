@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import type { CompanionRosterEntry } from '../../../shared/partyMembers/types'
 import {
-  companionAvatarInitial,
-  companionPortraitSrc,
-  companionRoleLabel
+  buildCompanionAvatarContent,
+  companionRoleLabel,
+  type CompanionAvatarContent
 } from './playCompanionRosterLogic'
 
 export interface PlayCompanionRosterProps {
@@ -15,15 +16,36 @@ export interface PlayCompanionRosterProps {
   onSaveOrder: () => void
 }
 
-function CompanionRosterAvatar(props: { entry: CompanionRosterEntry }): JSX.Element {
-  const src = companionPortraitSrc(props.entry.portraitPath)
-  if (src) {
-    return <img className="play-companion-roster-avatar" src={src} alt="" />
+function renderCompanionAvatarContent(
+  content: CompanionAvatarContent,
+  onImageError: () => void
+): JSX.Element {
+  if (content.kind === 'image') {
+    return (
+      <img
+        className="play-companion-roster-avatar"
+        src={content.src}
+        alt=""
+        onError={onImageError}
+      />
+    )
   }
   return (
     <span className="play-companion-roster-avatar play-companion-roster-avatar-fallback" aria-hidden="true">
-      {companionAvatarInitial(props.entry.name)}
+      {content.text}
     </span>
+  )
+}
+
+function CompanionRosterAvatar(props: { entry: CompanionRosterEntry }): JSX.Element {
+  const [imageFailed, setImageFailed] = useState(false)
+  return renderCompanionAvatarContent(
+    buildCompanionAvatarContent({
+      name: props.entry.name,
+      portraitPath: props.entry.portraitPath,
+      imageFailed
+    }),
+    () => setImageFailed(true)
   )
 }
 

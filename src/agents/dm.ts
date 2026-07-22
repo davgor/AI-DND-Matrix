@@ -50,6 +50,7 @@ import {
 import { persistDeityManifestationSideEffect } from './deityManifestation'
 import { persistFactionNarrationSideEffects } from './factionNarration'
 import { persistNpcPlayMintSideEffects } from './npcPlayMintNarration'
+import { persistPlacePlayMintSideEffects } from './placePlayMintNarration'
 import type {
   DeityManifestationProposal,
   FactionProposal,
@@ -61,7 +62,7 @@ import type {
   NpcLifeUpdateProposal,
   RegionStatusUpdateProposal
 } from '../shared/worldMutations'
-import type { NpcProposal } from '../shared/playPopulation'
+import type { NpcProposal, PlaceProposal } from '../shared/playPopulation'
 import { persistWorldMutationSideEffects } from './worldMutationNarration'
 import type { CombatIntent } from '../shared/combat/types'
 import { COMBAT_INTENTS } from '../shared/combat/types'
@@ -465,6 +466,8 @@ export interface NarrationResult {
   npcLifeUpdates?: NpcLifeUpdateProposal[]
   /** EPIC-134 — typed play-time NPC mint proposals (engine validates + clamps). */
   npcProposals?: NpcProposal[]
+  /** Ticket 141 — typed play-time place/region mint proposals (engine validates + clamps). */
+  placeProposals?: PlaceProposal[]
 }
 
 export async function assembleNarrationContext(input: {
@@ -557,7 +560,7 @@ function buildOptionalNarrationSections(context: NarrationContext): string[] {
 }
 
 const NARRATION_SCHEMA_FIELDS =
-  '{"narrationText":string,"sceneUpdate"?:string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"questProposals"?:Array<{"kind":"main"|"side","title":string,"summary":string,"scale":"minor"|"major","regionId"?:string,"objectives"?:string[],"relatedWorldFactId"?:string}>,"questUpdates"?:Array<{"questId":string,"objectiveIndex"?:number,"objectiveDone"?:boolean,"summary"?:string}>,"questCompletions"?:string[],"spellGrants"?:Array<{"catalogSpellKey":string}>,"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"currencyGrants"?:{"amount":number},"itemPurchases"?:Array<{"catalogItemId":string}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"logBookAmendments"?:Array<{"entryId":string,"title"?:string,"content"?:string}>,"logBookDeletions"?:string[],"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean,"factionProposals"?:Array<{"key":string,"name":string,"kind":"civic"|"military"|"mercantile"|"criminal"|"clandestine"|"political"|"religious","summary":string,"motivation"?:string,"publicFace"?:string,"methods"?:string,"deityId"?:string,"deityKey"?:string,"homeRegionId"?:string,"homeRegionKey"?:string}>,"reputationUpdates"?:Array<{"characterId":string,"factionId"?:string,"factionKey"?:string,"delta":number,"reason"?:string}>,"relationUpdates"?:Array<{"factionAId"?:string,"factionAKey"?:string,"factionBId"?:string,"factionBKey"?:string,"stance":"ally"|"rival"|"tense"|"secret"|"war","summary"?:string}>,"npcFactionUpdates"?:Array<{"npcId":string,"factionId"?:string|null,"factionKey"?:string|null,"membershipRole"?:string|null}>,"deityManifestation"?:{"deityId"?:string,"deityKey"?:string,"regionId"?:string},"regionStatusUpdates"?:Array<{"regionId":string,"op":"destroy"|"damage"|"restore","cause"?:string}>,"npcLifeUpdates"?:Array<{"npcId":string,"alive":boolean,"location"?:string,"cause"?:string}>,"npcProposals"?:Array<{"key"?:string,"name":string,"role":string,"disposition":string,"backstory"?:string,"regionId"?:string,"regionKey"?:string,"canSpeak"?:boolean,"temperament"?:string,"alignment"?:string,"raceKey"?:string,"backgroundKey"?:string,"genderKey"?:string,"classKey"?:string,"factionId"?:string,"factionKey"?:string,"factionMembershipRole"?:string|null,"purpose"?:"introduced_in_scene"|"background_presence"}>}'
+  '{"narrationText":string,"sceneUpdate"?:string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"questProposals"?:Array<{"kind":"main"|"side","title":string,"summary":string,"scale":"minor"|"major","regionId"?:string,"objectives"?:string[],"relatedWorldFactId"?:string}>,"questUpdates"?:Array<{"questId":string,"objectiveIndex"?:number,"objectiveDone"?:boolean,"summary"?:string}>,"questCompletions"?:string[],"spellGrants"?:Array<{"catalogSpellKey":string}>,"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"currencyGrants"?:{"amount":number},"itemPurchases"?:Array<{"catalogItemId":string}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"logBookAmendments"?:Array<{"entryId":string,"title"?:string,"content"?:string}>,"logBookDeletions"?:string[],"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean,"factionProposals"?:Array<{"key":string,"name":string,"kind":"civic"|"military"|"mercantile"|"criminal"|"clandestine"|"political"|"religious","summary":string,"motivation"?:string,"publicFace"?:string,"methods"?:string,"deityId"?:string,"deityKey"?:string,"homeRegionId"?:string,"homeRegionKey"?:string}>,"reputationUpdates"?:Array<{"characterId":string,"factionId"?:string,"factionKey"?:string,"delta":number,"reason"?:string}>,"relationUpdates"?:Array<{"factionAId"?:string,"factionAKey"?:string,"factionBId"?:string,"factionBKey"?:string,"stance":"ally"|"rival"|"tense"|"secret"|"war","summary"?:string}>,"npcFactionUpdates"?:Array<{"npcId":string,"factionId"?:string|null,"factionKey"?:string|null,"membershipRole"?:string|null}>,"deityManifestation"?:{"deityId"?:string,"deityKey"?:string,"regionId"?:string},"regionStatusUpdates"?:Array<{"regionId":string,"op":"destroy"|"damage"|"restore","cause"?:string}>,"npcLifeUpdates"?:Array<{"npcId":string,"alive":boolean,"location"?:string,"cause"?:string}>,"npcProposals"?:Array<{"key"?:string,"name":string,"role":string,"disposition":string,"backstory"?:string,"regionId"?:string,"regionKey"?:string,"canSpeak"?:boolean,"temperament"?:string,"alignment"?:string,"raceKey"?:string,"backgroundKey"?:string,"genderKey"?:string,"classKey"?:string,"factionId"?:string,"factionKey"?:string,"factionMembershipRole"?:string|null,"purpose"?:"introduced_in_scene"|"background_presence"}>,"placeProposals"?:Array<{"key":string,"name":string,"description":string,"parentRegionId"?:string,"parentRegionKey"?:string}>}'
 
 const NARRATION_GUIDANCE_LINES: readonly string[] = [
   'sceneUpdate rewrites the surroundings description only when the location or environment materially changes (arriving somewhere new, weather shifts, the room layout changes). Omit during casual conversation.',
@@ -578,7 +581,9 @@ const NARRATION_GUIDANCE_LINES: readonly string[] = [
   'Use deityManifestation when a god personally appears or answers — engine ensures one speakable NPC per deity (idempotent). Prefer deityId; deityKey may match a slugified deity name. Optional regionId places the manifestation; otherwise the current region is used.',
   'Use regionStatusUpdates to destroy, damage, or restore a place (op + regionId from context). Structured status wins over prose — burning a village must include destroy (or damage), not worldFact alone. Only restore clears destroyed. Use npcLifeUpdates when an NPC dies or is defeated outside combat writers. Optional worldFact may narrate why.',
   // EPIC-134
-  'Use npcProposals when the fiction introduces a new named NPC who is not already in presentNpcs — include identity bundle fields (raceKey, genderKey, classKey, alignment) for speaking NPCs. At most two mint per turn; duplicate key/name in region is ignored. Minted NPCs are not journal spoilers until log-book or dossier meet rules.'
+  'Use npcProposals when the fiction introduces a new named NPC who is not already in presentNpcs — include identity bundle fields (raceKey, genderKey, classKey, alignment) for speaking NPCs. At most two mint per turn; duplicate key/name in region is ignored. Minted NPCs are not journal spoilers until log-book or dossier meet rules.',
+  // Ticket 141
+  'Use placeProposals when the fiction introduces a new named place or settlement that should become a region (key, name, description; optional parentRegionId/parentRegionKey). At most two mint per turn; duplicate key/name in the campaign is ignored. Unknown parent hints fall back safely — do not invent region ids.'
 ]
 
 // 040.9: narration schema, static guidance, and emphasis rules ride in the
@@ -724,6 +729,23 @@ function persistCharacterLogAndJournalEffects(
   persistJournalEntry(db, input.campaignId, input.characterId, result.journalEntry)
 }
 
+function persistPlayPopulationSideEffects(
+  db: Database.Database,
+  result: NarrationResult,
+  input: NarrationSideEffectInput & { characterId: string }
+): void {
+  persistNpcPlayMintSideEffects(db, result, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    characterId: input.characterId
+  })
+  persistPlacePlayMintSideEffects(db, result, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    characterId: input.characterId
+  })
+}
+
 async function persistCharacterNarrationSideEffects(
   db: Database.Database,
   result: NarrationResult,
@@ -748,12 +770,7 @@ async function persistCharacterNarrationSideEffects(
     campaignId: input.campaignId,
     characterId: input.characterId
   })
-  // EPIC-134
-  persistNpcPlayMintSideEffects(db, result, {
-    campaignId: input.campaignId,
-    regionId: input.regionId,
-    characterId: input.characterId
-  })
+  persistPlayPopulationSideEffects(db, result, input)
   persistDeityManifestationSideEffect(db, result.deityManifestation, {
     campaignId: input.campaignId,
     fallbackRegionId: input.regionId

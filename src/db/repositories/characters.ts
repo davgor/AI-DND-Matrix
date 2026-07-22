@@ -408,6 +408,15 @@ export function transferPartyMemberOwnership(
   )
 }
 
+/** Persist generated companion face-token path onto `portrait_path` (epic 139). */
+export function updateCharacterPortraitPath(
+  db: Database.Database,
+  characterId: string,
+  path: string | null
+): void {
+  db.prepare('UPDATE characters SET portrait_path = ? WHERE id = ?').run(path, characterId)
+}
+
 export function listPlayerCharacters(db: Database.Database, campaignId: string): Character[] {
   return listCharactersByCampaign(db, campaignId).filter((character) => character.kind === 'player')
 }

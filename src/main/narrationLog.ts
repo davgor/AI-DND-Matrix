@@ -4,8 +4,10 @@ import type { NpcReactionKind } from '../shared/alignment/types'
 import { stripActionMarkers } from '../shared/alignment/types'
 import { listEventsByCampaign, type Event } from '../db/repositories/events'
 import { getBestiarySpeciesById } from '../db/repositories/bestiary'
+import { getCharacterById } from '../db/repositories/characters'
 import { getNpcById } from '../db/repositories/npcs'
 import { getDb } from './db'
+import { resolveCompanionFaceTokenPath } from './companionFaceTokenAsset'
 import { resolveNpcFaceTokenPath } from './npcFaceTokenAsset'
 import { resolveCreatureTokenPath } from './creatureTokenAsset'
 
@@ -22,6 +24,8 @@ export interface PlayLogEntry {
   sceneSetting?: boolean
   speakerName?: string
   npcId?: string
+  /** AI companion character id when speaker is partyMember (epic 139). */
+  partyMemberId?: string
   faceTokenPath?: string | null
 }
 
@@ -199,7 +203,11 @@ function perkChosenEntries(event: Event): PlayLogEntry[] {
 }
 
 function partyMemberActionEntries(event: Event): PlayLogEntry[] {
-  const payload = event.payload as { content?: string; memberName?: string }
+  const payload = event.payload as {
+    content?: string
+    memberName?: string
+    characterId?: string
+  }
   if (typeof payload.content !== 'string') {
     return []
   }
@@ -209,7 +217,8 @@ function partyMemberActionEntries(event: Event): PlayLogEntry[] {
       timestamp: event.timestamp,
       speaker: 'partyMember',
       text: payload.content,
-      speakerName: typeof payload.memberName === 'string' ? payload.memberName : undefined
+      speakerName: typeof payload.memberName === 'string' ? payload.memberName : undefined,
+      partyMemberId: typeof payload.characterId === 'string' ? payload.characterId : undefined
     }
   ]
 }
@@ -257,19 +266,46 @@ function resolveEntryFaceTokenPath(db: Database.Database, npcId: string): string
   return null
 }
 
-function enrichNpcFaceTokens(db: Database.Database, entries: PlayLogEntry[]): PlayLogEntry[] {
-  const cache = new Map<string, string | null>()
-  return entries.map((entry) => {
-    if (entry.speaker !== 'npc' || !entry.npcId) {
-      return entry
-    }
-    let faceTokenPath = cache.get(entry.npcId)
+function resolveCompanionEntryFaceTokenPath(
+  db: Database.Database,
+  partyMemberId: string
+): string | null {
+  const companion = getCharacterById(db, partyMemberId)
+  if (!companion || companion.kind !== 'ai_party_member') {
+    return null
+  }
+  return resolveCompanionFaceTokenPath(companion.portraitPath)
+}
+
+function enrichEntryFaceToken(
+  db: Database.Database,
+  entry: PlayLogEntry,
+  npcCache: Map<string, string | null>,
+  companionCache: Map<string, string | null>
+): PlayLogEntry {
+  if (entry.speaker === 'npc' && entry.npcId) {
+    let faceTokenPath = npcCache.get(entry.npcId)
     if (faceTokenPath === undefined) {
       faceTokenPath = resolveEntryFaceTokenPath(db, entry.npcId)
-      cache.set(entry.npcId, faceTokenPath)
+      npcCache.set(entry.npcId, faceTokenPath)
     }
     return faceTokenPath ? { ...entry, faceTokenPath } : entry
-  })
+  }
+  if (entry.speaker === 'partyMember' && entry.partyMemberId) {
+    let faceTokenPath = companionCache.get(entry.partyMemberId)
+    if (faceTokenPath === undefined) {
+      faceTokenPath = resolveCompanionEntryFaceTokenPath(db, entry.partyMemberId)
+      companionCache.set(entry.partyMemberId, faceTokenPath)
+    }
+    return faceTokenPath ? { ...entry, faceTokenPath } : entry
+  }
+  return entry
+}
+
+function enrichFaceTokens(db: Database.Database, entries: PlayLogEntry[]): PlayLogEntry[] {
+  const npcCache = new Map<string, string | null>()
+  const companionCache = new Map<string, string | null>()
+  return entries.map((entry) => enrichEntryFaceToken(db, entry, npcCache, companionCache))
 }
 
 export function buildNarrationLog(
@@ -284,7 +320,7 @@ export function buildNarrationLog(
         return payloadCharacterId === undefined || payloadCharacterId === characterId
       })
     : events
-  return enrichNpcFaceTokens(db, scoped.flatMap(eventToLogEntries))
+  return enrichFaceTokens(db, scoped.flatMap(eventToLogEntries))
 }
 
 export function registerNarrationLogHandlers(): void {

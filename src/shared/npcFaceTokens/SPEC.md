@@ -18,3 +18,20 @@ See `types.ts` for `shouldEnqueueNpcFaceToken` and entity kind `speaking_npc`.
 - Orchestration: `generateNpcFaceToken(provider, request)` — no UI coupling.
 - Tests use `createMockImageProvider` (success + failure); no llamacpp required.
 - Production v1 default scheduler provider is a **placeholder PNG mock** (not llamacpp); swap for cloud later per m001.1.
+
+## AI companion face tokens (epic 139)
+
+Companions reuse this pipeline — they do **not** fork a second image stack.
+
+| Concern | Rule |
+|---------|------|
+| Entity kind | `ai_party_member` (`COMPANION_FACE_TOKEN_ENTITY_KIND` in `src/shared/partyMembers/`) |
+| Toggle | Same campaign flag: `npcFaceTokenGenerationEnabled` |
+| Enqueue | On companion Accept when toggle ON — `maybeEnqueueCompanionFaceTokenAfterAccept` in `src/main/companionFaceTokenScheduler.ts` |
+| Persist | File under `companion-face-tokens/`; path stored on character `portrait_path` |
+| Orchestration | Calls shared `generateNpcFaceToken` with companion identity/appearance |
+| Blocking | Never — Accept → identity / play continues if the provider fails |
+| Surfaces | Social party lines + play roster avatar; letter-initial fallback |
+| Out of scope here | Companion dossiers, full-body combat tokens |
+
+Contract helpers for enqueue policy: `shouldEnqueueCompanionFaceToken` in `partyMembers/types.ts`.

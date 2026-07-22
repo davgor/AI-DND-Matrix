@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { describe, expect, it, vi } from 'vitest'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { applyStartingLoadout } from '../db/repositories/startingLoadout'
 import { createTestDb } from '../db/testUtils'
-import { createCampaign } from '../db/repositories/campaigns'
+import { createCampaign, getCampaignById } from '../db/repositories/campaigns'
 import { createCampaignRace } from '../db/repositories/campaignRaces'
 import {
   createCharacter,
@@ -12,9 +15,14 @@ import {
 } from '../db/repositories/characters'
 import { setGuidedCreationPhase } from '../db/repositories/guidedCreation'
 import { findCatalogItemByName } from '../db/repositories/items'
-import type { CompanionPreviewDto } from '../shared/partyMembers/types'
+import { createMockImageProvider } from '../shared/imageGeneration'
+import {
+  COMPANION_FACE_TOKEN_ENTITY_KIND,
+  type CompanionPreviewDto
+} from '../shared/partyMembers/types'
 import type { RaceLore } from '../shared/raceSelection/types'
 import { createPartyMembers } from './characterCreationIpc'
+import type { CompanionFaceTokenSchedulerDeps } from './companionFaceTokenScheduler'
 import { kickoffIdentityInterviewIfNeeded } from './guidedCreationIdentity'
 import {
   acceptCompanionPreview,
@@ -22,6 +30,9 @@ import {
   listCompanionRosterForPlayer,
   setCompanionOrder
 } from './companionsIpc'
+
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 const ELF_LORE: RaceLore = {
   summary: 'Elves guard the mistwood.',
@@ -42,11 +53,15 @@ const VALID_PROPOSAL = JSON.stringify({
   abilityScores: { body: 20, agility: 3, mind: 99 }
 })
 
-function seedCompanionsPlayer(db: ReturnType<typeof createTestDb>) {
+function seedCompanionsPlayer(
+  db: ReturnType<typeof createTestDb>,
+  opts?: { npcFaceTokenGenerationEnabled?: boolean }
+) {
   const campaign = createCampaign(db, {
     name: 'M',
     premisePrompt: 'A realm.',
-    deathMode: 'legendary'
+    deathMode: 'legendary',
+    npcFaceTokenGenerationEnabled: opts?.npcFaceTokenGenerationEnabled === true
   })
   const player = createCharacter(db, {
     campaignId: campaign.id,
@@ -295,6 +310,126 @@ describe('setCompanionOrder', () => {
       ok: false,
       reason: 'not_companion'
     })
+  })
+})
+
+async function flushFaceTokenJobs(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+}
+
+function buildFaceTokenDeps(
+  db: ReturnType<typeof createTestDb>,
+  baseDir: string,
+  imageProvider: CompanionFaceTokenSchedulerDeps['imageProvider'],
+  logger = { warn: vi.fn(), error: vi.fn() }
+): CompanionFaceTokenSchedulerDeps {
+  return {
+    db,
+    getCampaign: (id) => getCampaignById(db, id),
+    getCompanion: (id) => getCharacterById(db, id),
+    imageProvider,
+    baseDir,
+    logger
+  }
+}
+
+describe('acceptCompanionPreview face-token: toggle OFF', () => {
+  it('does not enqueue when npcFaceTokenGenerationEnabled is OFF', async () => {
+    const db = createTestDb()
+    const baseDir = mkdtempSync(join(tmpdir(), 'companion-accept-face-off-'))
+    const provider = createScriptedProvider([])
+    const imageProvider = createMockImageProvider({
+      mode: 'success',
+      mimeType: 'image/png',
+      bytesBase64: PNG_BASE64
+    })
+    const { campaign, player } = seedCompanionsPlayer(db, {
+      npcFaceTokenGenerationEnabled: false
+    })
+    try {
+      const result = await acceptCompanionPreview(
+        db,
+        provider,
+        { campaignId: campaign.id, characterId: player.id, preview: buildPreview(player.id) },
+        buildFaceTokenDeps(db, baseDir, imageProvider)
+      )
+      expect(result).toEqual({ ok: true })
+      expect(getCharacterById(db, player.id)?.guidedCreationPhase).toBe('identity')
+      await flushFaceTokenJobs()
+      expect(imageProvider.calls).toHaveLength(0)
+      expect(listPartyMembersForPlayer(db, player.id)[0]?.portraitPath).toBeNull()
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('acceptCompanionPreview face-token: toggle ON', () => {
+  it('async enqueues ai_party_member face token when toggle is ON', async () => {
+    const db = createTestDb()
+    const baseDir = mkdtempSync(join(tmpdir(), 'companion-accept-face-on-'))
+    const provider = createScriptedProvider([])
+    const imageProvider = createMockImageProvider({
+      mode: 'success',
+      mimeType: 'image/png',
+      bytesBase64: PNG_BASE64
+    })
+    const { campaign, player } = seedCompanionsPlayer(db, {
+      npcFaceTokenGenerationEnabled: true
+    })
+    try {
+      const result = await acceptCompanionPreview(
+        db,
+        provider,
+        { campaignId: campaign.id, characterId: player.id, preview: buildPreview(player.id) },
+        buildFaceTokenDeps(db, baseDir, imageProvider)
+      )
+      expect(result).toEqual({ ok: true })
+      expect(getCharacterById(db, player.id)?.guidedCreationPhase).toBe('identity')
+      await flushFaceTokenJobs()
+      expect(imageProvider.calls).toHaveLength(1)
+      expect(imageProvider.calls[0]?.request.entityKind).toBe(COMPANION_FACE_TOKEN_ENTITY_KIND)
+      const member = listPartyMembersForPlayer(db, player.id)[0]
+      expect(member?.portraitPath).toBeTruthy()
+      expect(existsSync(member!.portraitPath!)).toBe(true)
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('acceptCompanionPreview face-token: provider throw', () => {
+  it('still advances to identity when the image provider throws', async () => {
+    const db = createTestDb()
+    const baseDir = mkdtempSync(join(tmpdir(), 'companion-accept-face-throw-'))
+    const provider = createScriptedProvider([])
+    const logger = { warn: vi.fn(), error: vi.fn() }
+    const { campaign, player } = seedCompanionsPlayer(db, {
+      npcFaceTokenGenerationEnabled: true
+    })
+    const faceDeps = buildFaceTokenDeps(
+      db,
+      baseDir,
+      { generateImage: vi.fn().mockRejectedValue(new Error('provider boom')) },
+      logger
+    )
+    try {
+      const result = await acceptCompanionPreview(
+        db,
+        provider,
+        { campaignId: campaign.id, characterId: player.id, preview: buildPreview(player.id) },
+        faceDeps
+      )
+      expect(result).toEqual({ ok: true })
+      expect(getCharacterById(db, player.id)?.guidedCreationPhase).toBe('identity')
+      await flushFaceTokenJobs()
+      expect(logger.error).toHaveBeenCalled()
+      expect(listPartyMembersForPlayer(db, player.id)[0]?.portraitPath).toBeNull()
+      expect(listCompanionRosterForPlayer(db, { playerCharacterId: player.id })[0]?.portraitPath).toBeNull()
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
   })
 })
 

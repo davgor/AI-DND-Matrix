@@ -62,9 +62,9 @@ When image toggle is ON and a companion is accepted (or equivalent persist path 
 
 #### Acceptance criteria
 
-- [ ] Toggle OFF → no enqueue
-- [ ] Toggle ON → async enqueue with companion entity type
-- [ ] Unit tests with mock image provider
+- [x] Toggle OFF → no enqueue
+- [x] Toggle ON → async enqueue with companion entity type
+- [x] Unit tests with mock image provider
 
 ### 139.2 Persist asset + lifecycle
 
@@ -74,8 +74,8 @@ Store generated face-token reference on the companion row (or shared asset table
 
 #### Acceptance criteria
 
-- [ ] Asset persists and survives restart
-- [ ] Repo/unit tests for write + read
+- [x] Asset persists and survives restart
+- [x] Repo/unit tests for write + read
 
 ### 139.3 Social + roster/sheet surfaces
 
@@ -85,8 +85,8 @@ Prefer stored face token on Social party lines and roster/sheet avatars; letter-
 
 #### Acceptance criteria
 
-- [ ] Component tests: token present vs fallback
-- [ ] No broken-image placeholders
+- [x] Component tests: token present vs fallback
+- [x] No broken-image placeholders
 
 ### 139.4 Failure never blocks
 
@@ -96,8 +96,8 @@ Image provider throw / timeout does not block Accept→identity or play turns.
 
 #### Acceptance criteria
 
-- [ ] Integration/unit test: provider throws → phase/play continues
-- [ ] Fallback avatar still renders
+- [x] Integration/unit test: provider throws → phase/play continues
+- [x] Fallback avatar still renders
 
 ### 139.5 Docs + delivery gate
 
@@ -107,5 +107,5 @@ Cross-link README / **129** / **122**; full delivery gate including `act`.
 
 #### Acceptance criteria
 
-- [ ] Docs note companion tokens are this epic, not **129** DoD
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] Docs note companion tokens are this epic, not **129** DoD
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

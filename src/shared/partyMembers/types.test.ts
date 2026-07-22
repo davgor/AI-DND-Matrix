@@ -163,4 +163,10 @@ describe('companion face-token enqueue policy', () => {
     expect(shouldEnqueueCompanionFaceToken(false)).toBe(false)
     expect(shouldEnqueueCompanionFaceToken(true)).toBe(true)
   })
+
+  it('skips companions that already have a face token when toggle is ON', () => {
+    expect(shouldEnqueueCompanionFaceToken(true, { hasFaceToken: true })).toBe(false)
+    expect(shouldEnqueueCompanionFaceToken(true, { hasFaceToken: false })).toBe(true)
+    expect(shouldEnqueueCompanionFaceToken(false, { hasFaceToken: false })).toBe(false)
+  })
 })

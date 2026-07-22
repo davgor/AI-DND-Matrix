@@ -137,7 +137,7 @@ describe('SocialMessage avatar rendering', () => {
   })
 })
 
-describe('SocialMessage face token avatar', () => {
+describe('SocialMessage NPC face token avatar', () => {
   let root: Root
   let container: HTMLDivElement
 
@@ -158,7 +158,6 @@ describe('SocialMessage face token avatar', () => {
         faceTokenPath: 'C:/data/npc-face-tokens/camp/npc-filo.png'
       })
     })
-
     const image = container.querySelector('.social-avatar-image') as HTMLImageElement
     expect(image).toBeTruthy()
     expect(image.src).toContain('npc-filo.png')
@@ -174,7 +173,6 @@ describe('SocialMessage face token avatar', () => {
         faceTokenPath: 'C:/missing/npc-filo.png'
       })
     })
-
     const image = container.querySelector('.social-avatar-image') as HTMLImageElement
     expect(image).toBeTruthy()
     act(() => {
@@ -182,6 +180,51 @@ describe('SocialMessage face token avatar', () => {
     })
     expect(container.querySelector('.social-avatar-image')).toBeNull()
     expect(container.querySelector('.social-avatar')?.textContent).toBe('F')
+  })
+})
+
+describe('SocialMessage companion face token avatar', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('renders a companion face token on partyMember lines when faceTokenPath is present', () => {
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'partyMember',
+        text: 'I take the flank.',
+        speakerName: 'Bryn',
+        faceTokenPath: 'C:/data/companion-face-tokens/camp/bryn.png'
+      })
+    })
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    expect(image).toBeTruthy()
+    expect(image.src).toContain('bryn.png')
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('')
+  })
+
+  it('falls back to letter initial on partyMember lines when the token fails', () => {
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'partyMember',
+        text: 'I take the flank.',
+        speakerName: 'Bryn',
+        faceTokenPath: 'C:/missing/bryn.png'
+      })
+    })
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    act(() => {
+      image.dispatchEvent(new Event('error'))
+    })
+    expect(container.querySelector('.social-avatar-image')).toBeNull()
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('B')
   })
 })
 

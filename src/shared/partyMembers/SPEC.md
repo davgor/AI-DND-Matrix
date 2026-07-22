@@ -21,7 +21,7 @@ Shared DTOs and clamp helpers live in `src/shared/partyMembers/types.ts`. Phase 
 | 9 | **Race keys.** Unknown / non-catalog race keys rewrite to `human` (`COMPANION_FALLBACK_RACE_KEY`). Blank names reject the proposal (`null` preview). |
 | 10 | **Inventory.** Optional catalog item ids on the proposal; unknown ids dropped at clamp. Starter loadout templates may still apply on Accept (**129.7**). |
 | 11 | **Identity digest.** When roster non-empty, identity kickoff gets `CompanionIdentityDigest` (name, role, raceKey, characterClass) — no full sheet dump. |
-| 12 | **Face tokens.** Contract constants remain here for forward compatibility (`COMPANION_FACE_TOKEN_ENTITY_KIND`, `shouldEnqueueCompanionFaceToken`). **Implementation is epic 139** (depends on **122** / m001). This epic uses letter-initial / existing `portraitPath` only. |
+| 12 | **Face tokens.** Entity kind `ai_party_member` + `shouldEnqueueCompanionFaceToken` live here. **Implementation is epic 139** (reuses **122** / m001 stack + campaign `npcFaceTokenGenerationEnabled`). Persist on companion `portraitPath`; Social + roster prefer token with letter-initial fallback. **129** DoD does not require images. |
 | 13 | **Metering.** Generate calls use purpose `onboarding.companion_generate` (setup bucket). |
 | 14 | **Player orders (play).** Short natural-language stance, max `COMPANION_ORDER_MAX_CHARS` (200), grounds `decidePartyMemberAction` (**129.6**). |
 | 15 | **Flee / leave follow.** Living companions follow the PC on successful flee/scene-leave unless SPEC exceptions (unconscious, explicitly left behind) — updates flee SPEC in **129.8**. |
@@ -76,10 +76,13 @@ Preview is **not** persisted. Regenerate must not leave orphan DB rows (**129.3*
 | Concern | Rule |
 |---------|------|
 | Entity | `ai_party_member` companion id (not world `npcId`) |
-| When | Accept, and image toggle ON |
+| When | Accept, and campaign `npcFaceTokenGenerationEnabled` ON |
 | Blocking | Never — Accept → identity proceeds even if provider throws |
 | Surfaces | Social party lines + roster/sheet avatar; letter fallback when missing |
-| Pipeline | Shared **122** / **m001.1** request shape; companion appearance traits feed the prompt |
+| Pipeline | Shared **122** / **m001.1** (`generateNpcFaceToken`); scheduler in `companionFaceTokenScheduler.ts`; asset → `portrait_path` |
+| Docs | Details also in `src/shared/npcFaceTokens/SPEC.md` (epic **139**) |
+
+**129 vs 139:** Companion create/Accept/identity (**129**) must work with letter-initial only. Portrait generation is **139** DoD, not **129**.
 
 ## Play deepen (contract only here)
 
@@ -110,5 +113,6 @@ Purpose id: `onboarding.companion_generate` (`COMPANION_GENERATE_LLM_PURPOSE`). 
 |------|----------|
 | **100** / **099** | Character Setup stays without party section |
 | **122** / **123** | World NPC / enemy tokens — not companion entity kind |
-| **m001.6** | Player-PC visuals; companion wiring owned by **129** |
+| **139** | Companion face-token enqueue / persist / Social+roster surfaces |
+| **m001.6** | Player-PC visuals; companion wiring owned by **129** / **139** |
 | **011** | Mid-play promotion unchanged; must not require re-entering `companions` |

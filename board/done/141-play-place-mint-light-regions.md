@@ -17,6 +17,6 @@ Epic **134** shipped NPC play mint only. Place/region mint from `placeProposals`
 
 ## Acceptance criteria
 
-- [ ] SPEC section in `src/shared/playPopulation/SPEC.md` updated from deferral to live contract
-- [ ] `placeProposals` persist idempotently
-- [ ] Smoke: unnamed hamlet minted in play survives reopen
+- [x] SPEC section in `src/shared/playPopulation/SPEC.md` updated from deferral to live contract
+- [x] `placeProposals` persist idempotently
+- [x] Smoke: unnamed hamlet minted in play survives reopen

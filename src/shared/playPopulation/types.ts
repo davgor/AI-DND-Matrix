@@ -3,6 +3,9 @@ import type { Alignment, Temperament } from '../alignment/types'
 /** Max NPC mint proposals applied per narration side-effect pass (epic 134). */
 export const MAX_NPC_PROPOSALS_PER_TURN = 2 as const
 
+/** Max place/region mint proposals applied per narration side-effect pass (ticket 141). */
+export const MAX_PLACE_PROPOSALS_PER_TURN = 2 as const
+
 export const NPC_MINT_PURPOSES = ['introduced_in_scene', 'background_presence'] as const
 export type NpcMintPurpose = (typeof NPC_MINT_PURPOSES)[number]
 
@@ -28,7 +31,7 @@ export interface NpcProposal {
   purpose?: NpcMintPurpose
 }
 
-/** Reserved for epic 142 — not persisted in v1. */
+/** Typed DM proposal to mint a new place/region during play (ticket 141). */
 export interface PlaceProposal {
   key: string
   name: string

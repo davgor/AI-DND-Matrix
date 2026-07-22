@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../testUtils'
 import { createCampaign } from './campaigns'
-import { createCharacter, getCharacterById, listCharactersByCampaign, updateCharacter } from './characters'
+import {
+  createCharacter,
+  getCharacterById,
+  listCharactersByCampaign,
+  updateCharacter,
+  updateCharacterPortraitPath
+} from './characters'
 import { createNpc } from './npcs'
 import { createRegion } from './regions'
 
@@ -114,5 +120,25 @@ describe('characters repository: update', () => {
     expect(fetched?.xp).toBe(150)
     expect(fetched?.level).toBe(2)
     expect(fetched?.inventory).toEqual(['shortbow', 'leather armor'])
+  })
+})
+
+describe('characters repository: updateCharacterPortraitPath', () => {
+  it('persists portrait_path and survives reload', () => {
+    const db = createTestDb()
+    const campaign = seedCampaign(db)
+    const created = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Bryn',
+      characterClass: 'ranger',
+      kind: 'ai_party_member'
+    })
+    expect(created.portraitPath).toBeNull()
+    updateCharacterPortraitPath(db, created.id, '/data/companion-face-tokens/c/bryn.png')
+    expect(getCharacterById(db, created.id)?.portraitPath).toBe(
+      '/data/companion-face-tokens/c/bryn.png'
+    )
+    updateCharacterPortraitPath(db, created.id, null)
+    expect(getCharacterById(db, created.id)?.portraitPath).toBeNull()
   })
 })

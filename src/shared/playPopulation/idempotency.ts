@@ -1,8 +1,8 @@
 import type Database from 'better-sqlite3'
 import { listNpcsByRegion, type Npc } from '../../db/repositories/npcs'
-import { listRegionsByCampaign } from '../../db/repositories/regions'
+import { listRegionsByCampaign, type Region } from '../../db/repositories/regions'
 import { namesMatch, slugifyLabel } from './slug'
-import type { NpcProposal } from './types'
+import type { NpcProposal, PlaceProposal } from './types'
 
 function findNpcByKeyInCampaign(
   db: Database.Database,
@@ -39,4 +39,22 @@ export function findExistingNpcForProposal(
     return undefined
   }
   return findNpcByKeyInCampaign(db, campaignId, proposal.key)
+}
+
+/** Return an existing region if this place proposal would duplicate a prior mint (ticket 141). */
+export function findExistingRegionForProposal(
+  db: Database.Database,
+  campaignId: string,
+  proposal: Pick<PlaceProposal, 'key' | 'name'>
+): Region | undefined {
+  const regions = listRegionsByCampaign(db, campaignId)
+  const byName = regions.find((region) => namesMatch(region.name, proposal.name))
+  if (byName) {
+    return byName
+  }
+  const normalizedKey = slugifyLabel(proposal.key)
+  if (!normalizedKey) {
+    return undefined
+  }
+  return regions.find((region) => slugifyLabel(region.name) === normalizedKey)
 }

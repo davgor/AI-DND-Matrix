@@ -4,10 +4,12 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
+import { createCharacter } from '../db/repositories/characters'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { appendEvent } from '../db/repositories/events'
 import { buildNarrationLog } from './narrationLog'
+import { writeCompanionFaceTokenAsset } from './companionFaceTokenAsset'
 import { writeNpcFaceTokenAsset } from './npcFaceTokenAsset'
 import { persistCreatureTokenAsset } from './creatureTokenAsset'
 import { createBestiarySpecies } from '../db/repositories/bestiary'
@@ -183,6 +185,84 @@ describe('buildNarrationLog: npc face token', () => {
     } finally {
       rmSync(baseDir, { recursive: true, force: true })
     }
+  })
+})
+
+function seedCompanionWithOptionalPortrait(
+  db: ReturnType<typeof createTestDb>,
+  portraitPath?: string
+) {
+  const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+  const player = createCharacter(db, {
+    campaignId: campaign.id,
+    name: 'Asha',
+    characterClass: 'fighter',
+    kind: 'player'
+  })
+  const companion = createCharacter(db, {
+    campaignId: campaign.id,
+    name: 'Bryn',
+    characterClass: 'ranger',
+    kind: 'ai_party_member',
+    ownerPlayerCharacterId: player.id,
+    ...(portraitPath !== undefined ? { portraitPath } : {})
+  })
+  return { campaign, companion }
+}
+
+describe('buildNarrationLog: companion face token present', () => {
+  it('includes faceTokenPath when the companion has a stored portrait asset', () => {
+    const db = createTestDb()
+    const { campaign, companion } = seedCompanionWithOptionalPortrait(db)
+    const baseDir = mkdtempSync(join(tmpdir(), 'narration-log-companion-face-'))
+    try {
+      const tokenPath = writeCompanionFaceTokenAsset({
+        baseDir,
+        campaignId: campaign.id,
+        companionId: companion.id,
+        bytesBase64: PNG_BASE64,
+        mimeType: 'image/png'
+      })
+      expect(tokenPath).toBeTruthy()
+      db.prepare('UPDATE characters SET portrait_path = ? WHERE id = ?').run(tokenPath, companion.id)
+      appendEvent(db, {
+        campaignId: campaign.id,
+        type: 'party_member_action',
+        payload: {
+          content: 'Bryn watches the treeline.',
+          memberName: 'Bryn',
+          characterId: companion.id
+        }
+      })
+      expect(buildNarrationLog(db, campaign.id)).toEqual([
+        expect.objectContaining({
+          speaker: 'partyMember',
+          partyMemberId: companion.id,
+          faceTokenPath: tokenPath
+        })
+      ])
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('buildNarrationLog: companion face token missing', () => {
+  it('omits faceTokenPath when the companion has no portrait asset', () => {
+    const db = createTestDb()
+    const { campaign, companion } = seedCompanionWithOptionalPortrait(db)
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'party_member_action',
+      payload: {
+        content: 'Bryn nods.',
+        memberName: 'Bryn',
+        characterId: companion.id
+      }
+    })
+    const entry = buildNarrationLog(db, campaign.id)[0]
+    expect(entry?.speaker).toBe('partyMember')
+    expect(entry?.faceTokenPath).toBeUndefined()
   })
 })
 

@@ -2,23 +2,27 @@
 
 A single-player, text-adventure-style TTRPG desktop app (Electron + React + TypeScript). Two cooperating AI agents run the game — a **DM agent** that sets scenes, drives the plot, and designs encounters, and **NPC/party-member agents** that roleplay individual characters and enemies. Campaigns are generated from a free-text prompt and then played; world state is durable and causally consistent — if you burn down a village, every later scene remembers it's gone.
 
-Each campaign supports **multiple player characters** in one shared world. After the first character finishes guided creation, re-opening the campaign lands on a **Campaign Hub** (world preview + character cast rail) instead of jumping straight into play. New characters follow a layered onboarding path: mechanical setup → race → background → starting equipment → **prompt-generated AI companion (optional skip)** → AI-guided identity → opening scene → enter world.
+Each campaign supports **multiple player characters** in one shared world. After the first character finishes guided creation, re-opening the campaign lands on a **Campaign Hub** (world preview + character cast rail) instead of jumping straight into play. New characters follow a layered onboarding path: mechanical setup → race → background → starting equipment → **prompt-generated AI companion (optional skip)** → AI-guided identity → opening scene → enter world. (The old Character Setup “AI Party Members” block stays hidden — epic **100**; companions are the dedicated post-equipment step — epic **129**, with optional face-token portraits — epic **139**.)
 
 ## Status
 
-**Shipped through epic 108**, plus **106** Ask the DM OOC chat, **112** LLM usage metering, and **113** multi-cloud provider settings (see [Roadmap](#roadmap) below). The core loop is playable end-to-end: cascading campaign creation (pantheon, world, regions, NPCs, story), onboarding review, race/background/equipment selection, guided identity and opening scene, hub-based multi-character management, turn-based play with Social/Scene streaming, combat, quests, spellbook, progression, loot, out-of-character Ask the DM, and packaging with auto-update.
+**Shipped through epic 141** (plus polish tickets through **120** and a done **142** oxlint split — see [Roadmap](#roadmap)). The core loop is playable end-to-end: cascading campaign creation, onboarding review, race/background/equipment, prompt-generated companions (with optional face tokens), guided identity and opening scene, hub multi-character play, Social/Scene streaming, combat, factions/reputation, world mutations, live NPC/place population, commerce/travel intents, shared multi-PC time, play-shell resilience, Ask the DM, LLM metering, multi-cloud Settings, NPC/enemy face tokens, and packaging with auto-update.
 
-**In progress** (`board/in-progress/`):
-
-- **100** — hide AI Party Members section on character setup (temporary UI follow-up to 099)
+**In progress** (`board/in-progress/`): none
 
 **Active backlog** (`board/backlog/`):
 
-- **020** — local llama.cpp provider (managed process, adapter, packaged runtime, local-provider smoke parity)
+- **142** — world grid spatial data model *(filename id; distinct from done polish ticket `142-oxlint-…`)*
 
-**Still parked** (`board/backlog/revisit/`):
+**Revisit** (`board/backlog/revisit/`):
 
-- **021** — consolidated end-to-end smoke test (v1 definition of done; pairs with 020 local parity)
+- **020** — local llama.cpp provider (Settings pick → download → run; sub-tickets 020.1–020.20)
+
+**Missing ticket files** (not on disk; do not invent status):
+
+- **021** — consolidated v1 e2e smoke matrix (was parked; no `board/**/021*` file)
+- **138** — restore-021 epic (referenced by older notes; no file under backlog/done)
+- **140** — removed / absent (`140-automated-e2e-testing-framework` deleted)
 
 **Exploratory** (`board/backlog/moonshots/`): image generation (m001), host-driven multiplayer (m002), mod-driven homebrew catalog (m003), pixel/sprite grid campaign type (m004), remote play via PC local providers (m005). Not committed delivery scope until promoted to the main backlog.
 
@@ -148,34 +152,48 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | 072–082 | **Opening-scene handoff & engineering gates** — Generate reply, opening-scene kickoff / enter-world, rebrand AI-TTRPG, deadcode as a delivery gate |
 | 083 | **RAG over campaign SQLite** — local embedder, chunk index, hybrid retrieval for DM/NPC/party grounding within 040 budgets |
 | 084–092 | **Social stream & NPC voice** — Social/Scene split + streaming window; selective NPC replies; speaking-style samples; auto-update parity |
-| 093–104 | **Balance, branding, release polish** — starting-weapon / ability-score retunes; shield app icon; update-ready copy; deploy/CI harden |
-| 107–108 | **CI sharding & identity grounding** — dynamic Vitest shards; identity kickoff grounded in race/background/gear/spells |
+| 093–104 | **Balance, branding, release polish** — starting-weapon / ability-score retunes; shield app icon; update-ready copy; deploy/CI harden; hide Character Setup AI Party Members (**100**) |
 | 105 | **NPC dossier modal** — Social / log book entry → Traits → Facts → persisted DM opinion → Disposition |
+| 106 | **Ask the DM** — out-of-character chat in session chrome (never calls `turn:resolve`) |
+| 107–108 | **CI sharding & identity grounding** — dynamic Vitest shards; identity kickoff grounded in race/background/gear/spells |
+
+### Completed (109–141)
+
+| Range | Theme |
+|-------|--------|
+| 109–120 | **Docs, CI, and play polish** — README refresh (**109**); CI/Windows shard fixes; quest FK harden; LLM usage metering (**112**); multi-cloud provider Settings (**113**); combat/update fixes; bestiary (**116**); incoming-text glow; animated d20; enter-world / Electron restore |
+| 121–124 | **Dossier, tokens, hub recap** — journal ↔ NPC dossier; NPC face tokens (**122**); enemy combat tokens (**123**); hub session recap *(note: ids 122/123 also reused for small UI polish tickets)* |
+| 125–128 | **Factions & social graph** — campaign factions/reputation; rules-debt closure (**126**: Action lockout, spell grants, custom backgrounds, bestiary Review); NPC relationship web; Scene/Social person links |
+| 129–132 | **Companions & world tools** — prompt-generated AI companions (**129**); hard world mutations; rules honesty (conditions/homebrew); campaign export/import/backup |
+| 133–136 | **Multi-PC & play resilience** — shared time/causality; on-demand live world population; reliable commerce/travel intents; play-shell ErrorBoundary + turn-failure recovery |
+| 137 | **README / board status truth** — Status + Roadmap realigned to `board/` |
+| 139 | **Companion face tokens** — non-blocking `ai_party_member` portraits reusing **122** pipeline |
+| 141 | **Play place mint** — typed `placeProposals` → idempotent region create (deferred from **134**) |
+| 142*(done)* | **Oxlint max-lines-per-function splits** — engineering polish *(same numeric id as open backlog world-grid epic; different files)* |
 
 ### In progress
 
-| Epic | Intent |
-|------|--------|
-| **100** | Hide AI Party Members section on character setup (party draft wiring retained for later re-enable) |
+None (`board/in-progress/` empty aside from `.gitkeep`).
 
 ### Active backlog
 
 | Epic | Intent |
 |------|--------|
-| **020** | Local llama.cpp provider: managed `llama-server` lifecycle, adapter behind the existing provider interface, settings wiring, packaged runtime, and smoke parity across major flows without a cloud API key |
-| **106** | Ask the DM — out-of-character chat in session chrome that never calls `turn:resolve` |
+| **142** | World grid — spatial data model for persistent world locations (data/APIs first; not m004 sprite play) |
 
 ### Revisit backlog
 
 | Epic | Intent |
 |------|--------|
-| **021** | Single v1 end-to-end smoke matrix covering campaign creation through restart integrity (cloud-provider runbook; pairs with 020's local parity tickets) |
+| **020** | Local llama.cpp provider: Settings curated catalog → in-app download → managed `llama-server` lifecycle → smoke parity without a cloud API key (sub-tickets under `board/backlog/revisit/`) |
+
+**021** (v1 e2e smoke matrix) has **no ticket file** on the board today. Do not list it as active work until a restore ticket (historically **138**) is recreated.
 
 ### Moonshots (exploratory)
 
 | Id | Intent |
 |----|--------|
-| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback; NPC face tokens → epic **121** |
+| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback; face-token follow-ups → epics **122** / **123** / **139** |
 | **m002** | Host-driven multiplayer with host-side AI routing and guest party-member identities |
 | **m003** | Mod packs that seed homebrew catalog content from structured text files |
 | **m004** | Pixel/sprite grid campaign type (FF + Pokémon-style exploration/combat) forked from the narrative create pipeline |

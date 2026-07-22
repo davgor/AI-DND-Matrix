@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { clampNpcProposals } from './clamp'
-import { findExistingNpcForProposal } from './idempotency'
+import { clampNpcProposals, clampPlaceProposals } from './clamp'
+import { findExistingNpcForProposal, findExistingRegionForProposal } from './idempotency'
 import { namesMatch, slugifyLabel } from './slug'
-import { isValidNpcProposal } from './validate'
-import { MAX_NPC_PROPOSALS_PER_TURN } from './types'
+import { isValidNpcProposal, isValidPlaceProposal } from './validate'
+import { MAX_NPC_PROPOSALS_PER_TURN, MAX_PLACE_PROPOSALS_PER_TURN } from './types'
 import { createTestDb } from '../../db/testUtils'
 import { createCampaign } from '../../db/repositories/campaigns'
 import { createNpc } from '../../db/repositories/npcs'
 import { createRegion } from '../../db/repositories/regions'
+
+const placeProposal = {
+  key: 'mistwood-hamlet',
+  name: 'Mistwood Hamlet',
+  description: 'A nameless cluster of cottages.'
+}
 
 const speakingProposal = {
   key: 'barkeep-tom',
@@ -114,5 +120,60 @@ describe('findExistingNpcForProposal', () => {
         key: 'tom'
       })?.id
     ).toBe(tom.id)
+  })
+})
+
+describe('isValidPlaceProposal', () => {
+  it('accepts key, name, and description', () => {
+    expect(isValidPlaceProposal(placeProposal)).toBe(true)
+  })
+
+  it('rejects incomplete place proposals', () => {
+    expect(isValidPlaceProposal({ key: 'x', name: 'Y' })).toBe(false)
+    expect(isValidPlaceProposal({ name: 'Y', description: 'd' })).toBe(false)
+  })
+})
+
+describe('clampPlaceProposals', () => {
+  it(`keeps at most ${MAX_PLACE_PROPOSALS_PER_TURN} valid proposals`, () => {
+    const clamped = clampPlaceProposals([
+      placeProposal,
+      { key: 'ford-camp', name: 'Ford Camp', description: 'Tents.' },
+      { key: 'ridge-watch', name: 'Ridge Watch', description: 'Lookout.' },
+      { key: 'bad' }
+    ])
+    expect(clamped).toHaveLength(MAX_PLACE_PROPOSALS_PER_TURN)
+    expect(clamped[0]?.name).toBe('Mistwood Hamlet')
+    expect(clamped[1]?.name).toBe('Ford Camp')
+  })
+})
+
+describe('findExistingRegionForProposal', () => {
+  it('matches by campaign name and by key slug', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Roads',
+      premisePrompt: 'Travel',
+      deathMode: 'legendary'
+    })
+    const hamlet = createRegion(db, {
+      campaignId: campaign.id,
+      name: 'Mistwood Hamlet',
+      description: 'Cottages'
+    })
+
+    expect(
+      findExistingRegionForProposal(db, campaign.id, {
+        name: 'mistwood hamlet',
+        key: 'other-key'
+      })?.id
+    ).toBe(hamlet.id)
+
+    expect(
+      findExistingRegionForProposal(db, campaign.id, {
+        name: 'New Name',
+        key: 'mistwood-hamlet'
+      })?.id
+    ).toBe(hamlet.id)
   })
 })
