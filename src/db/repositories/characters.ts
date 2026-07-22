@@ -41,6 +41,8 @@ export interface Character extends CharacterGuidedCreationFields {
   backgroundKey: string | null
   backgroundStory: string | null
   backgroundCustomLabel: string | null
+  /** EPIC-133 — last shared world day this PC was active (watermark, not a private clock). */
+  lastActiveInGameDate: number
 }
 
 export interface CreateCharacterInput {
@@ -106,6 +108,8 @@ interface CharacterRow {
   background_key?: string | null
   background_story?: string | null
   background_custom_label?: string | null
+  /** EPIC-133 */
+  last_active_in_game_date?: number | null
 }
 
 function parseObituaryJson(raw: string | null | undefined): CharacterObituary | null {
@@ -127,22 +131,8 @@ function parseJsonArray(raw: string): unknown[] {
   return (JSON.parse(raw) as unknown[] | null) ?? []
 }
 
-function rowToCharacter(row: CharacterRow): Character {
+function rowToCharacterIdentityFields(row: CharacterRow) {
   return {
-    id: row.id,
-    campaignId: row.campaign_id,
-    name: row.name,
-    characterClass: row.class,
-    stats: parseJsonObject(row.stats),
-    inventory: parseJsonArray(row.inventory),
-    hp: row.hp,
-    xp: row.xp,
-    level: row.level,
-    currency: row.currency,
-    kind: row.kind,
-    sourceNpcId: row.source_npc_id,
-    portraitPath: row.portrait_path,
-    sheetBackgroundPath: row.sheet_background_path,
     identityWho: row.identity_who,
     identityWhy: row.identity_why,
     identityWhere: row.identity_where,
@@ -160,6 +150,28 @@ function rowToCharacter(row: CharacterRow): Character {
     backgroundKey: row.background_key ?? null,
     backgroundStory: row.background_story ?? null,
     backgroundCustomLabel: row.background_custom_label ?? null
+  }
+}
+
+function rowToCharacter(row: CharacterRow): Character {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    name: row.name,
+    characterClass: row.class,
+    stats: parseJsonObject(row.stats),
+    inventory: parseJsonArray(row.inventory),
+    hp: row.hp,
+    xp: row.xp,
+    level: row.level,
+    currency: row.currency,
+    kind: row.kind,
+    sourceNpcId: row.source_npc_id,
+    portraitPath: row.portrait_path,
+    sheetBackgroundPath: row.sheet_background_path,
+    ...rowToCharacterIdentityFields(row),
+    // EPIC-133
+    lastActiveInGameDate: row.last_active_in_game_date ?? 0
   }
 }
 
@@ -209,7 +221,9 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     raceKey: input.raceKey ?? null,
     backgroundKey: input.backgroundKey ?? null,
     backgroundStory: input.backgroundStory ?? null,
-    backgroundCustomLabel: input.backgroundCustomLabel ?? null
+    backgroundCustomLabel: input.backgroundCustomLabel ?? null,
+    // EPIC-133 — new characters start synced at day 0 until first play touch
+    lastActiveInGameDate: 0
   }
 }
 
@@ -396,4 +410,17 @@ export function transferPartyMemberOwnership(
 
 export function listPlayerCharacters(db: Database.Database, campaignId: string): Character[] {
   return listCharactersByCampaign(db, campaignId).filter((character) => character.kind === 'player')
+}
+
+/** EPIC-133 — set per-PC last-active watermark to world day (monotonic). */
+export function touchCharacterLastActiveInGameDate(
+  db: Database.Database,
+  characterId: string,
+  worldDay: number
+): void {
+  db.prepare(
+    `UPDATE characters
+     SET last_active_in_game_date = MAX(COALESCE(last_active_in_game_date, 0), ?)
+     WHERE id = ?`
+  ).run(worldDay, characterId)
 }

@@ -40,6 +40,12 @@
   line-height: 1.5;
 }
 
+.campaign-hub-world-day {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
 .campaign-hub-last-played {
   margin: 8px 0 0;
   font-size: 0.85rem;
@@ -154,6 +160,19 @@
 .campaign-hub-cast-region {
   margin: 0 0 4px;
   font-size: 0.85rem;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.campaign-hub-cast-last-active {
+  margin: 0 0 4px;
+  font-size: 0.8rem;
+  color: var(--text-dim, #6b7280);
+}
+
+.campaign-hub-cast-away {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
   color: var(--text-secondary, #9ca3af);
 }
 

@@ -41,7 +41,7 @@ The heuristic (`src/agents/turnRoutingHeuristic.ts`, pure functions over caller-
 | Single NPC present + no check + dialogue cue (question mark, NPC name match, ask/tell/say) + prior interaction | `converse`: `npcResponse` only |
 | Pure physical verb phrase (whitelisted gesture verbs), no check, no NPC address | `act`: `playerActionExpression` only |
 
-**Side-effect starvation guard.** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, commerce, spells, alignment, and story-driven death. The converse-only and act-only rows omit it, so they return `null` (defer to LLM routing) whenever any signal suggests state could change:
+**Side-effect starvation guard.** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, spells, alignment, and story-driven death. Clear commerce/travel intents also resolve on a dedicated engine branch (**135**) beside narration so debit/move cannot starve when social routes omit `dmNarration`. The converse-only and act-only rows omit narration, so they return `null` (defer to LLM routing) whenever any signal suggests state could change:
 
 - an active quest whose title/summary/objective text mentions a present NPC name or region keyword,
 - a pending alignment shift,

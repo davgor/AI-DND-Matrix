@@ -190,15 +190,13 @@ describe('resolvePlayerTurn startEncounter without hostiles (116.8)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
+      db, 
+      provider, 
       {
         campaignId: campaign.id,
         characterId: player.id,
         playerInput: '*I swing my sword at the nearest beast*'
-      },
-      () => 0.5
-    )
+      }, { rng: () => 0.5 })
 
     expect(result.combatState).not.toBeNull()
     expect(result.combatState?.combatants.some((c) => c.ref.kind === 'npc')).toBe(true)

@@ -26,6 +26,8 @@ describe('scene header: no glow on mount', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
         />
       )
     })
@@ -53,6 +55,8 @@ describe('scene header: glow on summary change', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
         />
       )
     })
@@ -66,6 +70,8 @@ describe('scene header: glow on summary change', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
         />
       )
     })
@@ -95,6 +101,8 @@ describe('scene header: no glow when summary unchanged', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
         />
       )
     })
@@ -108,6 +116,8 @@ describe('scene header: no glow when summary unchanged', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
         />
       )
     })
@@ -140,6 +150,8 @@ describe('scene header: person links', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
           personCandidates={[{ npcId: 'npc-anna', name: 'Anna' }]}
           onPersonActivate={onPersonActivate}
         />

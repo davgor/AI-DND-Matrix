@@ -45,11 +45,11 @@ describe('turnIpc modification + enchanted attack', () => {
       })
     ])
 
-    const enchantTurn = await resolvePlayerTurn(db, provider, {
+    const enchantTurn = await resolvePlayerTurn(db,  provider,  {
       campaignId: campaign.id,
       characterId: player.id,
       playerInput: 'I enchant my longsword with fire'
-    }, Math.random)
+    }, { rng: Math.random })
     expect(enchantTurn.itemModification?.summary).toContain('fire')
     expect(getEquippedWeaponDamageProfile(db, player.id).components).toHaveLength(2)
     expect(getCatalogItemById(db, longsword.id)!.mechanicalProperties).toEqual(catalogBefore)

@@ -38,6 +38,8 @@ function openingScenePlayer(overrides: Partial<Character> = {}): Character {
     backgroundKey: null,
     backgroundStory: null,
     backgroundCustomLabel: null,
+    // EPIC-133
+    lastActiveInGameDate: 0,
     ...overrides
   }
 }

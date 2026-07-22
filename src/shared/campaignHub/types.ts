@@ -45,6 +45,10 @@ export interface HubCastMember {
   lastKnownRegionName: string | null
   hasObituary: boolean
   obituary?: CharacterObituary
+  /** EPIC-133 — last shared world day this cast member was active. */
+  lastActiveInGameDate: number
+  /** EPIC-133 — empty when synced with the campaign clock; away copy otherwise. */
+  awayBlurb: string
 }
 
 export interface HubCharacterQuestSummary {
@@ -96,12 +100,15 @@ export interface PartyRosterMember {
 /**
  * When active character A encounters inactive living player B,
  * B is narrated via agent grounded in B's SQLite history — not chat history.
+ * EPIC-133: proxy grounding also includes shared world day (see sharedTime / inactivePlayer).
  */
 export interface InactivePlayerProxyContext {
   inactiveCharacterId: string
   activeCharacterId: string
   campaignId: string
   regionId: string
+  /** Shared campaign clock day when the encounter is grounded (optional on older callers). */
+  sharedWorldDay?: number
 }
 
 /**

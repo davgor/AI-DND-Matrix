@@ -28,7 +28,12 @@ function resumeButton(props: Parameters<typeof CampaignHubCastRail>[0]): JSX.Ele
   const cardComponent = (list.props.children[0] as JSX.Element).props.children as JSX.Element
   const article = CampaignHubCastCard(cardComponent.props)
   const details = (article.props.children as JSX.Element[])[1]
-  return details.props.children[3] as JSX.Element
+  const children = details.props.children as JSX.Element[]
+  const resume = children.find((child) => child?.props?.className === 'campaign-hub-resume')
+  if (!resume) {
+    throw new Error('expected Resume button in cast card details')
+  }
+  return resume
 }
 
 function createButton(props: Parameters<typeof CampaignHubCastRail>[0]): JSX.Element {

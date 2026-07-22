@@ -1,6 +1,7 @@
 import type { HubCastMember } from '../../../shared/campaignHub/types'
+import { formatLastActiveLabel } from '../../../shared/sharedTime'
 
-export interface CampaignHubCastRailProps {
+interface CampaignHubCastRailProps {
   cast: HubCastMember[]
   actionsDisabled: boolean
   onResumeCharacter: (characterId: string) => void
@@ -42,6 +43,21 @@ export function CampaignHubCastRail(props: CampaignHubCastRailProps): JSX.Elemen
   )
 }
 
+function CampaignHubCastPresence(props: { member: HubCastMember }): JSX.Element {
+  const { member } = props
+  return (
+    <>
+      {/* EPIC-133 */}
+      <p className="campaign-hub-cast-last-active">
+        {formatLastActiveLabel(member.lastActiveInGameDate)}
+      </p>
+      {member.awayBlurb ? (
+        <p className="campaign-hub-cast-away">{member.awayBlurb}</p>
+      ) : null}
+    </>
+  )
+}
+
 export function CampaignHubCastCard(props: {
   member: HubCastMember
   actionsDisabled: boolean
@@ -69,6 +85,7 @@ export function CampaignHubCastCard(props: {
         {member.lastKnownRegionName ? (
           <p className="campaign-hub-cast-region">Last seen: {member.lastKnownRegionName}</p>
         ) : null}
+        <CampaignHubCastPresence member={member} />
         {isDead ? (
           <button
             type="button"

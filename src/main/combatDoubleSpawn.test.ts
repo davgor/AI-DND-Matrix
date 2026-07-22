@@ -120,15 +120,13 @@ describe('attack follow-up on spawned instance (116.10)', () => {
     ])
 
     await resolvePlayerTurn(
-      db,
-      provider,
+      db, 
+      provider, 
       {
         campaignId: campaign.id,
         characterId: player.id,
         playerInput: '*I swing my sword at the nearest beast*'
-      },
-      initiativeRng()
-    )
+      }, { rng: initiativeRng() })
 
     const spawned = listNpcsByRegion(db, region.id)
     expect(spawned.length).toBeGreaterThan(0)
@@ -139,15 +137,13 @@ describe('attack follow-up on spawned instance (116.10)', () => {
       `{"intent":{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"${targetId}"}}`
     ])
     const attackResult = await resolvePlayerTurn(
-      db,
-      attackProvider,
+      db, 
+      attackProvider, 
       {
         campaignId: campaign.id,
         characterId: player.id,
         playerInput: 'I strike the beast'
-      },
-      attackRng(20)
-    )
+      }, { rng: attackRng(20) })
 
     expect(attackResult.combatAttack).toBeDefined()
     expect(attackResult.combatAttack?.target).toEqual({ kind: 'npc', id: targetId })

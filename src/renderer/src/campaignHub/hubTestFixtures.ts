@@ -57,6 +57,9 @@ export function makeTestCastMember(overrides: Partial<HubCastMember> = {}): HubC
     lifeStatus: 'alive',
     lastKnownRegionName: 'Greywatch',
     hasObituary: false,
+    // EPIC-133 — synced with makeTestCampaign inGameDate default (12)
+    lastActiveInGameDate: 12,
+    awayBlurb: '',
     ...overrides
   }
 }

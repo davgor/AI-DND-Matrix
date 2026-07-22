@@ -27,6 +27,8 @@ describe('setting feed: no glow on hydrate', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
           showRolls={false}
           lastCheck={null}
         />
@@ -58,6 +60,8 @@ describe('setting feed: glow on new setting only', () => {
           sceneContext={{}}
           expositionStatus={{ state: 'idle', errorMessage: null }}
           onRetryExposition={() => {}}
+          onAbortTurnFailure={() => {}}
+          turnFailureRetryable={false}
           showRolls={false}
           lastCheck={null}
         />

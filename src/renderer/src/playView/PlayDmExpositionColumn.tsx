@@ -22,6 +22,8 @@ export function PlayDmExpositionColumn(props: {
       sceneContext={props.sceneContext}
       expositionStatus={controller.expositionStatus}
       onRetryExposition={controller.retryExposition}
+      onAbortTurnFailure={controller.abortTurnFailure}
+      turnFailureRetryable={controller.turnFailure?.retryable === true}
       showRolls={controller.showRolls}
       lastCheck={controller.lastCheck}
       personCandidates={props.personCandidates}
@@ -43,6 +45,7 @@ export function PlayDmExpositionColumn(props: {
           lootNarration={controller.lootNarration}
           lockoutNarration={controller.lockoutNarration}
           spellGrantNarration={controller.spellGrantNarration}
+          commerceTravelFeedback={controller.commerceTravelFeedback}
         />
       }
     />

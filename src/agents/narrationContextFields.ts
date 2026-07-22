@@ -1,7 +1,9 @@
 import type Database from 'better-sqlite3'
 import type { Alignment, PendingAlignmentShift } from '../shared/alignment/types'
+import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listPlayerCharacters } from '../db/repositories/characters'
 import { listEventsByCampaign } from '../db/repositories/events'
+import { formatSharedTimeGrounding } from '../shared/sharedTime'
 import { isHostileNpc, listNpcsByRegion } from '../db/repositories/npcs'
 import { getRegionById, type RegionStatus } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
@@ -157,6 +159,17 @@ function loadFactionPlaySection(
   return digest ? buildDmFactionPlayPromptSection(digest) : undefined
 }
 
+function loadSharedTimeFields(db: Database.Database, campaignId: string, characterId: string) {
+  // EPIC-133
+  const sharedWorldDay = getCampaignById(db, campaignId)?.inGameDate ?? 0
+  const activeCharacter = getCharacterById(db, characterId)
+  const sharedTimeGrounding = formatSharedTimeGrounding({
+    worldDay: sharedWorldDay,
+    lastActiveInGameDate: activeCharacter?.lastActiveInGameDate ?? 0
+  })
+  return { sharedWorldDay, sharedTimeGrounding }
+}
+
 export function loadNarrationContextFields(
   db: Database.Database,
   input: {
@@ -181,6 +194,9 @@ export function loadNarrationContextFields(
   knownSpells: KnownSpellContext[]
   factionPlaySection?: string
   worldMutationDigest?: string
+  /** EPIC-133 — shared campaign clock grounding. */
+  sharedWorldDay: number
+  sharedTimeGrounding: string
 } {
   const world = loadNarrationWorldFields(db, input.campaignId, input.regionId, input.characterId)
   const characterFields = loadNarrationCharacterFields(db, {
@@ -190,9 +206,16 @@ export function loadNarrationContextFields(
     presentNpcIds: world.presentNpcs.map((npc) => npc.id)
   })
   const factionPlaySection = loadFactionPlaySection(db, input)
+  const { sharedWorldDay, sharedTimeGrounding } = loadSharedTimeFields(
+    db,
+    input.campaignId,
+    input.characterId
+  )
   return {
     ...world,
     ...characterFields,
-    ...(factionPlaySection ? { factionPlaySection } : {})
+    ...(factionPlaySection ? { factionPlaySection } : {}),
+    sharedWorldDay,
+    sharedTimeGrounding
   }
 }

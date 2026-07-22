@@ -11,11 +11,9 @@ describe('combat HUD HP smoke', () => {
     hydrateNpcFromCatalog(db, goblin.id, getCreatureByKey(db, 'goblin-scout')!)
 
     const turn = await resolvePlayerTurn(
-      db,
-      createScriptedProvider(['{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}']),
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Fight!' },
-      initiativeRng()
-    )
+      db, 
+      createScriptedProvider(['{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}']), 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Fight!' }, { rng: initiativeRng() })
 
     const hero = turn.combatState?.combatants.find((c) => c.ref.kind === 'player')
     const monster = turn.combatState?.combatants.find((c) => c.ref.kind === 'npc')

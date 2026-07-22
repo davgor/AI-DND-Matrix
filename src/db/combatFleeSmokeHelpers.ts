@@ -52,9 +52,7 @@ export async function resolveFleeTurn(input: {
   rng: () => number
 }): Promise<TurnResult> {
   return resolvePlayerTurn(
-    input.db,
-    input.provider,
-    { campaignId: input.campaignId, characterId: input.playerId, playerInput: input.playerInput },
-    input.rng
-  )
+    input.db, 
+    input.provider, 
+    { campaignId: input.campaignId, characterId: input.playerId, playerInput: input.playerInput }, { rng: input.rng })
 }

@@ -115,6 +115,34 @@ describe('schema migration 52', () => {
   })
 })
 
+// EPIC-133
+describe('schema migration 53', () => {
+  it('migration 53 adds last_active_in_game_date on characters', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 52)
+    )
+
+    const before = db
+      .prepare('PRAGMA table_info(characters)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(before).not.toContain('last_active_in_game_date')
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 53)
+    )
+
+    const after = db
+      .prepare('PRAGMA table_info(characters)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(after).toContain('last_active_in_game_date')
+  })
+})
+
 describe('schema migration 40', () => {
   it('migration 40 adds ask_dm_messages table', () => {
     const db = new Database(':memory:')

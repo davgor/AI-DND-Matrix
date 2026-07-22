@@ -6,6 +6,9 @@ Shared types: `src/shared/worldMutations/types.ts`. Persist: `src/agents/worldMu
 
 Builds on regions/`updateRegionStatus` (003), narration side effects (006), hub destroyed UI (038), routing starvation (040). Complements factions (125) — political memory ≠ place destruction.
 
+<!-- EPIC-133 -->
+**Shared time (133):** World mutations are world-scoped on the same campaign clock (`campaigns.in_game_date`). There are no per-PC parallel calendars; see `src/shared/sharedTime/SPEC.md`.
+
 ## Locked product decisions
 
 | # | Decision |

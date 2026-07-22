@@ -47,11 +47,9 @@ describe('resolvePlayerTurn: rest and travel branches', () => {
     db.prepare('UPDATE characters SET hp = ? WHERE id = ?').run(5, player.id)
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I catch my breath' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I catch my breath' }, { rng: fixedRng(0.5) })
 
     expect(provider.calls).toHaveLength(1)
     expect(result.hpAfter).toBeGreaterThan(5)
@@ -66,11 +64,9 @@ describe('resolvePlayerTurn: rest and travel branches', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'We travel far' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'We travel far' }, { rng: fixedRng(0.5) })
 
     expect(result.inGameDateAfter).toBe(30)
     expect(result.narrationText).toContain('30 days')
@@ -90,11 +86,9 @@ describe('resolvePlayerTurn: narrated check turn', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I sneak past the guard' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I sneak past the guard' }, { rng: fixedRng(0.5) })
 
     expect(result.check).toBeDefined()
     expect(result.narrationText).toBe('You slip past unseen.')
@@ -113,11 +107,9 @@ describe('resolvePlayerTurn: narrated check turn', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I pick the lock' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I pick the lock' }, { rng: fixedRng(0.5) })
 
     expect(result.check).toBeDefined()
     expect(result.playerActionText).toBe('Kael picks the lock.')
@@ -141,11 +133,9 @@ describe('resolvePlayerTurn: converse-only routing', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' }, { rng: fixedRng(0.5) })
 
     expect(result.narrationText).toBe('')
     expect(result.npcReactions[0]?.text).toBe('What do you need?')
@@ -170,11 +160,9 @@ describe('resolvePlayerTurn: social utterance persistence (088)', () => {
     ])
 
     await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' }, { rng: fixedRng(0.5) })
 
     const log = buildNarrationLog(db, campaign.id, player.id)
     expect(log.some((entry) => entry.speaker === 'player' && entry.text === 'Hello Mira')).toBe(true)
@@ -217,11 +205,9 @@ describe('resolvePlayerTurn: group-address empty-plan recovery (088/090)', () =>
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello everyone' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello everyone' }, { rng: fixedRng(0.5) })
 
     expect(result.npcReactions).toHaveLength(3)
     expect(new Set(result.npcReactions.map((reaction) => reaction.npcId))).toEqual(
@@ -256,11 +242,9 @@ describe('resolvePlayerTurn: named-addressee empty-plan recovery (090)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Filo' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Filo' }, { rng: fixedRng(0.5) })
 
     expect(result.npcReactions).toHaveLength(1)
     expect(result.npcReactions[0]?.npcId).toBe(filo.id)
@@ -293,11 +277,9 @@ describe('resolvePlayerTurn: unclear-address empty-plan recovery (090)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello there' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello there' }, { rng: fixedRng(0.5) })
 
     expect(result.npcReactions).toHaveLength(0)
     expect(result.narrationText).toContain('Faces turn toward you')
@@ -311,11 +293,9 @@ describe('resolvePlayerTurn: player action expression (040.3 heuristic fast path
     const provider = createScriptedProvider(['{"checkNeeded":false}'])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I draw my sword' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I draw my sword' }, { rng: fixedRng(0.5) })
 
     expect(result.playerActionText).toBe('Kael draws their sword.')
     // the entire routed turn cost a single, intent-only LLM call
@@ -334,11 +314,9 @@ describe('resolvePlayerTurn: player action expression (040.3 heuristic fast path
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I brace myself' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I brace myself' }, { rng: fixedRng(0.5) })
 
     expect(result.check).toBeDefined()
     expect(result.playerActionText).toBe('Kael braces themselves.')
@@ -365,11 +343,9 @@ describe('resolvePlayerTurn: heuristic converse fast path (040.3)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' }, { rng: fixedRng(0.5) })
 
     expect(result.narrationText).toBe('')
     expect(result.npcReactions[0]?.text).toBe('Back again so soon?')
@@ -392,11 +368,9 @@ describe('resolvePlayerTurn: heuristic converse fast path (040.3)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello Mira' }, { rng: fixedRng(0.5) })
 
     expect(result.npcReactions[0]?.text).toBe('Welcome, stranger.')
     expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('routingPlan')
@@ -426,15 +400,13 @@ describe('resolvePlayerTurn: composite turns fall through to LLM routing (040.3)
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
+      db, 
+      provider, 
       {
         campaignId: campaign.id,
         characterId: player.id,
         playerInput: 'I draw my sword and warn the bandit to stand down'
-      },
-      fixedRng(0.5)
-    )
+      }, { rng: fixedRng(0.5) })
 
     // Fell through to the merged LLM call — its plan (including the NPC beat) executed.
     expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('routingPlan')
@@ -461,11 +433,9 @@ describe('resolvePlayerTurn: targeted NPC combat', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I taunt the bandit' },
-      fixedRng(0.99)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I taunt the bandit' }, { rng: fixedRng(0.99) })
 
     expect(result.npcReactions[0]?.attackResult?.hit).toBe(true)
     expect(getCharacterById(db, player.id)?.hp).toBe(0)
@@ -489,11 +459,9 @@ describe('resolvePlayerTurn: non-speaking creature actions', () => {
     ])
 
     await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I approach' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I approach' }, { rng: fixedRng(0.5) })
 
     const actionLine = buildNarrationLog(db, campaign.id).find((entry) => entry.reactionKind === 'action')
     expect(actionLine?.text).toBe('The wolf lunges.')
@@ -516,11 +484,9 @@ describe('resolvePlayerTurn: NPC promotion proposal (011.1)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Join us, Mira!' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Join us, Mira!' }, { rng: fixedRng(0.5) })
 
     expect(result.proposedPromotion).toEqual({ npcId: npc.id, npcName: 'Mira' })
     expect(getNpcById(db, npc.id)?.isPartyMember).toBe(false)
@@ -544,11 +510,9 @@ describe('resolvePlayerTurn: party member on narration turn', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I look around' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I look around' }, { rng: fixedRng(0.5) })
 
     expect(result.partyMemberActions[0]?.actionText).toBe('Brom scouts ahead.')
   })
@@ -576,11 +540,9 @@ describe('resolvePlayerTurn: party silent on dialogue', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Good evening' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Good evening' }, { rng: fixedRng(0.5) })
 
     expect(result.partyMemberActions).toHaveLength(0)
   })
@@ -632,11 +594,9 @@ describe('resolvePlayerTurn: scene context capped in NPC prompts (040.5)', () =>
     ])
 
     await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I shove through the crowd' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I shove through the crowd' }, { rng: fixedRng(0.5) })
 
     const sceneLine = sceneLineOf(provider.calls[2]?.prompt)
     expect(sceneLine).toHaveLength(SCENE_CONTEXT_MAX_CHARS)
@@ -667,11 +627,9 @@ describe('resolvePlayerTurn: scene context under the cap flows whole (040.5)', (
     ])
 
     await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I kick the door open' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I kick the door open' }, { rng: fixedRng(0.5) })
 
     const partyScene = sceneLineOf(provider.calls[2]?.prompt)
     expect(partyScene).toContain('Kael kicks the door open.')
@@ -763,11 +721,9 @@ describe('resolvePlayerTurn: proxy gated off on a signal-free narrated turn (040
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I study the old milestone' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I study the old milestone' }, { rng: fixedRng(0.5) })
 
     // merged intent+routing call plus narration only — zero proxy calls
     expect(provider.calls).toHaveLength(2)
@@ -794,11 +750,9 @@ describe('resolvePlayerTurn: proxy gated off on converse-only turns (040.5)', ()
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello there' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Hello there' }, { rng: fixedRng(0.5) })
 
     expect(provider.calls).toHaveLength(2)
     expect(result.inactivePlayerActions).toEqual([])
@@ -826,11 +780,9 @@ describe('resolvePlayerTurn: proxy fires on cross-character log writes (040.5)',
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I cross the square' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I cross the square' }, { rng: fixedRng(0.5) })
 
     expect(provider.calls).toHaveLength(3)
     expect(result.inactivePlayerActions?.[0]?.actionText).toBe('Lyra waves from the well.')
@@ -851,11 +803,9 @@ describe('resolvePlayerTurn: proxy fires on a name mention (040.5)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I look around for Lyra' },
-      fixedRng(0.5)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I look around for Lyra' }, { rng: fixedRng(0.5) })
 
     expect(provider.calls).toHaveLength(3)
     expect(result.inactivePlayerActions?.[0]?.actionText).toBe('Lyra looks up from her book.')
@@ -883,15 +833,13 @@ describe('resolvePlayerTurn: name mention on converse-only turns (040.5)', () =>
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
+      db, 
+      provider, 
       {
         campaignId: campaign.id,
         characterId: player.id,
         playerInput: 'Mira, have you seen Lyra today?'
-      },
-      fixedRng(0.5)
-    )
+      }, { rng: fixedRng(0.5) })
 
     expect(provider.calls).toHaveLength(3)
     expect(result.inactivePlayerActions?.[0]?.actionText).toBe(
@@ -907,11 +855,9 @@ describe('resolvePlayerTurn: dying-sequence short-circuit', () => {
     const provider = createScriptedProvider([])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'anything' },
-      fixedRng(0.99)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'anything' }, { rng: fixedRng(0.99) })
 
     expect(provider.calls).toHaveLength(0)
     expect(result.dyingResolution).toBeDefined()

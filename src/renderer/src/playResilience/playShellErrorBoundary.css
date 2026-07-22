@@ -1,0 +1,25 @@
+.play-shell-error-fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  margin: 1rem;
+  border: 1px solid var(--border-subtle, #444);
+  border-radius: 8px;
+  background: var(--panel-bg, #1a1a1a);
+}
+
+.play-shell-error-fallback h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.play-shell-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.play-shell-error-secondary {
+  opacity: 0.9;
+}

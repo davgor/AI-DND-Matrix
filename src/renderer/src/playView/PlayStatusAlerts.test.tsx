@@ -10,7 +10,8 @@ const emptyAlerts = {
   xpNarration: null,
   lootNarration: null,
   lockoutNarration: null,
-  spellGrantNarration: null
+  spellGrantNarration: null,
+  commerceTravelFeedback: null
 } as const
 
 describe('PlayStatusAlerts', () => {

@@ -200,11 +200,9 @@ describe('non-combat NPC reaction path is untouched (data-integrity item 9)', ()
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I taunt the goblin' },
-      fixedRng(0.99)
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I taunt the goblin' }, { rng: fixedRng(0.99) })
 
     // merged intent+routing call (040.2) plus the NPC reaction call
     expect(provider.calls).toHaveLength(2)

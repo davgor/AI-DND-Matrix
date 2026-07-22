@@ -49,6 +49,7 @@ import {
 } from './questNarration'
 import { persistDeityManifestationSideEffect } from './deityManifestation'
 import { persistFactionNarrationSideEffects } from './factionNarration'
+import { persistNpcPlayMintSideEffects } from './npcPlayMintNarration'
 import type {
   DeityManifestationProposal,
   FactionProposal,
@@ -60,6 +61,7 @@ import type {
   NpcLifeUpdateProposal,
   RegionStatusUpdateProposal
 } from '../shared/worldMutations'
+import type { NpcProposal } from '../shared/playPopulation'
 import { persistWorldMutationSideEffects } from './worldMutationNarration'
 import type { CombatIntent } from '../shared/combat/types'
 import { COMBAT_INTENTS } from '../shared/combat/types'
@@ -109,6 +111,11 @@ function isValidActionTypeFields(candidate: Record<string, unknown>): boolean {
     return true
   }
   if (!VALID_ACTION_TYPES.includes(candidate['actionType'] as ActionType)) {
+    return false
+  }
+  // EPIC-135 — optional destination name must be a string when present
+  const dest = candidate['travelDestinationName']
+  if (dest !== undefined && typeof dest !== 'string') {
     return false
   }
   return candidate['actionType'] !== 'travel' || typeof candidate['travelDays'] === 'number'
@@ -188,11 +195,15 @@ export function clampIntentDC(intent: IntentInterpretation): IntentInterpretatio
 
 // Shared between the standalone intent prompt below and the merged
 // intent + routing prompt (040.2, intentAndRoute.ts) so the two never drift.
+// EPIC-135 — travelDestinationName lets the travel bypass match/generate a region.
 export const INTENT_SCHEMA_FIELDS =
-  '{"checkNeeded":bool,"ability":"body|agility|mind|presence","dc":number,"proficient":bool,"actionType"?:"restShort"|"restLong"|"travel"|"modifyItem","travelDays"?:number,"combatIntent"?:"none"|"startEncounter"|"attack"|"endEncounter"|"flee","targetNpcId"?:string,"participantNpcIds"?:string[],"lethality"?:"lethal"|"non_lethal","acceptSurrender"?:bool,"offerMercy"?:bool,"usedCatalogSpellKey"?:string}'
+  '{"checkNeeded":bool,"ability":"body|agility|mind|presence","dc":number,"proficient":bool,"actionType"?:"restShort"|"restLong"|"travel"|"modifyItem","travelDays"?:number,"travelDestinationName"?:string,"combatIntent"?:"none"|"startEncounter"|"attack"|"endEncounter"|"flee","targetNpcId"?:string,"participantNpcIds"?:string[],"lethality"?:"lethal"|"non_lethal","acceptSurrender"?:bool,"offerMercy"?:bool,"usedCatalogSpellKey"?:string}'
 
 export const INTENT_GUIDANCE_LINES: readonly string[] = [
   'Set "actionType" to "restShort" for a short rest (e.g. catching your breath), "restLong" for a long rest (e.g. making camp for the night), or "travel" with an estimated "travelDays" for traveling between regions — and set "checkNeeded" to false for all three, since rest/travel are resolved deterministically by the engine, not by a check.',
+  // EPIC-135
+  'When "actionType" is "travel", also set "travelDestinationName" to the destination place name from the player input when one is clear (exact region name when known).',
+  'Do not rely on narration alone for buying/selling gear or changing regions — the engine resolves clear commerce and travel intents. Still narrate flavor when a dmNarration beat runs.',
   'Set "actionType" to "modifyItem" with "checkNeeded" false when the player clearly enchants, infuses, or renames their owned weapon (e.g. "I enchant my sword with fire") — not for buying new gear or vague magic.',
   'Use combatIntent "startEncounter" only when combat should begin and no encounter is active. Use "attack" with targetNpcId during an active encounter on the player\'s turn. Use "flee" when the player clearly tries to escape (e.g. "I run for the door", "we need to get out") — not for repositioning within the same room. Use "endEncounter" to narratively end combat without a flee attempt.',
   'When hostile NPCs are already present in the region, prefer starting combat once with those existing ids (participantNpcIds when known) — do not invent new foes. Once an encounter is active, prefer "attack" with an exact targetNpcId from present/visible hostiles; never emit another startEncounter while those hostiles remain engaged.',
@@ -406,6 +417,9 @@ export interface NarrationContext {
   factionPlaySection?: string
   /** Slim destroyed/altered / dead-NPC grounding (130.3). */
   worldMutationDigest?: string
+  /** EPIC-133 — shared campaign clock (not a private calendar). */
+  sharedWorldDay: number
+  sharedTimeGrounding: string
 }
 
 interface ProposedItemGrant {
@@ -449,6 +463,8 @@ export interface NarrationResult {
   regionStatusUpdates?: RegionStatusUpdateProposal[]
   /** Typed NPC life/defeat updates — engine applies via updateNpcStatus (130). */
   npcLifeUpdates?: NpcLifeUpdateProposal[]
+  /** EPIC-134 — typed play-time NPC mint proposals (engine validates + clamps). */
+  npcProposals?: NpcProposal[]
 }
 
 export async function assembleNarrationContext(input: {
@@ -484,7 +500,7 @@ export async function assembleNarrationContext(input: {
   }
 }
 
-function buildOptionalNarrationSections(context: NarrationContext): string[] {
+function buildCombatNarrationSections(context: NarrationContext): string[] {
   const sections: string[] = []
   if (context.combatSummary) {
     sections.push(
@@ -494,6 +510,11 @@ function buildOptionalNarrationSections(context: NarrationContext): string[] {
   if (context.lastCombatAttack) {
     sections.push(`Last combat attack (authoritative): ${JSON.stringify(context.lastCombatAttack)}`)
   }
+  return sections
+}
+
+function buildSceneNarrationSections(context: NarrationContext): string[] {
+  const sections: string[] = []
   if (context.equippedWeaponSummary) {
     sections.push(
       `Equipped weapon (authoritative, include modifications in narration): ${context.equippedWeaponSummary}`
@@ -509,17 +530,34 @@ function buildOptionalNarrationSections(context: NarrationContext): string[] {
       `Bestiary recall for present foes (base lore + discovered fact titles — do not invent combat stats): ${JSON.stringify(context.bestiaryRecall)}`
     )
   }
+  return sections
+}
+
+function buildWorldNarrationSections(context: NarrationContext): string[] {
+  const sections: string[] = []
   if (context.factionPlaySection) {
     sections.push(context.factionPlaySection)
   }
   if (context.worldMutationDigest) {
     sections.push(`World condition (authoritative structured status): ${context.worldMutationDigest}`)
   }
+  // EPIC-133
+  if (context.sharedTimeGrounding) {
+    sections.push(context.sharedTimeGrounding)
+  }
   return sections
 }
 
+function buildOptionalNarrationSections(context: NarrationContext): string[] {
+  return [
+    ...buildCombatNarrationSections(context),
+    ...buildSceneNarrationSections(context),
+    ...buildWorldNarrationSections(context)
+  ]
+}
+
 const NARRATION_SCHEMA_FIELDS =
-  '{"narrationText":string,"sceneUpdate"?:string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"questProposals"?:Array<{"kind":"main"|"side","title":string,"summary":string,"scale":"minor"|"major","regionId"?:string,"objectives"?:string[],"relatedWorldFactId"?:string}>,"questUpdates"?:Array<{"questId":string,"objectiveIndex"?:number,"objectiveDone"?:boolean,"summary"?:string}>,"questCompletions"?:string[],"spellGrants"?:Array<{"catalogSpellKey":string}>,"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"currencyGrants"?:{"amount":number},"itemPurchases"?:Array<{"catalogItemId":string}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"logBookAmendments"?:Array<{"entryId":string,"title"?:string,"content"?:string}>,"logBookDeletions"?:string[],"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean,"factionProposals"?:Array<{"key":string,"name":string,"kind":"civic"|"military"|"mercantile"|"criminal"|"clandestine"|"political"|"religious","summary":string,"motivation"?:string,"publicFace"?:string,"methods"?:string,"deityId"?:string,"deityKey"?:string,"homeRegionId"?:string,"homeRegionKey"?:string}>,"reputationUpdates"?:Array<{"characterId":string,"factionId"?:string,"factionKey"?:string,"delta":number,"reason"?:string}>,"relationUpdates"?:Array<{"factionAId"?:string,"factionAKey"?:string,"factionBId"?:string,"factionBKey"?:string,"stance":"ally"|"rival"|"tense"|"secret"|"war","summary"?:string}>,"npcFactionUpdates"?:Array<{"npcId":string,"factionId"?:string|null,"factionKey"?:string|null,"membershipRole"?:string|null}>,"deityManifestation"?:{"deityId"?:string,"deityKey"?:string,"regionId"?:string},"regionStatusUpdates"?:Array<{"regionId":string,"op":"destroy"|"damage"|"restore","cause"?:string}>,"npcLifeUpdates"?:Array<{"npcId":string,"alive":boolean,"location"?:string,"cause"?:string}>}'
+  '{"narrationText":string,"sceneUpdate"?:string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"questProposals"?:Array<{"kind":"main"|"side","title":string,"summary":string,"scale":"minor"|"major","regionId"?:string,"objectives"?:string[],"relatedWorldFactId"?:string}>,"questUpdates"?:Array<{"questId":string,"objectiveIndex"?:number,"objectiveDone"?:boolean,"summary"?:string}>,"questCompletions"?:string[],"spellGrants"?:Array<{"catalogSpellKey":string}>,"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"currencyGrants"?:{"amount":number},"itemPurchases"?:Array<{"catalogItemId":string}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"logBookAmendments"?:Array<{"entryId":string,"title"?:string,"content"?:string}>,"logBookDeletions"?:string[],"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean,"factionProposals"?:Array<{"key":string,"name":string,"kind":"civic"|"military"|"mercantile"|"criminal"|"clandestine"|"political"|"religious","summary":string,"motivation"?:string,"publicFace"?:string,"methods"?:string,"deityId"?:string,"deityKey"?:string,"homeRegionId"?:string,"homeRegionKey"?:string}>,"reputationUpdates"?:Array<{"characterId":string,"factionId"?:string,"factionKey"?:string,"delta":number,"reason"?:string}>,"relationUpdates"?:Array<{"factionAId"?:string,"factionAKey"?:string,"factionBId"?:string,"factionBKey"?:string,"stance":"ally"|"rival"|"tense"|"secret"|"war","summary"?:string}>,"npcFactionUpdates"?:Array<{"npcId":string,"factionId"?:string|null,"factionKey"?:string|null,"membershipRole"?:string|null}>,"deityManifestation"?:{"deityId"?:string,"deityKey"?:string,"regionId"?:string},"regionStatusUpdates"?:Array<{"regionId":string,"op":"destroy"|"damage"|"restore","cause"?:string}>,"npcLifeUpdates"?:Array<{"npcId":string,"alive":boolean,"location"?:string,"cause"?:string}>,"npcProposals"?:Array<{"key"?:string,"name":string,"role":string,"disposition":string,"backstory"?:string,"regionId"?:string,"regionKey"?:string,"canSpeak"?:boolean,"temperament"?:string,"alignment"?:string,"raceKey"?:string,"backgroundKey"?:string,"genderKey"?:string,"classKey"?:string,"factionId"?:string,"factionKey"?:string,"factionMembershipRole"?:string|null,"purpose"?:"introduced_in_scene"|"background_presence"}>}'
 
 const NARRATION_GUIDANCE_LINES: readonly string[] = [
   'sceneUpdate rewrites the surroundings description only when the location or environment materially changes (arriving somewhere new, weather shifts, the room layout changes). Omit during casual conversation.',
@@ -538,7 +576,9 @@ const NARRATION_GUIDANCE_LINES: readonly string[] = [
   'Use spellGrants when the player earns a new spell through training, a grimoire, or a story reward — validate catalogSpellKey against known catalog keys only.',
   'Use factionProposals to mint a new power bloc (unique key per campaign). Use reputationUpdates with the acting characterId and factionId/factionKey for standing shifts. Use relationUpdates for inter-faction stance changes. Use npcFactionUpdates to set or clear NPC faction membership.',
   'Use deityManifestation when a god personally appears or answers — engine ensures one speakable NPC per deity (idempotent). Prefer deityId; deityKey may match a slugified deity name. Optional regionId places the manifestation; otherwise the current region is used.',
-  'Use regionStatusUpdates to destroy, damage, or restore a place (op + regionId from context). Structured status wins over prose — burning a village must include destroy (or damage), not worldFact alone. Only restore clears destroyed. Use npcLifeUpdates when an NPC dies or is defeated outside combat writers. Optional worldFact may narrate why.'
+  'Use regionStatusUpdates to destroy, damage, or restore a place (op + regionId from context). Structured status wins over prose — burning a village must include destroy (or damage), not worldFact alone. Only restore clears destroyed. Use npcLifeUpdates when an NPC dies or is defeated outside combat writers. Optional worldFact may narrate why.',
+  // EPIC-134
+  'Use npcProposals when the fiction introduces a new named NPC who is not already in presentNpcs — include identity bundle fields (raceKey, genderKey, classKey, alignment) for speaking NPCs. At most two mint per turn; duplicate key/name in region is ignored. Minted NPCs are not journal spoilers until log-book or dossier meet rules.'
 ]
 
 // 040.9: narration schema, static guidance, and emphasis rules ride in the
@@ -672,6 +712,18 @@ export async function persistNarrationSideEffects(
   })
 }
 
+function persistCharacterLogAndJournalEffects(
+  db: Database.Database,
+  input: NarrationSideEffectInput & { characterId: string },
+  result: NarrationResult
+): void {
+  persistLogBookEntries(db, input.campaignId, input.characterId, result.logBookEntries)
+  persistLogBookAmendments(db, input.characterId, result.logBookAmendments)
+  persistLogBookDeletions(db, input.characterId, result.logBookDeletions)
+  persistCrossCharacterLogBookEntries(db, input.campaignId, result.crossCharacterLogBookEntries)
+  persistJournalEntry(db, input.campaignId, input.characterId, result.journalEntry)
+}
+
 async function persistCharacterNarrationSideEffects(
   db: Database.Database,
   result: NarrationResult,
@@ -690,14 +742,16 @@ async function persistCharacterNarrationSideEffects(
   })
   const commerce = persistNarrationCommerce(db, input.characterId, result)
   persistItemGrants(db, input.characterId, result.itemGrants)
-  persistLogBookEntries(db, input.campaignId, input.characterId, result.logBookEntries)
-  persistLogBookAmendments(db, input.characterId, result.logBookAmendments)
-  persistLogBookDeletions(db, input.characterId, result.logBookDeletions)
-  persistCrossCharacterLogBookEntries(db, input.campaignId, result.crossCharacterLogBookEntries)
-  persistJournalEntry(db, input.campaignId, input.characterId, result.journalEntry)
+  persistCharacterLogAndJournalEffects(db, input, result)
   const spellGrants = persistSpellGrants(db, input.characterId, result.spellGrants)
   persistFactionNarrationSideEffects(db, result, {
     campaignId: input.campaignId,
+    characterId: input.characterId
+  })
+  // EPIC-134
+  persistNpcPlayMintSideEffects(db, result, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
     characterId: input.characterId
   })
   persistDeityManifestationSideEffect(db, result.deityManifestation, {

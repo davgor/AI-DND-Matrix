@@ -9,9 +9,12 @@ import type { TurnRoutingPlan } from '../shared/turnRouting/types'
 //
 // Bias rule (data-integrity item 1): `dmNarration` is the sole write path for
 // world facts, quests + their rewards, log book, cross-character entries,
-// journal, item grants, commerce, spells, alignment, story-driven death,
+// journal, item grants, spells, alignment, story-driven death,
 // and typed world mutations (region status / NPC life — epic 130).
-// Any row that omits it may only fire on turns it can PROVE are inert; every
+// EPIC-135: clear commerce/travel intents also resolve via a dedicated engine
+// branch beside narration — transactional terms still defer converse/act rows
+// so LLM routing can flavor, but debit/move must not starve if narration is omitted.
+// Any row that omits dmNarration may only fire on turns it can PROVE are inert; every
 // ambiguous signal returns null and defers to LLM routing.
 
 interface PresentNpcSignal {

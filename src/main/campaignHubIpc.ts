@@ -8,6 +8,7 @@ import type {
 } from '../shared/campaignHub/types'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listCharactersByCampaign } from '../db/repositories/characters'
+import { formatAwayBlurb } from '../shared/sharedTime'
 import { listDeitiesByCampaign } from '../db/repositories/deities'
 import {
   listFactionRelationsByCampaign,
@@ -34,6 +35,8 @@ function regionNameForCharacter(
 }
 
 function buildCast(db: Database.Database, campaignId: string): HubCastMember[] {
+  // EPIC-133
+  const worldDay = getCampaignById(db, campaignId)?.inGameDate ?? 0
   return listCharactersByCampaign(db, campaignId)
     .filter((character) => character.kind === 'player')
     .map((character) => ({
@@ -45,7 +48,9 @@ function buildCast(db: Database.Database, campaignId: string): HubCastMember[] {
       lifeStatus: character.lifeStatus,
       lastKnownRegionName: regionNameForCharacter(db, campaignId, character.id),
       hasObituary: character.obituary !== null,
-      obituary: character.obituary ?? undefined
+      obituary: character.obituary ?? undefined,
+      lastActiveInGameDate: character.lastActiveInGameDate,
+      awayBlurb: formatAwayBlurb(worldDay, character.lastActiveInGameDate)
     }))
 }
 

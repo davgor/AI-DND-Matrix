@@ -23,6 +23,8 @@ Otherwise existing onboarding routing applies unchanged (`CampaignReview` → `C
 | `life_status`, `death_cause`, `died_at` | Engine/main on death resolution |
 | `obituary_json` | Obituary agent at death; persisted atomically with death |
 | World state (regions, NPCs, story threads, `current_state_summary`) | Campaign-level; shared by all living characters |
+| <!-- EPIC-133 --> Shared world day (`campaigns.in_game_date`) | Single campaign clock — Model B (`src/shared/sharedTime/`); rest/travel advance it |
+| <!-- EPIC-133 --> Per-PC `last_active_in_game_date` | Watermark only (not a private calendar); hub shows last-active + optional away blurb |
 | Per-character state (`currentRegionId`, journal, log book, narration log, party roster) | Character-scoped |
 | Hub preview | Read-only UI over `PlayAwareHubSnapshot` IPC |
 | Inactive player proxy | Agent reads inactive character SQLite history; engine validates mechanical changes |

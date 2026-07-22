@@ -88,15 +88,13 @@ describe('quest-advancing dialogue falls through to LLM routing (starvation guar
     ])
 
     const result = await resolvePlayerTurn(
-      scene.db,
-      provider,
+      scene.db, 
+      provider, 
       {
         campaignId: scene.campaign.id,
         characterId: scene.player.id,
         playerInput: 'Mira, what do you know about the amulet?'
-      },
-      () => 0.5
-    )
+      }, { rng: () => 0.5 })
 
     // The turn used merged LLM routing, not the heuristic converse row
     // (040.9: schemas live in systemPrompt, so distinguish the call there).
@@ -123,15 +121,13 @@ describe('inert dialogue takes the heuristic fast path', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      scene.db,
-      provider,
+      scene.db, 
+      provider, 
       {
         campaignId: scene.campaign.id,
         characterId: scene.player.id,
         playerInput: 'Mira, how are you doing?'
-      },
-      () => 0.5
-    )
+      }, { rng: () => 0.5 })
 
     expect(provider.calls).toHaveLength(2)
     // Intent-only call: no routing schema in the systemPrompt, no scene

@@ -77,11 +77,9 @@ describe('efficiency smoke: simple dialogue turn (heuristic converse row, 040.3)
       '{"dialogue":"Well met, Kael. The rope is fresh in."}'
     ])
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Tessa, how is the morning treating you?' },
-      () => 0.5
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Tessa, how is the morning treating you?' }, { rng: () => 0.5 })
     expect(provider.calls, 'converse budget: intent + npcResponse, nothing else').toHaveLength(2)
     // The intent call must be the slim intent-only prompt: no routing schema
     // in systemPrompt, no scene grounding payloads in the user prompt.
@@ -103,11 +101,9 @@ describe('efficiency smoke: check + narration turn (merged intent+route, 040.2)'
       '{"narrationText":"The strongbox lock clicks open."}'
     ])
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I try to pick the lock on the strongbox' },
-      () => 0.5
-    )
+      db, 
+      provider, 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I try to pick the lock on the strongbox' }, { rng: () => 0.5 })
     expect(provider.calls, 'check-turn budget: merged intent+route + narrate').toHaveLength(2)
     // First call carried the routing half (not a separate routing round trip).
     expect(provider.calls[0]?.context?.systemPrompt ?? '').toContain('routingPlan')
@@ -124,15 +120,13 @@ describe('efficiency smoke: combat player attack with 2 NPC catch-up turns (040.
       `{"intent":{"checkNeeded":false,"combatIntent":"attack","targetNpcId":"${goblins[0]!.id}"}}`
     ])
     const turnInput = { campaignId: campaign.id, characterId: player.id }
-    await resolvePlayerTurn(db, provider, { ...turnInput, playerInput: 'I draw my sword!' }, initiativeRng())
+    await resolvePlayerTurn(db,  provider,  { ...turnInput, playerInput: 'I draw my sword!' }, { rng: initiativeRng() })
     expect(provider.calls, 'startEncounter budget: 1 intent call').toHaveLength(1)
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { ...turnInput, playerInput: 'I swing at the first goblin' },
-      attackRng(3)
-    )
+      db, 
+      provider, 
+      { ...turnInput, playerInput: 'I swing at the first goblin' }, { rng: attackRng(3) })
     expect(provider.calls, 'attack budget: 1 intent call, 0 flavor for 2 NPC catch-up turns').toHaveLength(2)
     // Both goblins took their catch-up turns — on template flavor, not LLM.
     expect(result.npcReactions).toHaveLength(2)
@@ -149,13 +143,11 @@ describe('efficiency smoke: encounter end rewards with enrichment off (040.7 + 0
       '{"difficulty":"easy"}'
     ])
     const turnInput = { campaignId: campaign.id, characterId: player.id }
-    await resolvePlayerTurn(db, provider, { ...turnInput, playerInput: 'To arms!' }, initiativeRng())
+    await resolvePlayerTurn(db,  provider,  { ...turnInput, playerInput: 'To arms!' }, { rng: initiativeRng() })
     const result = await resolvePlayerTurn(
-      db,
-      provider,
-      { ...turnInput, playerInput: 'I strike the goblin down' },
-      attackRng(20)
-    )
+      db, 
+      provider, 
+      { ...turnInput, playerInput: 'I strike the goblin down' }, { rng: attackRng(20) })
     // 3 calls total = two intents + one 64-token XP difficulty rating (061).
     // Yield (040.8) and loot (040.7) resolve rules-first/template with zero calls.
     expect(provider.calls, 'reward budget: 1 XP difficulty call, 0 loot/yield LLM calls').toHaveLength(3)

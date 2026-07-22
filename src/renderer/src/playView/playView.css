@@ -314,6 +314,31 @@
   color: #9fd49f;
 }
 
+.dm-commerce-travel-banner {
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(140, 170, 210, 0.45);
+  background: rgba(20, 40, 70, 0.35);
+  color: #d8e6f5;
+}
+
+.dm-commerce-travel-banner-fail {
+  border-color: rgba(210, 120, 120, 0.5);
+  background: rgba(70, 20, 20, 0.35);
+  color: #f0d0d0;
+}
+
+.dm-commerce-travel-title {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+  color: #9eb8d8;
+}
+
+.dm-commerce-travel-banner-fail .dm-commerce-travel-title {
+  color: #e8a0a0;
+}
+
 .dm-imprisoned-status {
   margin: 0;
   padding: 0.65rem 1rem;

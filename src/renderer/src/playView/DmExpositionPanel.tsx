@@ -25,6 +25,8 @@ interface DmExpositionPanelProps {
   sceneContext: SceneSummaryInput
   expositionStatus: ExpositionStatus
   onRetryExposition: () => void
+  onAbortTurnFailure: () => void
+  turnFailureRetryable: boolean
   showRolls: boolean
   lastCheck: TurnResult['check'] | null
   combatStrip?: ReactNode
@@ -56,6 +58,8 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
         sceneContext={props.sceneContext}
         expositionStatus={props.expositionStatus}
         onRetryExposition={props.onRetryExposition}
+        onAbortTurnFailure={props.onAbortTurnFailure}
+        turnFailureRetryable={props.turnFailureRetryable}
         personCandidates={props.personCandidates}
         onPersonActivate={props.onPersonActivate}
       />

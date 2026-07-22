@@ -47,10 +47,11 @@ import { resolveLongRest, resolveShortRest } from '../engine/rest'
 import { resolveTravel } from '../engine/travel'
 import { buildAgentProvider } from './campaignIpc'
 import { generateRegionForCampaign } from './campaignEditIpc'
-import { advanceInGameDate } from '../db/repositories/campaigns'
+import { advanceInGameDate, getCampaignById } from '../db/repositories/campaigns'
 import {
   getCharacterById,
   listPartyMembersForPlayer,
+  touchCharacterLastActiveInGameDate,
   updateCharacter,
   type Character
 } from '../db/repositories/characters'
@@ -82,6 +83,18 @@ import { generateObituaryForDeath, type GenerateObituaryInput } from './obituary
 import type { CombatAttackResult, CombatStateSnapshot } from '../shared/combat/types'
 import type { FleeTurnOutcome } from '../shared/combat/flee/types'
 import { applyCatalogSpellLockout, tryBlockLockedAction } from './turnLockoutPlay'
+import { resolvePlayerTurnForIpc } from './turnResolveRecovery'
+import {
+  maybeResolveCommerceForTurn,
+  overlayTravelIntent,
+  travelSuccessExtras,
+  travelUnknownDestinationExtras,
+  type CommerceTravelTurnExtras
+} from './commerceTravelTurn'
+import type {
+  CommerceResolveResult,
+  TravelResolveResult
+} from '../shared/commerceTravel/types'
 
 export interface TurnInput {
   campaignId: string
@@ -89,6 +102,17 @@ export interface TurnInput {
   playerInput: string
   /** Optional DEV correlation id from the renderer (`[campaignAction]` traces). */
   clientTraceId?: string
+  /** EPIC-136: idempotency key for safe turn retry across IPC. */
+  turnAttemptId?: string
+}
+
+/** EPIC-136: signals first durable write in a turn attempt. */
+export interface TurnExecutionHooks {
+  onMutationCommitted?: () => void
+}
+
+function markTurnMutation(hooks?: TurnExecutionHooks): void {
+  hooks?.onMutationCommitted?.()
 }
 
 export interface NpcAttackOutcome {
@@ -155,6 +179,10 @@ export interface TurnResult {
   lockoutNarration?: string
   /** Newly learned spell names for player-visible grant feedback. */
   spellGrantNarration?: string
+  /** EPIC-135: engine commerce/travel resolve (independent of narration fields). */
+  commerceResolve?: CommerceResolveResult
+  travelResolve?: TravelResolveResult
+  commerceTravelFeedback?: string
 }
 
 function buildTurnResultExtras(
@@ -185,7 +213,12 @@ interface RestTurnInput {
   playerInput: string
 }
 
-function resolveRestTurn(db: Database.Database, turn: RestTurnInput): TurnResult {
+function resolveRestTurn(
+  db: Database.Database,
+  turn: RestTurnInput,
+  hooks?: TurnExecutionHooks
+): TurnResult {
+  markTurnMutation(hooks)
   const { campaignId, character, kind, playerInput } = turn
   const maxHp = resolveCharacterMaxHp(character)
   const rest = kind === 'restShort' ? resolveShortRest(character.hp, maxHp) : resolveLongRest(character.hp, maxHp)
@@ -228,8 +261,10 @@ function resolveRestTurn(db: Database.Database, turn: RestTurnInput): TurnResult
 function resolveTravelTurn(
   db: Database.Database,
   input: { campaignId: string; estimatedDays: number; playerInput: string; characterId: string },
-  destinationRegionId?: string
+  destinationRegionId?: string,
+  hooks?: TurnExecutionHooks
 ): TurnResult {
+  markTurnMutation(hooks)
   const { campaignId, estimatedDays, playerInput, characterId } = input
   const days = resolveTravel(estimatedDays)
   const inGameDateAfter = advanceInGameDate(db, campaignId, days)
@@ -250,12 +285,22 @@ function resolveTravelTurn(
     payload: { days, narrationText, playerInput, characterId, destinationRegionId, dmLineKind: 'scene' }
   })
   createSaveSnapshot(db, campaignId)
+  // EPIC-135 — structured travel feedback alongside narration
+  const travelExtras: CommerceTravelTurnExtras = destinationRegionId
+    ? travelSuccessExtras({
+        db,
+        destinationRegionId,
+        estimatedDays,
+        inGameDateAfter
+      })
+    : {}
   return {
     narrationText,
     inGameDateAfter,
     npcReactions: [],
     partyMemberActions: [],
     inactivePlayerActions: [],
+    ...travelExtras,
     ...buildTurnResultExtras(db, characterId)
   }
 }
@@ -263,21 +308,29 @@ function resolveTravelTurn(
 async function resolveTravelTurnWithDestination(
   db: Database.Database,
   provider: Provider,
-  input: { campaignId: string; estimatedDays: number; playerInput: string; characterId: string },
+  input: {
+    campaignId: string
+    estimatedDays: number
+    playerInput: string
+    characterId: string
+    hooks?: TurnExecutionHooks
+  },
   intent: IntentInterpretation
 ): Promise<TurnResult> {
+  const { hooks, ...travelInput } = input
   const destination = intent.travelDestinationName?.trim()
   if (!destination) {
-    return resolveTravelTurn(db, input)
+    return resolveTravelTurn(db, travelInput, undefined, hooks)
   }
   const regions = listRegionsByCampaign(db, input.campaignId)
   const matched = regions.find(
     (region) => region.name.toLowerCase() === destination.toLowerCase()
   )
   if (matched) {
-    return resolveTravelTurn(db, input, matched.id)
+    return resolveTravelTurn(db, travelInput, matched.id, hooks)
   }
   try {
+    markTurnMutation(hooks)
     const detail = await generateRegionForCampaign(db, provider, {
       campaignId: input.campaignId,
       seedPrompt: destination
@@ -288,13 +341,15 @@ async function resolveTravelTurnWithDestination(
     if (!newRegion) {
       throw new Error('Region generation produced no destination')
     }
-    return resolveTravelTurn(db, input, newRegion.id)
+    return resolveTravelTurn(db, travelInput, newRegion.id, hooks)
   } catch {
+    // EPIC-135 — visible unknown-destination failure (generation unavailable)
     return {
       narrationText: `The way to ${destination} could not be charted — you remain where you are.`,
       npcReactions: [],
       partyMemberActions: [],
       inactivePlayerActions: [],
+      ...travelUnknownDestinationExtras(destination),
       ...buildTurnResultExtras(db, input.characterId)
     }
   }
@@ -453,6 +508,12 @@ interface RoutedTurnInput extends CheckTurnInput {
   routingPlan: TurnRoutingPlan
   regionId: string
   narrationContext: NarrationContext
+  hooks?: TurnExecutionHooks
+}
+
+export interface TurnResolveOptions {
+  rng: RandomFn
+  hooks?: TurnExecutionHooks
 }
 
 interface ResolvedCheckOutcome {
@@ -954,12 +1015,13 @@ async function executeRoutingBeats(
 async function resolveRoutedTurn(
   db: Database.Database,
   provider: Provider,
-  campaignId: string,
-  turn: RoutedTurnInput
+  input: { campaignId: string } & RoutedTurnInput
 ): Promise<TurnResult> {
-  const { character, intent, playerInput, rng, routingPlan, regionId, narrationContext } = turn
+  const { campaignId, character, intent, playerInput, rng, routingPlan, regionId, narrationContext, hooks } =
+    input
   const resolved = resolveOutcome(character, intent, rng)
 
+  markTurnMutation(hooks)
   appendPlayerAuditEvent(db, { campaignId, characterId: character.id, playerInput, resolved })
   appendPlayerUtteranceEvent(db, { campaignId, characterId: character.id, playerInput })
 
@@ -1074,7 +1136,9 @@ async function resolveCombatPlayerTurn(input: {
   character: Character
   intent: IntentInterpretation
   rng: RandomFn
+  hooks?: TurnExecutionHooks
 }): Promise<TurnResult> {
+  markTurnMutation(input.hooks)
   const { db, provider, turnInput, character, intent, rng } = input
   const regionId = getCurrentRegionId(db, turnInput.campaignId, character)
   const combatResult = await resolveCombatTurn({
@@ -1102,15 +1166,38 @@ interface IntentRoutedTurnInput {
   rng: RandomFn
 }
 
-async function resolveIntentRoutedTurn(input: IntentRoutedTurnInput): Promise<TurnResult> {
-  const { db, provider, turnInput, character, intent, rng } = input
+function alreadyHereTravelResult(
+  db: Database.Database,
+  characterId: string,
+  extras: CommerceTravelTurnExtras
+): TurnResult {
+  return {
+    narrationText: extras.commerceTravelFeedback ?? '',
+    npcReactions: [],
+    partyMemberActions: [],
+    inactivePlayerActions: [],
+    ...extras,
+    ...buildTurnResultExtras(db, characterId)
+  }
+}
+
+async function resolveActionTypeBypass(
+  input: IntentRoutedTurnInput,
+  intent: IntentInterpretation,
+  hooks?: TurnExecutionHooks
+): Promise<TurnResult | null> {
+  const { db, provider, turnInput, character } = input
   if (intent.actionType === 'restShort' || intent.actionType === 'restLong') {
-    return resolveRestTurn(db, {
-      campaignId: turnInput.campaignId,
-      character,
-      kind: intent.actionType,
-      playerInput: turnInput.playerInput
-    })
+    return resolveRestTurn(
+      db,
+      {
+        campaignId: turnInput.campaignId,
+        character,
+        kind: intent.actionType,
+        playerInput: turnInput.playerInput
+      },
+      hooks
+    )
   }
   if (intent.actionType === 'travel') {
     return resolveTravelTurnWithDestination(
@@ -1120,12 +1207,14 @@ async function resolveIntentRoutedTurn(input: IntentRoutedTurnInput): Promise<Tu
         campaignId: turnInput.campaignId,
         estimatedDays: intent.travelDays ?? 1,
         playerInput: turnInput.playerInput,
-        characterId: character.id
+        characterId: character.id,
+        hooks
       },
       intent
     )
   }
   if (intent.actionType === 'modifyItem') {
+    markTurnMutation(hooks)
     return resolveModificationTurn({
       db,
       provider,
@@ -1134,14 +1223,73 @@ async function resolveIntentRoutedTurn(input: IntentRoutedTurnInput): Promise<Tu
       playerInput: turnInput.playerInput
     })
   }
-  return resolveRoutedTurn(db, provider, turnInput.campaignId, {
+  return null
+}
+
+/** EPIC-135 — commerce resolve beside narration (incl. social-only routes). */
+function withCommerceResolve(input: {
+  db: Database.Database
+  campaignId: string
+  characterId: string
+  playerInput: string
+  routed: TurnResult
+  hooks?: TurnExecutionHooks
+}): TurnResult {
+  const commerceExtras = maybeResolveCommerceForTurn({
+    db: input.db,
+    characterId: input.characterId,
+    playerInput: input.playerInput,
+    commerceEffect: input.routed.commerceEffect
+  })
+  if (commerceExtras.commerceResolve?.ok) {
+    markTurnMutation(input.hooks)
+    createSaveSnapshot(input.db, input.campaignId)
+  }
+  const purchaseRejected =
+    input.routed.purchaseRejected ||
+    (commerceExtras.commerceResolve !== undefined && !commerceExtras.commerceResolve.ok)
+  return { ...input.routed, ...commerceExtras, purchaseRejected }
+}
+
+async function resolveIntentRoutedTurn(
+  input: IntentRoutedTurnInput,
+  hooks?: TurnExecutionHooks
+): Promise<TurnResult> {
+  const { db, turnInput, character, rng } = input
+  // EPIC-135 — overlay clear travel classification onto intent before bypasses
+  const travelOverlay = overlayTravelIntent({
+    db,
+    campaignId: turnInput.campaignId,
+    currentRegionId: input.regionId,
+    playerInput: turnInput.playerInput,
+    intent: input.intent
+  })
+  if (travelOverlay.alreadyHere) {
+    return alreadyHereTravelResult(db, character.id, travelOverlay.alreadyHere)
+  }
+  const intent = travelOverlay.intent
+  const bypass = await resolveActionTypeBypass(input, intent, hooks)
+  if (bypass) {
+    return bypass
+  }
+  const routed = await resolveRoutedTurn(db, input.provider, {
+    campaignId: turnInput.campaignId,
     character,
     intent,
     playerInput: turnInput.playerInput,
     rng,
     routingPlan: input.routingPlan,
     regionId: input.regionId,
-    narrationContext: input.narrationContext
+    narrationContext: input.narrationContext,
+    hooks
+  })
+  return withCommerceResolve({
+    db,
+    campaignId: turnInput.campaignId,
+    characterId: character.id,
+    playerInput: turnInput.playerInput,
+    routed,
+    hooks
   })
 }
 
@@ -1325,6 +1473,7 @@ async function resolveCombatOrRoutedTurn(input: {
   character: Character
   plan: IntentPlanResult
   rng: RandomFn
+  hooks?: TurnExecutionHooks
 }): Promise<TurnResult> {
   if (shouldRouteToCombat(input.db, input.turnInput.campaignId, input.character.id, input.plan.intent)) {
     const combatResult = await resolveTracedCombatTurn({
@@ -1333,7 +1482,8 @@ async function resolveCombatOrRoutedTurn(input: {
       turnInput: input.turnInput,
       character: input.character,
       intent: input.plan.intent,
-      rng: input.rng
+      rng: input.rng,
+      hooks: input.hooks
     })
     applyPostTurnCatalogLockout(input.db, input.character, input.plan.intent.usedCatalogSpellKey)
     return combatResult
@@ -1345,7 +1495,8 @@ async function resolveCombatOrRoutedTurn(input: {
     turnInput: input.turnInput,
     character: input.character,
     plan: input.plan,
-    rng: input.rng
+    rng: input.rng,
+    hooks: input.hooks
   })
   applyPostTurnCatalogLockout(input.db, input.character, input.plan.intent.usedCatalogSpellKey)
   return routed
@@ -1355,8 +1506,9 @@ async function executeResolvedPlayerTurn(
   db: Database.Database,
   provider: Provider,
   turnInput: TurnInput,
-  rng: RandomFn
+  options: TurnResolveOptions
 ): Promise<TurnResult> {
+  const { rng, hooks } = options
   const character = getCharacterById(db, turnInput.characterId)
   if (!character) {
     throw new Error(`Character ${turnInput.characterId} not found`)
@@ -1366,6 +1518,7 @@ async function executeResolvedPlayerTurn(
 
   const dyingTurn = resolveDyingTurnIfNeeded(db, turnInput.campaignId, character, rng)
   if (dyingTurn) {
+    markTurnMutation(hooks)
     logCampaignAction('branch', { branch: 'dying' })
     logCampaignAction('complete', { branch: 'dying', ...summarizeTurnResult(dyingTurn) })
     return dyingTurn
@@ -1382,7 +1535,7 @@ async function executeResolvedPlayerTurn(
     return blocked
   }
 
-  return resolveCombatOrRoutedTurn({ db, provider, turnInput, character, plan, rng })
+  return resolveCombatOrRoutedTurn({ db, provider, turnInput, character, plan, rng, hooks })
 }
 
 function logIntentRoute(plan: IntentPlanResult): void {
@@ -1404,6 +1557,7 @@ async function resolveTracedCombatTurn(input: {
   character: Character
   intent: IntentInterpretation
   rng: RandomFn
+  hooks?: TurnExecutionHooks
 }): Promise<TurnResult> {
   logCampaignAction('branch', { branch: 'combat' })
   const combatResult = await resolveCombatPlayerTurn(input)
@@ -1418,6 +1572,7 @@ async function resolveTracedRoutedTurn(input: {
   character: Character
   plan: IntentPlanResult
   rng: RandomFn
+  hooks?: TurnExecutionHooks
 }): Promise<TurnResult> {
   const branch = intentBranchName(input.plan.intent)
   logCampaignAction('branch', { branch })
@@ -1431,7 +1586,7 @@ async function resolveTracedRoutedTurn(input: {
     regionId: input.plan.regionId,
     narrationContext: input.plan.narrationContext,
     rng: input.rng
-  })
+  }, input.hooks)
   logCampaignAction('complete', { branch, ...summarizeTurnResult(result) })
   return result
 }
@@ -1440,8 +1595,9 @@ export async function resolvePlayerTurn(
   db: Database.Database,
   provider: Provider,
   turnInput: TurnInput,
-  rng: RandomFn
+  options: TurnResolveOptions
 ): Promise<TurnResult> {
+  const { rng, hooks } = options
   const turnId = turnInput.clientTraceId?.trim() || createCampaignActionTurnId()
   return runWithCampaignActionTrace(
     {
@@ -1452,7 +1608,14 @@ export async function resolvePlayerTurn(
     async () => {
       logCampaignAction('ipc_start', { playerInput: turnInput.playerInput })
       try {
-        return await executeResolvedPlayerTurn(db, provider, turnInput, rng)
+        const result = await executeResolvedPlayerTurn(db, provider, turnInput, { rng, hooks })
+        // EPIC-133 — bump per-PC last-active watermark to current shared world day
+        const worldDay =
+          result.inGameDateAfter ??
+          getCampaignById(db, turnInput.campaignId)?.inGameDate ??
+          0
+        touchCharacterLastActiveInGameDate(db, turnInput.characterId, worldDay)
+        return result
       } catch (error) {
         logCampaignAction('error', {
           error: error instanceof Error ? error.message : String(error)
@@ -1465,7 +1628,7 @@ export async function resolvePlayerTurn(
 
 export function registerTurnHandlers(): void {
   ipcMain.handle('turn:resolve', (_event, input: TurnInput) =>
-    resolvePlayerTurn(getDb(), buildAgentProvider(), input, Math.random)
+    resolvePlayerTurnForIpc(getDb(), buildAgentProvider(), input, Math.random)
   )
   ipcMain.handle('turn:generateObituary', (_event, input: GenerateObituaryInput) =>
     generateObituaryForDeath(getDb(), buildAgentProvider(), input)

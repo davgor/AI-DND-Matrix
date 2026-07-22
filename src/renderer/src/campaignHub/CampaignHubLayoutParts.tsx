@@ -1,5 +1,6 @@
 import type { Campaign } from '../../../db/repositories/campaigns'
 import type { HubCastMember } from '../../../shared/campaignHub/types'
+import { formatWorldDayLabel } from '../../../shared/sharedTime'
 import { CampaignReviewWorldHistoryModal } from '../campaignReview/CampaignReviewWorldHistoryModal'
 import { CampaignHubObituaryModal } from './CampaignHubObituaryModal'
 import { hubPremiseSnippet } from './hubUtils'
@@ -39,6 +40,10 @@ export function CampaignHubHeader(props: {
       <h1>{campaign?.name ?? 'Campaign'}</h1>
       {campaign?.premisePrompt ? (
         <p className="campaign-hub-premise">{hubPremiseSnippet(campaign.premisePrompt)}</p>
+      ) : null}
+      {/* EPIC-133 — shared campaign clock (not a private timeline) */}
+      {campaign ? (
+        <p className="campaign-hub-world-day">{formatWorldDayLabel(campaign.inGameDate)}</p>
       ) : null}
       {props.lastPlayed ? (
         <p className="campaign-hub-last-played">Last played: {props.lastPlayed}</p>

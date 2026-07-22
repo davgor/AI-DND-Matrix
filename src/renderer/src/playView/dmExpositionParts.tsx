@@ -85,6 +85,20 @@ export function SpellGrantBanner(props: { narrationText: string }): JSX.Element 
   )
 }
 
+/** EPIC-135 — engine commerce/travel success or fail (not DM-mind dependent). */
+export function CommerceTravelBanner(props: { narrationText: string }): JSX.Element {
+  const isFail = /cannot afford|No known|do not have|already in/i.test(props.narrationText)
+  return (
+    <div
+      className={isFail ? 'dm-commerce-travel-banner dm-commerce-travel-banner-fail' : 'dm-commerce-travel-banner'}
+      role="status"
+    >
+      <p className="dm-commerce-travel-title">{isFail ? 'Action failed' : 'Action resolved'}</p>
+      <p>{props.narrationText}</p>
+    </div>
+  )
+}
+
 export function ImprisonedStatusBanner(): JSX.Element {
   return (
     <div className="dm-imprisoned-status" role="status">
@@ -98,6 +112,8 @@ interface DmExpositionSceneHeaderProps extends ScenePersonLinkProps {
   sceneContext: SceneSummaryInput
   expositionStatus: ExpositionStatus
   onRetryExposition: () => void
+  onAbortTurnFailure: () => void
+  turnFailureRetryable: boolean
 }
 
 export function DmExpositionSceneHeader(props: DmExpositionSceneHeaderProps): JSX.Element {
@@ -111,9 +127,16 @@ export function DmExpositionSceneHeader(props: DmExpositionSceneHeaderProps): JS
       {props.expositionStatus.state === 'error' ? (
         <div className="dm-exposition-status dm-exposition-error" role="alert">
           <p>{props.expositionStatus.errorMessage}</p>
-          <button type="button" onClick={props.onRetryExposition}>
-            Retry
-          </button>
+          <div className="dm-exposition-error-actions">
+            {props.turnFailureRetryable ? (
+              <button type="button" onClick={props.onRetryExposition}>
+                Retry
+              </button>
+            ) : null}
+            <button type="button" onClick={props.onAbortTurnFailure}>
+              Abort
+            </button>
+          </div>
         </div>
       ) : null}
       <div

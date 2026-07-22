@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { PendingAlignmentShift } from '../../../shared/alignment/types'
 import {
   AlignmentShiftWarningBanner,
+  CommerceTravelBanner,
   DefeatDispositionBanner,
   ImprisonedStatusBanner,
   LockoutStatusBanner,
@@ -12,13 +13,13 @@ import {
 
 const TRANSIENT_DISMISS_MS = 8000
 
-export interface PlayStatusAlertItem {
+interface PlayStatusAlertItem {
   id: string
   node: JSX.Element
   transient: boolean
 }
 
-export interface PlayStatusAlertsProps {
+interface PlayStatusAlertsProps {
   pendingAlignmentShift: PendingAlignmentShift | null
   playerAlignment: string | null
   playerImprisoned: boolean
@@ -27,6 +28,7 @@ export interface PlayStatusAlertsProps {
   lootNarration: string | null
   lockoutNarration: string | null
   spellGrantNarration: string | null
+  commerceTravelFeedback: string | null
 }
 
 function pushIfPresent(
@@ -116,6 +118,13 @@ function pushTransientPlayStatusAlerts(
     dismissed,
     node: <LootRewardBanner narrationText={props.lootNarration ?? ''} />
   })
+  pushTransientIfShown({
+    alerts,
+    id: 'commerceTravel',
+    narration: props.commerceTravelFeedback,
+    dismissed,
+    node: <CommerceTravelBanner narrationText={props.commerceTravelFeedback ?? ''} />
+  })
 }
 
 export function buildPlayStatusAlerts(
@@ -153,6 +162,7 @@ export function PlayStatusAlerts(props: PlayStatusAlertsProps): JSX.Element | nu
   useTransientDismiss(props.lootNarration, 'loot', setDismissed)
   useTransientDismiss(props.lockoutNarration, 'lockout', setDismissed)
   useTransientDismiss(props.spellGrantNarration, 'spellGrant', setDismissed)
+  useTransientDismiss(props.commerceTravelFeedback, 'commerceTravel', setDismissed)
 
   useEffect(() => {
     setDismissed(new Set())

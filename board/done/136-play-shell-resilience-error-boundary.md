@@ -1,6 +1,6 @@
-# EPIC: Play shell resilience — ErrorBoundary and turn-failure recovery
+﻿# EPIC: Play shell resilience â€” ErrorBoundary and turn-failure recovery
 
-Long LLM turns and dense React play UI mean a renderer exception can blank the campaign page (**119** fixed a specific enter-world crash class, but there is still **no product ErrorBoundary** strategy). Mid-turn provider failures can leave players unsure whether the action persisted. Auto-save after resolved actions exists; **undo** and **explicit retry without double-write** are unclear as player-facing affordances. No network crash reporter by design (**001**) — local recovery must be enough for friends/playtesters.
+Long LLM turns and dense React play UI mean a renderer exception can blank the campaign page (**119** fixed a specific enter-world crash class, but there is still **no product ErrorBoundary** strategy). Mid-turn provider failures can leave players unsure whether the action persisted. Auto-save after resolved actions exists; **undo** and **explicit retry without double-write** are unclear as player-facing affordances. No network crash reporter by design (**001**) â€” local recovery must be enough for friends/playtesters.
 
 This epic makes the play shell **fail closed and recover visibly**: catch renderer crashes, preserve navigation back to hub/sidebar, and define turn-failure UX that avoids duplicate resolves.
 
@@ -19,7 +19,7 @@ Builds on **119**, turn IPC, guided-creation error categories, auto-save snapsho
 |---|----------|
 | 1 | **React ErrorBoundary** around play view (and ideally campaign shell) with fallback UI: error summary, Return to Hub / Campaigns, optional Reload play. |
 | 2 | **Turn failure UX.** When `turn:resolve` (or equivalent) fails after partial work, SPEC defines: show error; allow Retry only if idempotent/safe; otherwise Abort and keep last good save. |
-| 3 | **No double-apply.** Retry must not duplicate currency debit, XP, or mutations — use existing transaction boundaries or a turn attempt id. |
+| 3 | **No double-apply.** Retry must not duplicate currency debit, XP, or mutations â€” use existing transaction boundaries or a turn attempt id. |
 | 4 | **Guided creation** may reuse categories; play path gets parity. |
 | 5 | **Dev action trace (**089**)** remains; production copy stays non-technical. |
 
@@ -30,7 +30,7 @@ Builds on **119**, turn IPC, guided-creation error categories, auto-save snapsho
 - Smoke notes for crash fallback + failed provider turn
 - Delivery gate including `act`
 
-136.1 SPEC · 136.2 ErrorBoundary UI · 136.3 Turn failure IPC contract · 136.4 Idempotent retry · 136.5 Tests + smoke
+136.1 SPEC Â· 136.2 ErrorBoundary UI Â· 136.3 Turn failure IPC contract Â· 136.4 Idempotent retry Â· 136.5 Tests + smoke
 
 ## Relationship to other epics
 
@@ -39,7 +39,7 @@ Builds on **119**, turn IPC, guided-creation error categories, auto-save snapsho
 | **119** | Prior blank-page fix; this adds systemic boundary |
 | **130** / **135** | Mutations/commerce must stay transactional with retry policy |
 | **021** | Smoke matrix should include failure path later |
-| **m005** | Remote clients need host resilience — single-player first |
+| **m005** | Remote clients need host resilience â€” single-player first |
 
 ## Out of scope (v1)
 
@@ -49,7 +49,7 @@ Builds on **119**, turn IPC, guided-creation error categories, auto-save snapsho
 
 ## Sub-tickets
 
-### 136.1 SPEC — failure and recovery
+### 136.1 SPEC â€” failure and recovery
 
 #### Description
 
@@ -57,8 +57,8 @@ Document boundary placement, fallback actions, turn attempt identity, retry vs a
 
 #### Acceptance criteria
 
-- [ ] SPEC locks no-double-write rule
-- [ ] Shared error result types if new
+- [x] SPEC locks no-double-write rule
+- [x] Shared error result types if new
 
 ### 136.2 Play / campaign ErrorBoundary
 
@@ -68,8 +68,8 @@ Implement boundary + fallback component; wire in play shell (and parent if neede
 
 #### Acceptance criteria
 
-- [ ] Component test: child throw → fallback visible; hub action callable (mocked)
-- [ ] Normal play unaffected
+- [x] Component test: child throw â†’ fallback visible; hub action callable (mocked)
+- [x] Normal play unaffected
 
 ### 136.3 Turn failure surfacing
 
@@ -79,8 +79,8 @@ Map provider/main errors to player-visible play chrome states with Retry/Abort p
 
 #### Acceptance criteria
 
-- [ ] Integration/unit tests for error mapping
-- [ ] Success path clears error state
+- [x] Integration/unit tests for error mapping
+- [x] Success path clears error state
 
 ### 136.4 Idempotent retry
 
@@ -90,8 +90,8 @@ Ensure retry of a failed turn cannot double-apply engine effects; add regression
 
 #### Acceptance criteria
 
-- [ ] Test: currency/HP/mutation applied once across fail→retry→success
-- [ ] Abort leaves prior good state
+- [x] Test: currency/HP/mutation applied once across failâ†’retryâ†’success
+- [x] Abort leaves prior good state
 
 ### 136.5 Verification + smoke
 
@@ -101,5 +101,5 @@ Smoke notes for boundary + failed turn; full delivery gate including `act`.
 
 #### Acceptance criteria
 
-- [ ] Smoke notes written
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] Smoke notes written
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

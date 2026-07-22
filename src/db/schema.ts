@@ -914,5 +914,12 @@ export const migrations: Migration[] = [
     up: (db) => {
       migrateNpcOpinionsV52(db)
     }
+  },
+  // EPIC-133 — per-PC last-active world-day watermark (Model B)
+  {
+    version: 53,
+    up: (db) => {
+      addColumnIfMissing(db, 'characters', 'last_active_in_game_date', 'INTEGER NOT NULL DEFAULT 0')
+    }
   }
 ]

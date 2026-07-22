@@ -34,7 +34,8 @@ import type {
 import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { CombatStateSnapshot } from '../shared/combat/types'
-import type { TurnInput, TurnResult } from '../main/turnIpc'
+import type { TurnInput } from '../main/turnIpc'
+import type { TurnResolveResult } from '../shared/playResilience/types'
 import type { GenerateObituaryInput, GenerateObituaryResult } from '../main/obituaryIpc'
 import type { CharacterQuestView, CreateQuestInput, QuestIpcError, QuestStatus, UpdateQuestInput } from '../shared/quests/types'
 import type { LogEntry, UpdateLogEntryInput } from '../shared/logBook/types'
@@ -304,7 +305,7 @@ const spellbook = {
 }
 
 const turn = {
-  resolve: (input: TurnInput): Promise<TurnResult> => ipcRenderer.invoke('turn:resolve', input),
+  resolve: (input: TurnInput): Promise<TurnResolveResult> => ipcRenderer.invoke('turn:resolve', input),
   generateObituary: (input: GenerateObituaryInput): Promise<GenerateObituaryResult> =>
     ipcRenderer.invoke('turn:generateObituary', input)
 }
