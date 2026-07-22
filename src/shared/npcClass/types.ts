@@ -48,12 +48,50 @@ export function isNpcClassKey(value: unknown): value is NpcClassKey {
   return typeof value === 'string' && (NPC_CLASS_KEYS as readonly string[]).includes(normalizeNpcClassKey(value))
 }
 
+/** Common LLM / D&D role names that are not roster keys but map cleanly. */
+const NPC_CLASS_ALIASES: Record<string, NpcClassKey> = {
+  wizard: 'mage',
+  sorcerer: 'mage',
+  warlock: 'mage',
+  witch: 'mage',
+  priest: 'cleric',
+  priestess: 'cleric',
+  healer: 'cleric',
+  paladin: 'cleric',
+  thief: 'rogue',
+  assassin: 'rogue',
+  warrior: 'fighter',
+  knight: 'fighter',
+  barbarian: 'fighter',
+  soldier: 'fighter',
+  hunter: 'ranger',
+  scout: 'ranger',
+  druid: 'ranger',
+  herbalist: 'commoner',
+  gardener: 'commoner',
+  merchant: 'commoner',
+  peasant: 'commoner',
+  villager: 'commoner',
+  civilian: 'commoner',
+  bard: 'commoner',
+  artisan: 'commoner'
+}
+
 export function parseNpcClassKey(value: unknown): NpcClassKey | undefined {
   if (typeof value !== 'string') {
     return undefined
   }
   const normalized = normalizeNpcClassKey(value)
-  return isNpcClassKey(normalized) ? normalized : undefined
+  if (isNpcClassKey(normalized)) {
+    return normalized
+  }
+  const byLabel = NPC_CLASS_ROSTER.find(
+    (entry) => normalizeNpcClassKey(entry.label) === normalized
+  )
+  if (byLabel) {
+    return byLabel.key
+  }
+  return NPC_CLASS_ALIASES[normalized]
 }
 
 function normalizeNpcClassKey(value: string): string {

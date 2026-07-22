@@ -22,8 +22,9 @@ export const LLAMACPP_MODEL_CATALOG: LlamaCppCatalogEntry[] = [
     label: 'Qwen2.5 7B Instruct (Q4_K_M)',
     approxDownloadSize: '~4.7 GB',
     vramHint: '8 GB+ VRAM recommended (16 GB+ RAM if CPU-only)',
+    // Official Qwen repo split Q4_K_M into multi-part shards; use bartowski's single file.
     downloadUrl:
-      'https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf',
+      'https://huggingface.co/bartowski/Qwen2.5-7B-Instruct-GGUF/resolve/main/Qwen2.5-7B-Instruct-Q4_K_M.gguf',
     sha256: ''
   }
 ]

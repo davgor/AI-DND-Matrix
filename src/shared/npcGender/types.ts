@@ -24,12 +24,23 @@ export function isGenderKey(value: unknown): value is GenderKey {
   return typeof value === 'string' && (GENDER_KEYS as readonly string[]).includes(normalizeGenderKey(value))
 }
 
+const GENDER_ALIASES: Record<string, GenderKey> = {
+  male: 'man',
+  female: 'woman',
+  'he/him': 'man',
+  'she/her': 'woman',
+  'they/them': 'nonbinary'
+}
+
 export function parseGenderKey(value: unknown): GenderKey | undefined {
   if (typeof value !== 'string') {
     return undefined
   }
   const normalized = normalizeGenderKey(value)
-  return isGenderKey(normalized) ? normalized : undefined
+  if (isGenderKey(normalized)) {
+    return normalized
+  }
+  return GENDER_ALIASES[normalized]
 }
 
 function normalizeGenderKey(value: string): string {

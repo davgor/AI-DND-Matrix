@@ -78,14 +78,26 @@ export function isBackgroundKey(value: unknown): value is BackgroundKey {
   return typeof value === 'string' && (BACKGROUND_KEYS as readonly string[]).includes(normalizeBackgroundKey(value))
 }
 
+/** Common invented background labels models emit for village roles. */
+const BACKGROUND_ALIASES: Record<string, BackgroundKey> = {
+  herbalist: 'hermit',
+  healer: 'acolyte',
+  gardener: 'farmhand',
+  apothecary: 'hermit',
+  midwife: 'folk_hero',
+  priest: 'acolyte',
+  priestess: 'acolyte'
+}
+
 export function parseBackgroundKey(value: unknown): BackgroundKey | undefined {
   if (typeof value !== 'string') {
     return undefined
   }
   const normalized = normalizeBackgroundKey(value)
-  return (BACKGROUND_KEYS as readonly string[]).includes(normalized)
-    ? (normalized as BackgroundKey)
-    : undefined
+  if ((BACKGROUND_KEYS as readonly string[]).includes(normalized)) {
+    return normalized as BackgroundKey
+  }
+  return BACKGROUND_ALIASES[normalized]
 }
 
 export function normalizeBackgroundKey(value: string): string {

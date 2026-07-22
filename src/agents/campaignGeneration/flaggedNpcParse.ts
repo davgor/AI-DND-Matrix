@@ -31,8 +31,22 @@ function readCanSpeakFromRecord(record: Record<string, unknown>): boolean | unde
   return undefined
 }
 
-function keyInRaceOptions(key: string, options: AvailableRaceOption[]): boolean {
-  return options.some((option) => option.key === key)
+function resolveRaceKeyFromOptions(
+  raw: string,
+  options: AvailableRaceOption[]
+): string | undefined {
+  const trimmed = raw.trim()
+  const normalized = trimmed.toLowerCase().replace(/\s+/g, '_')
+  const byKey = options.find(
+    (option) => option.key === trimmed || option.key.toLowerCase() === normalized
+  )
+  if (byKey) {
+    return byKey.key
+  }
+  const byLabel = options.find(
+    (option) => option.label.trim().toLowerCase() === trimmed.toLowerCase()
+  )
+  return byLabel?.key
 }
 
 function parseSpeakingBundleFields(
@@ -40,7 +54,7 @@ function parseSpeakingBundleFields(
   availableRaces: AvailableRaceOption[]
 ): Omit<NpcCoreBundle, 'canSpeak' | 'temperament'> | undefined {
   const raceRaw = readStringField(record, 'race', 'raceKey', 'race_key')
-  const raceKey = raceRaw && keyInRaceOptions(raceRaw, availableRaces) ? raceRaw : undefined
+  const raceKey = raceRaw ? resolveRaceKeyFromOptions(raceRaw, availableRaces) : undefined
   const genderKey = parseGenderKey(readStringField(record, 'gender', 'genderKey', 'gender_key'))
   const classKey = parseNpcClassKey(readStringField(record, 'class', 'classKey', 'class_key'))
   const alignment = parseAlignment(record['alignment'])

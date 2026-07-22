@@ -930,10 +930,10 @@ src/shared/characterBackground/apply.ts:14 - BackgroundGenerateStoryInput
 src/shared/characterBackground/apply.ts:16 - normalizeBackgroundStory
 src/shared/characterBackground/apply.ts:21 - resolveBackgroundRosterEntry
 src/shared/characterBackground/apply.ts:35 - validateBackgroundApplyFields
+src/shared/characterBackground/types.ts:103 - normalizeBackgroundKey
 src/shared/characterBackground/types.ts:27 - BackgroundKey
 src/shared/characterBackground/types.ts:32 - PlayerBackgroundKey
 src/shared/characterBackground/types.ts:7 - BACKGROUND_KEYS
-src/shared/characterBackground/types.ts:91 - normalizeBackgroundKey
 src/shared/characterSetup/abilityScoreMethod.ts:21 - extractAbilityScoreMethod
 src/shared/characterSetup/abilityScoreMethod.ts:7 - isAbilityScoreMethod
 src/shared/combat/flee/types.ts:10 - FleeExpositionPhase
@@ -1123,9 +1123,9 @@ src/shared/loot/types.ts:12 - LOOT_COMPLETED_STATES
 src/shared/loot/types.ts:13 - LootCompletedState
 src/shared/loot/types.ts:53 - LootGrantRejected
 src/shared/loot/types.ts:9 - QUEST_SCALES
+src/shared/npcClass/types.ts:101 - findNpcClassRosterEntry
 src/shared/npcClass/types.ts:3 - NpcClassKey
 src/shared/npcClass/types.ts:47 - isNpcClassKey
-src/shared/npcClass/types.ts:63 - findNpcClassRosterEntry
 src/shared/npcCombat/types.ts:11 - DEFEAT_DISPOSITIONS
 src/shared/npcCombat/types.ts:5 - NPC_COMBAT_TIERS
 src/shared/npcCombat/types.ts:8 - RETIRED_ADVENTURER_PROFILES
@@ -1157,7 +1157,7 @@ src/shared/npcFaceTokens/index.ts:6 - NpcFaceTokenEligibility
 src/shared/npcFaceTokens/index.ts:9 - isNpcAppearanceTraits
 src/shared/npcGender/types.ts:23 - isGenderKey
 src/shared/npcGender/types.ts:3 - GenderKey
-src/shared/npcGender/types.ts:39 - findGenderRosterEntry
+src/shared/npcGender/types.ts:50 - findGenderRosterEntry
 src/shared/npcRelationships/index.ts:104 - opinionRowToPersistence
 src/shared/npcRelationships/index.ts:116 - isNpcOpinionRow
 src/shared/npcRelationships/index.ts:143 - isRelationshipWebEdge

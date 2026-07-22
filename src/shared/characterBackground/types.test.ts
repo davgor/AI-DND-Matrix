@@ -17,6 +17,12 @@ describe('characterBackground types', () => {
     expect(parseBackgroundKey(null)).toBeUndefined()
   })
 
+  it('maps common invented village-role backgrounds onto the roster (147)', () => {
+    expect(parseBackgroundKey('herbalist')).toBe('hermit')
+    expect(parseBackgroundKey('Healer')).toBe('acolyte')
+    expect(parseBackgroundKey('gardener')).toBe('farmhand')
+  })
+
   it('isBackgroundKey mirrors parseBackgroundKey', () => {
     expect(isBackgroundKey('noble')).toBe(true)
     expect(isBackgroundKey('bogus')).toBe(false)

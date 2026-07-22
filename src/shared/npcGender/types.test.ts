@@ -22,6 +22,14 @@ describe('parseGenderKey', () => {
     expect(parseGenderKey('True Neutral')).toBeUndefined()
   })
 
+  it('maps common LLM male/female aliases to roster keys (147)', () => {
+    expect(parseGenderKey('male')).toBe('man')
+    expect(parseGenderKey('Female')).toBe('woman')
+    expect(parseGenderKey('he/him')).toBe('man')
+    expect(parseGenderKey('she/her')).toBe('woman')
+    expect(parseGenderKey('they/them')).toBe('nonbinary')
+  })
+
   it('rejects unknown keys', () => {
     expect(parseGenderKey('alien')).toBeUndefined()
     expect(parseGenderKey('')).toBeUndefined()

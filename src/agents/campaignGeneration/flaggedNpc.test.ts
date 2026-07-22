@@ -104,6 +104,38 @@ describe('generateNpcCoreBundle (052.5 + 051.4)', () => {
   })
 })
 
+describe('generateNpcCoreBundle herbalist aliases (147)', () => {
+  it('accepts realistic herbalist-style LLM field aliases', async () => {
+    const payload = JSON.stringify({
+      canSpeak: true,
+      temperament: 'cautious',
+      race: 'Human',
+      gender: 'female',
+      alignment: 'Neutral Good',
+      class: 'herbalist',
+      background: 'herbalist',
+      hairColor: 'brown',
+      age: 'middle-aged',
+      eyeColor: 'green'
+    })
+    const provider = createScriptedProvider([payload])
+    const bundle = await generateNpcCoreBundle(provider, {
+      regionName: 'Ashbrook',
+      regionDescription: 'A village at the edge of a cursed forest.',
+      seedPrompt: "A scared gardener that partially saw the priest's disappearance",
+      availableRaces: buildAvailableRaceOptions([])
+    })
+    expect(bundle).toMatchObject({
+      canSpeak: true,
+      raceKey: 'human',
+      genderKey: 'woman',
+      classKey: 'commoner',
+      backgroundKey: 'hermit',
+      alignment: 'neutral_good'
+    })
+  })
+})
+
 const NON_SPEAKING_BUNDLE_PAYLOAD = JSON.stringify({
   canSpeak: false,
   temperament: 'aggressive',
