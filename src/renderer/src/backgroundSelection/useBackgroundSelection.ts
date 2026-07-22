@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { BackgroundRosterEntry } from '../../../shared/characterBackground/types'
+import { isCustomBackgroundKey } from '../../../shared/characterBackground/types'
 import {
   clearBackgroundSelectionDraft,
   readBackgroundSelectionDraft,
@@ -90,10 +91,30 @@ function useBackgroundApply(
   return { submitting, confirm }
 }
 
+async function requestBackgroundStory(input: {
+  campaignId: string
+  characterId: string
+  state: BackgroundSelectionState
+  playerPrompt: string
+}): Promise<string> {
+  if (!input.state.backgroundKey || !window.background?.generateStory) {
+    throw new Error('Background story generation unavailable')
+  }
+  return window.background.generateStory({
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    backgroundKey: input.state.backgroundKey,
+    ...(isCustomBackgroundKey(input.state.backgroundKey)
+      ? { backgroundCustomLabel: input.state.customLabel.trim() }
+      : {}),
+    ...(input.playerPrompt ? { playerPrompt: input.playerPrompt } : {})
+  })
+}
+
 function useBackgroundGenerateModal(
   campaignId: string,
   characterId: string,
-  backgroundKey: string | null,
+  state: BackgroundSelectionState,
   setState: (updater: (current: BackgroundSelectionState) => BackgroundSelectionState) => void
 ) {
   const [modalOpen, setModalOpen] = useState(false)
@@ -102,18 +123,16 @@ function useBackgroundGenerateModal(
 
   const generateStory = useCallback(
     async (playerPrompt: string): Promise<void> => {
-      if (!backgroundKey || !window.background?.generateStory) {
+      if (!state.backgroundKey) {
+        return
+      }
+      if (isCustomBackgroundKey(state.backgroundKey) && !state.customLabel.trim()) {
         return
       }
       setModalLoading(true)
       setModalError(null)
       try {
-        const story = await window.background.generateStory({
-          campaignId,
-          characterId,
-          backgroundKey,
-          ...(playerPrompt ? { playerPrompt } : {})
-        })
+        const story = await requestBackgroundStory({ campaignId, characterId, state, playerPrompt })
         setState((current) => ({ ...current, story }))
         setModalOpen(false)
       } catch {
@@ -122,38 +141,38 @@ function useBackgroundGenerateModal(
         setModalLoading(false)
       }
     },
-    [backgroundKey, campaignId, characterId, setState]
+    [campaignId, characterId, setState, state]
   )
 
-  return {
-    modalOpen,
-    modalLoading,
-    modalError,
-    openGenerate: () => {
+  const openGenerate = useCallback(() => {
+    setModalError(null)
+    setModalOpen(true)
+  }, [])
+
+  const closeGenerate = useCallback(() => {
+    if (!modalLoading) {
+      setModalOpen(false)
       setModalError(null)
-      setModalOpen(true)
-    },
-    closeGenerate: () => {
-      if (!modalLoading) {
-        setModalOpen(false)
-        setModalError(null)
-      }
-    },
-    generateStory
-  }
+    }
+  }, [modalLoading])
+
+  return { modalOpen, modalLoading, modalError, openGenerate, closeGenerate, generateStory }
 }
 
-export function useBackgroundSelection(
-  campaignId: string,
-  characterId: string,
-  savedBackgroundKey: string | null | undefined,
-  savedBackgroundStory: string | null | undefined
-) {
+interface UseBackgroundSelectionInput {
+  campaignId: string
+  characterId: string
+  savedBackgroundKey?: string | null
+  savedBackgroundStory?: string | null
+  savedCustomLabel?: string | null
+}
+
+export function useBackgroundSelection(input: UseBackgroundSelectionInput) {
   const loaded = useBackgroundRosterData()
   const [initialized, setInitialized] = useState(false)
   const [state, setState] = useState<BackgroundSelectionState>(initialBackgroundSelectionState())
-  const apply = useBackgroundApply(campaignId, characterId, state, loaded.setError)
-  const modal = useBackgroundGenerateModal(campaignId, characterId, state.backgroundKey, setState)
+  const apply = useBackgroundApply(input.campaignId, input.characterId, state, loaded.setError)
+  const modal = useBackgroundGenerateModal(input.campaignId, input.characterId, state, setState)
 
   useEffect(() => {
     if (loaded.loading) {
@@ -162,20 +181,27 @@ export function useBackgroundSelection(
     }
     setState(
       resolveInitialBackgroundSelectionState(
-        savedBackgroundKey,
-        savedBackgroundStory,
-        readBackgroundSelectionDraft(characterId)
+        input.savedBackgroundKey,
+        input.savedBackgroundStory,
+        readBackgroundSelectionDraft(input.characterId),
+        input.savedCustomLabel
       )
     )
     setInitialized(true)
-  }, [characterId, loaded.loading, savedBackgroundKey, savedBackgroundStory])
+  }, [
+    input.characterId,
+    input.savedBackgroundKey,
+    input.savedBackgroundStory,
+    input.savedCustomLabel,
+    loaded.loading
+  ])
 
   useEffect(() => {
     if (!initialized) {
       return
     }
-    writeBackgroundSelectionDraft(characterId, state)
-  }, [characterId, initialized, state])
+    writeBackgroundSelectionDraft(input.characterId, state)
+  }, [input.characterId, initialized, state])
 
   return {
     roster: loaded.roster,

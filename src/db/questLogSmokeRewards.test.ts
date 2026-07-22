@@ -13,12 +13,16 @@ import {
 } from './repositories/quests'
 import { buildQuestViews } from '../main/questIpc'
 import { runQuestXpPass } from '../main/progressionPipeline'
+import { speciesAppearanceResponses } from '../test/fixtures/campaignGenerationFixtures'
 import { QUEST_SMOKE_GENERATION } from './questLogSmokeFixtures'
 
 describe('quest log smoke rewards', () => {
   it('seeds main quest, accepts side quest, and completes with XP', async () => {
     const db = createTestDb()
-    const provider = createScriptedProvider([JSON.stringify({ difficulty: 'medium' })])
+    const provider = createScriptedProvider([
+      ...speciesAppearanceResponses(QUEST_SMOKE_GENERATION.bestiary.foes.length),
+      JSON.stringify({ difficulty: 'medium' })
+    ])
     const campaign = await persistGeneratedCampaign({
       db,
       provider,

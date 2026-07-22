@@ -29,12 +29,12 @@ Flow covered:
 1. Run `npm run dev` with a configured provider.
 2. Create a campaign and complete mechanical character setup. Confirm race, then land on **Choose your background**.
 3. Pick **Soldier** from the dropdown — read-only description populates with roster text (no LLM).
-4. Click **Generate**, enter an optional guidance prompt, confirm — story textarea fills and remains editable.
-5. Open **Generate** again with an empty modal prompt — a new story still generates.
-6. Hand-edit the story, then **Choose your gear**.
-7. On equipment, click **Back** — you should return to background selection, not race.
-8. Complete equipment → guided identity — the DM should reference your background rather than asking what you did before from scratch.
-9. Open character sheet — background label appears near race/class.
+4. **Custom (126.5)** — Select **Custom**, enter a required label (e.g. River Smuggler), generate/edit story, proceed. Confirm identity/opening prompts use the custom label.
+5. Click **Generate**, enter an optional guidance prompt, confirm — story textarea fills and remains editable.
+6. Open **Generate** again with an empty modal prompt — a new story still generates.
+7. Hand-edit the story, then **Choose your gear**.
+8. On equipment, click **Back** — you should return to background selection, not race.
+9. Complete equipment → guided identity — the DM should reference your background rather than asking what you did before from scratch.
 10. Restart the app while still in `background` phase (before confirming) — you should resume on the background page.
 
 ## Recorded run (template)

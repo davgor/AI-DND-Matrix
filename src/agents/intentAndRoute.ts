@@ -77,7 +77,9 @@ const ROUTING_GUIDANCE_LINES: readonly string[] = [
   'The routing plan is produced before any check is rolled — when "checkNeeded" is true, always include a dmNarration beat so the engine-resolved outcome is narrated.',
   'When "actionType" is set or "combatIntent" is not "none", the engine bypasses routing — "routingPlan" may be omitted on those turns.',
   'For ordinary dialogue or exploration (no rest/travel/combat), always include "routingPlan" — never return intent alone.',
-  'Examples: asking a shopkeeper a question → converse with npcResponse only; drawing a sword → act with playerActionExpression; picking a lock (check) → narrate with dmNarration after any expression beat.'
+  'Examples: asking a shopkeeper a question → converse with npcResponse only; drawing a sword → act with playerActionExpression; picking a lock (check) → narrate with dmNarration after any expression beat.',
+  // EPIC-135 — social-only plans may omit dmNarration; engine still resolves clear buy/sell/travel.
+  'Buying, selling, trading, or traveling may use converse/npcResponse for flavor, but destination names belong on intent.travelDestinationName when actionType is travel.'
 ]
 
 function buildSceneSections(context: IntentAndRouteContext): string[] {

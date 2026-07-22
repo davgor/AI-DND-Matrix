@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { AbilityScores, RandomFn } from '../engine/abilities'
 import { abilityModifier } from '../engine/abilities'
+import { conditionsFromStats } from '../engine/conditions'
 import { resolveNpcAttack, type NpcAttackResolution } from '../engine/npcAttack'
 import { resolvePlayerAttackAgainstNpc } from '../engine/playerAttack'
 import { checkYieldEligibility } from '../engine/yieldEligibility'
@@ -121,7 +122,8 @@ export function resolvePlayerAttack(input: PlayerAttackInput): PlayerAttackSyncR
     targetAc: targetNpc.ac,
     targetHp: targetNpc.hp,
     targetResistances: resolveNpcResistanceProfile(db, targetNpc),
-    lethality
+    lethality,
+    attackerConditions: conditionsFromStats(player.stats)
   })
   const hpAfter = applyNpcDamage(db, targetNpc.id, resolution.damage)
   const attackResult: CombatAttackResult = {
@@ -224,7 +226,8 @@ async function resolveNpcCombatTurn(input: CatchUpInput & { npcId: string }): Pr
     attackBonus,
     damageRoll,
     targetAc: computeCharacterTotalAc(db, player.id, scores?.agility ?? 10),
-    targetHp: player.hp
+    targetHp: player.hp,
+    attackerConditions: npc.conditions
   })
 
   const attackResult = attack.hit

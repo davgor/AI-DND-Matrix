@@ -5,6 +5,7 @@ import type { Region } from '../../db/repositories/regions'
 import type { StoryThread } from '../../db/repositories/storyThreads'
 import type { Deity } from '../../db/repositories/deities'
 import type { RegionExtras } from '../campaign/regionExtras'
+import type { Faction, FactionRelation } from '../factions'
 
 /** Durable life status on player character rows (engine/main authority). */
 export type CharacterLifeStatus = 'alive' | 'dead'
@@ -44,6 +45,10 @@ export interface HubCastMember {
   lastKnownRegionName: string | null
   hasObituary: boolean
   obituary?: CharacterObituary
+  /** EPIC-133 — last shared world day this cast member was active. */
+  lastActiveInGameDate: number
+  /** EPIC-133 — empty when synced with the campaign clock; away copy otherwise. */
+  awayBlurb: string
 }
 
 export interface HubCharacterQuestSummary {
@@ -67,6 +72,8 @@ export interface PlayAwareHubSnapshot {
   storyThreads: StoryThread[]
   characters: Character[]
   deities: Deity[]
+  factions: Faction[]
+  factionRelations: FactionRelation[]
   currentStateSummary: string
   cast: HubCastMember[]
   questSummariesByCharacterId: HubCharacterQuestSummary[]
@@ -93,12 +100,15 @@ export interface PartyRosterMember {
 /**
  * When active character A encounters inactive living player B,
  * B is narrated via agent grounded in B's SQLite history — not chat history.
+ * EPIC-133: proxy grounding also includes shared world day (see sharedTime / inactivePlayer).
  */
 export interface InactivePlayerProxyContext {
   inactiveCharacterId: string
   activeCharacterId: string
   campaignId: string
   regionId: string
+  /** Shared campaign clock day when the encounter is grounded (optional on older callers). */
+  sharedWorldDay?: number
 }
 
 /**

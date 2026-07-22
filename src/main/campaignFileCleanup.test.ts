@@ -32,7 +32,10 @@ const CHARACTER: Character = {
   ownerPlayerCharacterId: null,
   raceKey: null,
   backgroundKey: null,
-  backgroundStory: null
+  backgroundStory: null,
+  backgroundCustomLabel: null,
+  // EPIC-133
+  lastActiveInGameDate: 0
 }
 
 describe('campaign file cleanup', () => {

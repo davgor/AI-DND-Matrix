@@ -14,6 +14,9 @@ import { getCampaignRaceByKey } from '../db/repositories/campaignRaces'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { findRosterEntry } from '../engine/raceSelection/roster'
 import { findBackgroundRosterEntry } from '../engine/characterBackground/roster'
+import { resolveBackgroundDisplayLabel } from '../shared/characterBackground/resolveLabel'
+import { CUSTOM_BACKGROUND_KEY, isCustomBackgroundKey } from '../shared/characterBackground/types'
+import { CUSTOM_BACKGROUND_DESCRIPTION } from '../shared/characterBackground/apply'
 import type { RaceLore } from '../shared/raceSelection/types'
 import type { GuidedCreationSendMessageInput, GuidedCreationSendMessageResult } from '../shared/guidedCreation/types'
 import {
@@ -43,23 +46,50 @@ function regionsForCampaign(db: Database.Database, campaignId: string) {
   }))
 }
 
+function trimmedBackgroundStory(backgroundStory: string | null): string | null {
+  return backgroundStory?.trim() || null
+}
+
+function customBackgroundContext(
+  backgroundCustomLabel: string | null | undefined,
+  backgroundStory: string | null
+) {
+  return {
+    backgroundLabel: resolveBackgroundDisplayLabel(CUSTOM_BACKGROUND_KEY, backgroundCustomLabel),
+    backgroundDescription: CUSTOM_BACKGROUND_DESCRIPTION,
+    backgroundStory: trimmedBackgroundStory(backgroundStory)
+  }
+}
+
+function rosterBackgroundContext(backgroundKey: string, backgroundStory: string | null) {
+  const entry = findBackgroundRosterEntry(backgroundKey)
+  return {
+    backgroundLabel: entry?.label ?? null,
+    backgroundDescription: entry?.description ?? null,
+    backgroundStory: trimmedBackgroundStory(backgroundStory)
+  }
+}
+
 export function resolveCharacterBackgroundContext(
   backgroundKey: string | null,
-  backgroundStory: string | null
+  backgroundStory: string | null,
+  backgroundCustomLabel?: string | null
 ): {
   backgroundLabel: string | null
   backgroundDescription: string | null
   backgroundStory: string | null
 } {
   if (!backgroundKey) {
-    return { backgroundLabel: null, backgroundDescription: null, backgroundStory: backgroundStory?.trim() || null }
+    return {
+      backgroundLabel: null,
+      backgroundDescription: null,
+      backgroundStory: trimmedBackgroundStory(backgroundStory)
+    }
   }
-  const entry = findBackgroundRosterEntry(backgroundKey)
-  return {
-    backgroundLabel: entry?.label ?? null,
-    backgroundDescription: entry?.description ?? null,
-    backgroundStory: backgroundStory?.trim() || null
+  if (isCustomBackgroundKey(backgroundKey)) {
+    return customBackgroundContext(backgroundCustomLabel, backgroundStory)
   }
+  return rosterBackgroundContext(backgroundKey, backgroundStory)
 }
 
 export function resolveCharacterRaceContext(
@@ -93,7 +123,8 @@ function buildKickoffInterviewContext(
   const raceContext = resolveCharacterRaceContext(db, campaignId, character.raceKey)
   const backgroundContext = resolveCharacterBackgroundContext(
     character.backgroundKey,
-    character.backgroundStory
+    character.backgroundStory,
+    character.backgroundCustomLabel
   )
   const gearContext = resolveCharacterStartingGear(
     db,
@@ -160,7 +191,7 @@ export async function kickoffIdentityInterviewIfNeeded(
   return { ok: true, kickedOff: true }
 }
 
-export interface IdentityInterviewTurn {
+interface IdentityInterviewTurn {
   input: GuidedCreationSendMessageInput
   characterId: string
   currentFoundations: ReturnType<typeof readIdentityFoundationsStatus>

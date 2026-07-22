@@ -9,12 +9,18 @@ import type {
 import { isBestiaryVariantKey, parseCompositionPlan } from '../../shared/bestiary/types'
 import type { Bucket } from '../../shared/catalogTaxonomy'
 import { isBucket } from '../../shared/catalogTaxonomy'
+import {
+  hasUsableCreatureAppearance,
+  normalizeCreatureAppearance,
+  type CreatureAppearanceTraits
+} from '../../shared/creatureTokens/appearance'
 
 export interface CreateBestiarySpeciesInput {
   campaignId: string
   key: string
   name: string
   baseLore: string
+  visualAppearance?: CreatureAppearanceTraits | null
   buckets: Bucket[]
   tags: string[]
   defaultCatalogKey?: string | null
@@ -48,6 +54,8 @@ interface BestiarySpeciesRow {
   species_key: string
   name: string
   base_lore: string
+  visual_appearance_json: string | null
+  creature_token_path: string | null
   buckets_json: string
   tags_json: string
   default_catalog_key: string | null
@@ -89,6 +97,29 @@ function parseTagsJson(raw: string): string[] {
   return parsed.filter((item): item is string => typeof item === 'string')
 }
 
+function parseVisualAppearanceJson(raw: string | null): CreatureAppearanceTraits | null {
+  if (!raw) {
+    return null
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    const normalized = normalizeCreatureAppearance(parsed as Partial<CreatureAppearanceTraits>)
+    return hasUsableCreatureAppearance(normalized) ? normalized : null
+  } catch {
+    return null
+  }
+}
+
+function serializeVisualAppearance(
+  appearance: CreatureAppearanceTraits | null | undefined
+): string | null {
+  if (appearance == null) {
+    return null
+  }
+  const normalized = normalizeCreatureAppearance(appearance)
+  return hasUsableCreatureAppearance(normalized) ? JSON.stringify(normalized) : null
+}
+
 function rowToBestiarySpecies(row: BestiarySpeciesRow): BestiarySpecies {
   return {
     id: row.id,
@@ -96,6 +127,8 @@ function rowToBestiarySpecies(row: BestiarySpeciesRow): BestiarySpecies {
     key: row.species_key,
     name: row.name,
     baseLore: row.base_lore,
+    visualAppearance: parseVisualAppearanceJson(row.visual_appearance_json),
+    creatureTokenPath: row.creature_token_path,
     buckets: parseBucketsJson(row.buckets_json),
     tags: parseTagsJson(row.tags_json),
     defaultCatalogKey: row.default_catalog_key,
@@ -178,15 +211,16 @@ export function createBestiarySpecies(
   input: CreateBestiarySpeciesInput
 ): BestiarySpecies {
   const baseLore = assertNonEmptyBaseLore(input.baseLore)
+  const visualAppearanceJson = serializeVisualAppearance(input.visualAppearance)
   const id = randomUUID()
   const now = new Date().toISOString()
   const run = db.transaction(() => {
     db.prepare(
       `INSERT INTO bestiary_species
-         (id, campaign_id, species_key, name, base_lore, buckets_json, tags_json,
+         (id, campaign_id, species_key, name, base_lore, visual_appearance_json, buckets_json, tags_json,
           default_catalog_key, created_at, updated_at)
        VALUES
-         (@id, @campaignId, @speciesKey, @name, @baseLore, @bucketsJson, @tagsJson,
+         (@id, @campaignId, @speciesKey, @name, @baseLore, @visualAppearanceJson, @bucketsJson, @tagsJson,
           @defaultCatalogKey, @createdAt, @updatedAt)`
     ).run({
       id,
@@ -194,6 +228,7 @@ export function createBestiarySpecies(
       speciesKey: input.key,
       name: input.name,
       baseLore,
+      visualAppearanceJson,
       bucketsJson: JSON.stringify(input.buckets),
       tagsJson: JSON.stringify(input.tags),
       defaultCatalogKey: input.defaultCatalogKey ?? null,
@@ -227,6 +262,14 @@ export function getBestiarySpeciesByKey(
     .prepare('SELECT * FROM bestiary_species WHERE campaign_id = ? AND species_key = ?')
     .get(campaignId, speciesKey) as BestiarySpeciesRow | undefined
   return row ? rowToBestiarySpecies(row) : undefined
+}
+
+export function updateBestiarySpeciesCreatureTokenPath(
+  db: Database.Database,
+  speciesId: string,
+  path: string | null
+): void {
+  db.prepare('UPDATE bestiary_species SET creature_token_path = ? WHERE id = ?').run(path, speciesId)
 }
 
 export function listBestiarySpecies(db: Database.Database, campaignId: string): BestiarySpecies[] {

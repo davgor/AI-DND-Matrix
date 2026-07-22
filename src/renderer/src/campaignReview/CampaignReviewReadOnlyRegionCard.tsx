@@ -30,6 +30,12 @@ export function CampaignReviewReadOnlyRegionCard(props: {
           {region.status.cause ? `: ${region.status.cause}` : ''}.
         </p>
       ) : null}
+      {!region.status.destroyed && region.status.damaged ? (
+        <p className="campaign-review-region-destroyed">
+          This region has been damaged
+          {region.status.cause ? `: ${region.status.cause}` : ''}.
+        </p>
+      ) : null}
       <CampaignReviewPanel legend="Overview">
         {FormattedText({ as: 'p', className: 'campaign-review-readonly-value', text: region.description })}
       </CampaignReviewPanel>

@@ -8,6 +8,7 @@ export function usePlaySheetRailState(input: {
   refreshToken: number
 }): {
   character: Character | null
+  setCharacter: (character: Character | null) => void
   activeTab: PlaySheetTab
   setActiveTab: (tab: PlaySheetTab) => void
 } {
@@ -26,5 +27,5 @@ export function usePlaySheetRailState(input: {
     }
   }, [input.campaignId, input.characterId, input.refreshToken])
 
-  return { character, activeTab, setActiveTab }
+  return { character, setCharacter, activeTab, setActiveTab }
 }

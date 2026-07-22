@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import type { Condition } from '../engine/conditions'
+import { conditionsFromStats, type Condition } from '../engine/conditions'
 import { resolveCharacterMaxHp } from '../shared/hp/resolveMaxHp'
 import type { CombatStateSnapshot, CombatantRef } from '../shared/combat/types'
 import { combatantRefKey } from '../shared/combat/types'
@@ -87,7 +87,8 @@ function resolveNpcHp(db: Database.Database, ref: CombatantRef) {
 function resolveCharacterHp(db: Database.Database, ref: CombatantRef) {
   const character = getCharacterById(db, ref.id)
   const maxHp = character ? resolveCharacterMaxHp(character) : 0
-  return { hp: character?.hp ?? 0, maxHp, conditions: [] as Condition[] }
+  const conditions = conditionsFromStats(character?.stats)
+  return { hp: character?.hp ?? 0, maxHp, conditions }
 }
 
 function resolveCombatantHp(

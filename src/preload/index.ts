@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { CreateCampaignResult } from '../main/campaignCreateIpc'
 import type { DeleteCampaignResult } from '../shared/campaignDelete/types'
 import type {
+  CampaignDuplicateResult,
+  CampaignExportResult,
+  CampaignImportResult
+} from '../shared/campaignPortability'
+import type {
   EditNpcDispositionInput,
   EditNpcTraitsInput,
   EditRegionDescriptionInput,
@@ -10,7 +15,10 @@ import type {
   EditWorldHistoryInput,
   EditWorldSummaryInput,
   EditPantheonSummaryInput,
+  EditFactionsSummaryInput,
+  EditGenerativeTokensInput,
   EditNpcFaceTokenGenerationInput,
+  EditEnemyTokenGenerationInput,
   GenerateRegionInput,
   GenerateNpcInput
 } from '../main/campaignEditIpc'
@@ -24,10 +32,16 @@ import type {
   ReplaceSetupPartyMembersInput,
   UpdatePlayerCharacterSetupInput
 } from '../main/characterCreationIpc'
+import type {
+  GeneratePlayerCharacterIconInput,
+  GeneratePlayerCharacterIconResult,
+  ReplacePlayerCharacterPortraitInput
+} from '../main/playerCharacterIconIpc'
 import type { Character } from '../db/repositories/characters'
 import type { CampaignWithLastPlayed } from '../db/repositories/campaigns'
 import type { CombatStateSnapshot } from '../shared/combat/types'
-import type { TurnInput, TurnResult } from '../main/turnIpc'
+import type { TurnInput } from '../main/turnIpc'
+import type { TurnResolveResult } from '../shared/playResilience/types'
 import type { GenerateObituaryInput, GenerateObituaryResult } from '../main/obituaryIpc'
 import type { CharacterQuestView, CreateQuestInput, QuestIpcError, QuestStatus, UpdateQuestInput } from '../shared/quests/types'
 import type { LogEntry, UpdateLogEntryInput } from '../shared/logBook/types'
@@ -65,7 +79,12 @@ import type {
   BackgroundGenerateStoryInput,
   BackgroundRosterEntry
 } from '../shared/characterBackground/types'
-import type { NpcDossierDto } from '../shared/npcDossier/types'
+import type { NpcDossierDto, NpcDossierOpinion } from '../shared/npcDossier/types'
+import type {
+  OpinionSubject,
+  OpinionSubjectOption,
+  RelationshipWebDto
+} from '../shared/npcRelationships/types'
 import type {
   AskDmListHistoryInput,
   AskDmMessage,
@@ -105,8 +124,14 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:editWorldSummary', input),
   editPantheonSummary: (input: EditPantheonSummaryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editPantheonSummary', input),
+  editFactionsSummary: (input: EditFactionsSummaryInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editFactionsSummary', input),
+  editGenerativeTokens: (input: EditGenerativeTokensInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editGenerativeTokens', input),
   editNpcFaceTokenGeneration: (input: EditNpcFaceTokenGenerationInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editNpcFaceTokenGeneration', input),
+  editEnemyTokenGeneration: (input: EditEnemyTokenGenerationInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editEnemyTokenGeneration', input),
   editWorldHistory: (input: EditWorldHistoryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldHistory', input),
   editNpcDisposition: (input: EditNpcDispositionInput): Promise<CampaignDetail> =>
@@ -132,7 +157,12 @@ const campaigns = {
   confirmPromotion: (input: PromoteNpcInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:confirmPromotion', input),
   delete: (campaignId: string): Promise<DeleteCampaignResult> =>
-    ipcRenderer.invoke('campaigns:delete', campaignId)
+    ipcRenderer.invoke('campaigns:delete', campaignId),
+  export: (campaignId: string): Promise<CampaignExportResult> =>
+    ipcRenderer.invoke('campaigns:export', campaignId),
+  import: (): Promise<CampaignImportResult> => ipcRenderer.invoke('campaigns:import'),
+  duplicate: (campaignId: string): Promise<CampaignDuplicateResult> =>
+    ipcRenderer.invoke('campaigns:duplicate', campaignId)
 }
 
 const files = {
@@ -175,7 +205,13 @@ const characters = {
   listLogEntries: (characterId: string): Promise<LogEntry[]> =>
     ipcRenderer.invoke('characters:listLogEntries', characterId),
   listJournalEntries: (characterId: string): Promise<CharacterJournalEntry[]> =>
-    ipcRenderer.invoke('characters:listJournalEntries', characterId)
+    ipcRenderer.invoke('characters:listJournalEntries', characterId),
+  generatePlayerIcon: (
+    input: GeneratePlayerCharacterIconInput
+  ): Promise<GeneratePlayerCharacterIconResult> =>
+    ipcRenderer.invoke('characters:generatePlayerIcon', input),
+  replacePlayerPortrait: (input: ReplacePlayerCharacterPortraitInput): Promise<Character | undefined> =>
+    ipcRenderer.invoke('characters:replacePlayerPortrait', input)
 }
 
 const logBook = {
@@ -201,7 +237,27 @@ const npcDossier = {
     campaignId: string
     characterId: string
     npcId: string
-  }): Promise<NpcDossierDto | null> => ipcRenderer.invoke('npcDossier:get', input)
+  }): Promise<NpcDossierDto | null> => ipcRenderer.invoke('npcDossier:get', input),
+  getSubjectOpinion: (input: {
+    campaignId: string
+    characterId: string
+    npcId: string
+    subject: OpinionSubject
+  }): Promise<NpcDossierOpinion | null> =>
+    ipcRenderer.invoke('npcDossier:getSubjectOpinion', input),
+  listOpinionSubjects: (input: {
+    campaignId: string
+    characterId: string
+    npcId: string
+  }): Promise<OpinionSubjectOption[]> =>
+    ipcRenderer.invoke('npcDossier:listOpinionSubjects', input)
+}
+
+const relationshipWeb = {
+  get: (input: {
+    campaignId: string
+    characterId: string
+  }): Promise<RelationshipWebDto> => ipcRenderer.invoke('relationshipWeb:get', input)
 }
 
 const journal = {
@@ -263,7 +319,7 @@ const spellbook = {
 }
 
 const turn = {
-  resolve: (input: TurnInput): Promise<TurnResult> => ipcRenderer.invoke('turn:resolve', input),
+  resolve: (input: TurnInput): Promise<TurnResolveResult> => ipcRenderer.invoke('turn:resolve', input),
   generateObituary: (input: GenerateObituaryInput): Promise<GenerateObituaryResult> =>
     ipcRenderer.invoke('turn:generateObituary', input)
 }
@@ -421,6 +477,7 @@ contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('logBook', logBook)
 contextBridge.exposeInMainWorld('npcDossier', npcDossier)
+contextBridge.exposeInMainWorld('relationshipWeb', relationshipWeb)
 contextBridge.exposeInMainWorld('journal', journal)
 contextBridge.exposeInMainWorld('askDm', askDm)
 contextBridge.exposeInMainWorld('quests', quests)
@@ -445,6 +502,7 @@ export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type LogBookApi = typeof logBook
 export type NpcDossierApi = typeof npcDossier
+export type RelationshipWebApi = typeof relationshipWeb
 export type JournalApi = typeof journal
 export type AskDmApi = typeof askDm
 export type QuestsApi = typeof quests

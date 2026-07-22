@@ -77,18 +77,36 @@ export function parseNpcCoreBundleRecord(
 export function parseFlaggedNpcDetailsRecord(
   record: Record<string, unknown>,
   bundle: NpcCoreBundle
-): { name: string; role: string; disposition: string; backstory?: string } | undefined {
+): {
+  name: string
+  role: string
+  disposition: string
+  backstory?: string
+  factionKey?: string
+  membershipRole?: string
+} | undefined {
   const name = readStringField(record, 'name')
   const role = readStringField(record, 'role')
   const disposition = readStringField(record, 'disposition')
   const backstory = readStringField(record, 'backstory')
+  const factionKey = readStringField(record, 'factionKey', 'faction_key')
+  const membershipRole = readStringField(
+    record,
+    'membershipRole',
+    'faction_membership_role',
+    'membership_role'
+  )
   if (!name || !role || !disposition) {
     return undefined
   }
-  if (bundle.canSpeak) {
-    return backstory ? { name, role, disposition, backstory } : undefined
+  const membership = {
+    ...(factionKey ? { factionKey } : {}),
+    ...(membershipRole ? { membershipRole } : {})
   }
-  return { name, role, disposition }
+  if (bundle.canSpeak) {
+    return backstory ? { name, role, disposition, backstory, ...membership } : undefined
+  }
+  return { name, role, disposition, ...membership }
 }
 
 export function resolveBundleBlurbs(bundle: NpcCoreBundle): {

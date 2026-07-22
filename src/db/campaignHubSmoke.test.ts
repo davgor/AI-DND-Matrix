@@ -35,6 +35,9 @@ function player(overrides: Partial<Character> = {}): Character {
     raceKey: null,
     backgroundKey: null,
     backgroundStory: null,
+    backgroundCustomLabel: null,
+    // EPIC-133
+    lastActiveInGameDate: 0,
     ...overrides
   }
 }

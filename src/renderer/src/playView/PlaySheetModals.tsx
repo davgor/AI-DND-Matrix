@@ -25,6 +25,7 @@ export function PlaySheetModals(props: {
         npcId={props.modals.dossierNpcId}
         isOpen={props.modals.dossierNpcId !== null}
         onClose={props.modals.closeDossier}
+        onOpenNpcDossier={props.modals.openDossier}
       />
     </>
   )

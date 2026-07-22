@@ -21,7 +21,9 @@ export interface PlayViewController extends RollVisibilityController, PlayLogCon
   submitAction: () => Promise<void>
   lastCheck: ReturnType<typeof useTurnSubmission>['lastCheck']
   expositionStatus: ReturnType<typeof useTurnSubmission>['expositionStatus']
+  turnFailure: ReturnType<typeof useTurnSubmission>['turnFailure']
   retryExposition: () => void
+  abortTurnFailure: () => void
   characterRefreshToken: number
   recap: SessionRecapController
   promotion: PromotionPromptController
@@ -32,6 +34,9 @@ export interface PlayViewController extends RollVisibilityController, PlayLogCon
   defeatDispositionNarration: string | null
   xpNarration: string | null
   lootNarration: string | null
+  lockoutNarration: string | null
+  spellGrantNarration: string | null
+  commerceTravelFeedback: string | null
   playerImprisoned: boolean
   notifyPerkChosen: () => void
   obituaryRequest: ReturnType<typeof useObituaryDrafting>['obituaryRequest']
@@ -62,6 +67,9 @@ export function usePlayViewController(campaignId: string, characterId: string): 
     defeatDispositionNarration: turn.defeatDispositionNarration,
     xpNarration: turn.xpNarration,
     lootNarration: turn.lootNarration,
+    lockoutNarration: turn.lockoutNarration,
+    spellGrantNarration: turn.spellGrantNarration,
+    commerceTravelFeedback: turn.commerceTravelFeedback,
     playerImprisoned: turn.playerImprisoned,
     notifyPerkChosen: turn.notifyPerkChosen,
     obituaryRequest: obituary.obituaryRequest,

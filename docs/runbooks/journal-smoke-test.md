@@ -24,3 +24,7 @@ node scripts/journal-smoke.mjs
 ## Journal → NPC dossier (epic **121**)
 
 Person-name links and the known-dossiers list in the play-sheet Journal overlay open the existing NPC dossier modal. Manual steps: [NPC dossier smoke test — Journal entry points](./npc-dossier-smoke-test.md#journal-entry-points-epic-121).
+
+## Scene / Social → NPC dossier (epic **128**)
+
+Scene summary and Social bubble prose reuse the same person matcher and dossier open path. Manual steps: [NPC dossier smoke test — Scene / Social prose entry points](./npc-dossier-smoke-test.md#scene--social-prose-entry-points-epic-128).

@@ -29,6 +29,8 @@ export interface Character extends CharacterGuidedCreationFields {
   kind: CharacterKind
   sourceNpcId: string | null
   portraitPath: string | null
+  /** Last appearance prompt used for a generated player icon (null after clean upload). */
+  portraitPrompt?: string | null
   sheetBackgroundPath: string | null
   alignment: Alignment | null
   pendingAlignmentShift: PendingAlignmentShift | null
@@ -40,6 +42,9 @@ export interface Character extends CharacterGuidedCreationFields {
   raceKey: string | null
   backgroundKey: string | null
   backgroundStory: string | null
+  backgroundCustomLabel: string | null
+  /** EPIC-133 — last shared world day this PC was active (watermark, not a private clock). */
+  lastActiveInGameDate: number
 }
 
 export interface CreateCharacterInput {
@@ -55,6 +60,7 @@ export interface CreateCharacterInput {
   currency?: number
   sourceNpcId?: string | null
   portraitPath?: string | null
+  portraitPrompt?: string | null
   sheetBackgroundPath?: string | null
   alignment?: Alignment | null
   ownerPlayerCharacterId?: string | null
@@ -62,6 +68,7 @@ export interface CreateCharacterInput {
   raceKey?: string | null
   backgroundKey?: string | null
   backgroundStory?: string | null
+  backgroundCustomLabel?: string | null
 }
 
 export interface UpdateCharacterInput {
@@ -86,6 +93,7 @@ interface CharacterRow {
   kind: CharacterKind
   source_npc_id: string | null
   portrait_path: string | null
+  portrait_prompt?: string | null
   sheet_background_path: string | null
   identity_who: string | null
   identity_why: string | null
@@ -103,6 +111,9 @@ interface CharacterRow {
   race_key?: string | null
   background_key?: string | null
   background_story?: string | null
+  background_custom_label?: string | null
+  /** EPIC-133 */
+  last_active_in_game_date?: number | null
 }
 
 function parseObituaryJson(raw: string | null | undefined): CharacterObituary | null {
@@ -124,22 +135,8 @@ function parseJsonArray(raw: string): unknown[] {
   return (JSON.parse(raw) as unknown[] | null) ?? []
 }
 
-function rowToCharacter(row: CharacterRow): Character {
+function rowToCharacterIdentityFields(row: CharacterRow) {
   return {
-    id: row.id,
-    campaignId: row.campaign_id,
-    name: row.name,
-    characterClass: row.class,
-    stats: parseJsonObject(row.stats),
-    inventory: parseJsonArray(row.inventory),
-    hp: row.hp,
-    xp: row.xp,
-    level: row.level,
-    currency: row.currency,
-    kind: row.kind,
-    sourceNpcId: row.source_npc_id,
-    portraitPath: row.portrait_path,
-    sheetBackgroundPath: row.sheet_background_path,
     identityWho: row.identity_who,
     identityWhy: row.identity_why,
     identityWhere: row.identity_where,
@@ -155,7 +152,31 @@ function rowToCharacter(row: CharacterRow): Character {
     ownerPlayerCharacterId: row.owner_player_character_id ?? null,
     raceKey: row.race_key ?? null,
     backgroundKey: row.background_key ?? null,
-    backgroundStory: row.background_story ?? null
+    backgroundStory: row.background_story ?? null,
+    backgroundCustomLabel: row.background_custom_label ?? null
+  }
+}
+
+function rowToCharacter(row: CharacterRow): Character {
+  return {
+    id: row.id,
+    campaignId: row.campaign_id,
+    name: row.name,
+    characterClass: row.class,
+    stats: parseJsonObject(row.stats),
+    inventory: parseJsonArray(row.inventory),
+    hp: row.hp,
+    xp: row.xp,
+    level: row.level,
+    currency: row.currency,
+    kind: row.kind,
+    sourceNpcId: row.source_npc_id,
+    portraitPath: row.portrait_path,
+    portraitPrompt: row.portrait_prompt ?? null,
+    sheetBackgroundPath: row.sheet_background_path,
+    ...rowToCharacterIdentityFields(row),
+    // EPIC-133
+    lastActiveInGameDate: row.last_active_in_game_date ?? 0
   }
 }
 
@@ -188,6 +209,7 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     kind: input.kind,
     sourceNpcId: values.sourceNpcId,
     portraitPath: values.portraitPath,
+    portraitPrompt: input.portraitPrompt ?? null,
     sheetBackgroundPath: values.sheetBackgroundPath,
     identityWho: null,
     identityWhy: null,
@@ -204,7 +226,10 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null,
     raceKey: input.raceKey ?? null,
     backgroundKey: input.backgroundKey ?? null,
-    backgroundStory: input.backgroundStory ?? null
+    backgroundStory: input.backgroundStory ?? null,
+    backgroundCustomLabel: input.backgroundCustomLabel ?? null,
+    // EPIC-133 — new characters start synced at day 0 until first play touch
+    lastActiveInGameDate: 0
   }
 }
 
@@ -226,9 +251,9 @@ function insertCharacterRow(
 ): void {
   db.prepare(
     `INSERT INTO characters
-       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment, owner_player_character_id, race_key, background_key, background_story)
+       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment, owner_player_character_id, race_key, background_key, background_story, background_custom_label)
      VALUES
-       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment, @ownerPlayerCharacterId, @raceKey, @backgroundKey, @backgroundStory)`
+       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment, @ownerPlayerCharacterId, @raceKey, @backgroundKey, @backgroundStory, @backgroundCustomLabel)`
   ).run({
     id,
     campaignId: input.campaignId,
@@ -249,7 +274,8 @@ function insertCharacterRow(
     ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null,
     raceKey: input.raceKey ?? null,
     backgroundKey: input.backgroundKey ?? null,
-    backgroundStory: input.backgroundStory ?? null
+    backgroundStory: input.backgroundStory ?? null,
+    backgroundCustomLabel: input.backgroundCustomLabel ?? null
   })
 }
 
@@ -268,8 +294,18 @@ export function createCharacter(db: Database.Database, input: CreateCharacterInp
   }
 
   insertCharacterRow(db, id, input, values)
-
+  applyPortraitPromptAfterCreate(db, id, input.portraitPrompt)
   return buildCharacterRecord(id, input, values)
+}
+
+function applyPortraitPromptAfterCreate(
+  db: Database.Database,
+  id: string,
+  portraitPrompt: string | null | undefined
+): void {
+  if (portraitPrompt != null) {
+    updateCharacterPortraitPrompt(db, id, portraitPrompt)
+  }
 }
 
 export function getCharacterById(db: Database.Database, id: string): Character | undefined {
@@ -388,6 +424,65 @@ export function transferPartyMemberOwnership(
   )
 }
 
+/** Persist portrait path (generated or uploaded). */
+export function updateCharacterPortraitPath(
+  db: Database.Database,
+  characterId: string,
+  path: string | null
+): void {
+  db.prepare('UPDATE characters SET portrait_path = ? WHERE id = ?').run(path, characterId)
+}
+
+/** Store or clear the last generated appearance prompt (epic 144). */
+function updateCharacterPortraitPrompt(
+  db: Database.Database,
+  characterId: string,
+  prompt: string | null
+): void {
+  db.prepare('UPDATE characters SET portrait_prompt = ? WHERE id = ?').run(prompt, characterId)
+}
+
+/**
+ * Bind a generated icon path and keep the appearance prompt for regenerate prefills.
+ * Call only after successful generation — never on failure.
+ */
+export function persistGeneratedCharacterPortrait(
+  db: Database.Database,
+  characterId: string,
+  path: string,
+  appearancePrompt: string
+): void {
+  db.prepare(
+    'UPDATE characters SET portrait_path = ?, portrait_prompt = ? WHERE id = ?'
+  ).run(path, appearancePrompt, characterId)
+}
+
+/**
+ * Replace portrait with a clean upload and clear generated-prompt provenance.
+ */
+export function replaceCharacterPortraitWithUpload(
+  db: Database.Database,
+  characterId: string,
+  path: string
+): void {
+  db.prepare(
+    'UPDATE characters SET portrait_path = ?, portrait_prompt = NULL WHERE id = ?'
+  ).run(path, characterId)
+}
+
 export function listPlayerCharacters(db: Database.Database, campaignId: string): Character[] {
   return listCharactersByCampaign(db, campaignId).filter((character) => character.kind === 'player')
+}
+
+/** EPIC-133 — set per-PC last-active watermark to world day (monotonic). */
+export function touchCharacterLastActiveInGameDate(
+  db: Database.Database,
+  characterId: string,
+  worldDay: number
+): void {
+  db.prepare(
+    `UPDATE characters
+     SET last_active_in_game_date = MAX(COALESCE(last_active_in_game_date, 0), ?)
+     WHERE id = ?`
+  ).run(worldDay, characterId)
 }

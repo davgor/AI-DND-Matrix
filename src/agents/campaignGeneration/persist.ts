@@ -2,8 +2,19 @@ import type Database from 'better-sqlite3'
 import { resolveOrRealizeCampaignRace } from '../raceLore'
 import { generateNpcSpeakingStyle } from '../npcSpeakingStyle'
 import { generateOrGetBestiarySpecies } from '../bestiary/generateSpecies'
-import { createCampaign, type Campaign } from '../../db/repositories/campaigns'
-import { createDeity } from '../../db/repositories/deities'
+import {
+  createCampaign,
+  updateCampaignFactionPressure,
+  updateCampaignFactionsSummary,
+  type Campaign
+} from '../../db/repositories/campaigns'
+import { createDeity, listDeitiesByCampaign } from '../../db/repositories/deities'
+import {
+  createFaction,
+  createFactionRelation,
+  getFactionByKey,
+  type CreateFactionInput
+} from '../../db/repositories/factions'
 import { createNpcWithCombatReview } from '../../db/repositories/npcCombatHydration'
 import { createRegion } from '../../db/repositories/regions'
 import { createRegionHistoryEntry } from '../../db/repositories/regionHistory'
@@ -18,6 +29,8 @@ import type {
   CampaignGenerationResult,
   CampaignSetupInput,
   GeneratedBestiaryRoster,
+  GeneratedFaction,
+  GeneratedFactions,
   GeneratedNpc,
   GeneratedPantheon,
   GeneratedRegion,
@@ -138,7 +151,27 @@ function buildGeneratedNpcAppearanceFields(enriched: GeneratedNpc) {
   }
 }
 
+function resolveNpcFactionMembership(
+  db: Database.Database,
+  campaignId: string,
+  npc: GeneratedNpc
+): { factionId: string | null; factionMembershipRole: string | null } {
+  const key = npc.factionKey?.trim()
+  if (!key) {
+    return { factionId: null, factionMembershipRole: null }
+  }
+  const faction = getFactionByKey(db, campaignId, key)
+  if (!faction) {
+    return { factionId: null, factionMembershipRole: null }
+  }
+  return {
+    factionId: faction.id,
+    factionMembershipRole: npc.membershipRole?.trim() || null
+  }
+}
+
 function buildCreateNpcInputFromGenerated(
+  db: Database.Database,
   campaignId: string,
   regionId: string,
   enriched: GeneratedNpc
@@ -159,7 +192,8 @@ function buildCreateNpcInputFromGenerated(
     classKey: enriched.classKey ?? null,
     speakingStyleSpecimen: enriched.speakingStyleSpecimen ?? null,
     speakingStyleExamples: enriched.speakingStyleExamples ?? null,
-    ...buildGeneratedNpcAppearanceFields(enriched)
+    ...buildGeneratedNpcAppearanceFields(enriched),
+    ...resolveNpcFactionMembership(db, campaignId, enriched)
   }
 }
 
@@ -170,7 +204,7 @@ async function persistGeneratedNpc(input: PersistGeneratedNpcInput): Promise<voi
   await createNpcWithCombatReview(
     db,
     provider,
-    buildCreateNpcInputFromGenerated(campaignId, regionId, enriched)
+    buildCreateNpcInputFromGenerated(db, campaignId, regionId, enriched)
   )
 }
 
@@ -300,6 +334,92 @@ function persistGeneratedPantheon(
   }
 }
 
+function resolveDeityIdByName(
+  deities: Array<{ id: string; name: string }>,
+  deityName: string | undefined
+): string | null {
+  if (!deityName?.trim()) {
+    return null
+  }
+  const needle = deityName.trim().toLowerCase()
+  const match = deities.find((deity) => deity.name.trim().toLowerCase() === needle)
+  return match?.id ?? null
+}
+
+function buildCreateFactionInput(
+  campaignId: string,
+  faction: GeneratedFaction,
+  index: number,
+  deityId: string | null
+): CreateFactionInput {
+  return {
+    campaignId,
+    key: faction.key,
+    name: faction.name,
+    kind: faction.kind,
+    summary: faction.summary,
+    motivation: faction.motivation ?? null,
+    publicFace: faction.publicFace ?? null,
+    methods: faction.methods ?? null,
+    deityId,
+    homeRegionId: null,
+    sortOrder: faction.sortOrder ?? index,
+    source: 'campaign_create'
+  }
+}
+
+function persistFactionRoster(
+  db: Database.Database,
+  campaignId: string,
+  factions: GeneratedFaction[],
+  deities: Array<{ id: string; name: string }>
+): Map<string, string> {
+  const idsByKey = new Map<string, string>()
+  for (const [index, faction] of factions.entries()) {
+    const deityId = resolveDeityIdByName(deities, faction.deityName)
+    const created = createFaction(
+      db,
+      buildCreateFactionInput(campaignId, faction, index, deityId)
+    )
+    idsByKey.set(faction.key, created.id)
+  }
+  return idsByKey
+}
+
+function persistFactionRelations(
+  db: Database.Database,
+  campaignId: string,
+  factions: GeneratedFactions,
+  idsByKey: Map<string, string>
+): void {
+  for (const relation of factions.relations) {
+    const factionAId = idsByKey.get(relation.factionAKey)
+    const factionBId = idsByKey.get(relation.factionBKey)
+    if (!factionAId || !factionBId) {
+      continue
+    }
+    createFactionRelation(db, {
+      campaignId,
+      factionAId,
+      factionBId,
+      stance: relation.stance,
+      summary: relation.summary ?? null
+    })
+  }
+}
+
+function persistGeneratedFactions(
+  db: Database.Database,
+  campaignId: string,
+  factions: GeneratedFactions
+): void {
+  updateCampaignFactionsSummary(db, campaignId, factions.factionsSummary)
+  updateCampaignFactionPressure(db, campaignId, factions.factionPressure)
+  const deities = listDeitiesByCampaign(db, campaignId)
+  const idsByKey = persistFactionRoster(db, campaignId, factions.factions, deities)
+  persistFactionRelations(db, campaignId, factions, idsByKey)
+}
+
 async function persistGeneratedBestiary(args: {
   db: Database.Database
   provider: Provider
@@ -361,10 +481,13 @@ export async function persistGeneratedCampaign(args: {
     worldSummary: generation.world.worldSummary,
     worldHistory: generation.world.worldHistory,
     pantheonSummary: generation.pantheon.pantheonSummary,
-    npcFaceTokenGenerationEnabled: input.npcFaceTokenGenerationEnabled === true
+    generativeTokensEnabled: input.generativeTokensEnabled === true,
+    npcFaceTokenGenerationEnabled: input.npcFaceTokenGenerationEnabled === true,
+    enemyTokenGenerationEnabled: input.enemyTokenGenerationEnabled === true
   })
 
   persistGeneratedPantheon(db, campaign.id, generation.pantheon)
+  persistGeneratedFactions(db, campaign.id, generation.factions)
   const regionIdsByName = persistGeneratedRegionsWithQuests(db, campaign.id, generation.regions)
   await persistCampaignNpcsFromGeneration({
     db,

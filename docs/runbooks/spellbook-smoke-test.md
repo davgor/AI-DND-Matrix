@@ -26,5 +26,9 @@ Manual verification for epic **046** after automated `src/db/spellbookSmoke.test
 ## Automated
 
 ```bash
-npx vitest run src/db/spellbookSmoke.test.ts src/engine/knownSpells.test.ts src/main/spellbookIpc.test.ts
+npx vitest run src/db/spellbookSmoke.test.ts src/engine/knownSpells.test.ts src/main/spellbookIpc.test.ts src/agents/dmSpellbook.test.ts
 ```
+
+## Epic 126 grant feedback
+
+When the DM grants a spell mid-play, a **Spell learned** status banner should appear and the spellbook list should include the new key after the turn (no campaign restart).

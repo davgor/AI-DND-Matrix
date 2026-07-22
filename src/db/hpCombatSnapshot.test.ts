@@ -53,6 +53,31 @@ describe('combat snapshot max HP for party', () => {
   })
 })
 
+describe('combat snapshot conditions on HUD', () => {
+  it('surfaces player stats.conditions on the combat HUD snapshot', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Cond', premisePrompt: 'c', deathMode: 'legendary' })
+    createRegion(db, { campaignId: campaign.id, name: 'R', description: 'R' })
+    const player = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Hero',
+      characterClass: 'fighter',
+      kind: 'player',
+      hp: 12,
+      stats: { maxHp: 12, hitDieRolls: [8], conditions: ['poisoned', 'prone'] }
+    })
+    const encounter = createActiveEncounter(db, {
+      campaignId: campaign.id,
+      participantIds: [{ kind: 'player', id: player.id }],
+      initiativeOrder: [{ combatant: { kind: 'player', id: player.id }, roll: 12 }]
+    })
+
+    const snapshot = buildCombatStateSnapshot(db, encounter, player.id)
+    const hero = snapshot.combatants.find((c) => c.ref.id === player.id)
+    expect(hero?.conditions).toEqual(['poisoned', 'prone'])
+  })
+})
+
 describe('combat snapshot max HP for catalog monsters', () => {
   it('shows catalog monster maxHp greater than 1', () => {
     const db = createTestDb()

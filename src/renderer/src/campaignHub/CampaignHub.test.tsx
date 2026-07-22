@@ -72,6 +72,9 @@ describe('CampaignHub layout shell', () => {
     const headerChildren = normalizeChildren(header.props.children)
     expect((headerChildren[0] as JSX.Element).props.children).toBe('Iron Marches')
     expect((headerChildren[1] as JSX.Element).props.className).toBe('campaign-hub-premise')
-    expect((headerChildren[2] as JSX.Element).props.children).toEqual(['Last played: ', 'Jun 1, 2026'])
+    // EPIC-133 — world day sits between premise and wall-clock last played
+    expect((headerChildren[2] as JSX.Element).props.className).toBe('campaign-hub-world-day')
+    expect((headerChildren[2] as JSX.Element).props.children).toBe('World day 12')
+    expect((headerChildren[3] as JSX.Element).props.children).toEqual(['Last played: ', 'Jun 1, 2026'])
   })
 })

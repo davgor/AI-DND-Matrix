@@ -32,7 +32,7 @@ describe('buildCreateProgress', () => {
     const progress = buildCreateProgress('story')
     expect(progress).toEqual({
       stage: 'story',
-      stageIndex: 6,
+      stageIndex: 7,
       stageTotal: CREATE_CAMPAIGN_STAGE_TOTAL,
       statusText: CREATE_STAGE_GOOFY_MESSAGES.story[0]
     })
@@ -44,6 +44,7 @@ describe('mapCreateStageToPlayerMessage', () => {
     expect(mapCreateStageToPlayerMessage('canon')).toBe('Recalling known places and people')
     expect(mapCreateStageToPlayerMessage('pantheon')).toBe('Assembling the pantheon')
     expect(mapCreateStageToPlayerMessage('world')).toBe('Imagining your world')
+    expect(mapCreateStageToPlayerMessage('factions')).toBe('Sketching power blocs')
     expect(mapCreateStageToPlayerMessage('regions')).toBe('Shaping regions')
     expect(mapCreateStageToPlayerMessage('npcs')).toBe('Populating your world')
     expect(mapCreateStageToPlayerMessage('bestiary')).toBe('Stocking the bestiary')
@@ -58,6 +59,7 @@ describe('mapCreateStageTraceLabel', () => {
     expect(mapCreateStageTraceLabel('canon')).toBe('Canon')
     expect(mapCreateStageTraceLabel('pantheon')).toBe('Pantheon')
     expect(mapCreateStageTraceLabel('world')).toBe('World')
+    expect(mapCreateStageTraceLabel('factions')).toBe('Factions')
     expect(mapCreateStageTraceLabel('regions')).toBe('Regions')
     expect(mapCreateStageTraceLabel('npcs')).toBe('NPCs')
     expect(mapCreateStageTraceLabel('bestiary')).toBe('Bestiary')

@@ -9,12 +9,17 @@ import { createLogEntry } from '../db/repositories/logEntries'
 import {
   bumpNpcPlayerInteractionAt,
   createNpc,
+  getNpcById,
   updateNpcFaceTokenPath,
   updateNpcOpinionSummary
 } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
+import { createBestiarySpecies } from '../db/repositories/bestiary'
 import { persistNpcFaceTokenAsset } from './npcFaceTokenAsset'
-import { getNpcDossier } from './npcDossier'
+import { persistCreatureTokenAsset } from './creatureTokenAsset'
+import { getNpcDossier, getNpcSubjectOpinion } from './npcDossier'
+import { bumpNpcOpinionSubjectInteraction, getNpcOpinion } from '../db/repositories/npcOpinions'
+import { playerOpinionSubject } from '../shared/npcRelationships/types'
 
 function seedDossierFixture(db: ReturnType<typeof createTestDb>) {
   const campaign = createCampaign(db, {
@@ -130,7 +135,7 @@ describe('getNpcDossier: access control', () => {
   })
 })
 
-describe('getNpcDossier: appearance traits', () => {
+describe('getNpcDossier: NPC appearance traits', () => {
   it('includes hair, age, and eye color on traits when set', async () => {
     const db = createTestDb()
     const { campaign, hero, npc } = seedDossierFixture(db)
@@ -169,6 +174,52 @@ describe('getNpcDossier: appearance traits', () => {
     expect(dossier?.traits.hairColor).toBeNull()
     expect(dossier?.traits.age).toBeNull()
     expect(dossier?.traits.eyeColor).toBeNull()
+    expect(dossier?.traits.silhouette).toBeNull()
+    expect(dossier?.traits.primaryColors).toEqual([])
+  })
+})
+
+describe('getNpcDossier: species appearance traits', () => {
+  it('surfaces bestiary species appearance when NPC links to a species', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    const species = createBestiarySpecies(db, {
+      campaignId: campaign.id,
+      key: 'rift-beast',
+      name: 'Rift-beast',
+      baseLore: 'Planar predators.',
+      visualAppearance: {
+        silhouette: 'quadruped wolf-like',
+        sizeClass: 'large',
+        primaryColors: ['violet'],
+        distinguishingMarks: 'rift scars',
+        textureOrMaterial: 'crackling fur'
+      },
+      buckets: ['beast'],
+      tags: ['rift']
+    })
+    const foe = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: npc.regionId,
+      name: 'Scarred Rift-beast',
+      role: 'hostile',
+      disposition: 'hostile',
+      canSpeak: false,
+      bestiarySpeciesId: species.id,
+      bestiaryVariantKey: 'standard'
+    })
+
+    const dossier = await getNpcDossier(db, {
+      campaignId: campaign.id,
+      characterId: hero.id,
+      npcId: foe.id
+    })
+
+    expect(dossier?.traits.silhouette).toBe('quadruped wolf-like')
+    expect(dossier?.traits.sizeClass).toBe('large')
+    expect(dossier?.traits.primaryColors).toEqual(['violet'])
+    expect(dossier?.traits.distinguishingMarks).toBe('rift scars')
+    expect(dossier?.traits.textureOrMaterial).toBe('crackling fur')
   })
 })
 
@@ -287,6 +338,123 @@ describe('getNpcDossier: face token path', () => {
   })
 })
 
+const DOSSIER_PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+function seedGrayWolfSpecies(db: ReturnType<typeof createTestDb>, campaignId: string) {
+  return createBestiarySpecies(db, {
+    campaignId,
+    key: 'gray-wolf',
+    name: 'Gray Wolf',
+    baseLore: 'Pack hunters.',
+    buckets: ['beast'],
+    tags: ['wolf']
+  })
+}
+
+function createGrayWolfFoe(
+  db: ReturnType<typeof createTestDb>,
+  fixture: ReturnType<typeof seedDossierFixture>,
+  speciesId: string
+) {
+  return createNpc(db, {
+    campaignId: fixture.campaign.id,
+    regionId: fixture.npc.regionId,
+    name: 'Gray Wolf',
+    role: 'enemy',
+    disposition: 'hostile',
+    canSpeak: false,
+    bestiarySpeciesId: speciesId,
+    bestiaryVariantKey: 'standard'
+  })
+}
+
+describe('getNpcDossier: species creature token path', () => {
+  it('exposes resolved species creature token for non-speaking enemy instances', async () => {
+    const db = createTestDb()
+    const fixture = seedDossierFixture(db)
+    const species = seedGrayWolfSpecies(db, fixture.campaign.id)
+    const foe = createGrayWolfFoe(db, fixture, species.id)
+    const baseDir = mkdtempSync(join(tmpdir(), 'dossier-creature-token-'))
+    try {
+      const path = persistCreatureTokenAsset(db, {
+        speciesId: species.id,
+        campaignId: fixture.campaign.id,
+        bytesBase64: DOSSIER_PNG_BASE64,
+        mimeType: 'image/png',
+        baseDir
+      })
+
+      const dossier = await getNpcDossier(db, {
+        campaignId: fixture.campaign.id,
+        characterId: fixture.hero.id,
+        npcId: foe.id
+      })
+
+      expect(dossier?.faceTokenPath).toBe(path)
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('getNpcDossier: species creature token precedence', () => {
+  it('prefers NPC face token over species creature token for speaking NPCs', async () => {
+    const db = createTestDb()
+    const fixture = seedDossierFixture(db)
+    const species = seedGrayWolfSpecies(db, fixture.campaign.id)
+    db.prepare('UPDATE npcs SET bestiary_species_id = ? WHERE id = ?').run(species.id, fixture.npc.id)
+    const baseDir = mkdtempSync(join(tmpdir(), 'dossier-token-precedence-'))
+    try {
+      persistCreatureTokenAsset(db, {
+        speciesId: species.id,
+        campaignId: fixture.campaign.id,
+        bytesBase64: DOSSIER_PNG_BASE64,
+        mimeType: 'image/png',
+        baseDir
+      })
+      const facePath = persistNpcFaceTokenAsset(db, {
+        npcId: fixture.npc.id,
+        campaignId: fixture.campaign.id,
+        bytesBase64: DOSSIER_PNG_BASE64,
+        mimeType: 'image/png',
+        baseDir
+      })
+
+      const dossier = await getNpcDossier(db, {
+        campaignId: fixture.campaign.id,
+        characterId: fixture.hero.id,
+        npcId: fixture.npc.id
+      })
+
+      expect(dossier?.faceTokenPath).toBe(facePath)
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('getNpcDossier: missing species creature token', () => {
+  it('returns null when species creature token path points to a missing file', async () => {
+    const db = createTestDb()
+    const fixture = seedDossierFixture(db)
+    const species = seedGrayWolfSpecies(db, fixture.campaign.id)
+    db.prepare('UPDATE bestiary_species SET creature_token_path = ? WHERE id = ?').run(
+      '/tmp/missing-creature-token.png',
+      species.id
+    )
+    const foe = createGrayWolfFoe(db, fixture, species.id)
+
+    const dossier = await getNpcDossier(db, {
+      campaignId: fixture.campaign.id,
+      characterId: fixture.hero.id,
+      npcId: foe.id
+    })
+
+    expect(dossier?.faceTokenPath).toBeNull()
+  })
+})
+
 describe('getNpcDossier: opinion regeneration', () => {
   it('regenerates and persists opinion when interaction watermark is stale', async () => {
     const db = createTestDb()
@@ -328,5 +496,98 @@ describe('getNpcDossier: opinion regeneration', () => {
 
     expect(dossier?.opinion.summary).toBe('Previous summary.')
     expect(dossier?.opinion.stale).toBe(true)
+  })
+})
+
+describe('getNpcSubjectOpinion: other PC freshness', () => {
+  it('generates once for another PC, skips when fresh, regenerates when stale', async () => {
+    const db = createTestDb()
+    const { campaign, hero, otherHero, npc } = seedDossierFixture(db)
+    const subject = { subjectType: 'player_character' as const, subjectId: otherHero.id }
+    const generateOpinion = vi.fn(async () => ({
+      summary: 'Wary of the ally.',
+      stance: 'wary' as const
+    }))
+
+    const first = await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      { generateOpinion }
+    )
+    expect(generateOpinion).toHaveBeenCalledTimes(1)
+    expect(first?.summary).toBe('Wary of the ally.')
+    expect(first?.stale).toBe(false)
+
+    const second = await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      { generateOpinion }
+    )
+    expect(generateOpinion).toHaveBeenCalledTimes(1)
+    expect(second?.summary).toBe('Wary of the ally.')
+
+    bumpNpcOpinionSubjectInteraction(
+      db,
+      npc.id,
+      subject,
+      new Date(Date.now() + 60_000).toISOString()
+    )
+    const third = await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      { generateOpinion: async () => ({ summary: 'Updated ally view.', stance: 'hostile' }) }
+    )
+    expect(third?.summary).toBe('Updated ally view.')
+  })
+})
+
+describe('getNpcSubjectOpinion: NPC subject', () => {
+  it('generates NPC-subject opinions without leaking other holders', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    const captain = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: npc.regionId,
+      name: 'Captain',
+      role: 'guard',
+      disposition: 'stern'
+    })
+    const subject = { subjectType: 'npc' as const, subjectId: captain.id }
+
+    await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      {
+        generateOpinion: async (ctx) => {
+          expect(ctx.subject.subjectId).toBe(captain.id)
+          expect(ctx.npc.id).toBe(npc.id)
+          return { summary: 'Resents the captain.', stance: 'hostile' }
+        }
+      }
+    )
+
+    const stored = getNpcOpinion(db, npc.id, subject)
+    expect(stored?.summary).toBe('Resents the captain.')
+    expect(getNpcOpinion(db, npc.id, playerOpinionSubject(hero.id))).toBeUndefined()
+  })
+})
+
+describe('getNpcSubjectOpinion: reopen persistence', () => {
+  it('persists player opinion across reopen (restart-shaped)', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    await getNpcDossier(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id },
+      { generateOpinion: async () => 'Remembers your kindness.' }
+    )
+
+    const reopened = await getNpcDossier(db, {
+      campaignId: campaign.id,
+      characterId: hero.id,
+      npcId: npc.id
+    })
+    expect(reopened?.opinion.summary).toBe('Remembers your kindness.')
+    expect(getNpcById(db, npc.id)?.opinionSummary).toBe('Remembers your kindness.')
   })
 })

@@ -39,6 +39,21 @@
   font-family: inherit;
 }
 
+.background-selection-custom-label-row {
+  margin-bottom: 1rem;
+}
+
+.background-selection-custom-label {
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
 .background-selection-description,
 .background-selection-story,
 .background-selection-modal-prompt {

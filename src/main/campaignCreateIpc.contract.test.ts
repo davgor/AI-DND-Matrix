@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { listBestiarySpecies } from '../db/repositories/bestiary'
+import {
+  listFactionRelationsByCampaign,
+  listFactionsByCampaign
+} from '../db/repositories/factions'
+import { FACTION_PRESSURE_BANDS, parseFactionPressure } from '../shared/factions'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import {
@@ -46,6 +51,18 @@ describe('createCampaignFromRequest contract — default setup form', () => {
     expect(result.detail.deities.length).toBeGreaterThanOrEqual(8)
     expect(result.detail.deities.length).toBeLessThanOrEqual(12)
     expect(result.detail.deities.filter((deity) => deity.isForgotten).length).toBeGreaterThanOrEqual(2)
+    const pressure = parseFactionPressure(result.detail.campaign?.factionPressure)
+    expect(pressure).toBeDefined()
+    const band = FACTION_PRESSURE_BANDS[pressure!]
+    const factions = listFactionsByCampaign(db, result.detail.campaign!.id)
+    expect(factions.length).toBeGreaterThanOrEqual(band.minFactions)
+    expect(factions.length).toBeLessThanOrEqual(band.maxFactions)
+    expect(result.detail.campaign?.factionsSummary?.trim().length).toBeGreaterThan(0)
+    expect(factions.some((faction) => faction.kind === 'religious')).toBe(true)
+    expect(factions.some((faction) => faction.deityId !== null)).toBe(true)
+    const relations = listFactionRelationsByCampaign(db, result.detail.campaign!.id)
+    expect(relations.length).toBeGreaterThanOrEqual(band.minRelations)
+    expect(relations.length).toBeLessThanOrEqual(band.maxRelations)
     expect(result.detail.regions).toHaveLength(2)
     expect(result.detail.npcs).toHaveLength(6)
     expect(result.detail.storyThreads[0]?.title).toBe('The Missing Envoy')

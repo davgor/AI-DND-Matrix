@@ -15,6 +15,7 @@ describe('LLM purpose taxonomy: ids', () => {
     expect([...LLM_PURPOSE_IDS]).toEqual([
       'campaign.pantheon',
       'campaign.world',
+      'campaign.faction',
       'campaign.region',
       'campaign.npc',
       'campaign.story',

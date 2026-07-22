@@ -24,6 +24,12 @@ import type {
   CompositionSlot,
   SpawnOutcome
 } from '../shared/bestiary/types'
+import {
+  createCreatureTokenSchedulerDeps,
+  maybeEnqueueCreatureTokenAfterSpawn,
+  maybeEnqueueCreatureTokenAfterSpeciesCreate,
+  type CreatureTokenSchedulerDeps
+} from './creatureTokenScheduler'
 
 const PROVISIONAL_HOSTILE_FALLBACK_NAME = 'Hostile creature'
 
@@ -130,8 +136,10 @@ function spawnInstanceNpc(input: {
   species: BestiarySpecies
   variants: BestiaryVariant[]
   variantKey: BestiaryVariantKey
+  creatureTokenSchedulerDeps?: CreatureTokenSchedulerDeps
 }): string {
-  const { db, campaignId, regionId, species, variants, variantKey } = input
+  const { db, campaignId, regionId, species, variants, variantKey, creatureTokenSchedulerDeps } =
+    input
   const catalogKey = resolveCatalogKey(species, variants, variantKey)
   const npc = createNpc(db, {
     campaignId,
@@ -147,6 +155,10 @@ function spawnInstanceNpc(input: {
     skipCombatHydration: true
   })
   hydrateSpawnedNpc(db, npc.id, catalogKey)
+  maybeEnqueueCreatureTokenAfterSpawn(
+    creatureTokenSchedulerDeps ?? createCreatureTokenSchedulerDeps(db),
+    { campaignId, speciesId: species.id }
+  )
   return npc.id
 }
 
@@ -156,6 +168,7 @@ function materializeComposition(input: {
   regionId: string
   species: BestiarySpecies
   slots: CompositionSlot[]
+  creatureTokenSchedulerDeps?: CreatureTokenSchedulerDeps
 }): string[] {
   const variants = listBestiaryVariants(input.db, input.species.id)
   const ids: string[] = []
@@ -168,7 +181,8 @@ function materializeComposition(input: {
           regionId: input.regionId,
           species: input.species,
           variants,
-          variantKey: slot.variantKey
+          variantKey: slot.variantKey,
+          creatureTokenSchedulerDeps: input.creatureTokenSchedulerDeps
         })
       )
     }
@@ -204,6 +218,7 @@ interface QuestPrepSpawnInput {
   playerCharacterId: string
   playerLevel: number
   partySize: number
+  creatureTokenSchedulerDeps?: CreatureTokenSchedulerDeps
 }
 
 /**
@@ -249,7 +264,8 @@ function materializeQuestAssignments(
         campaignId: input.campaignId,
         regionId: input.regionId,
         species,
-        slots
+        slots,
+        creatureTokenSchedulerDeps: input.creatureTokenSchedulerDeps
       })
     )
   }
@@ -283,6 +299,7 @@ async function resolveSpeciesForOnDemand(input: {
   campaignId: string
   hintName: string
   playerLevel: number
+  creatureTokenSchedulerDeps?: CreatureTokenSchedulerDeps
 }): Promise<BestiarySpecies | undefined> {
   const existing = findMatchingBestiarySpecies(input.db, input.campaignId, input.hintName)
   if (existing) return existing
@@ -294,6 +311,12 @@ async function resolveSpeciesForOnDemand(input: {
     tags: inferTags(input.hintName),
     levelHint: input.playerLevel
   })
+  if (result.created) {
+    maybeEnqueueCreatureTokenAfterSpeciesCreate(
+      input.creatureTokenSchedulerDeps ?? createCreatureTokenSchedulerDeps(input.db),
+      { campaignId: input.campaignId, speciesId: result.species.id }
+    )
+  }
   return result.species
 }
 
@@ -306,6 +329,7 @@ export interface OnDemandSpawnInput {
   partySize: number
   playerInput?: string
   regionText?: string
+  creatureTokenSchedulerDeps?: CreatureTokenSchedulerDeps
 }
 
 /**
@@ -322,7 +346,8 @@ export async function spawnOnDemandEncounterHostiles(
       provider: input.provider,
       campaignId: input.campaignId,
       hintName,
-      playerLevel: input.playerLevel
+      playerLevel: input.playerLevel,
+      creatureTokenSchedulerDeps: input.creatureTokenSchedulerDeps
     })
     if (!species) {
       return spawnProvisionalHostile(input)
@@ -342,7 +367,8 @@ export async function spawnOnDemandEncounterHostiles(
       campaignId: input.campaignId,
       regionId: input.regionId,
       species,
-      slots: plan.slots
+      slots: plan.slots,
+      creatureTokenSchedulerDeps: input.creatureTokenSchedulerDeps
     })
     if (ids.length === 0) {
       return spawnProvisionalHostile(input)

@@ -6,7 +6,7 @@ Touches any of these paths? **Run this checklist.**
 
 | Layer | Key files |
 |-------|-----------|
-| Staged generation | `src/agents/campaignGeneration/index.ts`, `prompts.ts`, `normalize.ts`, `persist.ts`, `fixtures.ts` |
+| Staged generation | `src/agents/campaignGeneration/index.ts`, `prompts.ts`, `normalize.ts`, `persist.ts`, `src/test/fixtures/campaignGenerationFixtures.ts` |
 | Create IPC | `src/main/campaignCreateIpc.ts` |
 | Progress / stages | `src/shared/campaignCreate/types.ts`, `stageMessages.ts` |
 | Legacy generate | `src/main/campaignIpc.ts` (`generateCampaignFromPrompt`) |
@@ -26,8 +26,8 @@ npx vitest run src/main/campaignCreateIpc.contract.test.ts
 
 **When you change validation or prompts, also:**
 
-1. Update or add a fixture in `src/agents/campaignGeneration/fixtures.ts` that mirrors **real** model drift:
-   - snake_case keys (`world_name`, `region_name`, `story_thread`)
+1. Update or add a fixture in `src/test/fixtures/campaignGenerationFixtures.ts` that mirrors **real** model drift:
+   - snake_case keys (`world_name`, `region_name`, `story_thread`, `faction_pressure`)
    - single-newline world paragraphs (not only `\n\n`)
    - human-readable enums (`Neutral Good`, `friendly`, `Human`, `Merchant`)
    - markdown JSON fences around world payload
@@ -43,11 +43,12 @@ Existing fixtures to reuse:
 
 ## 2. Pipeline invariants (do not break silently)
 
-Initial create runs **world → regions → per-slot NPCs → bestiary → story → persist**. Keep these behaviors unless the ticket explicitly changes them:
+Initial create runs **canon → pantheon → world → factions → regions → per-slot NPCs → bestiary → story → persist**. Keep these behaviors unless the ticket explicitly changes them:
 
 | Stage | Failure mode if wrong |
 |-------|------------------------|
 | World | Short prose rejected or padded — see `normalizeGeneratedWorld` / `padWorldProse` |
+| Factions | Pressure bands (light 2–4 / medium 3–7 / heavy 6–10); religious required for medium/heavy when deities exist — see `normalizeGeneratedFactions` |
 | Regions | Exact `regionCount`; names must match NPC `regionName` after normalize |
 | NPCs | Each slot retries on duplicate names; shortfall top-up runs **before** final validation (`repairNpcShortfall`) |
 | Bestiary | Prepped roster (`MIN_PREPPED_BESTIARY_SPECIES = 3`); see `bestiaryStage.ts` / `docs/runbooks/bestiary-efficiency.md` |
@@ -89,7 +90,7 @@ Vitest uses system Node and scripted JSON. **One real create** catches ABI, prov
 3. Create a campaign with **default counts** (2 regions, 3 NPCs) and a premise similar to recent failures, e.g.:
    - *"After a failed harvest, survivors gather in a mountain pass and face bandits who now wear the faces of the dead."*
 4. Confirm:
-   - Progress labels mention world → regions → NPCs → **bestiary** → story → save (no generic hang)
+   - Progress labels mention world → **factions** → regions → NPCs → **bestiary** → story → save (no generic hang)
    - **No** "The narrative engine returned an invalid campaign"
    - Campaign Review shows World section + regions + NPCs
 5. If it fails, check main-process logs for `CampaignGenerationSchemaError` or persist region/race errors before loosening validation blindly.

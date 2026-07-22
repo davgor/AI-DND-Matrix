@@ -23,7 +23,7 @@ describe('alignment smoke: setup and shift flow', () => {
     setCharacterAlignment(db, player.id, 'lawful_good')
 
     await resolvePlayerTurn(
-      db,
+      db, 
       createScriptedProvider([
         JSON.stringify({
           intent: { checkNeeded: false },
@@ -36,10 +36,8 @@ describe('alignment smoke: setup and shift flow', () => {
             warningText: 'Looting this shrine may mean you are no longer Lawful Good if you continue.'
           }
         })
-      ]),
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I loot the shrine' },
-      () => 10
-    )
+      ]), 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I loot the shrine' }, { rng: () => 10 })
 
     const afterWarn = db
       .prepare('SELECT pending_alignment_shift FROM characters WHERE id = ?')
@@ -47,7 +45,7 @@ describe('alignment smoke: setup and shift flow', () => {
     expect(afterWarn.pending_alignment_shift).toContain('neutral_evil')
 
     const result = await resolvePlayerTurn(
-      db,
+      db, 
       createScriptedProvider([
         JSON.stringify({
           intent: { checkNeeded: false },
@@ -57,10 +55,8 @@ describe('alignment smoke: setup and shift flow', () => {
           narrationText: 'You take the relic.',
           commitAlignmentShift: { newAlignment: 'neutral_evil' }
         })
-      ]),
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I take everything' },
-      () => 10
-    )
+      ]), 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I take everything' }, { rng: () => 10 })
 
     expect(result.pendingAlignmentShift).toBeNull()
     expect(result.alignmentShiftCommitted).toBe('neutral_evil')
@@ -82,7 +78,7 @@ describe('alignment smoke: non-speaking creatures', async () => {
     expect(reaction.reactionKind).toBe('action')
 
     await resolvePlayerTurn(
-      db,
+      db, 
       createScriptedProvider([
         JSON.stringify({
           intent: { checkNeeded: false },
@@ -93,10 +89,8 @@ describe('alignment smoke: non-speaking creatures', async () => {
         }),
         JSON.stringify({ narrationText: 'A wolf attacks.' }),
         JSON.stringify({ actionDescription: '**The wolf lunges.**' })
-      ]),
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'I approach' },
-      () => 1
-    )
+      ]), 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'I approach' }, { rng: () => 1 })
 
     appendEvent(db, {
       campaignId: campaign.id,

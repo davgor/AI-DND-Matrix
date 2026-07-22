@@ -56,6 +56,10 @@ export interface Npc {
   age: string | null
   eyeColor: string | null
   faceTokenPath: string | null
+  factionId: string | null
+  factionMembershipRole: string | null
+  deityId: string | null
+  isDivineManifestation: boolean
 }
 
 export interface CreateNpcInput {
@@ -82,6 +86,10 @@ export interface CreateNpcInput {
   hairColor?: string | null
   age?: string | null
   eyeColor?: string | null
+  factionId?: string | null
+  factionMembershipRole?: string | null
+  deityId?: string | null
+  isDivineManifestation?: boolean
 }
 
 interface NpcRow {
@@ -122,6 +130,10 @@ interface NpcRow {
   age: string | null
   eye_color: string | null
   face_token_path: string | null
+  faction_id: string | null
+  faction_membership_role: string | null
+  deity_id: string | null
+  is_divine_manifestation: number | null
 }
 
 function parseSpeakingStyleExamples(raw: string | null): string[] | null {
@@ -211,6 +223,17 @@ function appearanceFieldsFromRow(
   }
 }
 
+function factionFieldsFromRow(
+  row: NpcRow
+): Pick<Npc, 'factionId' | 'factionMembershipRole' | 'deityId' | 'isDivineManifestation'> {
+  return {
+    factionId: row.faction_id ?? null,
+    factionMembershipRole: row.faction_membership_role ?? null,
+    deityId: row.deity_id ?? null,
+    isDivineManifestation: row.is_divine_manifestation === 1
+  }
+}
+
 function rowToNpc(row: NpcRow): Npc {
   const combatTier = isNpcCombatTier(row.combat_tier) ? row.combat_tier : 'villager'
   const profile = row.retired_adventurer_profile as RetiredAdventurerProfile | null
@@ -241,7 +264,8 @@ function rowToNpc(row: NpcRow): Npc {
     ...speakingStyleFieldsFromRow(row),
     ...bestiaryLinkFieldsFromRow(row),
     ...opinionFieldsFromRow(row),
-    ...appearanceFieldsFromRow(row)
+    ...appearanceFieldsFromRow(row),
+    ...factionFieldsFromRow(row)
   }
 }
 
@@ -337,11 +361,21 @@ function resolveNpcAppearanceDefaults(input: CreateNpcInput) {
   }
 }
 
+function resolveNpcFactionDefaults(input: CreateNpcInput) {
+  return {
+    factionId: input.factionId ?? null,
+    factionMembershipRole: input.factionMembershipRole ?? null,
+    deityId: input.deityId ?? null,
+    isDivineManifestation: input.isDivineManifestation === true
+  }
+}
+
 function resolveNpcKeyDefaults(input: CreateNpcInput) {
   return {
     ...resolveNpcIdentityKeyDefaults(input),
     ...resolveNpcSpeakingStyleDefaults(input),
-    ...resolveNpcAppearanceDefaults(input)
+    ...resolveNpcAppearanceDefaults(input),
+    ...resolveNpcFactionDefaults(input)
   }
 }
 
@@ -357,10 +391,7 @@ function resolveCreateNpcDefaults(input: CreateNpcInput) {
   }
 }
 
-export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
-  const id = randomUUID()
-  const defaults = resolveCreateNpcDefaults(input)
-
+function insertNpcRow(db: Database.Database, id: string, input: CreateNpcInput, defaults: ReturnType<typeof resolveCreateNpcDefaults>): void {
   db.prepare(
     `INSERT INTO npcs (
       id, campaign_id, region_id, name, role, disposition, alignment, temperament,
@@ -368,14 +399,16 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
       race_key, background_key, gender_key, class_key,
       speaking_style_specimen, speaking_style_examples_json,
       bestiary_species_id, bestiary_variant_key,
-      hair_color, age, eye_color
+      hair_color, age, eye_color,
+      faction_id, faction_membership_role, deity_id, is_divine_manifestation
     ) VALUES (
       @id, @campaignId, @regionId, @name, @role, @disposition, @alignment, @temperament,
       @canSpeak, @status, 0, @backstory, @catalogCreatureKey, 'villager',
       @raceKey, @backgroundKey, @genderKey, @classKey,
       @speakingStyleSpecimen, @speakingStyleExamplesJson,
       @bestiarySpeciesId, @bestiaryVariantKey,
-      @hairColor, @age, @eyeColor
+      @hairColor, @age, @eyeColor,
+      @factionId, @factionMembershipRole, @deityId, @isDivineManifestation
     )`
   ).run({
     id,
@@ -400,8 +433,18 @@ export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
     bestiaryVariantKey: defaults.bestiaryVariantKey,
     hairColor: defaults.hairColor,
     age: defaults.age,
-    eyeColor: defaults.eyeColor
+    eyeColor: defaults.eyeColor,
+    factionId: defaults.factionId,
+    factionMembershipRole: defaults.factionMembershipRole,
+    deityId: defaults.deityId,
+    isDivineManifestation: defaults.isDivineManifestation ? 1 : 0
   })
+}
+
+export function createNpc(db: Database.Database, input: CreateNpcInput): Npc {
+  const id = randomUUID()
+  const defaults = resolveCreateNpcDefaults(input)
+  insertNpcRow(db, id, input, defaults)
 
   if (!input.skipCombatHydration && !input.catalogCreatureKey) {
     hydrateNpcVillagerTier(db, id)
@@ -451,6 +494,41 @@ export function updateNpcFaceTokenPath(
   path: string | null
 ): void {
   db.prepare('UPDATE npcs SET face_token_path = ? WHERE id = ?').run(path, npcId)
+}
+
+export interface UpdateNpcFactionFieldsInput {
+  factionId?: string | null
+  factionMembershipRole?: string | null
+  deityId?: string | null
+  isDivineManifestation?: boolean
+}
+
+export function updateNpcFactionFields(
+  db: Database.Database,
+  npcId: string,
+  input: UpdateNpcFactionFieldsInput
+): void {
+  const npc = getNpcById(db, npcId)
+  if (!npc) {
+    return
+  }
+  db.prepare(
+    `UPDATE npcs
+     SET faction_id = ?, faction_membership_role = ?, deity_id = ?, is_divine_manifestation = ?
+     WHERE id = ?`
+  ).run(
+    input.factionId !== undefined ? input.factionId : npc.factionId,
+    input.factionMembershipRole !== undefined
+      ? input.factionMembershipRole
+      : npc.factionMembershipRole,
+    input.deityId !== undefined ? input.deityId : npc.deityId,
+    (input.isDivineManifestation !== undefined
+      ? input.isDivineManifestation
+      : npc.isDivineManifestation)
+      ? 1
+      : 0,
+    npcId
+  )
 }
 
 export interface UpdateNpcOpinionSummaryInput {

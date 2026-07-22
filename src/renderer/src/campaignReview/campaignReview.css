@@ -41,6 +41,22 @@
   margin-bottom: 28px;
 }
 
+.campaign-review-bestiary {
+  margin-bottom: 28px;
+}
+
+.campaign-review-bestiary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.campaign-review-bestiary-variants {
+  margin: 0.35rem 0 0;
+  padding-left: 1.25rem;
+}
+
 .campaign-review-story ul {
   margin: 8px 0 0;
   padding-left: 1.25rem;
@@ -189,6 +205,55 @@
   max-height: min(60vh, 520px);
   overflow: auto;
   margin: 12px 0;
+}
+
+.campaign-review-factions {
+  margin-bottom: 28px;
+}
+
+.campaign-review-factions h2 {
+  margin: 0 0 12px;
+}
+
+.campaign-review-faction-pressure {
+  margin: 0 0 12px;
+}
+
+.campaign-review-faction-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.campaign-review-faction-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.campaign-review-faction-name {
+  font-weight: 600;
+}
+
+.campaign-review-faction-kind {
+  opacity: 0.85;
+}
+
+.campaign-review-faction-deity {
+  opacity: 0.9;
+}
+
+.campaign-review-faction-relations {
+  margin-top: 16px;
+}
+
+.campaign-review-faction-relations ul {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
 }
 
 .campaign-review-deity-card {

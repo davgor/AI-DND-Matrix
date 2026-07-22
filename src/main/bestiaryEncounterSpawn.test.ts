@@ -1,11 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { createTestDb } from '../db/testUtils'
-import { createCampaign } from '../db/repositories/campaigns'
+import { createCampaign, getCampaignById } from '../db/repositories/campaigns'
 import { createRegion } from '../db/repositories/regions'
 import { createCharacter } from '../db/repositories/characters'
-import { createBestiarySpecies, listBestiarySpecies } from '../db/repositories/bestiary'
+import {
+  createBestiarySpecies,
+  getBestiarySpeciesById,
+  listBestiarySpecies
+} from '../db/repositories/bestiary'
 import { getNpcById, listNpcsByRegion } from '../db/repositories/npcs'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { createMockImageProvider } from '../shared/imageGeneration'
 import {
   deriveProvisionalHostileName,
   detectThematicSignal,
@@ -13,9 +21,47 @@ import {
   spawnOnDemandEncounterHostiles,
   type OnDemandSpawnInput
 } from './bestiaryEncounterSpawn'
+import {
+  type CreatureTokenSchedulerDeps
+} from './creatureTokenScheduler'
 
 const PRESET_LORE =
   'Wolves hunt the borderlands in packs, circling travelers before the first bite falls.'
+
+const PRESET_APPEARANCE = {
+  silhouette: 'quadruped canine',
+  sizeClass: 'medium',
+  primaryColors: ['grey'],
+  distinguishingMarks: null,
+  textureOrMaterial: 'matted fur'
+}
+
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+function buildCreatureTokenDeps(
+  db: ReturnType<typeof createTestDb>,
+  baseDir: string
+): CreatureTokenSchedulerDeps {
+  const provider = createMockImageProvider({
+    mode: 'success',
+    mimeType: 'image/png',
+    bytesBase64: PNG_BASE64
+  })
+  return {
+    db,
+    getCampaign: (id) => getCampaignById(db, id),
+    getSpecies: (id) => getBestiarySpeciesById(db, id),
+    imageProvider: provider,
+    baseDir,
+    logger: { warn: vi.fn(), error: vi.fn() }
+  }
+}
+
+async function flushCreatureTokenJobs(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+}
 
 function seedScene(level = 1) {
   const db = createTestDb()
@@ -122,7 +168,9 @@ describe('spawnOnDemand prefers existing species', () => {
 describe('spawnOnDemand generate + hydrate', () => {
   it('maps wolf retrieval to dire-wolf catalog tier', async () => {
     const scene = seedScene()
-    const provider = createScriptedProvider([JSON.stringify({ baseLore: PRESET_LORE })])
+    const provider = createScriptedProvider([
+      JSON.stringify({ baseLore: PRESET_LORE, visualAppearance: PRESET_APPEARANCE })
+    ])
     const outcome = await spawnOnDemandEncounterHostiles(baseSpawnInput(scene, { provider }))
 
     expect(outcome.kind).toBe('success')
@@ -153,5 +201,65 @@ describe('spawnOnDemand provisional fallback', () => {
     const npc = getNpcById(scene.db, id)
     expect(npc?.combatTier).toBe('villager')
     expect(npc?.name.toLowerCase()).toContain('beast')
+  })
+})
+
+function enableGenerativeTokens(db: ReturnType<typeof createTestDb>, campaignId: string): void {
+  db.prepare(
+    `UPDATE campaigns
+     SET enemy_token_generation_enabled = 1,
+         npc_face_token_generation_enabled = 1,
+         generative_tokens_enabled = 1
+     WHERE id = ?`
+  ).run(campaignId)
+}
+
+describe('spawnOnDemand creature token scheduling', () => {
+  it('enqueues after new species create and spawn when toggle is ON', async () => {
+    const scene = seedScene()
+    enableGenerativeTokens(scene.db, scene.campaign.id)
+    const baseDir = mkdtempSync(join(tmpdir(), 'spawn-creature-token-'))
+    const deps = buildCreatureTokenDeps(scene.db, baseDir)
+    const provider = createScriptedProvider([
+      JSON.stringify({ baseLore: PRESET_LORE, visualAppearance: PRESET_APPEARANCE })
+    ])
+
+    try {
+      await spawnOnDemandEncounterHostiles(
+        baseSpawnInput(scene, {
+          provider,
+          creatureTokenSchedulerDeps: deps
+        })
+      )
+      await flushCreatureTokenJobs()
+      const species = listBestiarySpecies(scene.db, scene.campaign.id)[0]
+      expect(species?.creatureTokenPath).toBeTruthy()
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('skips enqueue when toggle is OFF', async () => {
+    const scene = seedScene()
+    const baseDir = mkdtempSync(join(tmpdir(), 'spawn-creature-token-off-'))
+    const deps = buildCreatureTokenDeps(scene.db, baseDir)
+    const provider = createScriptedProvider([
+      JSON.stringify({ baseLore: PRESET_LORE, visualAppearance: PRESET_APPEARANCE })
+    ])
+
+    try {
+      await spawnOnDemandEncounterHostiles(
+        baseSpawnInput(scene, {
+          provider,
+          creatureTokenSchedulerDeps: deps
+        })
+      )
+      await flushCreatureTokenJobs()
+      const species = listBestiarySpecies(scene.db, scene.campaign.id)[0]
+      expect(species?.creatureTokenPath).toBeNull()
+      expect(deps.imageProvider.generateImage).toBeDefined()
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
   })
 })

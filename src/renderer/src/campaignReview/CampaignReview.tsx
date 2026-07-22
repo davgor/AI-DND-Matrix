@@ -9,7 +9,9 @@ import { CampaignReviewModals } from './CampaignReviewModals'
 import { CampaignReviewFooter, CampaignReviewStory } from './CampaignReviewSections'
 import { CampaignReviewWorldSection } from './CampaignReviewWorldSection'
 import { CampaignReviewPantheonSection } from './CampaignReviewPantheonSection'
-import { CampaignReviewFaceTokenToggle } from './CampaignReviewFaceTokenToggle'
+import { CampaignReviewFactionsSection } from './CampaignReviewFactionsSection'
+import { CampaignReviewGenerativeTokensToggle } from './CampaignReviewGenerativeTokensToggle'
+import { CampaignReviewBestiarySection } from './CampaignReviewBestiarySection'
 import { createCampaignReviewSavers } from './campaignReviewSavers'
 import { useCampaignRaces } from './useCampaignRaces'
 import './campaignReview.css'
@@ -52,12 +54,32 @@ function CampaignReviewPantheonBlock(props: {
   )
 }
 
-function CampaignReviewFaceTokenBlock(props: {
+function CampaignReviewFactionsBlock(props: {
+  factionsSummary: string
+  factionPressure: NonNullable<CampaignDetail['campaign']>['factionPressure']
+  factions: CampaignDetail['factions']
+  relations: CampaignDetail['factionRelations']
+  deities: CampaignDetail['deities']
+  onSaveSummary: (summary: string) => Promise<void>
+}): JSX.Element {
+  return (
+    <CampaignReviewFactionsSection
+      factionsSummary={props.factionsSummary}
+      factionPressure={props.factionPressure}
+      factions={props.factions}
+      relations={props.relations}
+      deities={props.deities}
+      onSaveSummary={props.onSaveSummary}
+    />
+  )
+}
+
+function CampaignReviewGenerativeTokensBlock(props: {
   enabled: boolean
   onChange: (enabled: boolean) => void
 }): JSX.Element {
   return (
-    <CampaignReviewFaceTokenToggle
+    <CampaignReviewGenerativeTokensToggle
       enabled={props.enabled}
       onChange={(enabled) => {
         void props.onChange(enabled)
@@ -89,7 +111,16 @@ function CampaignReviewMainSections(props: {
         deities={props.detail.deities}
         onSaveSummary={props.savers.savePantheonSummary}
       />
+      <CampaignReviewFactionsBlock
+        factionsSummary={props.detail.campaign?.factionsSummary ?? ''}
+        factionPressure={props.detail.campaign?.factionPressure ?? 'light'}
+        factions={props.detail.factions}
+        relations={props.detail.factionRelations}
+        deities={props.detail.deities}
+        onSaveSummary={props.savers.saveFactionsSummary}
+      />
       <CampaignReviewStory storyThreads={props.detail.storyThreads} />
+      <CampaignReviewBestiarySection entries={props.detail.bestiary} />
       <CampaignReviewRegions
         regionBlocks={props.regionBlocks}
         campaignRaces={props.campaignRaces}
@@ -115,9 +146,9 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
     <div className="campaign-review">
       <CampaignReviewHeader campaignName={detail.campaign?.name} />
       {detail.campaign ? (
-        <CampaignReviewFaceTokenBlock
-          enabled={detail.campaign.npcFaceTokenGenerationEnabled === true}
-          onChange={savers.saveNpcFaceTokenGeneration}
+        <CampaignReviewGenerativeTokensBlock
+          enabled={detail.campaign.generativeTokensEnabled === true}
+          onChange={savers.saveGenerativeTokens}
         />
       ) : null}
       <CampaignReviewMainSections

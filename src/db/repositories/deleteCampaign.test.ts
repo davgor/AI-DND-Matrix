@@ -14,8 +14,14 @@ import { createWorldFact } from './worldFacts'
 import { createCampaignRace } from './campaignRaces'
 import { createBestiarySpecies, setQuestFoeAssignment } from './bestiary'
 import { createDeity } from './deities'
+import {
+  applyCharacterFactionReputationDelta,
+  createFaction,
+  createFactionRelation
+} from './factions'
 import { deleteCampaignCascade } from './deleteCampaign'
 import { insertLlmUsageEvent } from './llmUsageEvents'
+import { upsertNpcOpinion } from './npcOpinions'
 import { createQuest } from './quests'
 
 const SAMPLE_RACE_LORE = {
@@ -66,11 +72,17 @@ const NESTED_COUNT_SQL: Record<string, string> = {
   bestiary_variants: `SELECT COUNT(*) as count FROM bestiary_variants
            WHERE species_id IN (SELECT id FROM bestiary_species WHERE campaign_id = ?)`,
   quest_foe_assignments: `SELECT COUNT(*) as count FROM quest_foe_assignments
-           WHERE quest_id IN (SELECT id FROM quests WHERE campaign_id = ?)`
+           WHERE quest_id IN (SELECT id FROM quests WHERE campaign_id = ?)`,
+  character_faction_reputations: `SELECT COUNT(*) as count FROM character_faction_reputations
+           WHERE character_id IN (SELECT id FROM characters WHERE campaign_id = ?)
+              OR faction_id IN (SELECT id FROM factions WHERE campaign_id = ?)`
 }
 
 function countForCampaign(db: TestDb, table: string, campaignId: string): number {
   const nested = NESTED_COUNT_SQL[table]
+  if (table === 'character_faction_reputations') {
+    return (db.prepare(nested!).get(campaignId, campaignId) as { count: number }).count
+  }
   const sql = nested ?? `SELECT COUNT(*) as count FROM ${table} WHERE campaign_id = ?`
   return (db.prepare(sql).get(campaignId) as { count: number }).count
 }
@@ -111,6 +123,14 @@ function seedRegionNpcAndCharacter(db: TestDb, campaignId: string, label: string
     portraitPath: `/tmp/${label}-portrait.png`,
     sheetBackgroundPath: `/tmp/${label}-sheet.png`
   })
+  upsertNpcOpinion(db, {
+    campaignId,
+    npcId: npc.id,
+    subject: { subjectType: 'player_character', subjectId: character.id },
+    summary: `${label} likes the hero.`,
+    generatedAt: '2026-01-01T00:00:00.000Z',
+    stance: 'warm'
+  })
   return { region, character }
 }
 
@@ -134,6 +154,45 @@ function seedBestiaryAndQuest(db: TestDb, campaignId: string, label: string): vo
   setQuestFoeAssignment(db, quest.id, [{ speciesId: species.id }])
 }
 
+function seedFactionGraph(
+  db: TestDb,
+  campaignId: string,
+  characterId: string,
+  label: string
+): void {
+  const factionA = createFaction(db, {
+    campaignId,
+    key: `${label.toLowerCase()}-court`,
+    name: `${label} Court`,
+    kind: 'political',
+    summary: 'Test court.',
+    sortOrder: 0,
+    source: 'campaign_create'
+  })
+  const factionB = createFaction(db, {
+    campaignId,
+    key: `${label.toLowerCase()}-guild`,
+    name: `${label} Guild`,
+    kind: 'mercantile',
+    summary: 'Test guild.',
+    sortOrder: 1,
+    source: 'campaign_create'
+  })
+  createFactionRelation(db, {
+    campaignId,
+    factionAId: factionA.id,
+    factionBId: factionB.id,
+    stance: 'rival',
+    summary: 'Harbor fees'
+  })
+  applyCharacterFactionReputationDelta(db, {
+    characterId,
+    factionId: factionA.id,
+    delta: 10,
+    reason: 'Seeded standing'
+  })
+}
+
 function seedCampaignFootprint(db: TestDb, label: string) {
   const campaign = createCampaign(db, {
     name: label,
@@ -152,6 +211,7 @@ function seedCampaignFootprint(db: TestDb, label: string) {
   })
   seedDeityForCampaign(db, campaign.id, label)
   seedBestiaryAndQuest(db, campaign.id, label)
+  seedFactionGraph(db, campaign.id, character.id, label)
   createSaveSnapshot(db, campaign.id)
   createWorldFact(db, { campaignId: campaign.id, content: 'Fact', regionId: region.id })
   createStoryThread(db, { campaignId: campaign.id, title: 'Thread', state: 'open' })
@@ -182,7 +242,10 @@ const DIRECT_TABLES = [
   'deities',
   'bestiary_species',
   'quests',
-  'llm_usage_events'
+  'llm_usage_events',
+  'factions',
+  'faction_relations',
+  'npc_opinions'
 ] as const
 
 const NESTED_TABLES = [
@@ -191,6 +254,7 @@ const NESTED_TABLES = [
   'character_items',
   'bestiary_variants',
   'quest_foe_assignments',
+  'character_faction_reputations',
   'rag_chunks',
   'rag_backfill_state'
 ] as const
@@ -213,6 +277,10 @@ function expectOtherCampaignIntact(db: TestDb, otherId: string): void {
   expect(countForCampaign(db, 'bestiary_species', otherId)).toBe(1)
   expect(countForCampaign(db, 'bestiary_variants', otherId)).toBe(1)
   expect(countForCampaign(db, 'quest_foe_assignments', otherId)).toBe(1)
+  expect(countForCampaign(db, 'factions', otherId)).toBe(2)
+  expect(countForCampaign(db, 'faction_relations', otherId)).toBe(1)
+  expect(countForCampaign(db, 'character_faction_reputations', otherId)).toBe(1)
+  expect(countForCampaign(db, 'npc_opinions', otherId)).toBe(1)
   expect(
     (db.prepare('SELECT COUNT(*) as count FROM quest_foe_assignments').get() as { count: number }).count
   ).toBe(1)
@@ -256,6 +324,10 @@ describe('deleteCampaignCascade: foreign keys', () => {
     expect(countForCampaign(db, 'bestiary_species', target.id)).toBe(0)
     expect(countForCampaign(db, 'bestiary_variants', target.id)).toBe(0)
     expect(countForCampaign(db, 'quest_foe_assignments', target.id)).toBe(0)
+    expect(countForCampaign(db, 'factions', target.id)).toBe(0)
+    expect(countForCampaign(db, 'faction_relations', target.id)).toBe(0)
+    expect(countForCampaign(db, 'character_faction_reputations', target.id)).toBe(0)
+    expect(countForCampaign(db, 'npc_opinions', target.id)).toBe(0)
   })
 })
 
@@ -278,5 +350,8 @@ describe('deleteCampaignCascade: rollback', () => {
     expect(countForCampaign(db, 'bestiary_species', target.id)).toBe(1)
     expect(countForCampaign(db, 'bestiary_variants', target.id)).toBe(1)
     expect(countForCampaign(db, 'quest_foe_assignments', target.id)).toBe(1)
+    expect(countForCampaign(db, 'factions', target.id)).toBe(2)
+    expect(countForCampaign(db, 'faction_relations', target.id)).toBe(1)
+    expect(countForCampaign(db, 'character_faction_reputations', target.id)).toBe(1)
   })
 })

@@ -12,7 +12,7 @@ describe('CampaignStartFormFields generation defaults', () => {
     expect(clampNpcsPerRegion(-1)).toBe(0)
   })
 
-  it('defaults NPC face-token generation to OFF', () => {
-    expect(DEFAULT_CAMPAIGN_SETUP_FORM.npcFaceTokenGenerationEnabled).toBe(false)
+  it('defaults generative tokens to OFF', () => {
+    expect(DEFAULT_CAMPAIGN_SETUP_FORM.generativeTokensEnabled).toBe(false)
   })
 })

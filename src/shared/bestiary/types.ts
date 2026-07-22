@@ -1,4 +1,5 @@
 import type { Bucket } from '../catalogTaxonomy'
+import type { CreatureAppearanceTraits } from '../creatureTokens/appearance'
 
 export const BESTIARY_GENERATION_POINTS = ['prepped', 'on_quest', 'on_demand'] as const
 export type BestiaryGenerationPoint = (typeof BESTIARY_GENERATION_POINTS)[number]
@@ -39,6 +40,10 @@ export interface BestiarySpecies {
   key: string
   name: string
   baseLore: string
+  /** Structured visual descriptors for creature tokens; null for legacy species rows. */
+  visualAppearance: CreatureAppearanceTraits | null
+  /** Persisted creature-token asset path; null until generation succeeds. */
+  creatureTokenPath: string | null
   buckets: Bucket[]
   tags: string[]
   defaultCatalogKey: string | null

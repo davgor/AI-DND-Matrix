@@ -137,7 +137,7 @@ describe('SocialMessage avatar rendering', () => {
   })
 })
 
-describe('SocialMessage face token avatar', () => {
+describe('SocialMessage NPC face token avatar', () => {
   let root: Root
   let container: HTMLDivElement
 
@@ -158,7 +158,6 @@ describe('SocialMessage face token avatar', () => {
         faceTokenPath: 'C:/data/npc-face-tokens/camp/npc-filo.png'
       })
     })
-
     const image = container.querySelector('.social-avatar-image') as HTMLImageElement
     expect(image).toBeTruthy()
     expect(image.src).toContain('npc-filo.png')
@@ -174,7 +173,6 @@ describe('SocialMessage face token avatar', () => {
         faceTokenPath: 'C:/missing/npc-filo.png'
       })
     })
-
     const image = container.querySelector('.social-avatar-image') as HTMLImageElement
     expect(image).toBeTruthy()
     act(() => {
@@ -182,6 +180,145 @@ describe('SocialMessage face token avatar', () => {
     })
     expect(container.querySelector('.social-avatar-image')).toBeNull()
     expect(container.querySelector('.social-avatar')?.textContent).toBe('F')
+  })
+})
+
+describe('SocialMessage companion face token avatar', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('renders a companion face token on partyMember lines when faceTokenPath is present', () => {
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'partyMember',
+        text: 'I take the flank.',
+        speakerName: 'Bryn',
+        faceTokenPath: 'C:/data/companion-face-tokens/camp/bryn.png'
+      })
+    })
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    expect(image).toBeTruthy()
+    expect(image.src).toContain('bryn.png')
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('')
+  })
+
+  it('falls back to letter initial on partyMember lines when the token fails', () => {
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'partyMember',
+        text: 'I take the flank.',
+        speakerName: 'Bryn',
+        faceTokenPath: 'C:/missing/bryn.png'
+      })
+    })
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    act(() => {
+      image.dispatchEvent(new Event('error'))
+    })
+    expect(container.querySelector('.social-avatar-image')).toBeNull()
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('B')
+  })
+})
+
+function enemyActionEntry(overrides: Partial<PlayLogEntry> = {}): PlayLogEntry {
+  return entry({
+    speaker: 'npc',
+    text: 'The wolf lunges at you.',
+    speakerName: 'Gray Wolf',
+    npcId: 'npc-gray-wolf',
+    reactionKind: 'action',
+    ...overrides
+  })
+}
+
+describe('SocialMessage enemy action avatar resolved', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('renders a creature token image on enemy action rows when faceTokenPath resolves', () => {
+    const tokenPath = 'C:/data/creature-tokens/camp/gray-wolf.png'
+    renderSocialMessage(root, {
+      entry: enemyActionEntry({ faceTokenPath: tokenPath })
+    })
+
+    const avatar = container.querySelector('.social-avatar')
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    expect(image).toBeTruthy()
+    expect(image.src).toContain('gray-wolf.png')
+    expect(avatar?.textContent).toBe('')
+    expect(container.querySelector('.social-message--other')).not.toBeNull()
+  })
+
+  it('falls back to the letter initial on enemy action rows when no token is available', () => {
+    renderSocialMessage(root, {
+      entry: enemyActionEntry()
+    })
+
+    expect(container.querySelector('.social-avatar-image')).toBeNull()
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('G')
+  })
+})
+
+describe('SocialMessage enemy action avatar fallback', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('falls back to the letter initial when an enemy creature token fails to load', () => {
+    renderSocialMessage(root, {
+      entry: enemyActionEntry({
+        faceTokenPath: 'C:/missing/gray-wolf.png'
+      })
+    })
+
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    expect(image).toBeTruthy()
+    act(() => {
+      image.dispatchEvent(new Event('error'))
+    })
+    expect(container.querySelector('.social-avatar-image')).toBeNull()
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('G')
+  })
+
+  it('keeps the avatar container stable when switching from token to initial fallback', () => {
+    renderSocialMessage(root, {
+      entry: enemyActionEntry({
+        faceTokenPath: 'C:/missing/gray-wolf.png'
+      })
+    })
+
+    const avatarBefore = container.querySelector('.social-avatar')
+    expect(avatarBefore).not.toBeNull()
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    act(() => {
+      image.dispatchEvent(new Event('error'))
+    })
+    const avatarAfter = container.querySelector('.social-avatar')
+    expect(avatarAfter).toBe(avatarBefore)
+    expect(avatarAfter?.classList.contains('social-avatar')).toBe(true)
   })
 })
 
@@ -231,5 +368,160 @@ describe('SocialMessage dossier interactions', () => {
       ;({ root, container } = mountRoot())
     }
     expect(onOpenNpcDossier).not.toHaveBeenCalled()
+  })
+})
+
+const personLinkCandidates = [
+  { npcId: 'npc-filo', name: 'Filo' },
+  { npcId: 'npc-mira', name: 'Mira' }
+]
+
+function clickButtonNamed(container: HTMLElement, name: string): void {
+  const button = Array.from(container.querySelectorAll('button')).find(
+    (el) => el.textContent === name
+  )
+  expect(button).toBeTruthy()
+  act(() => {
+    button?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
+
+describe('SocialMessage person links in dialogue prose', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('links another known NPC in dialogue prose and opens with that npcId', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Ask Mira about the gate.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'dialogue'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+    clickButtonNamed(container, 'Mira')
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-mira')
+  })
+})
+
+describe('SocialMessage person links in action prose', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('links another known NPC in non-dialogue action prose', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Points toward Mira.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'action'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+    clickButtonNamed(container, 'Mira')
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-mira')
+  })
+})
+
+describe('SocialMessage person link self-name exclusion', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('does not link the speaker name inside their own bubble prose', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Filo shrugs. Ask Mira.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'dialogue'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+
+    const proseFilo = Array.from(
+      container.querySelectorAll('.social-message-text button')
+    ).find((button) => button.textContent === 'Filo')
+    expect(proseFilo).toBeUndefined()
+
+    const mira = Array.from(container.querySelectorAll('.social-message-text button')).find(
+      (button) => button.textContent === 'Mira'
+    )
+    expect(mira).toBeTruthy()
+  })
+})
+
+describe('SocialMessage avatar and speaker name dossier', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('keeps avatar and speaker name opening the speaker dossier', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Ask Mira.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'dialogue'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+
+    const avatar = container.querySelector('.social-avatar-button') as HTMLButtonElement
+    const speakerName = container.querySelector(
+      '.social-message-name-button'
+    ) as HTMLButtonElement
+    act(() => {
+      avatar.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-filo')
+    onOpenNpcDossier.mockClear()
+    act(() => {
+      speakerName.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-filo')
   })
 })

@@ -142,6 +142,20 @@ describe('generateNpcCoreBundle GenerateContext (040.1 + 040.13)', () => {
   })
 })
 
+function expectSpeakingDetailsSystemPrompt(systemPrompt: string | undefined): void {
+  expect(systemPrompt).toContain(AGENT_JSON_CONTRACT_SYSTEM)
+  expect(systemPrompt).toContain('"backstory":string')
+  expect(systemPrompt).toContain('factionKey')
+  expect(systemPrompt).toContain('membershipRole')
+  expect(systemPrompt).toContain('two short paragraphs')
+}
+
+function expectSpeakingGenerateContext(call: { context?: { maxTokens?: number; systemPrompt?: string }; prompt?: string } | undefined): void {
+  expect(call?.context?.maxTokens).toBe(4096)
+  expectSpeakingDetailsSystemPrompt(call?.context?.systemPrompt)
+  expect(call?.prompt).not.toContain('Respond ONLY with JSON')
+}
+
 describe('generateFlaggedNpcDetails GenerateContext (040.13)', () => {
   const detailsInput = {
     regionName: 'Harbor',
@@ -154,12 +168,7 @@ describe('generateFlaggedNpcDetails GenerateContext (040.13)', () => {
   it('sends the speaking schema and backstory rule via systemPrompt with the prose cap', async () => {
     const provider = createScriptedProvider([ELF_SCOUT_FINAL])
     await generateFlaggedNpcDetails(provider, { ...detailsInput, bundle: SPEAKING_BUNDLE })
-    const call = provider.calls[0]
-    expect(call?.context?.maxTokens).toBe(4096)
-    expect(call?.context?.systemPrompt).toContain(AGENT_JSON_CONTRACT_SYSTEM)
-    expect(call?.context?.systemPrompt).toContain('"backstory":string')
-    expect(call?.context?.systemPrompt).toContain('two short paragraphs')
-    expect(call?.prompt).not.toContain('Respond ONLY with JSON')
+    expectSpeakingGenerateContext(provider.calls[0])
   })
 
   it('sends the non-speaking schema (no backstory) via systemPrompt', async () => {
@@ -171,13 +180,14 @@ describe('generateFlaggedNpcDetails GenerateContext (040.13)', () => {
       bundle: { canSpeak: false, temperament: 'aggressive' }
     })
     const call = provider.calls[0]
-    expect(call?.context?.systemPrompt).toContain('{"name":string,"role":string,"disposition":string}')
+    expect(call?.context?.systemPrompt).toContain('"name":string')
+    expect(call?.context?.systemPrompt).toContain('factionKey')
     expect(call?.context?.systemPrompt).not.toContain('"backstory":string')
     expect(call?.context?.systemPrompt).toContain('Omit backstory entirely')
   })
 })
 
-describe('buildFlaggedNpcFinalPrompt (052.6 + 051.5)', () => {
+describe('buildFlaggedNpcFinalPrompt speaking NPCs (052.6 + 051.5)', () => {
   it('includes full race lore, region history, and background grounding when the NPC speaks', () => {
     const prompt = buildFlaggedNpcFinalPrompt({
       regionName: 'Harbor',
@@ -200,7 +210,9 @@ describe('buildFlaggedNpcFinalPrompt (052.6 + 051.5)', () => {
     expect(prompt).toContain('Background (Soldier):')
     expect(prompt).toContain('Let the backstory reflect this background')
   })
+})
 
+describe('buildFlaggedNpcFinalPrompt non-speaking and factions', () => {
   it('omits identity grounding when canSpeak is false', () => {
     const prompt = buildFlaggedNpcFinalPrompt({
       regionName: 'Wilds',
@@ -214,6 +226,25 @@ describe('buildFlaggedNpcFinalPrompt (052.6 + 051.5)', () => {
     // The backstory-omission rule rides in systemPrompt since 040.13 (see
     // 'generateFlaggedNpcDetails GenerateContext' above), not the user prompt.
     expect(prompt).not.toContain('omit backstory entirely')
+  })
+
+  it('includes faction digest and clergy bias when pressure is medium (125.4)', () => {
+    const prompt = buildFlaggedNpcFinalPrompt({
+      regionName: 'Harbor',
+      regionDescription: 'A salt port.',
+      regionHistory: [],
+      seedPrompt: 'A tide priest',
+      existingNpcNames: [],
+      bundle: SPEAKING_BUNDLE,
+      factionDigestLines: [
+        'Campaign factions (use factionKey from this roster when binding membership):',
+        'temple_of_vhalor: Temple of Vhalor [religious] — deity:Vhalor',
+        'When factionPressure is medium/heavy or the world is faith-forward, prefer religious factions for acolyte, priest, inquisitor, or cultist roles.'
+      ]
+    })
+    expect(prompt).toContain('temple_of_vhalor')
+    expect(prompt).toContain('deity:Vhalor')
+    expect(prompt.toLowerCase()).toMatch(/acolyte|priest|inquisitor|cultist/)
   })
 })
 

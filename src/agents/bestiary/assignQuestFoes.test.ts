@@ -82,7 +82,8 @@ describe('assignQuestFoes creates species', () => {
     expect(species).toBeDefined()
     expect(species!.key === 'rift-beast' || species!.name.toLowerCase().includes('rift')).toBe(true)
     expect(getBestiarySpeciesByKey(db, campaign.id, 'rift-beast')).toBeDefined()
-    expect(provider.calls.length).toBe(0)
+    // Preset lore may still trigger one appearance-only LLM attempt (failures are non-fatal).
+    expect(provider.calls.length).toBeLessThanOrEqual(1)
   })
 })
 

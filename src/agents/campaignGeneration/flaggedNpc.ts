@@ -17,8 +17,14 @@ import {
 } from './flaggedNpcParse'
 import { listCampaignRaces } from '../../db/repositories/campaignRaces'
 import { listDeitiesByCampaign } from '../../db/repositories/deities'
+import { listFactionsByCampaign } from '../../db/repositories/factions'
+import { buildFactionDigestLines } from '../../shared/factions/digest'
 import { buildFlaggedNpcFinalPrompt, buildNpcCoreBundlePrompt } from './flaggedNpcPrompts'
-import { formatDeityDigestLines, formatWorldContextLines } from './prompts'
+import {
+  formatDeityDigestLines,
+  formatNpcFactionMembershipGuidance,
+  formatWorldContextLines
+} from './prompts'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
@@ -56,8 +62,12 @@ const FINAL_NPC_MAX_TOKENS = 4096
 
 const FINAL_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
-    schemaFragment: '{"name":string,"role":string,"disposition":string,"backstory":string}',
-    guidanceLines: ['backstory must be two short paragraphs tying the NPC to its region.']
+    schemaFragment:
+      '{"name":string,"role":string,"disposition":string,"backstory":string,"factionKey"?:string,"membershipRole"?:string}',
+    guidanceLines: [
+      'backstory must be two short paragraphs tying the NPC to its region.',
+      'Optional factionKey must match a campaign faction key; membershipRole is a short affiliation role.'
+    ]
   }),
   maxTokens: FINAL_NPC_MAX_TOKENS,
   purpose: 'campaign.npc'
@@ -65,7 +75,8 @@ const FINAL_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
 
 const FINAL_NON_SPEAKING_GENERATE_CONTEXT: GenerateContext = {
   systemPrompt: buildAgentSystemPrompt({
-    schemaFragment: '{"name":string,"role":string,"disposition":string}',
+    schemaFragment:
+      '{"name":string,"role":string,"disposition":string,"factionKey"?:string,"membershipRole"?:string}',
     guidanceLines: ['Omit backstory entirely (canSpeak is false).']
   }),
   maxTokens: FINAL_NPC_MAX_TOKENS,
@@ -107,7 +118,14 @@ export async function generateNpcCoreBundle(
 export async function generateFlaggedNpcDetails(
   provider: Provider,
   input: Parameters<typeof buildFlaggedNpcFinalPrompt>[0]
-): Promise<{ name: string; role: string; disposition: string; backstory?: string }> {
+): Promise<{
+  name: string
+  role: string
+  disposition: string
+  backstory?: string
+  factionKey?: string
+  membershipRole?: string
+}> {
   const prompt = buildFlaggedNpcFinalPrompt(input)
   const context = input.bundle.canSpeak
     ? FINAL_SPEAKING_GENERATE_CONTEXT
@@ -177,7 +195,14 @@ function resolveFandomCharacterHint(
 
 function assembleGeneratedNpc(
   input: { regionName: string; bundle: NpcCoreBundle },
-  details: { name: string; role: string; disposition: string; backstory?: string }
+  details: {
+    name: string
+    role: string
+    disposition: string
+    backstory?: string
+    factionKey?: string
+    membershipRole?: string
+  }
 ): GeneratedNpc {
   return {
     name: details.name,
@@ -194,7 +219,9 @@ function assembleGeneratedNpc(
     backgroundKey: input.bundle.backgroundKey,
     hairColor: input.bundle.hairColor ?? null,
     age: input.bundle.age ?? null,
-    eyeColor: input.bundle.eyeColor ?? null
+    eyeColor: input.bundle.eyeColor ?? null,
+    ...(details.factionKey ? { factionKey: details.factionKey } : {}),
+    ...(details.membershipRole ? { membershipRole: details.membershipRole } : {})
   }
 }
 
@@ -212,10 +239,44 @@ function loadDeityDigestLines(db: Database.Database, campaignId: string): string
   )
 }
 
+function loadFactionDigestLines(db: Database.Database, campaignId: string): string[] {
+  const campaign = getCampaignById(db, campaignId)
+  const factions = listFactionsByCampaign(db, campaignId)
+  if (factions.length === 0) {
+    return []
+  }
+  const deities = listDeitiesByCampaign(db, campaignId)
+  const deityNamesById = Object.fromEntries(deities.map((deity) => [deity.id, deity.name]))
+  const rosterLines = buildFactionDigestLines(factions, {
+    enriched: false,
+    deityNamesById
+  })
+  const sorted = [...factions].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)
+  )
+  const keyedLines = rosterLines.map((line, index) => {
+    const faction = sorted[index]
+    return faction ? `${faction.key}: ${line}` : line
+  })
+  const bias = formatNpcFactionMembershipGuidance(
+    campaign?.factionPressure,
+    factions.some((faction) => faction.kind === 'religious')
+  )
+  return [
+    'Campaign factions (use factionKey from this roster when binding membership):',
+    ...keyedLines,
+    ...bias
+  ]
+}
+
 function loadFlaggedWorldContext(
   db: Database.Database,
   campaignId: string
-): { worldContextLines: string[]; deityDigestLines: string[] } {
+): {
+  worldContextLines: string[]
+  deityDigestLines: string[]
+  factionDigestLines: string[]
+} {
   const campaign = getCampaignById(db, campaignId)
   const worldContextLines =
     campaign && (campaign.worldName || campaign.worldSummary || campaign.worldHistory)
@@ -225,7 +286,11 @@ function loadFlaggedWorldContext(
           worldHistory: campaign.worldHistory
         })
       : []
-  return { worldContextLines, deityDigestLines: loadDeityDigestLines(db, campaignId) }
+  return {
+    worldContextLines,
+    deityDigestLines: loadDeityDigestLines(db, campaignId),
+    factionDigestLines: loadFactionDigestLines(db, campaignId)
+  }
 }
 
 async function attachSpeakingStyleToGeneratedNpc(
@@ -274,7 +339,10 @@ export async function generateFlaggedNpc(
   }
 ): Promise<GeneratedSingleNpcResult> {
   const availableRaces = buildAvailableRaceOptions(listCampaignRaces(db, input.campaignId))
-  const { worldContextLines, deityDigestLines } = loadFlaggedWorldContext(db, input.campaignId)
+  const { worldContextLines, deityDigestLines, factionDigestLines } = loadFlaggedWorldContext(
+    db,
+    input.campaignId
+  )
   const bundle = await generateNpcCoreBundle(provider, {
     regionName: input.regionName,
     regionDescription: input.regionDescription,
@@ -292,6 +360,7 @@ export async function generateFlaggedNpc(
     bundle,
     worldContextLines,
     deityDigestLines,
+    factionDigestLines,
     ...raceContext,
     ...resolveBundleBlurbs(bundle)
   })

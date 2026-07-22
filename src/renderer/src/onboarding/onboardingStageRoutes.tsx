@@ -81,6 +81,7 @@ function BackgroundSelectionStage(props: OnboardingStageContentProps): JSX.Eleme
       characterId={player.id}
       savedBackgroundKey={player.backgroundKey}
       savedBackgroundStory={player.backgroundStory}
+      savedCustomLabel={player.backgroundCustomLabel}
       onComplete={props.onBackgroundSelectionComplete}
       onBack={props.onBackgroundSelectionBack}
     />

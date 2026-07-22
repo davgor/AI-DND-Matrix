@@ -18,7 +18,8 @@ import {
   updateCampaignWorldHistory,
   updateCampaignWorldSummary,
   updateCampaignPantheonSummary,
-  updateCampaignNpcFaceTokenGenerationEnabled
+  updateCampaignFactionsSummary,
+  updateCampaignGenerativeTokensEnabled
 } from '../db/repositories/campaigns'
 import { deleteNpcCascade } from '../db/repositories/deleteNpc'
 import { deleteRegionCascade } from '../db/repositories/deleteRegion'
@@ -26,6 +27,7 @@ import { getNpcById, listNpcsByRegion, updateNpcDisposition, updateNpcTraits, ty
 import { getRegionById, listRegionsByCampaign, updateRegionDescription } from '../db/repositories/regions'
 import { listCampaignRaces } from '../db/repositories/campaignRaces'
 import { listDeitiesByCampaign } from '../db/repositories/deities'
+import { getFactionByKey } from '../db/repositories/factions'
 import {
   MAX_ADDITIONAL_REGION_NPC_COUNT,
   MIN_ADDITIONAL_REGION_NPC_COUNT
@@ -113,17 +115,52 @@ export function editPantheonSummary(
   return getCampaignDetail(db, input.campaignId)
 }
 
-export interface EditNpcFaceTokenGenerationInput {
+export interface EditFactionsSummaryInput {
+  campaignId: string
+  factionsSummary: string
+}
+
+export function editFactionsSummary(
+  db: Database.Database,
+  input: EditFactionsSummaryInput
+): CampaignDetail {
+  updateCampaignFactionsSummary(db, input.campaignId, input.factionsSummary)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+export interface EditGenerativeTokensInput {
   campaignId: string
   enabled: boolean
 }
 
+export function editGenerativeTokens(
+  db: Database.Database,
+  input: EditGenerativeTokensInput
+): CampaignDetail {
+  updateCampaignGenerativeTokensEnabled(db, input.campaignId, input.enabled)
+  return getCampaignDetail(db, input.campaignId)
+}
+
+/** @deprecated Prefer editGenerativeTokens. */
+export type EditNpcFaceTokenGenerationInput = EditGenerativeTokensInput
+
+/** @deprecated Prefer editGenerativeTokens. */
 export function editNpcFaceTokenGeneration(
   db: Database.Database,
   input: EditNpcFaceTokenGenerationInput
 ): CampaignDetail {
-  updateCampaignNpcFaceTokenGenerationEnabled(db, input.campaignId, input.enabled)
-  return getCampaignDetail(db, input.campaignId)
+  return editGenerativeTokens(db, input)
+}
+
+/** @deprecated Prefer editGenerativeTokens. */
+export type EditEnemyTokenGenerationInput = EditGenerativeTokensInput
+
+/** @deprecated Prefer editGenerativeTokens. */
+export function editEnemyTokenGeneration(
+  db: Database.Database,
+  input: EditEnemyTokenGenerationInput
+): CampaignDetail {
+  return editGenerativeTokens(db, input)
 }
 
 export interface EditWorldHistoryInput {
@@ -295,6 +332,25 @@ export interface GenerateNpcInput {
   seedPrompt: string
 }
 
+function resolveGeneratedNpcFactionFields(
+  db: Database.Database,
+  campaignId: string,
+  generatedNpc: Awaited<ReturnType<typeof generateFlaggedNpc>>['npc']
+): { factionId: string | null; factionMembershipRole: string | null } {
+  const factionKey = generatedNpc.factionKey?.trim()
+  if (!factionKey) {
+    return { factionId: null, factionMembershipRole: null }
+  }
+  const faction = getFactionByKey(db, campaignId, factionKey)
+  if (!faction) {
+    return { factionId: null, factionMembershipRole: null }
+  }
+  return {
+    factionId: faction.id,
+    factionMembershipRole: generatedNpc.membershipRole?.trim() || null
+  }
+}
+
 async function persistGeneratedNpcForCampaign(input: {
   db: Database.Database
   provider: ReturnType<typeof buildAgentProvider>
@@ -318,7 +374,8 @@ async function persistGeneratedNpcForCampaign(input: {
     genderKey: generatedNpc.genderKey ?? null,
     classKey: generatedNpc.classKey ?? null,
     speakingStyleSpecimen: generatedNpc.speakingStyleSpecimen ?? null,
-    speakingStyleExamples: generatedNpc.speakingStyleExamples ?? null
+    speakingStyleExamples: generatedNpc.speakingStyleExamples ?? null,
+    ...resolveGeneratedNpcFactionFields(db, campaignId, generatedNpc)
   })
 }
 
@@ -411,9 +468,23 @@ export function registerCampaignEditHandlers(): void {
     editPantheonSummary(getDb(), input)
   )
 
+  ipcMain.handle('campaigns:editFactionsSummary', (_event, input: EditFactionsSummaryInput) =>
+    editFactionsSummary(getDb(), input)
+  )
+
+  ipcMain.handle(
+    'campaigns:editGenerativeTokens',
+    (_event, input: EditGenerativeTokensInput) => editGenerativeTokens(getDb(), input)
+  )
+
   ipcMain.handle(
     'campaigns:editNpcFaceTokenGeneration',
     (_event, input: EditNpcFaceTokenGenerationInput) => editNpcFaceTokenGeneration(getDb(), input)
+  )
+
+  ipcMain.handle(
+    'campaigns:editEnemyTokenGeneration',
+    (_event, input: EditEnemyTokenGenerationInput) => editEnemyTokenGeneration(getDb(), input)
   )
 
   ipcMain.handle('campaigns:editWorldHistory', async (_event, input: EditWorldHistoryInput) =>

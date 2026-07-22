@@ -46,6 +46,26 @@ function identityRows(traits: NpcDossierTraits, campaignRaces: CampaignRace[]): 
   ]
 }
 
+function speciesAppearanceRows(traits: NpcDossierTraits): JSX.Element[] {
+  const rows: JSX.Element[] = []
+  if (traits.silhouette) {
+    rows.push(traitRow('Silhouette', traits.silhouette))
+  }
+  if (traits.sizeClass) {
+    rows.push(traitRow('Size', traits.sizeClass))
+  }
+  if (traits.primaryColors.length > 0) {
+    rows.push(traitRow('Colors', traits.primaryColors.join(', ')))
+  }
+  if (traits.distinguishingMarks) {
+    rows.push(traitRow('Marks', traits.distinguishingMarks))
+  }
+  if (traits.textureOrMaterial) {
+    rows.push(traitRow('Texture', traits.textureOrMaterial))
+  }
+  return rows
+}
+
 export function NpcDossierTraitsSection(props: {
   traits: NpcDossierTraits
   canSpeak: boolean
@@ -54,6 +74,7 @@ export function NpcDossierTraitsSection(props: {
   const rows: JSX.Element[] = [
     traitRow('Temperament', formatDossierTemperament(props.traits.temperament)),
     ...identityRows(props.traits, props.campaignRaces ?? []),
+    ...speciesAppearanceRows(props.traits),
     traitRow('Role', props.traits.role)
   ]
   if (!props.canSpeak) {

@@ -224,6 +224,10 @@ interface AssignQuestFoesInput {
   partySize?: number
 }
 
+export interface AssignQuestFoesOptions {
+  onSpeciesCreated?: (input: { campaignId: string; speciesId: string }) => void
+}
+
 async function resolveSpeciesForHint(input: {
   db: Database.Database
   provider: Provider
@@ -231,8 +235,9 @@ async function resolveSpeciesForHint(input: {
   campaignSpecies: BestiarySpecies[]
   hint: ParsedEnemyHint
   playerLevel?: number
+  onSpeciesCreated?: AssignQuestFoesOptions['onSpeciesCreated']
 }): Promise<BestiarySpecies> {
-  const { db, provider, campaignId, campaignSpecies, hint, playerLevel } = input
+  const { db, provider, campaignId, campaignSpecies, hint, playerLevel, onSpeciesCreated } = input
   let species = findExistingSpecies(campaignSpecies, hint)
   if (!species) {
     species = getBestiarySpeciesByKey(db, campaignId, hint.speciesKey)
@@ -240,15 +245,20 @@ async function resolveSpeciesForHint(input: {
   if (species) {
     return species
   }
-  const generated = await generateOrGetBestiarySpecies(db, provider, {
-    campaignId,
-    name: hint.name,
-    speciesKey: hint.speciesKey,
-    buckets: hint.buckets,
-    tags: hint.tags,
-    levelHint: playerLevel,
-    ...(hint.presetLore !== undefined ? { presetLore: hint.presetLore } : {})
-  })
+  const generated = await generateOrGetBestiarySpecies(
+    db,
+    provider,
+    {
+      campaignId,
+      name: hint.name,
+      speciesKey: hint.speciesKey,
+      buckets: hint.buckets,
+      tags: hint.tags,
+      levelHint: playerLevel,
+      ...(hint.presetLore !== undefined ? { presetLore: hint.presetLore } : {})
+    },
+    { onSpeciesCreated }
+  )
   campaignSpecies.push(generated.species)
   return generated.species
 }
@@ -260,7 +270,8 @@ async function resolveSpeciesForHint(input: {
 export async function assignQuestFoes(
   db: Database.Database,
   provider: Provider,
-  input: AssignQuestFoesInput
+  input: AssignQuestFoesInput,
+  options?: AssignQuestFoesOptions
 ): Promise<QuestFoeAssignment[]> {
   const hints = parseEnemyHintsFromQuestText(input.title, input.summary)
   if (hints.length === 0) {
@@ -280,7 +291,8 @@ export async function assignQuestFoes(
       campaignId: input.campaignId,
       campaignSpecies,
       hint,
-      playerLevel: input.playerLevel
+      playerLevel: input.playerLevel,
+      onSpeciesCreated: options?.onSpeciesCreated
     })
     const plannedComposition =
       typeof input.playerLevel === 'number'

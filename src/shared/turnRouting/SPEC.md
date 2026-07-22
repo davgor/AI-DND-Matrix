@@ -41,15 +41,18 @@ The heuristic (`src/agents/turnRoutingHeuristic.ts`, pure functions over caller-
 | Single NPC present + no check + dialogue cue (question mark, NPC name match, ask/tell/say) + prior interaction | `converse`: `npcResponse` only |
 | Pure physical verb phrase (whitelisted gesture verbs), no check, no NPC address | `act`: `playerActionExpression` only |
 
-**Side-effect starvation guard.** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, commerce, spells, alignment, and story-driven death. The converse-only and act-only rows omit it, so they return `null` (defer to LLM routing) whenever any signal suggests state could change:
+**Side-effect starvation guard.** `dmNarration` is the sole write path for world facts, quests (and their XP/loot rewards), log book, cross-character log entries, journal, item grants, spells, alignment, and story-driven death. Clear commerce/travel intents also resolve on a dedicated engine branch (**135**) beside narration so debit/move cannot starve when social routes omit `dmNarration`. The converse-only and act-only rows omit narration, so they return `null` (defer to LLM routing) whenever any signal suggests state could change:
 
 - an active quest whose title/summary/objective text mentions a present NPC name or region keyword,
 - a pending alignment shift,
 - first interaction with the present NPC this session (no NPC memories yet),
 - any present NPC is hostile (combat or consequence narration may follow on any turn),
 - player input containing transactional verbs (buy/sell/give/take/learn/purchase/trade/steal/hand/pay/teach/join/…),
+- player input containing world-alter verbs (burn/destroy/collapse/massacre/raze/demolish/sack/ruin/torch/rebuild/restore/…) — typed region/NPC mutations persist only through `dmNarration` (epic **130**),
 - the player has AI party members (heuristic plans omit `partyMember` beats),
 - inactive living player characters share the region (cross-character log writes flow through `dmNarration`).
+
+**Explicitly non-mutating routes** (must not claim world-alter without a narration beat): heuristic `converse` (`npcResponse` only), heuristic `act` (`playerActionExpression` only), rest/travel/modifyItem/combat bypass, Ask-the-DM OOC.
 
 The heuristic is deliberately biased toward `null`: check turns that were not already provable pre-LLM keep the (richer) merged-call plan, which `ensureDmNarrationBeat` already guarantees carries narration. Composite turns (action + check + NPC) always fall through to LLM routing.
 

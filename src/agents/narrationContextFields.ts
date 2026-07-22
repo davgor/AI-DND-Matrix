@@ -1,7 +1,9 @@
 import type Database from 'better-sqlite3'
 import type { Alignment, PendingAlignmentShift } from '../shared/alignment/types'
+import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listPlayerCharacters } from '../db/repositories/characters'
 import { listEventsByCampaign } from '../db/repositories/events'
+import { formatSharedTimeGrounding } from '../shared/sharedTime'
 import { isHostileNpc, listNpcsByRegion } from '../db/repositories/npcs'
 import { getRegionById, type RegionStatus } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
@@ -12,6 +14,11 @@ import { buildCombatSummaryForNarration } from './dmCombatContext'
 import { takeRecent } from './contextWindow'
 import { slimEvents, slimLogEntries, type SlimEvent, type SlimLogEntry } from './contextSlim'
 import { windowLogEntriesForNarration } from './logBookWindow'
+import {
+  buildDmFactionPlayPromptSection,
+  loadDmFactionPlayContext
+} from './factionPlayContext'
+import { buildWorldMutationDigest } from '../shared/worldMutations'
 import { loadActiveQuestsForCharacter } from './narrationQuestContext'
 import { loadKnownSpellsForNarration } from './narrationSpellContext'
 import type { ActiveQuestContext } from './questWindow'
@@ -25,6 +32,7 @@ type PresentNpcContext = {
   id: string
   name: string
   isHostile: boolean
+  alive: boolean
 }
 
 function listInactiveLivingPlayersInRegion(
@@ -59,6 +67,7 @@ function loadNarrationWorldFields(
   storyThreadState: { id: string; state: string; summary: string } | null
   presentNpcs: PresentNpcContext[]
   bestiaryRecall: SlimPresentBestiaryGrounding[]
+  worldMutationDigest?: string
 } {
   const region = getRegionById(db, regionId)
   const recentEvents = slimEvents(takeRecent(listEventsByCampaign(db, campaignId)))
@@ -67,7 +76,8 @@ function loadNarrationWorldFields(
   const presentNpcs = regionNpcs.map((npc) => ({
     id: npc.id,
     name: npc.name,
-    isHostile: isHostileNpc(npc)
+    isHostile: isHostileNpc(npc),
+    alive: npc.status.alive
   }))
   const bestiaryRecall = loadPresentBestiaryGrounding(db, {
     characterId,
@@ -76,14 +86,21 @@ function loadNarrationWorldFields(
       bestiarySpeciesId: npc.bestiarySpeciesId
     }))
   })
+  const regionStatus = region?.status ?? { destroyed: false }
+  const worldMutationDigest = buildWorldMutationDigest({
+    regionName: region?.name ?? 'Unknown region',
+    regionStatus,
+    presentNpcs
+  })
   return {
-    regionStatus: region?.status ?? { destroyed: false },
+    regionStatus,
     recentEvents,
     storyThreadState: primaryThread
       ? { id: primaryThread.id, state: primaryThread.state, summary: primaryThread.summary }
       : null,
     presentNpcs,
-    bestiaryRecall
+    bestiaryRecall,
+    ...(worldMutationDigest ? { worldMutationDigest } : {})
   }
 }
 
@@ -130,12 +147,36 @@ function loadNarrationCharacterFields(
   }
 }
 
+function loadFactionPlaySection(
+  db: Database.Database,
+  input: { campaignId: string; characterId: string; playerInput?: string }
+): string | undefined {
+  const digest = loadDmFactionPlayContext(db, {
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    playerInput: input.playerInput ?? ''
+  })
+  return digest ? buildDmFactionPlayPromptSection(digest) : undefined
+}
+
+function loadSharedTimeFields(db: Database.Database, campaignId: string, characterId: string) {
+  // EPIC-133
+  const sharedWorldDay = getCampaignById(db, campaignId)?.inGameDate ?? 0
+  const activeCharacter = getCharacterById(db, characterId)
+  const sharedTimeGrounding = formatSharedTimeGrounding({
+    worldDay: sharedWorldDay,
+    lastActiveInGameDate: activeCharacter?.lastActiveInGameDate ?? 0
+  })
+  return { sharedWorldDay, sharedTimeGrounding }
+}
+
 export function loadNarrationContextFields(
   db: Database.Database,
   input: {
     campaignId: string
     regionId: string
     characterId: string
+    playerInput?: string
   }
 ): {
   regionStatus: RegionStatus
@@ -151,6 +192,11 @@ export function loadNarrationContextFields(
   inactiveLivingPlayersInRegion: Array<{ id: string; name: string; characterClass: string }> | undefined
   activeQuests: ActiveQuestContext[]
   knownSpells: KnownSpellContext[]
+  factionPlaySection?: string
+  worldMutationDigest?: string
+  /** EPIC-133 — shared campaign clock grounding. */
+  sharedWorldDay: number
+  sharedTimeGrounding: string
 } {
   const world = loadNarrationWorldFields(db, input.campaignId, input.regionId, input.characterId)
   const characterFields = loadNarrationCharacterFields(db, {
@@ -159,5 +205,17 @@ export function loadNarrationContextFields(
     characterId: input.characterId,
     presentNpcIds: world.presentNpcs.map((npc) => npc.id)
   })
-  return { ...world, ...characterFields }
+  const factionPlaySection = loadFactionPlaySection(db, input)
+  const { sharedWorldDay, sharedTimeGrounding } = loadSharedTimeFields(
+    db,
+    input.campaignId,
+    input.characterId
+  )
+  return {
+    ...world,
+    ...characterFields,
+    ...(factionPlaySection ? { factionPlaySection } : {}),
+    sharedWorldDay,
+    sharedTimeGrounding
+  }
 }

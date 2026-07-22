@@ -2,10 +2,15 @@ import type Database from 'better-sqlite3'
 import type { Alignment } from '../shared/alignment/types'
 import type { Character } from '../db/repositories/characters'
 import { getCharacterById, listPlayerCharacters } from '../db/repositories/characters'
+import { getCampaignById } from '../db/repositories/campaigns'
 import { listCharacterJournalEntries } from '../db/repositories/characterJournalEntries'
 import { listLogEntriesByCharacter } from '../db/repositories/logEntries'
 import { listEventsByCampaign } from '../db/repositories/events'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
+import {
+  computeAwayDays,
+  formatSharedTimeGrounding
+} from '../shared/sharedTime'
 import { takeRecent } from './contextWindow'
 import { slimEvents, slimLogEntries, type SlimEvent, type SlimLogEntry } from './contextSlim'
 import { tryParseJson } from './jsonResponse'
@@ -77,6 +82,11 @@ export interface InactivePlayerContext {
   logBookEntries: SlimLogEntry[]
   storyThreadState: { id: string; state: string; summary: string } | null
   recentCampaignEvents: SlimEvent[]
+  /** EPIC-133 — shared campaign clock (not a private calendar). */
+  sharedWorldDay: number
+  lastActiveInGameDate: number
+  awayDays: number
+  sharedTimeGrounding: string
 }
 
 export function assembleInactivePlayerContext(
@@ -98,6 +108,10 @@ export function assembleInactivePlayerContext(
     .join('; ')
   const threads = listStoryThreadsByCampaign(db, campaignId)
   const [primaryThread] = threads
+  // EPIC-133
+  const sharedWorldDay = getCampaignById(db, campaignId)?.inGameDate ?? 0
+  const lastActiveInGameDate = character.lastActiveInGameDate
+  const awayDays = computeAwayDays(sharedWorldDay, lastActiveInGameDate)
   return {
     inactiveCharacterId: character.id,
     name: character.name,
@@ -111,7 +125,14 @@ export function assembleInactivePlayerContext(
     storyThreadState: primaryThread
       ? { id: primaryThread.id, state: primaryThread.state, summary: primaryThread.summary }
       : null,
-    recentCampaignEvents: slimEvents(takeRecent(listEventsByCampaign(db, campaignId)))
+    recentCampaignEvents: slimEvents(takeRecent(listEventsByCampaign(db, campaignId))),
+    sharedWorldDay,
+    lastActiveInGameDate,
+    awayDays,
+    sharedTimeGrounding: formatSharedTimeGrounding({
+      worldDay: sharedWorldDay,
+      lastActiveInGameDate
+    })
   }
 }
 
@@ -135,7 +156,9 @@ const INACTIVE_PLAYER_GENERATE_CONTEXT: GenerateContext = {
     schemaFragment: '{"actionText":string}',
     guidanceLines: [
       "Speak and act from this character's established history only — do not invent mechanical stat changes.",
-      'Decide how this inactive character reacts in the shared world — dialogue, gesture, or brief action.'
+      'Decide how this inactive character reacts in the shared world — dialogue, gesture, or brief action.',
+      // EPIC-133
+      'Use the shared campaign clock only — do not invent a private calendar for this character.'
     ]
   }),
   maxTokens: 256,
@@ -151,6 +174,8 @@ function buildInactivePlayerPrompt(
     `You are roleplaying ${character.name}, an inactive player character in a shared world.`,
     `Identity: ${context.identitySummary}`,
     `Current region id: ${context.currentRegionId ?? '(unknown)'}`,
+    // EPIC-133
+    context.sharedTimeGrounding,
     `Narration log (this character only): ${JSON.stringify(context.narrationLog)}`,
     `Journal: ${JSON.stringify(context.journalEntries)}`,
     `Log book: ${JSON.stringify(context.logBookEntries)}`,

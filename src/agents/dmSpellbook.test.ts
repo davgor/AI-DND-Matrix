@@ -17,7 +17,9 @@ describe('persistSpellGrants', () => {
       characterClass: 'mage',
       kind: 'player'
     })
-    persistSpellGrants(db, hero.id, [{ catalogSpellKey: 'firebolt' }])
+    const result = persistSpellGrants(db, hero.id, [{ catalogSpellKey: 'firebolt' }])
+    expect(result.newlyGrantedKeys).toEqual(['firebolt'])
+    expect(result.newlyGrantedNames).toEqual(['Firebolt'])
     const updated = getCharacterById(db, hero.id)!
     expect((updated.stats as { knownSpellKeys?: string[] }).knownSpellKeys).toEqual(['firebolt'])
   })
@@ -32,7 +34,8 @@ describe('persistSpellGrants', () => {
       kind: 'player'
     })
     updateCharacter(db, hero.id, { stats: { ...hero.stats, knownSpellKeys: ['firebolt'] } })
-    persistSpellGrants(db, hero.id, [{ catalogSpellKey: 'not-a-spell' }])
+    const result = persistSpellGrants(db, hero.id, [{ catalogSpellKey: 'not-a-spell' }])
+    expect(result.newlyGrantedKeys).toEqual([])
     const updated = getCharacterById(db, hero.id)!
     expect((updated.stats as { knownSpellKeys?: string[] }).knownSpellKeys).toEqual(['firebolt'])
   })
@@ -56,6 +59,24 @@ describe('persistNarrationSideEffects spellGrants', () => {
     )
     const updated = getCharacterById(db, hero.id)!
     expect((updated.stats as { knownSpellKeys?: string[] }).knownSpellKeys).toContain('firebolt')
+  })
+
+  it('returns player-visible grant narration for new spells', async () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, { name: 'Spells', premisePrompt: 'Hook', deathMode: 'legendary' })
+    const region = createRegion(db, { campaignId: campaign.id, name: 'Tower', description: 'Arcane' })
+    const hero = createCharacter(db, {
+      campaignId: campaign.id,
+      name: 'Mage',
+      characterClass: 'mage',
+      kind: 'player'
+    })
+    const effects = await persistNarrationSideEffects(
+      db,
+      { narrationText: 'You learn a spell.', spellGrants: [{ catalogSpellKey: 'firebolt' }] },
+      { campaignId: campaign.id, regionId: region.id, characterId: hero.id }
+    )
+    expect(effects.spellGrantNarration).toBe('You learned Firebolt.')
   })
 })
 

@@ -24,7 +24,7 @@ describe('combat encounter smoke', () => {
       '{"difficulty":"easy"}'
     ])
     const turn = (input: string, rng: () => number = initiativeRng()) =>
-      resolvePlayerTurn(db, provider, { campaignId: campaign.id, characterId: player.id, playerInput: input }, rng)
+      resolvePlayerTurn(db,  provider,  { campaignId: campaign.id, characterId: player.id, playerInput: input }, { rng: rng })
 
     expect((await turn('I draw my sword!')).combatState).not.toBeNull()
     expect((await turn('I swing and miss', attackRng(3))).combatAttack?.hit).toBe(false)
@@ -41,11 +41,9 @@ describe('combat encounter smoke', () => {
   it('preserves encounter state across reload', async () => {
     const { db, campaign, player, goblin } = seedCombatSmokeCampaign()
     await resolvePlayerTurn(
-      db,
-      createScriptedProvider(['{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}']),
-      { campaignId: campaign.id, characterId: player.id, playerInput: 'Combat!' },
-      initiativeRng()
-    )
+      db, 
+      createScriptedProvider(['{"intent":{"checkNeeded":false,"combatIntent":"startEncounter"}}']), 
+      { campaignId: campaign.id, characterId: player.id, playerInput: 'Combat!' }, { rng: initiativeRng() })
     const encounter = getActiveEncounter(db, campaign.id)
     expect(encounter?.initiativeOrder.length).toBeGreaterThan(0)
     expect(getNpcById(db, goblin.id)?.hp).toBe(10)

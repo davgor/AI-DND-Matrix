@@ -25,8 +25,11 @@ import {
   buildCanonRecallPrompt,
   buildPantheonGenerationPrompt,
   buildRegionsGenerationPrompt,
+  buildSingleNpcPrompt,
   buildWorldGenerationPrompt,
-  formatDeityDigest
+  formatDeityDigest,
+  formatGeneratedFactionDigest,
+  formatGeneratedFactionDigestLines
 } from './prompts'
 import { normalizeAdditionalRegion, normalizeCanonRecall } from './normalize'
 import { persistRegionWithNpcs } from './persist'
@@ -40,7 +43,10 @@ import {
 import {
   ADDITIONAL_REGION,
   REALISTIC_LLM_WORLD,
+  REALISTIC_LLM_FACTIONS,
   VALID_WORLD,
+  VALID_MEDIUM_FACTIONS,
+  VALID_FACTIONS_RESPONSE,
   EMPTY_CANON_RESPONSE,
   VALID_PANTHEON_RESPONSE,
   buildCascadingSeedResponses,
@@ -53,7 +59,19 @@ import {
 } from '../../test/fixtures/campaignGenerationFixtures'
 import type { GeneratedNpc, GeneratedRegion } from '.'
 import type { CreateCampaignStage } from '../../shared/campaignCreate/types'
-import { countParagraphs, coerceNpcTemperament, hasRepeatedSentences, isValidGeneratedPantheon, isValidGeneratedWorld, normalizeGeneratedPantheon, normalizeGeneratedWorld, normalizeGeneratedNpc, normalizeRaceKeyForRoster } from './normalize'
+import {
+  countParagraphs,
+  coerceNpcTemperament,
+  hasRepeatedSentences,
+  isValidGeneratedFactions,
+  isValidGeneratedPantheon,
+  isValidGeneratedWorld,
+  normalizeGeneratedFactions,
+  normalizeGeneratedPantheon,
+  normalizeGeneratedWorld,
+  normalizeGeneratedNpc,
+  normalizeRaceKeyForRoster
+} from './normalize'
 import { meetsProseJargonStandards } from './proseJargonGuard'
 
 const SPEAKING_STYLE_FIXTURE_RESPONSE = JSON.stringify({
@@ -100,7 +118,92 @@ describe('normalizeGeneratedWorld', () => {
     expect(normalized?.worldSummary).toContain('mountain pass')
     expect(isValidGeneratedWorld(shortWorld)).toBe(false)
   })
+})
 
+describe('normalizeGeneratedFactions: valid fixtures', () => {
+  it('accepts camelCase medium fixtures and pressure band counts', () => {
+    const normalized = normalizeGeneratedFactions(VALID_MEDIUM_FACTIONS)
+    expect(normalized?.factionPressure).toBe('medium')
+    expect(normalized?.factions.length).toBeGreaterThanOrEqual(3)
+    expect(normalized?.factions.length).toBeLessThanOrEqual(7)
+    expect(normalized?.relations.length).toBeGreaterThanOrEqual(2)
+    expect(isValidGeneratedFactions(VALID_MEDIUM_FACTIONS, { deitiesPresent: true })).toBe(true)
+    expect(normalized?.factions.some((faction) => faction.kind === 'religious')).toBe(true)
+  })
+
+  it('accepts snake_case live-model keys', () => {
+    const normalized = normalizeGeneratedFactions(REALISTIC_LLM_FACTIONS)
+    expect(normalized?.factionPressure).toBe('medium')
+    expect(normalized?.factionsSummary).toContain('Caravan leagues')
+    expect(normalized?.factions.find((faction) => faction.key === 'temple_of_vhalor')?.deityName).toBe(
+      'Vhalor'
+    )
+    expect(normalized?.relations[0]?.factionAKey).toBe('ashen_caravan_league')
+    expect(isValidGeneratedFactions(REALISTIC_LLM_FACTIONS, { deitiesPresent: true })).toBe(true)
+  })
+})
+
+const OVERSIZED_LIGHT_FACTIONS = {
+  faction_pressure: 'light',
+  factions_summary: 'Too many blocs for a quiet valley.',
+  factions: [
+    { key: 'a', name: 'A', kind: 'civic', summary: 'A.', sort_order: 0 },
+    { key: 'b', name: 'B', kind: 'mercantile', summary: 'B.', sort_order: 1 },
+    { key: 'c', name: 'C', kind: 'criminal', summary: 'C.', sort_order: 2 },
+    { key: 'd', name: 'D', kind: 'military', summary: 'D.', sort_order: 3 },
+    {
+      key: 'temple',
+      name: 'Temple',
+      kind: 'religious',
+      summary: 'Faith.',
+      deity_name: 'Vhalor',
+      sort_order: 4
+    }
+  ],
+  relations: []
+}
+
+describe('normalizeGeneratedFactions: trimming', () => {
+  it('trims oversized rosters to band max while preferring religious factions', () => {
+    const normalized = normalizeGeneratedFactions(OVERSIZED_LIGHT_FACTIONS)
+    expect(normalized?.factions).toHaveLength(4)
+    expect(normalized?.factions.some((faction) => faction.kind === 'religious')).toBe(true)
+    expect(isValidGeneratedFactions(OVERSIZED_LIGHT_FACTIONS)).toBe(true)
+  })
+
+  it('rejects undersized medium rosters when deities exist', () => {
+    const thin = {
+      factionPressure: 'medium',
+      factionsSummary: 'Only two blocs.',
+      factions: [
+        { key: 'a', name: 'A', kind: 'civic', summary: 'A.' },
+        { key: 'b', name: 'B', kind: 'mercantile', summary: 'B.' }
+      ],
+      relations: [{ factionAKey: 'a', factionBKey: 'b', stance: 'ally' }]
+    }
+    expect(isValidGeneratedFactions(thin, { deitiesPresent: true })).toBe(false)
+  })
+
+  it('rejects medium rosters without religious factions when deities exist', () => {
+    const noFaith = {
+      factionPressure: 'medium',
+      factionsSummary: 'Secular courts only.',
+      factions: [
+        { key: 'a', name: 'A', kind: 'civic', summary: 'A.' },
+        { key: 'b', name: 'B', kind: 'mercantile', summary: 'B.' },
+        { key: 'c', name: 'C', kind: 'criminal', summary: 'C.' }
+      ],
+      relations: [
+        { factionAKey: 'a', factionBKey: 'b', stance: 'rival' },
+        { factionAKey: 'b', factionBKey: 'c', stance: 'tense' }
+      ]
+    }
+    expect(isValidGeneratedFactions(noFaith, { deitiesPresent: true })).toBe(false)
+    expect(isValidGeneratedFactions(noFaith, { deitiesPresent: false })).toBe(true)
+  })
+})
+
+describe('normalizeGeneratedWorld continued', () => {
   it('rejects history that only meets length after boilerplate padding', () => {
     const thinHistory = [
       'In the Dawnveil the Elder Titans shaped the land and slept.',
@@ -203,6 +306,109 @@ describe('normalizeGeneratedNpc appearance fields', () => {
   })
 })
 
+describe('normalizeGeneratedNpc faction membership (125.4)', () => {
+  const baseSpeaking = {
+    name: 'Mara',
+    role: 'acolyte',
+    disposition: 'devout',
+    regionName: 'Pass',
+    temperament: 'disciplined',
+    canSpeak: true,
+    alignment: 'lawful_good',
+    race: 'human',
+    background: 'acolyte',
+    gender: 'woman',
+    class: 'cleric',
+    backstory: 'Mara tends the shrine.'
+  }
+
+  it('keeps optional factionKey and membershipRole', () => {
+    const npc = normalizeGeneratedNpc({
+      ...baseSpeaking,
+      factionKey: 'temple_of_vhalor',
+      membershipRole: 'acolyte'
+    })
+    expect(npc?.factionKey).toBe('temple_of_vhalor')
+    expect(npc?.membershipRole).toBe('acolyte')
+  })
+
+  it('accepts snake_case aliases without invalidating the NPC', () => {
+    const npc = normalizeGeneratedNpc({
+      ...baseSpeaking,
+      faction_key: 'harbor_council',
+      faction_membership_role: 'clerk'
+    })
+    expect(npc?.factionKey).toBe('harbor_council')
+    expect(npc?.membershipRole).toBe('clerk')
+  })
+
+  it('keeps unknown faction keys on the generated shape (persist drops them)', () => {
+    const npc = normalizeGeneratedNpc({
+      ...baseSpeaking,
+      factionKey: 'not_a_real_faction',
+      membershipRole: 'spy'
+    })
+    expect(npc).toBeDefined()
+    expect(npc?.factionKey).toBe('not_a_real_faction')
+    expect(npc?.membershipRole).toBe('spy')
+  })
+})
+
+describe('formatGeneratedFactionDigest (125.4)', () => {
+  it('emits slim key/name/kind lines with deity names and caps at slim max', () => {
+    const digest = formatGeneratedFactionDigest(VALID_MEDIUM_FACTIONS.factions)
+    expect(digest).toContain('temple_of_vhalor: Temple of Vhalor [religious]')
+    expect(digest).toContain('deity:Vhalor')
+    expect(digest).toContain('harbor_council: Harbor Council [civic]')
+    expect(digest).not.toContain('Port magistrates who tax')
+  })
+
+  it('adds clergy bias wording for medium/heavy pressure', () => {
+    const lines = formatGeneratedFactionDigestLines(VALID_MEDIUM_FACTIONS.factions, {
+      factionPressure: 'medium'
+    })
+    const joined = lines.join('\n')
+    expect(joined).toContain('temple_of_vhalor')
+    expect(joined.toLowerCase()).toMatch(/clergy|acolyte|priest|inquisitor|cultist/)
+    expect(joined.toLowerCase()).toMatch(/religious/)
+  })
+
+  it('omits clergy bias for light pressure without religious factions', () => {
+    const lines = formatGeneratedFactionDigestLines(
+      [
+        {
+          key: 'vale_watch',
+          name: 'Vale Watch',
+          kind: 'civic',
+          summary: 'Local militia.'
+        }
+      ],
+      { factionPressure: 'light' }
+    )
+    const joined = lines.join('\n').toLowerCase()
+    expect(joined).not.toMatch(/acolyte|priest|inquisitor|cultist/)
+  })
+})
+
+describe('buildSingleNpcPrompt faction roster (125.4)', () => {
+  it('includes slim faction digest and optional membership fields', () => {
+    const prompt = buildSingleNpcPrompt({
+      campaignPremise: 'A harbor intrigue.',
+      regionName: 'Tidemark Reach',
+      regionDescription: 'A battered harbor.',
+      existingNpcNames: [],
+      seedPrompt: 'A tide priest',
+      availableRaces: buildAvailableRaceOptions([]),
+      factions: VALID_MEDIUM_FACTIONS
+    })
+    expect(prompt).toContain('temple_of_vhalor')
+    expect(prompt).toContain('deity:Vhalor')
+    expect(prompt).toContain('factionKey')
+    expect(prompt).toContain('membershipRole')
+    expect(prompt.toLowerCase()).toMatch(/clergy|acolyte|priest/)
+  })
+})
+
 describe('generateCampaignSeed NPC slot retries', () => {
   it('retries NPC slot generation when the model reuses an existing name', async () => {
     const regions = [makeRegion('Ashen Crown Bazaar', 'desert')]
@@ -213,6 +419,7 @@ describe('generateCampaignSeed NPC slot retries', () => {
       EMPTY_CANON_RESPONSE,
       VALID_PANTHEON_RESPONSE,
       JSON.stringify(VALID_WORLD),
+      VALID_FACTIONS_RESPONSE,
       JSON.stringify({ regions }),
       JSON.stringify({ npc: firstNpc }),
       JSON.stringify({ npc: duplicateNpc }),
@@ -249,7 +456,9 @@ describe('generateCampaignSeed progress', () => {
     expect(stages).toContain('world')
     expect(stages.indexOf('pantheon')).toBeGreaterThan(stages.indexOf('canon'))
     expect(stages.indexOf('world')).toBeGreaterThan(stages.indexOf('pantheon'))
-    expect(stages.indexOf('regions')).toBeGreaterThan(stages.indexOf('world'))
+    expect(stages).toContain('factions')
+    expect(stages.indexOf('factions')).toBeGreaterThan(stages.indexOf('world'))
+    expect(stages.indexOf('regions')).toBeGreaterThan(stages.indexOf('factions'))
     expect(stages).toContain('regions')
     expect(stages.filter((stage) => stage === 'npcs').length).toBeGreaterThanOrEqual(2)
     expect(stages).toContain('bestiary')
@@ -807,6 +1016,7 @@ function buildShortfallSeedPrelude(region: ReturnType<typeof makeRegion>, npcsPe
     EMPTY_CANON_RESPONSE,
     VALID_PANTHEON_RESPONSE,
     JSON.stringify(VALID_WORLD),
+    VALID_FACTIONS_RESPONSE,
     JSON.stringify({ regions: [region] }),
     ...Array.from({ length: npcsPerRegion * MAX_GENERATION_ATTEMPTS }, () => 'invalid npc slot response'),
     makeBestiarySeedResponse(),
@@ -870,8 +1080,8 @@ describe('one-shot NPC generation call-count guards (040.13)', () => {
     const provider = createScriptedProvider(responses)
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 2, npcsPerRegion: 3 })
     expect(result.npcs).toHaveLength(6)
-    // canon + pantheon + world + regions + one call per NPC (6) + bestiary + story = 12
-    expect(provider.calls).toHaveLength(12)
+    // canon + pantheon + world + factions + regions + one call per NPC (6) + bestiary + story = 13
+    expect(provider.calls).toHaveLength(13)
     expect(provider.calls.filter((call) => call.prompt.includes(CORE_BUNDLE_PROMPT_MARKER))).toHaveLength(0)
   })
 

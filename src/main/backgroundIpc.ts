@@ -8,7 +8,13 @@ import type {
   BackgroundGenerateStoryInput,
   BackgroundRosterEntry
 } from '../shared/characterBackground/types'
-import { normalizeBackgroundStory, resolveBackgroundRosterEntry } from '../shared/characterBackground/apply'
+import {
+  CUSTOM_BACKGROUND_DESCRIPTION,
+  normalizeBackgroundStory,
+  resolveBackgroundRosterEntry,
+  validateBackgroundApplyFields
+} from '../shared/characterBackground/apply'
+import { isCustomBackgroundKey, normalizeCustomBackgroundLabel } from '../shared/characterBackground/types'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById } from '../db/repositories/characters'
 import { setGuidedCreationPhase } from '../db/repositories/guidedCreation'
@@ -25,13 +31,31 @@ export function getBackgroundRoster(): BackgroundRosterEntry[] {
   return BACKGROUND_ROSTER
 }
 
+function resolveGenerateBackgroundLabels(input: BackgroundGenerateStoryInput): {
+  label: string
+  description: string
+} | null {
+  if (isCustomBackgroundKey(input.backgroundKey)) {
+    const label = normalizeCustomBackgroundLabel(input.backgroundCustomLabel)
+    if (!label) {
+      return null
+    }
+    return { label, description: CUSTOM_BACKGROUND_DESCRIPTION }
+  }
+  const entry = resolveBackgroundRosterEntry(BACKGROUND_ROSTER, input.backgroundKey)
+  if (!entry) {
+    return null
+  }
+  return { label: entry.label, description: entry.description }
+}
+
 export async function generateBackgroundStoryForCharacter(
   db: Database.Database,
   provider: ReturnType<typeof buildAgentProvider>,
   input: BackgroundGenerateStoryInput
 ): Promise<string> {
-  const entry = resolveBackgroundRosterEntry(BACKGROUND_ROSTER, input.backgroundKey)
-  if (!entry) {
+  const labels = resolveGenerateBackgroundLabels(input)
+  if (!labels) {
     throw new Error('invalid_background_key')
   }
 
@@ -52,8 +76,8 @@ export async function generateBackgroundStoryForCharacter(
     raceLore: raceContext.raceLore,
     campaignPremise: campaign.premisePrompt,
     worldSummary: campaign.worldSummary || campaign.currentStateSummary,
-    backgroundLabel: entry.label,
-    backgroundDescription: entry.description,
+    backgroundLabel: labels.label,
+    backgroundDescription: labels.description,
     playerPrompt,
     existingStory: character.backgroundStory
   })
@@ -71,8 +95,11 @@ export async function applyBackgroundSelection(
     return { ok: false, reason: 'invalid_phase' }
   }
 
-  const entry = findBackgroundRosterEntry(input.backgroundKey)
-  if (!entry) {
+  const validated = validateBackgroundApplyFields(input)
+  if (!validated.ok) {
+    return { ok: false, reason: validated.reason }
+  }
+  if (!isCustomBackgroundKey(validated.key) && !findBackgroundRosterEntry(validated.key)) {
     return { ok: false, reason: 'invalid_background_key' }
   }
 
@@ -80,8 +107,10 @@ export async function applyBackgroundSelection(
 
   return db.transaction(() => {
     db.prepare(
-      'UPDATE characters SET background_key = ?, background_story = ? WHERE id = ?'
-    ).run(entry.key, story, input.characterId)
+      `UPDATE characters
+       SET background_key = ?, background_story = ?, background_custom_label = ?
+       WHERE id = ?`
+    ).run(validated.key, story, validated.customLabel, input.characterId)
     setGuidedCreationPhase(db, input.characterId, 'equipment')
     return { ok: true as const }
   })()

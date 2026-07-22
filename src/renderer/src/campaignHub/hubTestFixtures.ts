@@ -14,10 +14,14 @@ export function makeTestCampaign(overrides: Partial<Campaign> = {}): Campaign {
     worldSummary: 'A fractured kingdom of mist and stone.\n\nOld oaths bind the living.\n\nWar stirs again.',
     worldHistory: 'Age one.\n\nAge two.\n\nAge three.\n\nAge four.',
     pantheonSummary: '',
+    factionsSummary: '',
+    factionPressure: 'light',
     inGameDate: 12,
     deathMode: 'standard',
     respawnRules: null,
+    generativeTokensEnabled: false,
     npcFaceTokenGenerationEnabled: false,
+    enemyTokenGenerationEnabled: false,
     ...overrides
   }
 }
@@ -54,6 +58,9 @@ export function makeTestCastMember(overrides: Partial<HubCastMember> = {}): HubC
     lifeStatus: 'alive',
     lastKnownRegionName: 'Greywatch',
     hasObituary: false,
+    // EPIC-133 — synced with makeTestCampaign inGameDate default (12)
+    lastActiveInGameDate: 12,
+    awayBlurb: '',
     ...overrides
   }
 }
@@ -76,6 +83,8 @@ export function makeTestHubSnapshot(overrides: Partial<PlayAwareHubSnapshot> = {
     storyThreads: [makeTestStoryThread()],
     characters: [],
     deities: [],
+    factions: [],
+    factionRelations: [],
     currentStateSummary: 'Tension rises along the northern border.',
     cast: [makeTestCastMember()],
     questSummariesByCharacterId: [

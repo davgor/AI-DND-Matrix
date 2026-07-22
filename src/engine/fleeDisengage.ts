@@ -1,5 +1,6 @@
 import { abilityModifier, type RandomFn } from './abilities'
-import { rollD20 } from './checks'
+import { rollD20WithMode } from './checks'
+import { advantageModeFromConditions, type Condition } from './conditions'
 
 export interface FleeDisengageParams {
   rng: RandomFn
@@ -7,6 +8,8 @@ export interface FleeDisengageParams {
   playerProficient: boolean
   proficiencyBonus: number
   hostileAgilityScore: number
+  playerConditions?: Condition[]
+  hostileConditions?: Condition[]
 }
 
 export interface FleeAttemptResult {
@@ -20,8 +23,14 @@ export interface FleeAttemptResult {
 
 /** Opposed Agility disengage — flat contested roll, no crit rules. Ties favor the defender (hostile). */
 export function resolveFleeDisengage(params: FleeDisengageParams): FleeAttemptResult {
-  const playerRoll = rollD20(params.rng)
-  const hostileRoll = rollD20(params.rng)
+  const playerRoll = rollD20WithMode(
+    params.rng,
+    advantageModeFromConditions(params.playerConditions ?? [], 'agility')
+  )
+  const hostileRoll = rollD20WithMode(
+    params.rng,
+    advantageModeFromConditions(params.hostileConditions ?? [], 'agility')
+  )
   const playerBonus =
     abilityModifier(params.playerAgilityScore) +
     (params.playerProficient ? params.proficiencyBonus : 0)

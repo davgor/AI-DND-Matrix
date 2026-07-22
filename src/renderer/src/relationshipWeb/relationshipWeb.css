@@ -1,0 +1,76 @@
+.relationship-web-overlay {
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.relationship-web-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(480px, 92vw);
+  max-height: min(70vh, 640px);
+  overflow: hidden;
+}
+
+.relationship-web-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.relationship-web-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--text-primary);
+}
+
+.relationship-web-body {
+  overflow-y: auto;
+  padding: 12px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.relationship-web-body h3 {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.relationship-web-node-list,
+.relationship-web-edge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.relationship-web-node-button,
+.relationship-web-edge-button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.relationship-web-node-button:hover,
+.relationship-web-edge-button:hover {
+  border-color: var(--text-accent);
+}
+
+.relationship-web-error {
+  color: var(--danger, #c44);
+  padding: 12px 20px;
+}

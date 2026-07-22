@@ -37,7 +37,10 @@ function characterWithNullStats(): Character {
     ownerPlayerCharacterId: null,
     raceKey: null,
     backgroundKey: null,
-    backgroundStory: null
+    backgroundStory: null,
+    backgroundCustomLabel: null,
+    // EPIC-133
+    lastActiveInGameDate: 0
   }
 }
 
@@ -56,7 +59,9 @@ describe('PlaySheetCharacterTab blank-screen crash', () => {
   it('does not throw when character.stats is null', () => {
     expect(() => {
       act(() => {
-        root.render(<PlaySheetCharacterTab character={characterWithNullStats()} />)
+        root.render(
+          <PlaySheetCharacterTab character={characterWithNullStats()} onCharacterUpdated={() => undefined} />
+        )
       })
     }).not.toThrow()
     expect(container.textContent).toContain('Kael')

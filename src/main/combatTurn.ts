@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3'
-import { canAct } from '../engine/conditions'
+import { canAct, conditionsFromStats } from '../engine/conditions'
 import { getActiveEncounter, isPlayerCombatTurn } from '../db/repositories/combatEncounters'
 import { getNpcById, updateNpcDisposition } from '../db/repositories/npcs'
 import { getCharacterById, type Character } from '../db/repositories/characters'
@@ -35,8 +35,7 @@ function provokeListedNpcs(db: Database.Database, npcIds: string[] | undefined):
 }
 
 function playerCanTakeCombatAction(character: Character): boolean {
-  const conditions = (character.stats as { conditions?: string[] }).conditions ?? []
-  return canAct(conditions as never[]) && character.hp > 0
+  return canAct(conditionsFromStats(character.stats)) && character.hp > 0
 }
 
 function assertPlayerAttackAllowed(encounter: import('../db/repositories/combatEncounters').CombatEncounter, character: Character): void {

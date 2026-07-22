@@ -64,6 +64,41 @@ describe('NpcDossierPortrait', () => {
   })
 })
 
+function enemyDossier(overrides: Parameters<typeof baseDossier>[0] = {}) {
+  return baseDossier({
+    name: 'Gray Wolf',
+    role: 'enemy',
+    canSpeak: false,
+    traits: {
+      temperament: 'hostile',
+      raceKey: null,
+      alignment: null,
+      genderKey: null,
+      classKey: null,
+      backgroundKey: null,
+      role: 'enemy',
+      hairColor: null,
+      age: null,
+      eyeColor: null,
+      silhouette: 'quadruped wolf',
+      sizeClass: 'medium',
+      primaryColors: ['gray'],
+      distinguishingMarks: 'scarred muzzle',
+      textureOrMaterial: 'matted fur'
+    },
+    ...overrides
+  })
+}
+
+function mountModalBody(
+  root: Root,
+  dossier: ReturnType<typeof baseDossier>
+): void {
+  act(() => {
+    root.render(<NpcDossierModalBody dossier={dossier} loading={false} error={null} />)
+  })
+}
+
 describe('NpcDossierModalBody portrait layout', () => {
   let container: HTMLDivElement
   let root: Root
@@ -83,19 +118,63 @@ describe('NpcDossierModalBody portrait layout', () => {
 
   it('places portrait beside Traits and Facts using dossier faceTokenPath', () => {
     const tokenPath = '/data/npc-face-tokens/camp/npc-1.png'
-    act(() => {
-      root.render(
-        <NpcDossierModalBody
-          dossier={baseDossier({ faceTokenPath: tokenPath })}
-          loading={false}
-          error={null}
-        />
-      )
-    })
+    mountModalBody(root, baseDossier({ faceTokenPath: tokenPath }))
     const topRow = container.querySelector('.npc-dossier-top-row')
     expect(topRow).not.toBeNull()
     const img = topRow?.querySelector('.npc-dossier-portrait img')
     expect(img?.getAttribute('src')).toBe(`file://${tokenPath}`)
     expect(topRow?.querySelector('h3')?.textContent).toBe('Traits')
+  })
+})
+
+describe('NpcDossierModalBody enemy portrait layout', () => {
+  let container: HTMLDivElement
+  let root: Root
+
+  beforeEach(() => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+  })
+
+  afterEach(() => {
+    act(() => {
+      root.unmount()
+    })
+    container.remove()
+  })
+
+  it('renders creature token portrait for non-speaking enemy dossiers', () => {
+    const tokenPath = '/data/creature-tokens/camp/gray-wolf.png'
+    mountModalBody(root, enemyDossier({ faceTokenPath: tokenPath }))
+    const img = container.querySelector('.npc-dossier-portrait img')
+    expect(img?.getAttribute('src')).toBe(`file://${tokenPath}`)
+    expect(container.querySelector('.npc-dossier-portrait-placeholder')).toBeNull()
+  })
+
+  it('shows neutral empty slot for enemy dossiers without a token', () => {
+    mountModalBody(root, enemyDossier())
+    expect(container.querySelector('.npc-dossier-portrait img')).toBeNull()
+    expect(container.querySelector('.npc-dossier-portrait-placeholder')).not.toBeNull()
+  })
+
+  it('falls back to empty slot when enemy creature token load fails', () => {
+    const tokenPath = '/data/creature-tokens/camp/missing-wolf.png'
+    mountModalBody(root, enemyDossier({ faceTokenPath: tokenPath }))
+    const img = container.querySelector('.npc-dossier-portrait img')
+    expect(img).not.toBeNull()
+    act(() => {
+      img?.dispatchEvent(new Event('error'))
+    })
+    expect(container.querySelector('.npc-dossier-portrait img')).toBeNull()
+    expect(container.querySelector('.npc-dossier-portrait-placeholder')).not.toBeNull()
+  })
+
+  it('uses the same faceTokenPath field Social avatars consume for enemies', () => {
+    const sharedTokenPath = '/data/creature-tokens/camp/gray-wolf.png'
+    mountModalBody(root, enemyDossier({ faceTokenPath: sharedTokenPath }))
+    expect(container.querySelector('.npc-dossier-portrait img')?.getAttribute('src')).toBe(
+      `file://${sharedTokenPath}`
+    )
   })
 })

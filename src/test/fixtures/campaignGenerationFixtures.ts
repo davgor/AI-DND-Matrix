@@ -114,6 +114,118 @@ export const VALID_PANTHEON = {
 
 export const VALID_PANTHEON_RESPONSE = JSON.stringify(VALID_PANTHEON)
 
+/** Medium-pressure faction roster with ≥1 religious + ≥2 relations (125.3 default path). */
+export const VALID_MEDIUM_FACTIONS = {
+  factionPressure: 'medium' as const,
+  factionsSummary:
+    'Harbor councils, salvage cults, and smuggler princes contest wreck rights while Vhalor’s temple keeps the drowned oaths. Every dockside bargain has a second ledger.',
+  factions: [
+    {
+      key: 'harbor_council',
+      name: 'Harbor Council',
+      kind: 'civic' as const,
+      summary: 'Port magistrates who tax moorings and quarrel over salvage licenses.',
+      motivation: 'Keep the inner sea routes profitable and orderly.',
+      publicFace: 'Civic stewards of the quays.',
+      methods: 'Tariffs, inspections, and sealed ledgers.',
+      sortOrder: 0
+    },
+    {
+      key: 'charting_compact',
+      name: 'Charting Compact Remnant',
+      kind: 'mercantile' as const,
+      summary: 'Surviving beacon crews and insurance brokers who still sell safe-passage charts.',
+      sortOrder: 1
+    },
+    {
+      key: 'temple_of_vhalor',
+      name: 'Temple of Vhalor',
+      kind: 'religious' as const,
+      summary: 'Tide priests who judge broken oaths sworn on water.',
+      deityName: 'Vhalor',
+      sortOrder: 2
+    },
+    {
+      key: 'smuggler_princes',
+      name: 'Smuggler Princes',
+      kind: 'criminal' as const,
+      summary: 'Captains who run dark lanes past the beacon chains.',
+      sortOrder: 3
+    }
+  ],
+  relations: [
+    {
+      factionAKey: 'harbor_council',
+      factionBKey: 'smuggler_princes',
+      stance: 'rival' as const,
+      summary: 'Dock seizures and midnight bribes keep the feud warm.'
+    },
+    {
+      factionAKey: 'temple_of_vhalor',
+      factionBKey: 'harbor_council',
+      stance: 'tense' as const,
+      summary: 'Priests demand wreck tithes the council refuses to cede.'
+    }
+  ]
+}
+
+export const VALID_FACTIONS_RESPONSE = JSON.stringify(VALID_MEDIUM_FACTIONS)
+
+/** Snake_case variant for live-model drift coverage. */
+export const REALISTIC_LLM_FACTIONS = {
+  faction_pressure: 'medium',
+  factions_summary:
+    'Caravan leagues, temple wardens, and desert courts trade favors under the Ashen Crown.',
+  factions: [
+    {
+      key: 'ashen_caravan_league',
+      name: 'Ashen Caravan League',
+      kind: 'mercantile',
+      summary: 'Desert traders who schedule every oasis stop.',
+      public_face: 'Honest middlemen of the upland road.',
+      sort_order: 0
+    },
+    {
+      key: 'crown_watch',
+      name: 'Crown Watch',
+      kind: 'military',
+      summary: 'Frontier riders who seal the pass when winter arrives.',
+      sort_order: 1
+    },
+    {
+      key: 'temple_of_vhalor',
+      name: 'Temple of Vhalor',
+      kind: 'religious',
+      summary: 'Oath-keepers who bless caravans before the dunes.',
+      deity_name: 'Vhalor',
+      sort_order: 2
+    },
+    {
+      key: 'sandglass_cabal',
+      name: 'Sandglass Cabal',
+      kind: 'clandestine',
+      summary: 'Informants who sell envoy routes to the highest bidder.',
+      sort_order: 3
+    }
+  ],
+  relations: [
+    {
+      faction_a_key: 'ashen_caravan_league',
+      faction_b_key: 'sandglass_cabal',
+      stance: 'rival',
+      summary: 'Leaked manifests keep the league hunting spies.'
+    },
+    {
+      faction_a_key: 'temple_of_vhalor',
+      faction_b_key: 'crown_watch',
+      stance: 'ally',
+      summary: 'Priests bless the watch before each winter patrol.'
+    }
+  ]
+}
+
+export const REALISTIC_FACTIONS_RESPONSE = JSON.stringify(REALISTIC_LLM_FACTIONS)
+
 /** Default prepped bestiary roster (N>=3 per 116.6). */
 export const DEFAULT_BESTIARY_FOES: GeneratedBestiaryFoe[] = [
   {
@@ -232,7 +344,8 @@ export function buildCrimsonReachCascadingResponses(input: {
   const responses: string[] = [
     EMPTY_CANON_RESPONSE,
     VALID_PANTHEON_RESPONSE,
-    JSON.stringify(CRIMSON_REACH_LLM_WORLD)
+    JSON.stringify(CRIMSON_REACH_LLM_WORLD),
+    VALID_FACTIONS_RESPONSE
   ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
@@ -268,7 +381,8 @@ export function buildRealisticLlmCascadingSeedResponses(input: {
   const responses: string[] = [
     EMPTY_CANON_RESPONSE,
     VALID_PANTHEON_RESPONSE,
-    `\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``
+    `\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``,
+    REALISTIC_FACTIONS_RESPONSE
   ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
@@ -332,7 +446,8 @@ export function buildCascadingSeedResponses(input: {
   const responses: string[] = [
     JSON.stringify(canonPayload),
     JSON.stringify(pantheonPayload),
-    JSON.stringify(VALID_WORLD)
+    JSON.stringify(VALID_WORLD),
+    VALID_FACTIONS_RESPONSE
   ]
   responses.push(JSON.stringify({ regions }))
   for (const region of regions) {
@@ -359,7 +474,8 @@ export function buildShieldHeroCascadingSeedResponses(input: {
   const responses: string[] = [
     JSON.stringify(SHIELD_HERO_CANON),
     JSON.stringify(SHIELD_HERO_PANTHEON),
-    JSON.stringify(VALID_WORLD)
+    JSON.stringify(VALID_WORLD),
+    VALID_FACTIONS_RESPONSE
   ]
   responses.push(JSON.stringify({ regions }))
   let npcIndex = 0
@@ -427,19 +543,37 @@ export function npcSpeakingStyleResponses(count: number): string[] {
   return Array.from({ length: count }, () => NPC_SPEAKING_STYLE_RESPONSE)
 }
 
+/** Scripted species appearance-only follow-up after preset-lore bestiary persist (123.2). */
+export const SPECIES_APPEARANCE_RESPONSE = JSON.stringify({
+  visualAppearance: {
+    silhouette: 'quadruped wolf-like',
+    sizeClass: 'medium',
+    primaryColors: ['ash grey'],
+    distinguishingMarks: 'scarred flank',
+    textureOrMaterial: 'matted fur'
+  }
+})
+
+export function speciesAppearanceResponses(count: number): string[] {
+  return Array.from({ length: count }, () => SPECIES_APPEARANCE_RESPONSE)
+}
+
 /**
  * Persist-time enrichment queue after campaign seed generation:
- * unique race lore realizes, then per speaking NPC: speaking-style + combat review.
+ * unique race lore realizes, then per speaking NPC: speaking-style + combat review,
+ * then optional appearance-only calls for preset-lore bestiary foes (123.2).
  */
 export function persistNpcEnrichmentResponses(
   npcCount: number,
-  uniqueRaceCount = 1
+  uniqueRaceCount = 1,
+  bestiaryFoeCount = DEFAULT_BESTIARY_FOES.length
 ): string[] {
   return [
     ...Array.from({ length: uniqueRaceCount }, () => RACE_LORE_RESPONSE),
     ...Array.from({ length: npcCount }, () => [
       NPC_SPEAKING_STYLE_RESPONSE,
       '{"upgrade":false}'
-    ]).flat()
+    ]).flat(),
+    ...speciesAppearanceResponses(bestiaryFoeCount)
   ]
 }

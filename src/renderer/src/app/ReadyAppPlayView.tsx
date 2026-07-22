@@ -4,6 +4,7 @@ import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
 import { PlayView } from '../playView/PlayView'
 import type { useSidebarController } from '../sidebar/useSidebarController'
 import type { useReadyAppBodyState } from './useReadyAppBody'
+import { PlayShellErrorBoundary } from '../playResilience/PlayShellErrorBoundary' // EPIC-136
 
 export function ReadyAppPlayView(props: {
   detail: CampaignDetail
@@ -16,13 +17,15 @@ export function ReadyAppPlayView(props: {
   }
 }): JSX.Element {
   return (
-    <PlayView
-      campaignId={props.detail.campaign!.id}
-      characterId={props.body.activePlayer!.id}
-      selectedCampaignId={props.detail.campaign!.id}
-      sidebarRef={props.sidebarRef}
-      onExitToCampaignHub={() => void props.body.handleExitToCampaignHub()}
-      {...props.campaignCallbacks}
-    />
+    <PlayShellErrorBoundary onReturnToHub={() => void props.body.handleExitToCampaignHub()}>
+      <PlayView
+        campaignId={props.detail.campaign!.id}
+        characterId={props.body.activePlayer!.id}
+        selectedCampaignId={props.detail.campaign!.id}
+        sidebarRef={props.sidebarRef}
+        onExitToCampaignHub={() => void props.body.handleExitToCampaignHub()}
+        {...props.campaignCallbacks}
+      />
+    </PlayShellErrorBoundary>
   )
 }

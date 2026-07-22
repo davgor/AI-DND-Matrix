@@ -283,6 +283,30 @@ describe('turnRoutingHeuristic: starvation guard, transactional and shared-scene
   })
 })
 
+describe('turnRoutingHeuristic: world-alter starvation guard (130.4)', () => {
+  it.each([
+    'I burn the village',
+    'I destroy the watchtower',
+    'I collapse the bridge',
+    'I massacre the garrison',
+    'I raze Oakhollow',
+    'I rebuild the hall'
+  ])('defers world-alter input that must hit dmNarration: %s', (playerInput) => {
+    expect(
+      heuristicRoutingPlan(noCheck(), signals({ playerInput, presentNpcs: [] }))
+    ).toBeNull()
+  })
+
+  it('still allows inert physical gestures without world-alter verbs', () => {
+    expect(
+      heuristicRoutingPlan(
+        noCheck(),
+        signals({ playerInput: 'I draw my sword', presentNpcs: [] })
+      )
+    ).not.toBeNull()
+  })
+})
+
 describe('canSkipRoutingLlm (pre-LLM intent-only gate)', () => {
   it('is true for a converse-eligible turn', () => {
     expect(canSkipRoutingLlm(signals())).toBe(true)

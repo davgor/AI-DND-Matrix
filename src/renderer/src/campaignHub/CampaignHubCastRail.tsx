@@ -1,11 +1,17 @@
+import { useEffect, useState } from 'react'
 import type { HubCastMember } from '../../../shared/campaignHub/types'
+import { formatLastActiveLabel } from '../../../shared/sharedTime'
 
-export interface CampaignHubCastRailProps {
+interface CampaignHubCastRailProps {
   cast: HubCastMember[]
   actionsDisabled: boolean
   onResumeCharacter: (characterId: string) => void
   onCreateCharacter: () => void
   onViewObituary: (characterId: string) => void
+}
+
+function castPortraitSrc(path: string | null): string | undefined {
+  return path ? `file://${path}` : undefined
 }
 
 export function CampaignHubCastRail(props: CampaignHubCastRailProps): JSX.Element {
@@ -42,6 +48,38 @@ export function CampaignHubCastRail(props: CampaignHubCastRailProps): JSX.Elemen
   )
 }
 
+function CampaignHubCastPresence(props: { member: HubCastMember }): JSX.Element {
+  const { member } = props
+  return (
+    <>
+      {/* EPIC-133 */}
+      <p className="campaign-hub-cast-last-active">
+        {formatLastActiveLabel(member.lastActiveInGameDate)}
+      </p>
+      {member.awayBlurb ? (
+        <p className="campaign-hub-cast-away">{member.awayBlurb}</p>
+      ) : null}
+    </>
+  )
+}
+
+function CastPortrait(props: { portraitPath: string | null; name: string }): JSX.Element {
+  const [loadFailed, setLoadFailed] = useState(false)
+  useEffect(() => {
+    setLoadFailed(false)
+  }, [props.portraitPath])
+  const src = castPortraitSrc(props.portraitPath)
+  const showImage = src !== undefined && !loadFailed
+  if (showImage) {
+    return <img src={src} alt="" onError={() => setLoadFailed(true)} />
+  }
+  return (
+    <span className="campaign-hub-cast-portrait-placeholder" aria-hidden="true">
+      {props.name.charAt(0).toUpperCase()}
+    </span>
+  )
+}
+
 export function CampaignHubCastCard(props: {
   member: HubCastMember
   actionsDisabled: boolean
@@ -55,11 +93,7 @@ export function CampaignHubCastCard(props: {
   return (
     <article className={isDead ? 'campaign-hub-cast-card--dead' : 'campaign-hub-cast-card--alive'}>
       <div className="campaign-hub-cast-portrait">
-        {member.portraitPath ? (
-          <img src={member.portraitPath} alt="" />
-        ) : (
-          <span className="campaign-hub-cast-portrait-placeholder" aria-hidden="true" />
-        )}
+        <CastPortrait portraitPath={member.portraitPath} name={member.name} />
       </div>
       <div className="campaign-hub-cast-details">
         <h3>{displayName}</h3>
@@ -69,6 +103,7 @@ export function CampaignHubCastCard(props: {
         {member.lastKnownRegionName ? (
           <p className="campaign-hub-cast-region">Last seen: {member.lastKnownRegionName}</p>
         ) : null}
+        <CampaignHubCastPresence member={member} />
         {isDead ? (
           <button
             type="button"

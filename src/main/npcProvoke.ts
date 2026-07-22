@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { RandomFn } from '../engine/abilities'
 import { proficiencyBonus } from '../engine/proficiency'
+import { conditionsFromStats } from '../engine/conditions'
 import { resolvePlayerAttackAgainstNpc } from '../engine/playerAttack'
 import { getEquippedWeaponDamageProfile } from '../db/repositories/characterItems'
 import { resolveNpcResistanceProfile } from '../db/repositories/npcResistances'
@@ -49,7 +50,8 @@ function strikeProvokedNpc(
     weaponComponents: weaponProfile.components,
     targetAc: npc.ac ?? 10,
     targetHp: npc.hp ?? 1,
-    targetResistances: resolveNpcResistanceProfile(db, npc)
+    targetResistances: resolveNpcResistanceProfile(db, npc),
+    attackerConditions: conditionsFromStats(player.stats)
   })
   if (resolution.hit) {
     applyNpcDamage(db, npc.id, resolution.damage)

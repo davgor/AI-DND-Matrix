@@ -51,7 +51,7 @@ describe('validateCampaignSetupForm', () => {
   })
 })
 
-describe('mapFormToCreateRequest', () => {
+describe('mapFormToCreateRequest: premise and counts', () => {
   it('maps premise and defaults name from premise when empty', () => {
     const request = mapFormToCreateRequest(
       { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A flooded kingdom under eternal rain' },
@@ -77,23 +77,25 @@ describe('mapFormToCreateRequest', () => {
     expect(request.regionCount).toBe(1)
     expect(request.npcsPerRegion).toBe(1)
   })
+})
 
-  it('maps npcFaceTokenGenerationEnabled (default false)', () => {
+describe('mapFormToCreateRequest: token flags', () => {
+  it('maps generativeTokensEnabled (default false)', () => {
     const off = mapFormToCreateRequest(
       { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A quiet village' },
       'session-3'
     )
-    expect(off.npcFaceTokenGenerationEnabled).toBe(false)
+    expect(off.generativeTokensEnabled).toBe(false)
 
     const on = mapFormToCreateRequest(
       {
         ...DEFAULT_CAMPAIGN_SETUP_FORM,
         premisePrompt: 'A quiet village',
-        npcFaceTokenGenerationEnabled: true
+        generativeTokensEnabled: true
       },
       'session-4'
     )
-    expect(on.npcFaceTokenGenerationEnabled).toBe(true)
+    expect(on.generativeTokensEnabled).toBe(true)
   })
 })
 
@@ -140,6 +142,28 @@ describe('isValidCreateCampaignRequest: core fields', () => {
   })
 })
 
+describe('isValidCreateCampaignRequest: generativeTokensEnabled', () => {
+  it('rejects non-boolean generativeTokensEnabled', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        generativeTokensEnabled: 'yes'
+      })
+    ).toBe(false)
+  })
+
+  it('accepts generativeTokensEnabled boolean', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        generativeTokensEnabled: true
+      })
+    ).toBe(true)
+  })
+})
+
 describe('isValidCreateCampaignRequest: npcFaceTokenGenerationEnabled', () => {
   it('rejects non-boolean npcFaceTokenGenerationEnabled', () => {
     expect(
@@ -157,6 +181,28 @@ describe('isValidCreateCampaignRequest: npcFaceTokenGenerationEnabled', () => {
         sessionId: 's1',
         premisePrompt: 'A haunted marsh',
         npcFaceTokenGenerationEnabled: true
+      })
+    ).toBe(true)
+  })
+})
+
+describe('isValidCreateCampaignRequest: enemyTokenGenerationEnabled', () => {
+  it('rejects non-boolean enemyTokenGenerationEnabled', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        enemyTokenGenerationEnabled: 'yes'
+      })
+    ).toBe(false)
+  })
+
+  it('accepts enemyTokenGenerationEnabled boolean', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        enemyTokenGenerationEnabled: true
       })
     ).toBe(true)
   })

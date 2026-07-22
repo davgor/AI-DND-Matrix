@@ -17,6 +17,14 @@ import {
 const WOLF_LORE =
   'Wolves hunt the borderlands in packs, circling travelers before the first bite falls.'
 
+const WOLF_APPEARANCE = {
+  silhouette: 'quadruped canine',
+  sizeClass: 'medium',
+  primaryColors: ['grey'],
+  distinguishingMarks: null,
+  textureOrMaterial: 'matted fur'
+}
+
 function seedPlayerOnlyScene() {
   const db = createTestDb()
   const campaign = createCampaign(db, {
@@ -118,7 +126,9 @@ describe('startEncounter without hostiles (116.8 / 115 fallback)', () => {
   it('spawns catalog-tier hostiles when retrieval matches (wolf → dire-wolf)', async () => {
     const { db, campaign, region, player } = seedPlayerOnlyScene()
     expect(listNpcsByRegion(db, region.id)).toHaveLength(0)
-    const provider = createScriptedProvider([JSON.stringify({ baseLore: WOLF_LORE })])
+    const provider = createScriptedProvider([
+      JSON.stringify({ baseLore: WOLF_LORE, visualAppearance: WOLF_APPEARANCE })
+    ])
 
     const encounter = await startEncounter({
       db,
@@ -180,15 +190,13 @@ describe('resolvePlayerTurn startEncounter without hostiles (116.8)', () => {
     ])
 
     const result = await resolvePlayerTurn(
-      db,
-      provider,
+      db, 
+      provider, 
       {
         campaignId: campaign.id,
         characterId: player.id,
         playerInput: '*I swing my sword at the nearest beast*'
-      },
-      () => 0.5
-    )
+      }, { rng: () => 0.5 })
 
     expect(result.combatState).not.toBeNull()
     expect(result.combatState?.combatants.some((c) => c.ref.kind === 'npc')).toBe(true)

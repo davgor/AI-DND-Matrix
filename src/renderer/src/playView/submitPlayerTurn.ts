@@ -1,4 +1,4 @@
-import type { TurnResult } from '../../../main/turnIpc'
+import type { TurnResolveResult } from '../../../shared/playResilience/types'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 
 export async function resolvePlayerTurn(input: {
@@ -6,7 +6,8 @@ export async function resolvePlayerTurn(input: {
   characterId: string
   playerInput: string
   clientTraceId?: string
-}): Promise<TurnResult> {
+  turnAttemptId?: string
+}): Promise<TurnResolveResult> {
   return window.turn.resolve(input)
 }
 

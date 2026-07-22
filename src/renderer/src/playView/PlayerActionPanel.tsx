@@ -1,6 +1,7 @@
 import type { KeyboardEvent, RefObject } from 'react'
 import type { PlayLogEntry } from '../../../main/narrationLog'
 import type { CombatStateSnapshot } from '../../../shared/combat/types'
+import type { PersonMatchCandidate } from '../../../shared/journal'
 import { useIncomingIdHighlights } from './incomingHighlight'
 import {
   eligibleHighlightIds,
@@ -22,6 +23,7 @@ interface PlayerActionPanelProps {
   combatState?: CombatStateSnapshot | null
   characterId?: string
   onOpenNpcDossier?: (npcId: string) => void
+  personCandidates?: PersonMatchCandidate[]
 }
 
 export function turnStateMessage(props: PlayerActionPanelProps): string | null {
@@ -63,6 +65,7 @@ function SocialStreamLog(props: {
   scrollRef: RefObject<HTMLDivElement>
   highlightedIds: ReadonlySet<string>
   onOpenNpcDossier?: (npcId: string) => void
+  personCandidates?: PersonMatchCandidate[]
 }): JSX.Element {
   return (
     <div
@@ -82,6 +85,7 @@ function SocialStreamLog(props: {
           entry={entry}
           highlighted={props.highlightedIds.has(entry.id)}
           onOpenNpcDossier={props.onOpenNpcDossier}
+          personCandidates={props.personCandidates}
         />
       ))}
     </div>
@@ -148,6 +152,7 @@ export function PlayerActionPanel(props: PlayerActionPanelProps): JSX.Element {
         scrollRef={scrollRef}
         highlightedIds={highlightedIds}
         onOpenNpcDossier={props.onOpenNpcDossier}
+        personCandidates={props.personCandidates}
       />
       <SocialComposer
         turnMessage={turnStateMessage(props)}

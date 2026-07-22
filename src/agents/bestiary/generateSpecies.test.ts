@@ -8,9 +8,22 @@ import { generateOrGetBestiarySpecies } from './generateSpecies'
 const PRESET_LORE =
   'Rift-beasts stalk the torn edges of the world, hunting in packs near planar scars. Locals know them by the low howl that carries before a storm of violet light.'
 
+const USABLE_APPEARANCE = {
+  silhouette: 'quadruped wolf-like',
+  sizeClass: 'large',
+  primaryColors: ['violet', 'charcoal'],
+  distinguishingMarks: 'planar scars along the flank',
+  textureOrMaterial: 'crackling fur'
+}
+
 const LLM_LORE_RESPONSE = JSON.stringify({
   baseLore:
-    'These beasts roam the wilds near open rifts, drawn to the scent of planar bleed. Hunters speak of eyes that catch purple fire when the veil thins.'
+    'These beasts roam the wilds near open rifts, drawn to the scent of planar bleed. Hunters speak of eyes that catch purple fire when the veil thins.',
+  visualAppearance: USABLE_APPEARANCE
+})
+
+const LLM_APPEARANCE_ONLY_RESPONSE = JSON.stringify({
+  visualAppearance: USABLE_APPEARANCE
 })
 
 function seedCampaign() {
@@ -30,7 +43,7 @@ const BEAST_PACK = {
 }
 
 describe('generateOrGetBestiarySpecies retrieval + create', () => {
-  it('retrieval match creates species with catalog key and lore', async () => {
+  it('retrieval match creates species with catalog key, lore, and appearance', async () => {
     const { db, campaign } = seedCampaign()
     const provider = createScriptedProvider([LLM_LORE_RESPONSE])
 
@@ -45,13 +58,14 @@ describe('generateOrGetBestiarySpecies retrieval + create', () => {
     expect(result.species.name).toBe('Rift-beast')
     expect(result.species.key).toBe('rift-beast')
     expect(result.species.baseLore.length).toBeGreaterThan(0)
+    expect(result.species.visualAppearance).toEqual(USABLE_APPEARANCE)
     expect(result.catalogKey).toBeTruthy()
     expect(result.species.defaultCatalogKey).toBe(result.catalogKey)
     expect(result.variants.some((v) => v.variantKey === 'standard')).toBe(true)
     expect(provider.calls.length).toBe(1)
   })
 
-  it('LLM lore path returns non-empty lore', async () => {
+  it('LLM lore path returns non-empty lore and appearance', async () => {
     const { db, campaign } = seedCampaign()
     const provider = createScriptedProvider([LLM_LORE_RESPONSE])
 
@@ -65,11 +79,12 @@ describe('generateOrGetBestiarySpecies retrieval + create', () => {
 
     expect(result.created).toBe(true)
     expect(result.species.baseLore.trim().length).toBeGreaterThan(0)
+    expect(result.species.visualAppearance?.silhouette).toBe('quadruped wolf-like')
     expect(result.species.key).toBe('shadow-hound')
   })
 })
 
-describe('generateOrGetBestiarySpecies dedup + preset', () => {
+describe('generateOrGetBestiarySpecies dedup', () => {
   it('second call with same key returns existing without LLM', async () => {
     const { db, campaign } = seedCampaign()
     const provider = createScriptedProvider([LLM_LORE_RESPONSE])
@@ -93,10 +108,30 @@ describe('generateOrGetBestiarySpecies dedup + preset', () => {
     expect(second.species.baseLore).toBe(first.species.baseLore)
     expect(provider.calls.length).toBe(1)
   })
+})
 
-  it('presetLore skips LLM entirely', async () => {
+describe('generateOrGetBestiarySpecies preset lore', () => {
+  it('presetLore with presetAppearance skips LLM entirely', async () => {
     const { db, campaign } = seedCampaign()
     const provider = createScriptedProvider([])
+
+    const result = await generateOrGetBestiarySpecies(db, provider, {
+      campaignId: campaign.id,
+      name: 'Rift-beast',
+      ...BEAST_PACK,
+      presetLore: PRESET_LORE,
+      presetAppearance: USABLE_APPEARANCE
+    })
+
+    expect(result.created).toBe(true)
+    expect(result.species.baseLore).toBe(PRESET_LORE)
+    expect(result.species.visualAppearance).toEqual(USABLE_APPEARANCE)
+    expect(provider.calls.length).toBe(0)
+  })
+
+  it('presetLore without presetAppearance runs appearance-only LLM call', async () => {
+    const { db, campaign } = seedCampaign()
+    const provider = createScriptedProvider([LLM_APPEARANCE_ONLY_RESPONSE])
 
     const result = await generateOrGetBestiarySpecies(db, provider, {
       campaignId: campaign.id,
@@ -107,7 +142,25 @@ describe('generateOrGetBestiarySpecies dedup + preset', () => {
 
     expect(result.created).toBe(true)
     expect(result.species.baseLore).toBe(PRESET_LORE)
-    expect(provider.calls.length).toBe(0)
+    expect(result.species.visualAppearance).toEqual(USABLE_APPEARANCE)
+    expect(provider.calls.length).toBe(1)
+    expect(provider.calls[0]?.prompt).toContain('visual appearance only')
+  })
+
+  it('presetLore stores null appearance when appearance-only LLM fails', async () => {
+    const { db, campaign } = seedCampaign()
+    const provider = createScriptedProvider(['not json'])
+
+    const result = await generateOrGetBestiarySpecies(db, provider, {
+      campaignId: campaign.id,
+      name: 'Rift-beast',
+      ...BEAST_PACK,
+      presetLore: PRESET_LORE
+    })
+
+    expect(result.created).toBe(true)
+    expect(result.species.baseLore).toBe(PRESET_LORE)
+    expect(result.species.visualAppearance).toBeNull()
   })
 })
 
@@ -120,7 +173,8 @@ describe('generateOrGetBestiarySpecies no combat stats', () => {
       campaignId: campaign.id,
       name: 'Rift-beast',
       ...BEAST_PACK,
-      presetLore: PRESET_LORE
+      presetLore: PRESET_LORE,
+      presetAppearance: USABLE_APPEARANCE
     })
 
     const speciesKeys = Object.keys(result.species)
@@ -137,11 +191,12 @@ describe('generateOrGetBestiarySpecies no combat stats', () => {
     expect(columnNames).not.toContain('max_hp')
   })
 
-  it('strips combat numbers from LLM lore payload and still persists lore', async () => {
+  it('strips combat numbers from LLM lore payload and still persists lore + appearance', async () => {
     const { db, campaign } = seedCampaign()
     const provider = createScriptedProvider([
       JSON.stringify({
         baseLore: 'A cunning pack predator of the border woods.',
+        visualAppearance: USABLE_APPEARANCE,
         hp: 42,
         ac: 15,
         damage: '2d6+3'
@@ -155,6 +210,7 @@ describe('generateOrGetBestiarySpecies no combat stats', () => {
     })
 
     expect(result.species.baseLore).toContain('pack predator')
+    expect(result.species.visualAppearance?.silhouette).toBe('quadruped wolf-like')
     expect(Object.keys(result.species)).not.toContain('hp')
     expect(Object.keys(result.species)).not.toContain('ac')
   })

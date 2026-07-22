@@ -17,6 +17,14 @@ import { startEncounter } from './combatOrchestration'
 const WOLF_LORE =
   'Wolves hunt the borderlands in packs, circling travelers before the first bite falls.'
 
+const WOLF_APPEARANCE = {
+  silhouette: 'quadruped canine',
+  sizeClass: 'medium',
+  primaryColors: ['grey'],
+  distinguishingMarks: null,
+  textureOrMaterial: 'matted fur'
+}
+
 vi.mock('../agents/bestiary/generateSpecies', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../agents/bestiary/generateSpecies')>()
   return {
@@ -179,7 +187,9 @@ describe('encounter start precedence (116.9)', () => {
     generateCallCount = 0
     const scene = seedScene()
     const goblin = seedHostileNpc(scene, 'Named Goblin')
-    const provider = createScriptedProvider([JSON.stringify({ baseLore: WOLF_LORE })])
+    const provider = createScriptedProvider([
+      JSON.stringify({ baseLore: WOLF_LORE, visualAppearance: WOLF_APPEARANCE })
+    ])
     const encounter = await startWithProvider(scene, provider, 'I swing at the nearest wolf', [
       goblin.id
     ])
@@ -192,7 +202,9 @@ describe('encounter start precedence (116.9)', () => {
     generateCallCount = 0
     const scene = seedScene()
     const bandit = seedHostileNpc(scene, 'Bandit')
-    const provider = createScriptedProvider([JSON.stringify({ baseLore: WOLF_LORE })])
+    const provider = createScriptedProvider([
+      JSON.stringify({ baseLore: WOLF_LORE, visualAppearance: WOLF_APPEARANCE })
+    ])
     const encounter = await startWithProvider(scene, provider, 'I swing at the nearest wolf')
     expect(encounter.participantIds.some((ref) => ref.kind === 'npc' && ref.id === bandit.id)).toBe(
       true
@@ -209,7 +221,9 @@ describe('encounter start precedence (116.9)', () => {
     const encounter = await startWithProvider(scene, throwingProvider(), 'I draw my blade and engage')
     expectQuestPrepElite(encounter, scene, species.id)
   })
+})
 
+describe('encounter start precedence on demand (116.9)', () => {
   it('on_demand: still spawns when no quest prep and empty region', async () => {
     generateCallCount = 0
     const scene = seedScene()

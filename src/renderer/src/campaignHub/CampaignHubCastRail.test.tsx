@@ -34,17 +34,18 @@ describe('CampaignHubCastRail', () => {
     const aliveArticle = castCardFromLi(items[0])
     const deadArticle = castCardFromLi(items[1])
 
-    const aliveHeading = cardDetails(aliveArticle).props.children[0]
-    expect(aliveHeading.props.children).toBe('Kael')
+    const aliveDetails = cardDetails(aliveArticle).props.children as JSX.Element[]
+    const deadDetails = cardDetails(deadArticle).props.children as JSX.Element[]
+    expect(aliveDetails[0].props.children).toBe('Kael')
+    expect(deadDetails[0].props.children).toBe('☠ Mira')
 
-    const deadHeading = cardDetails(deadArticle).props.children[0]
-    expect(deadHeading.props.children).toBe('☠ Mira')
-
-    const aliveButton = cardDetails(aliveArticle).props.children[3]
-    expect(aliveButton.props.className).toBe('campaign-hub-resume')
-
-    const deadButton = cardDetails(deadArticle).props.children[3]
-    expect(deadButton.props.className).toBe('campaign-hub-view-obituary')
+    // EPIC-133 — action buttons follow last-active / optional away rows
+    const aliveButton = aliveDetails.find((child) => child?.props?.className === 'campaign-hub-resume')
+    const deadButton = deadDetails.find(
+      (child) => child?.props?.className === 'campaign-hub-view-obituary'
+    )
+    expect(aliveButton).toBeDefined()
+    expect(deadButton).toBeDefined()
   })
 
   it('disables Resume and Create actions when actionsDisabled is true', () => {
@@ -58,9 +59,10 @@ describe('CampaignHubCastRail', () => {
 
     const list = (node.props.children as JSX.Element[])[1] as JSX.Element
     const aliveArticle = castCardFromLi(list.props.children[0] as JSX.Element)
-    const resumeButton = cardDetails(aliveArticle).props.children[3]
+    const details = cardDetails(aliveArticle).props.children as JSX.Element[]
+    const resumeButton = details.find((child) => child?.props?.className === 'campaign-hub-resume')
     const createButton = (node.props.children as JSX.Element[])[2].props.children
-    expect(resumeButton.props.disabled).toBe(true)
+    expect(resumeButton?.props.disabled).toBe(true)
     expect(createButton.props.disabled).toBe(true)
   })
 })

@@ -8,7 +8,12 @@ import type {
 } from '../shared/campaignHub/types'
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listCharactersByCampaign } from '../db/repositories/characters'
+import { formatAwayBlurb } from '../shared/sharedTime'
 import { listDeitiesByCampaign } from '../db/repositories/deities'
+import {
+  listFactionRelationsByCampaign,
+  listFactionsByCampaign
+} from '../db/repositories/factions'
 import { listNpcsByRegion } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
@@ -30,6 +35,8 @@ function regionNameForCharacter(
 }
 
 function buildCast(db: Database.Database, campaignId: string): HubCastMember[] {
+  // EPIC-133
+  const worldDay = getCampaignById(db, campaignId)?.inGameDate ?? 0
   return listCharactersByCampaign(db, campaignId)
     .filter((character) => character.kind === 'player')
     .map((character) => ({
@@ -41,7 +48,9 @@ function buildCast(db: Database.Database, campaignId: string): HubCastMember[] {
       lifeStatus: character.lifeStatus,
       lastKnownRegionName: regionNameForCharacter(db, campaignId, character.id),
       hasObituary: character.obituary !== null,
-      obituary: character.obituary ?? undefined
+      obituary: character.obituary ?? undefined,
+      lastActiveInGameDate: character.lastActiveInGameDate,
+      awayBlurb: formatAwayBlurb(worldDay, character.lastActiveInGameDate)
     }))
 }
 
@@ -87,7 +96,10 @@ export function buildHubSnapshot(db: Database.Database, campaignId: string): Pla
     regionExtras: buildRegionExtras(db, campaignId),
     storyThreads: listStoryThreadsByCampaign(db, campaignId),
     characters: listCharactersByCampaign(db, campaignId),
-    deities: listDeitiesByCampaign(db, campaignId)
+    deities: listDeitiesByCampaign(db, campaignId),
+    factions: listFactionsByCampaign(db, campaignId),
+    factionRelations: listFactionRelationsByCampaign(db, campaignId),
+    bestiary: []
   }
 
   return {

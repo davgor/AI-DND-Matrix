@@ -57,11 +57,9 @@ type Scene = ReturnType<typeof seedSharedRegionScene>
 
 function playTurn(scene: Scene, playerInput: string, responses: string[]) {
   return resolvePlayerTurn(
-    scene.db,
-    createScriptedProvider(responses),
-    { campaignId: scene.campaign.id, characterId: scene.active.id, playerInput },
-    () => 0.5
-  )
+    scene.db, 
+    createScriptedProvider(responses), 
+    { campaignId: scene.campaign.id, characterId: scene.active.id, playerInput }, { rng: () => 0.5 })
 }
 
 function inactiveActionEvents(scene: Scene) {

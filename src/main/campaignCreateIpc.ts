@@ -12,6 +12,7 @@ import {
 } from '../shared/campaignCreate/types'
 import { isValidCreateCampaignRequest, resolveNpcsPerRegion, resolveRegionCount } from '../shared/campaignCreate/validation'
 import { touchLastPlayed } from '../db/repositories/sessions'
+import { listBestiarySpecies } from '../db/repositories/bestiary'
 import type { DeathMode, RespawnRules } from '../db/repositories/campaigns'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
@@ -20,6 +21,11 @@ import {
   maybeEnqueueNpcFaceTokensForNpcs,
   type NpcFaceTokenSchedulerDeps
 } from './npcFaceTokenScheduler'
+import {
+  createCreatureTokenSchedulerDeps,
+  maybeEnqueueCreatureTokensForSpecies,
+  type CreatureTokenSchedulerDeps
+} from './creatureTokenScheduler'
 
 export interface CreateCampaignSuccess {
   ok: true
@@ -33,6 +39,11 @@ export interface CreateCampaignFailure {
 }
 
 export type CreateCampaignResult = CreateCampaignSuccess | CreateCampaignFailure
+
+export interface CreateCampaignSchedulerDeps {
+  faceToken?: NpcFaceTokenSchedulerDeps
+  creatureToken?: CreatureTokenSchedulerDeps
+}
 
 let mainWindow: BrowserWindow | undefined
 let createInFlight = false
@@ -50,7 +61,9 @@ function toSetupInput(request: CreateCampaignRequest): CampaignSetupInput {
     respawnRules: (request.respawnRules ?? null) as RespawnRules | null,
     regionCount: resolveRegionCount(request.regionCount),
     npcsPerRegion: resolveNpcsPerRegion(request.npcsPerRegion),
-    npcFaceTokenGenerationEnabled: request.npcFaceTokenGenerationEnabled === true
+    generativeTokensEnabled: request.generativeTokensEnabled === true,
+    npcFaceTokenGenerationEnabled: request.npcFaceTokenGenerationEnabled === true,
+    enemyTokenGenerationEnabled: request.enemyTokenGenerationEnabled === true
   }
 }
 
@@ -65,7 +78,7 @@ export async function createCampaignFromRequest(
   db: Database.Database,
   provider: Provider,
   request: CreateCampaignRequest,
-  faceTokenSchedulerDeps?: NpcFaceTokenSchedulerDeps
+  schedulerDeps?: CreateCampaignSchedulerDeps
 ): Promise<CreateCampaignResult> {
   const input = toSetupInput(request)
   try {
@@ -80,9 +93,14 @@ export async function createCampaignFromRequest(
     touchLastPlayed(db, campaign.id)
     const detail = getCampaignDetail(db, campaign.id)
     maybeEnqueueNpcFaceTokensForNpcs(
-      faceTokenSchedulerDeps ?? createNpcFaceTokenSchedulerDeps(db),
+      schedulerDeps?.faceToken ?? createNpcFaceTokenSchedulerDeps(db),
       campaign.id,
       detail.npcs
+    )
+    maybeEnqueueCreatureTokensForSpecies(
+      schedulerDeps?.creatureToken ?? createCreatureTokenSchedulerDeps(db),
+      campaign.id,
+      listBestiarySpecies(db, campaign.id)
     )
     return { ok: true, detail }
   } catch (error) {

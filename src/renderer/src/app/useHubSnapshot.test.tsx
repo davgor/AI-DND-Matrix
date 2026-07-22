@@ -23,6 +23,8 @@ function hubFor(campaignId: string): PlayAwareHubSnapshot {
     storyThreads: [],
     characters: [],
     deities: [],
+    factions: [],
+    factionRelations: [],
     currentStateSummary: '',
     cast: [],
     questSummariesByCharacterId: [],

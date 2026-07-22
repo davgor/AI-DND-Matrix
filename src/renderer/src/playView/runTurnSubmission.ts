@@ -1,40 +1,54 @@
 import type { TurnResult } from '../../../main/turnIpc'
-import type { DyingResolution } from '../../../main/dyingResolution'
-import type { Alignment, PendingAlignmentShift } from '../../../shared/alignment/types'
-import type { CombatStateSnapshot } from '../../../shared/combat/types'
-import type { FleeTurnOutcome } from '../../../shared/combat/flee/types'
+import type { Alignment } from '../../../shared/alignment/types'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
+import type { PendingTurnFailure } from '../../../shared/playResilience/types'
 import type { PlayLogController } from './usePlayLog'
 import type { PromotionPromptController } from './usePromotionPrompt'
 import {
   createCampaignActionTurnId,
   logRendererCampaignAction
 } from './campaignActionTrace'
-import { idleExposition, resolvePlayerTurn } from './submitPlayerTurn'
+import { failedExposition, idleExposition, resolvePlayerTurn } from './submitPlayerTurn'
 
 function playerImprisonedFromStats(stats: unknown): boolean {
   const defeat = (stats as { playerDefeatState?: { imprisoned?: boolean } } | undefined)?.playerDefeatState
   return defeat?.imprisoned === true
 }
 
-function buildTurnSubmissionResult(
+function buildTurnNarrationFields(result: TurnResult) {
+  return {
+    defeatDispositionNarration: result.defeatDispositionNarration ?? null,
+    xpNarration: result.xpNarration ?? null,
+    lootNarration: result.lootNarration ?? null,
+    lockoutNarration: result.lockoutNarration ?? null,
+    spellGrantNarration: result.spellGrantNarration ?? null,
+    commerceTravelFeedback: result.commerceTravelFeedback ?? null
+  }
+}
+
+function buildTurnCombatFields(result: TurnResult) {
+  return {
+    pendingAlignmentShift: result.pendingAlignmentShift,
+    combatState: result.combatState ?? null,
+    fleeOutcome: result.fleeOutcome ?? null,
+    dyingResolution: result.dyingResolution
+  }
+}
+
+function buildTurnSubmissionSuccess(
   result: TurnResult,
   player: { alignment?: Alignment | null; stats?: unknown } | undefined,
   characterRefreshToken: number
 ) {
   return {
+    kind: 'success' as const,
     lastCheck: result.check ?? null,
     characterRefreshToken: characterRefreshToken + 1,
     expositionStatus: idleExposition(),
-    pendingAlignmentShift: result.pendingAlignmentShift,
     playerAlignment: player?.alignment ?? null,
-    combatState: result.combatState ?? null,
-    fleeOutcome: result.fleeOutcome ?? null,
-    defeatDispositionNarration: result.defeatDispositionNarration ?? null,
-    xpNarration: result.xpNarration ?? null,
-    lootNarration: result.lootNarration ?? null,
     playerImprisoned: playerImprisonedFromStats(player?.stats),
-    dyingResolution: result.dyingResolution
+    ...buildTurnCombatFields(result),
+    ...buildTurnNarrationFields(result)
   }
 }
 
@@ -43,13 +57,15 @@ async function resolveTurnWithClientTrace(input: {
   characterId: string
   playerInput: string
   turnId: string
-}): Promise<TurnResult> {
+  turnAttemptId: string
+}) {
   try {
     return await resolvePlayerTurn({
       campaignId: input.campaignId,
       characterId: input.characterId,
       playerInput: input.playerInput,
-      clientTraceId: input.turnId
+      clientTraceId: input.turnId,
+      turnAttemptId: input.turnAttemptId
     })
   } catch (error) {
     logRendererCampaignAction('error', {
@@ -76,8 +92,19 @@ async function finalizeTurnSubmission(
   await input.playLog.refreshLog()
   const characters = await window.characters.listByCampaign(input.campaignId)
   const player = characters.find((character) => character.id === input.characterId)
-  return buildTurnSubmissionResult(result, player, input.characterRefreshToken)
+  return buildTurnSubmissionSuccess(result, player, input.characterRefreshToken)
 }
+
+type TurnSubmissionSuccess = Awaited<ReturnType<typeof finalizeTurnSubmission>>
+
+type TurnSubmissionFailure = {
+  kind: 'failure'
+  failure: PendingTurnFailure
+  characterRefreshToken: number
+  expositionStatus: ExpositionStatus
+}
+
+export type TurnSubmissionOutcome = TurnSubmissionSuccess | TurnSubmissionFailure
 
 export async function runTurnSubmission(input: {
   campaignId: string
@@ -86,32 +113,36 @@ export async function runTurnSubmission(input: {
   playLog: PlayLogController
   promotion: PromotionPromptController
   characterRefreshToken: number
-}): Promise<{
-  lastCheck: TurnResult['check'] | null
-  characterRefreshToken: number
-  expositionStatus: ExpositionStatus
-  pendingAlignmentShift: PendingAlignmentShift | null
-  playerAlignment: Alignment | null
-  combatState: CombatStateSnapshot | null
-  fleeOutcome: FleeTurnOutcome | null
-  defeatDispositionNarration: string | null
-  xpNarration: string | null
-  lootNarration: string | null
-  playerImprisoned: boolean
-  dyingResolution?: DyingResolution
-}> {
+  turnAttemptId?: string
+}): Promise<TurnSubmissionOutcome> {
   const turnId = createCampaignActionTurnId()
+  const turnAttemptId = input.turnAttemptId ?? createCampaignActionTurnId()
   logRendererCampaignAction('ui_submit', {
     turnId,
     campaignId: input.campaignId,
     characterId: input.characterId,
     playerInput: input.playerInput
   })
-  const result = await resolveTurnWithClientTrace({
+  const resolved = await resolveTurnWithClientTrace({
     campaignId: input.campaignId,
     characterId: input.characterId,
     playerInput: input.playerInput,
-    turnId
+    turnId,
+    turnAttemptId
   })
-  return finalizeTurnSubmission(input, result)
+  if (!resolved.ok) {
+    return {
+      kind: 'failure',
+      characterRefreshToken: input.characterRefreshToken,
+      expositionStatus: failedExposition(resolved.message),
+      failure: {
+        category: resolved.category,
+        message: resolved.message,
+        retryable: resolved.retryable,
+        turnAttemptId: resolved.turnAttemptId || turnAttemptId,
+        playerInput: input.playerInput
+      }
+    }
+  }
+  return finalizeTurnSubmission(input, resolved.result)
 }

@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { describe, expect, it, vi } from 'vitest'
 import type { BackgroundRosterEntry } from '../../../shared/characterBackground/types'
+import { CUSTOM_BACKGROUND_KEY } from '../../../shared/characterBackground/types'
 import {
   BackgroundDescriptionField,
   BackgroundStoryField
@@ -12,7 +13,8 @@ import {
   hydrateBackgroundSelectionState,
   initialBackgroundSelectionState,
   resolveInitialBackgroundSelectionState,
-  selectBackground
+  selectBackground,
+  selectCustomBackground
 } from './backgroundSelectionLogic'
 
 const roster: BackgroundRosterEntry[] = [
@@ -28,7 +30,7 @@ const roster: BackgroundRosterEntry[] = [
   }
 ]
 
-describe('backgroundSelectionLogic', () => {
+describe('backgroundSelectionLogic selection', () => {
   it('populates read-only description from roster selection', () => {
     const state = selectBackground(initialBackgroundSelectionState(), roster[0]!)
     expect(descriptionForSelection(roster, state.backgroundKey)).toBe('You served in an army.')
@@ -36,31 +38,63 @@ describe('backgroundSelectionLogic', () => {
 
   it('gates confirm until a background is selected', () => {
     expect(canConfirmBackgroundSelection(initialBackgroundSelectionState())).toBe(false)
-    expect(canConfirmBackgroundSelection(selectBackground(initialBackgroundSelectionState(), roster[0]!))).toBe(true)
+    expect(canConfirmBackgroundSelection(selectBackground(initialBackgroundSelectionState(), roster[0]!))).toBe(
+      true
+    )
   })
 
-  it('hydrates saved background key and story', () => {
+  it('requires a custom label for custom backgrounds', () => {
+    const custom = selectCustomBackground(initialBackgroundSelectionState())
+    expect(canConfirmBackgroundSelection(custom)).toBe(false)
+    expect(canConfirmBackgroundSelection({ ...custom, customLabel: 'River Smuggler' })).toBe(true)
+  })
+})
+
+describe('backgroundSelectionLogic hydrate and apply', () => {
+  it('hydrates saved background key, story, and custom label', () => {
     expect(hydrateBackgroundSelectionState('soldier', 'I marched for years.')).toEqual({
       backgroundKey: 'soldier',
+      customLabel: '',
       story: 'I marched for years.'
+    })
+    expect(hydrateBackgroundSelectionState(CUSTOM_BACKGROUND_KEY, 'Story', 'River Smuggler')).toEqual({
+      backgroundKey: CUSTOM_BACKGROUND_KEY,
+      customLabel: 'River Smuggler',
+      story: 'Story'
     })
   })
 
   it('prefers hydrated saved background over an in-progress draft', () => {
-    const resolved = resolveInitialBackgroundSelectionState(
-      'noble',
-      'Born to privilege.',
-      { backgroundKey: 'soldier', story: 'Draft story' }
-    )
+    const resolved = resolveInitialBackgroundSelectionState('noble', 'Born to privilege.', {
+      backgroundKey: 'soldier',
+      customLabel: '',
+      story: 'Draft story'
+    })
     expect(resolved).toEqual({
       backgroundKey: 'noble',
+      customLabel: '',
       story: 'Born to privilege.'
     })
   })
 
   it('builds apply input with optional empty story', () => {
-    const state = { backgroundKey: 'soldier', story: '   ' }
+    const state = { backgroundKey: 'soldier', customLabel: '', story: '   ' }
     expect(buildBackgroundApplyInput('c1', 'p1', state)?.backgroundStory).toBe('   ')
+  })
+
+  it('builds apply input for custom with label', () => {
+    const state = {
+      backgroundKey: CUSTOM_BACKGROUND_KEY,
+      customLabel: 'River Smuggler',
+      story: 'I smuggled.'
+    }
+    expect(buildBackgroundApplyInput('c1', 'p1', state)).toEqual({
+      campaignId: 'c1',
+      characterId: 'p1',
+      backgroundKey: CUSTOM_BACKGROUND_KEY,
+      backgroundStory: 'I smuggled.',
+      backgroundCustomLabel: 'River Smuggler'
+    })
   })
 })
 
@@ -84,7 +118,9 @@ describe('BackgroundSelectionForm fields', () => {
     const generateButton = field.props.children[1] as { props: { onClick: () => void } }
     generateButton.props.onClick()
     expect(onGenerateClick).toHaveBeenCalledOnce()
-    const textarea = field.props.children[2] as { props: { onChange: (event: { target: { value: string } }) => void } }
+    const textarea = field.props.children[2] as {
+      props: { onChange: (event: { target: { value: string } }) => void }
+    }
     textarea.props.onChange({ target: { value: 'Edited' } })
     expect(onChange).toHaveBeenCalledWith('Edited')
   })

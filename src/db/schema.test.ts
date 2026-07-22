@@ -19,6 +19,7 @@ const ALL_TABLE_NAMES = [
   'catalog_bucket_tags',
   'catalog_creatures',
   'catalog_spells',
+  'character_faction_reputations',
   'character_item_modifications',
   'character_items',
   'character_journal_entries',
@@ -27,11 +28,14 @@ const ALL_TABLE_NAMES = [
   'combat_encounters',
   'deities',
   'events',
+  'faction_relations',
+  'factions',
   'guided_creation_messages',
   'items',
   'llm_usage_events',
   'log_entries',
   'npc_memories',
+  'npc_opinions',
   'npcs',
   'quest_foe_assignments',
   'quests',
@@ -93,26 +97,49 @@ describe('schema migration 35', () => {
   })
 })
 
-describe('schema migration 39', () => {
-  it('migration 39 adds NPC dossier opinion columns', () => {
+describe('schema migration 52', () => {
+  it('migration 52 adds npc_opinions table', () => {
     const db = new Database(':memory:')
     runMigrations(
       db,
-      migrations.filter((migration) => migration.version <= 38)
+      migrations.filter((migration) => migration.version <= 51)
     )
+    expect(tableNames(db)).not.toContain('npc_opinions')
 
     runMigrations(
       db,
-      migrations.filter((migration) => migration.version === 39)
+      migrations.filter((migration) => migration.version === 52)
     )
 
-    const npcColumns = db
-      .prepare('PRAGMA table_info(npcs)')
+    expect(tableNames(db)).toContain('npc_opinions')
+  })
+})
+
+// EPIC-133
+describe('schema migration 53', () => {
+  it('migration 53 adds last_active_in_game_date on characters', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 52)
+    )
+
+    const before = db
+      .prepare('PRAGMA table_info(characters)')
       .all()
       .map((row) => (row as { name: string }).name)
-    expect(npcColumns).toContain('opinion_summary')
-    expect(npcColumns).toContain('opinion_summary_generated_at')
-    expect(npcColumns).toContain('last_player_interaction_at')
+    expect(before).not.toContain('last_active_in_game_date')
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 53)
+    )
+
+    const after = db
+      .prepare('PRAGMA table_info(characters)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(after).toContain('last_active_in_game_date')
   })
 })
 
@@ -152,6 +179,132 @@ describe('schema migration 42', () => {
       .all()
       .map((row) => (row as { name: string }).name)
     expect(campaignColumns).toContain('npc_face_token_generation_enabled')
+  })
+})
+
+describe('schema migration 50', () => {
+  it('migration 50 adds visual_appearance_json on bestiary_species', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 49)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 50)
+    )
+
+    const speciesColumns = db
+      .prepare('PRAGMA table_info(bestiary_species)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(speciesColumns).toContain('visual_appearance_json')
+  })
+})
+
+describe('schema migration 51', () => {
+  it('migration 51 adds creature_token_path on bestiary_species', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 50)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 51)
+    )
+
+    const speciesColumns = db
+      .prepare('PRAGMA table_info(bestiary_species)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(speciesColumns).toContain('creature_token_path')
+  })
+})
+
+describe('schema migration 47', () => {
+  it('migration 47 adds enemy_token_generation_enabled on campaigns', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 46)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 47)
+    )
+
+    const campaignColumns = db
+      .prepare('PRAGMA table_info(campaigns)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(campaignColumns).toContain('enemy_token_generation_enabled')
+  })
+})
+
+describe('schema migration 54', () => {
+  it('adds generative_tokens_enabled and ORs legacy NPC/enemy flags', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 53)
+    )
+    db.prepare(
+      `INSERT INTO campaigns (
+         id, name, premise_prompt, created_at, death_mode, respawn_rules,
+         npc_face_token_generation_enabled, enemy_token_generation_enabled
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('c-or', 'OR', 'p', '2020-01-01', 'standard', null, 1, 0)
+    db.prepare(
+      `INSERT INTO campaigns (
+         id, name, premise_prompt, created_at, death_mode, respawn_rules,
+         npc_face_token_generation_enabled, enemy_token_generation_enabled
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run('c-off', 'OFF', 'p', '2020-01-01', 'standard', null, 0, 0)
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 54)
+    )
+
+    const columns = db
+      .prepare('PRAGMA table_info(campaigns)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(columns).toContain('generative_tokens_enabled')
+
+    const onRow = db
+      .prepare('SELECT generative_tokens_enabled AS v FROM campaigns WHERE id = ?')
+      .get('c-or') as { v: number }
+    const offRow = db
+      .prepare('SELECT generative_tokens_enabled AS v FROM campaigns WHERE id = ?')
+      .get('c-off') as { v: number }
+    expect(onRow.v).toBe(1)
+    expect(offRow.v).toBe(0)
+  })
+})
+
+describe('schema migration 55', () => {
+  it('adds portrait_prompt on characters', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 54)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 55)
+    )
+
+    const columns = db
+      .prepare('PRAGMA table_info(characters)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(columns).toContain('portrait_prompt')
   })
 })
 

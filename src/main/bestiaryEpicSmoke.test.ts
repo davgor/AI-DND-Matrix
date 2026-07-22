@@ -23,8 +23,24 @@ import { startEncounter } from './combatOrchestration'
 const PRESET_LORE =
   'Rift-beasts stalk the torn edges of the world, hunting in packs near planar scars. Locals know them by the low howl that carries before a storm of violet light.'
 
+const PRESET_APPEARANCE = {
+  silhouette: 'quadruped wolf-like',
+  sizeClass: 'large',
+  primaryColors: ['violet'],
+  distinguishingMarks: 'planar scars',
+  textureOrMaterial: 'crackling fur'
+}
+
 const WOLF_LORE =
   'Wolves hunt the borderlands in packs, circling travelers before the first bite falls.'
+
+const WOLF_APPEARANCE = {
+  silhouette: 'quadruped canine',
+  sizeClass: 'medium',
+  primaryColors: ['grey', 'brown'],
+  distinguishingMarks: 'yellow eyes',
+  textureOrMaterial: 'matted fur'
+}
 
 function seedCampaignScene(level = 5) {
   const db = createTestDb()
@@ -65,7 +81,8 @@ describe('116.12 bestiary epic smoke — prepped', () => {
       speciesKey: 'rift-beast',
       buckets: ['beast'],
       tags: ['rift', 'pack-hunter'],
-      presetLore: PRESET_LORE
+      presetLore: PRESET_LORE,
+      presetAppearance: PRESET_APPEARANCE
     })
 
     expect(result.created).toBe(true)
@@ -83,7 +100,8 @@ describe('116.12 bestiary epic smoke — on quest', () => {
       speciesKey: 'rift-beast',
       buckets: ['beast'],
       tags: ['rift', 'pack-hunter'],
-      presetLore: PRESET_LORE
+      presetLore: PRESET_LORE,
+      presetAppearance: PRESET_APPEARANCE
     })
     const quest = createQuest(db, {
       campaignId: campaign.id,
@@ -111,7 +129,9 @@ describe('116.12 bestiary epic smoke — on quest', () => {
 describe('116.12 bestiary epic smoke — on demand', () => {
   it('empty region startEncounter with provider → combatants linked to bestiary', async () => {
     const { db, campaign, region, player } = seedCampaignScene(1)
-    const provider = createScriptedProvider([JSON.stringify({ baseLore: WOLF_LORE })])
+    const provider = createScriptedProvider([
+      JSON.stringify({ baseLore: WOLF_LORE, visualAppearance: WOLF_APPEARANCE })
+    ])
 
     const encounter = await startEncounter({
       db,
@@ -171,7 +191,8 @@ describe('116.12 bestiary epic smoke — efficiency', () => {
       speciesKey: 'rift-beast',
       buckets: ['beast'],
       tags: ['rift', 'pack-hunter'],
-      presetLore: PRESET_LORE
+      presetLore: PRESET_LORE,
+      presetAppearance: PRESET_APPEARANCE
     })
     const quest = createQuest(db, {
       campaignId: campaign.id,

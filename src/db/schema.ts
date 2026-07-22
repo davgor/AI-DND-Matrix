@@ -79,6 +79,149 @@ const CATALOG_TABLES_SQL = `
   CREATE INDEX idx_catalog_spells_archetype ON catalog_spells(archetype_hint);
 `
 
+const FACTIONS_V48_FACTIONS_SQL = `
+    CREATE TABLE IF NOT EXISTS factions (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      motivation TEXT,
+      public_face TEXT,
+      methods TEXT,
+      deity_id TEXT,
+      home_region_id TEXT,
+      sort_order INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      source TEXT NOT NULL,
+      UNIQUE(campaign_id, key),
+      FOREIGN KEY (campaign_id) REFERENCES campaigns(id),
+      FOREIGN KEY (deity_id) REFERENCES deities(id),
+      FOREIGN KEY (home_region_id) REFERENCES regions(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_factions_campaign
+      ON factions(campaign_id);
+  `
+
+const FACTIONS_V48_RELATIONS_SQL = `
+    CREATE TABLE IF NOT EXISTS faction_relations (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      faction_a_id TEXT NOT NULL,
+      faction_b_id TEXT NOT NULL,
+      stance TEXT NOT NULL,
+      summary TEXT,
+      updated_at TEXT NOT NULL,
+      UNIQUE(campaign_id, faction_a_id, faction_b_id),
+      FOREIGN KEY (campaign_id) REFERENCES campaigns(id),
+      FOREIGN KEY (faction_a_id) REFERENCES factions(id),
+      FOREIGN KEY (faction_b_id) REFERENCES factions(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_faction_relations_campaign
+      ON faction_relations(campaign_id);
+
+    CREATE TABLE IF NOT EXISTS character_faction_reputations (
+      character_id TEXT NOT NULL,
+      faction_id TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      band TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_reason TEXT,
+      PRIMARY KEY (character_id, faction_id),
+      FOREIGN KEY (character_id) REFERENCES characters(id),
+      FOREIGN KEY (faction_id) REFERENCES factions(id)
+    );
+  `
+
+function createFactionTablesV48(db: Database.Database): void {
+  db.exec(FACTIONS_V48_FACTIONS_SQL)
+  db.exec(FACTIONS_V48_RELATIONS_SQL)
+}
+
+function migrateFactionsV48(db: Database.Database): void {
+  addColumnIfMissing(db, 'campaigns', 'factions_summary', "TEXT NOT NULL DEFAULT ''")
+  addColumnIfMissing(db, 'campaigns', 'faction_pressure', "TEXT NOT NULL DEFAULT 'light'")
+  createFactionTablesV48(db)
+  addColumnIfMissing(db, 'npcs', 'faction_id', 'TEXT')
+  addColumnIfMissing(db, 'npcs', 'faction_membership_role', 'TEXT')
+  addColumnIfMissing(db, 'npcs', 'deity_id', 'TEXT')
+  addColumnIfMissing(db, 'npcs', 'is_divine_manifestation', 'INTEGER NOT NULL DEFAULT 0')
+}
+
+function createNpcOpinionsTableV52(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS npc_opinions (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+      npc_id TEXT NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+      subject_type TEXT NOT NULL CHECK (subject_type IN ('player_character', 'npc')),
+      subject_id TEXT NOT NULL,
+      summary TEXT,
+      generated_at TEXT,
+      last_relevant_interaction_at TEXT,
+      stance TEXT NOT NULL DEFAULT 'unknown'
+        CHECK (stance IN ('warm', 'wary', 'hostile', 'unknown')),
+      UNIQUE(npc_id, subject_type, subject_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_npc_opinions_campaign
+      ON npc_opinions(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_npc_opinions_npc
+      ON npc_opinions(npc_id);
+  `)
+}
+
+function migrateLegacyOpinionsIntoTableV52(db: Database.Database): void {
+  const legacyRows = db
+    .prepare(
+      `SELECT id, campaign_id, opinion_summary, opinion_summary_generated_at, last_player_interaction_at
+       FROM npcs WHERE opinion_summary IS NOT NULL`
+    )
+    .all() as Array<{
+    id: string
+    campaign_id: string
+    opinion_summary: string
+    opinion_summary_generated_at: string | null
+    last_player_interaction_at: string | null
+  }>
+
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO npc_opinions (
+       id, campaign_id, npc_id, subject_type, subject_id,
+       summary, generated_at, last_relevant_interaction_at, stance
+     ) VALUES (?, ?, ?, 'player_character', ?, ?, ?, ?, 'unknown')`
+  )
+  const findHero = db.prepare(
+    `SELECT id FROM characters
+     WHERE campaign_id = ? AND kind = 'player'
+     ORDER BY rowid ASC LIMIT 1`
+  )
+
+  for (const row of legacyRows) {
+    const hero = findHero.get(row.campaign_id) as { id: string } | undefined
+    if (!hero) {
+      continue
+    }
+    insert.run(
+      `legacy-${row.id}`,
+      row.campaign_id,
+      row.id,
+      hero.id,
+      row.opinion_summary,
+      row.opinion_summary_generated_at,
+      row.last_player_interaction_at
+    )
+  }
+}
+
+function migrateNpcOpinionsV52(db: Database.Database): void {
+  createNpcOpinionsTableV52(db)
+  migrateLegacyOpinionsIntoTableV52(db)
+}
+
 export const migrations: Migration[] = [
   {
     version: 1,
@@ -731,6 +874,77 @@ export const migrations: Migration[] = [
     version: 46,
     up: (db) => {
       addColumnIfMissing(db, 'npcs', 'face_token_path', 'TEXT')
+    }
+  },
+  {
+    version: 47,
+    up: (db) => {
+      addColumnIfMissing(
+        db,
+        'campaigns',
+        'enemy_token_generation_enabled',
+        'INTEGER NOT NULL DEFAULT 0'
+      )
+    }
+  },
+  {
+    version: 48,
+    up: migrateFactionsV48
+  },
+  {
+    version: 49,
+    up: (db) => {
+      addColumnIfMissing(db, 'characters', 'background_custom_label', 'TEXT')
+    }
+  },
+  {
+    version: 50,
+    up: (db) => {
+      addColumnIfMissing(db, 'bestiary_species', 'visual_appearance_json', 'TEXT')
+    }
+  },
+  {
+    version: 51,
+    up: (db) => {
+      addColumnIfMissing(db, 'bestiary_species', 'creature_token_path', 'TEXT')
+    }
+  },
+  {
+    version: 52,
+    up: (db) => {
+      migrateNpcOpinionsV52(db)
+    }
+  },
+  // EPIC-133 — per-PC last-active world-day watermark (Model B)
+  {
+    version: 53,
+    up: (db) => {
+      addColumnIfMissing(db, 'characters', 'last_active_in_game_date', 'INTEGER NOT NULL DEFAULT 0')
+    }
+  },
+  // EPIC-144 — unify NPC + enemy generative-token toggles
+  {
+    version: 54,
+    up: (db) => {
+      addColumnIfMissing(
+        db,
+        'campaigns',
+        'generative_tokens_enabled',
+        'INTEGER NOT NULL DEFAULT 0'
+      )
+      db.prepare(
+        `UPDATE campaigns
+         SET generative_tokens_enabled = 1
+         WHERE npc_face_token_generation_enabled = 1
+            OR enemy_token_generation_enabled = 1`
+      ).run()
+    }
+  },
+  // EPIC-144 — last player-icon generation prompt for regenerate prefills
+  {
+    version: 55,
+    up: (db) => {
+      addColumnIfMissing(db, 'characters', 'portrait_prompt', 'TEXT')
     }
   }
 ]

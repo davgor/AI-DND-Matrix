@@ -212,7 +212,50 @@ describe('persistRegionWithNpcs speaking style — fandom hints', () => {
   })
 })
 
-describe('persistGeneratedCampaign speaking style', () => {
+const SEED_STYLE_FACTIONS = {
+  factionPressure: 'light' as const,
+  factionsSummary: 'A quiet watch and a traders’ circle keep the vale calm.',
+  factions: [
+    {
+      key: 'vale_watch',
+      name: 'Vale Watch',
+      kind: 'civic' as const,
+      summary: 'Local militia that patrols the seed roads.',
+      sortOrder: 0
+    },
+    {
+      key: 'seed_traders',
+      name: 'Seed Traders',
+      kind: 'mercantile' as const,
+      summary: 'Grain merchants who fund the watch.',
+      sortOrder: 1
+    }
+  ],
+  relations: []
+}
+
+const SEED_STYLE_WORLD = {
+  worldName: 'Seed World',
+  worldSummary: 'Summary one.\n\nSummary two.\n\nSummary three.',
+  worldHistory: 'History one.\n\nHistory two.\n\nHistory three.\n\nHistory four.\n\nHistory five.'
+}
+
+function buildStylePersistGeneration(npcs: GeneratedNpc[]) {
+  return {
+    world: SEED_STYLE_WORLD,
+    pantheon: {
+      pantheonSummary: 'Gods walk.',
+      deities: []
+    },
+    factions: SEED_STYLE_FACTIONS,
+    regions: [makeRegion('Seed Vale', 'seed')],
+    npcs,
+    bestiary: DEFAULT_TEST_BESTIARY,
+    storyThread: { title: 'Arc', state: 'open' as const, summary: 'Begin.' }
+  }
+}
+
+describe('persistGeneratedCampaign speaking style fields', () => {
   it('persists speaking-style fields for campaign seed NPCs', async () => {
     const db = createTestDb()
     const npcs = makeNpcs('Seed Vale', 'Seed').map((npc) => ({
@@ -236,22 +279,7 @@ describe('persistGeneratedCampaign speaking style', () => {
         premisePrompt: 'A seeded realm.',
         deathMode: 'standard'
       },
-      generation: {
-        world: {
-          worldName: 'Seed World',
-          worldSummary: 'Summary one.\n\nSummary two.\n\nSummary three.',
-          worldHistory:
-            'History one.\n\nHistory two.\n\nHistory three.\n\nHistory four.\n\nHistory five.'
-        },
-        pantheon: {
-          pantheonSummary: 'Gods walk.',
-          deities: []
-        },
-        regions: [makeRegion('Seed Vale', 'seed')],
-        npcs,
-        bestiary: DEFAULT_TEST_BESTIARY,
-        storyThread: { title: 'Arc', state: 'open', summary: 'Begin.' }
-      }
+      generation: buildStylePersistGeneration(npcs)
     })
     const region = db
       .prepare('SELECT id FROM regions WHERE campaign_id = ? AND name = ?')
@@ -259,6 +287,46 @@ describe('persistGeneratedCampaign speaking style', () => {
     const persisted = listNpcsByRegion(db, region!.id)
     expect(persisted.every((npc) => npc.canSpeak && npc.speakingStyleSpecimen)).toBe(true)
     expect(persisted.every((npc) => (npc.speakingStyleExamples?.length ?? 0) >= 2)).toBe(true)
+  })
+})
+
+describe('persistGeneratedCampaign faction membership', () => {
+  it('attaches faction membership for known keys and drops unknown keys (125.4)', async () => {
+    const db = createTestDb()
+    const [member, orphan] = makeNpcs('Seed Vale', 'Seed').map((npc, index) => ({
+      ...npc,
+      regionName: 'Seed Vale',
+      name: index === 0 ? 'Known Member' : 'Orphan Member',
+      factionKey: index === 0 ? 'vale_watch' : 'missing_bloc',
+      membershipRole: index === 0 ? 'captain' : 'spy'
+    }))
+    const provider = createScriptedProvider([
+      RACE_LORE_RESPONSE,
+      SPEAKING_STYLE_RESPONSE,
+      '{"upgrade":false}',
+      SPEAKING_STYLE_RESPONSE,
+      '{"upgrade":false}'
+    ])
+    const campaign = await persistGeneratedCampaign({
+      db,
+      provider,
+      input: {
+        name: 'Faction Bind Campaign',
+        premisePrompt: 'A seeded realm.',
+        deathMode: 'standard'
+      },
+      generation: buildStylePersistGeneration([member!, orphan!])
+    })
+    const region = db
+      .prepare('SELECT id FROM regions WHERE campaign_id = ? AND name = ?')
+      .get(campaign.id, 'Seed Vale') as { id: string } | undefined
+    const persisted = listNpcsByRegion(db, region!.id)
+    const known = persisted.find((npc) => npc.name === 'Known Member')
+    const dropped = persisted.find((npc) => npc.name === 'Orphan Member')
+    expect(known?.factionId).toBeTruthy()
+    expect(known?.factionMembershipRole).toBe('captain')
+    expect(dropped?.factionId).toBeNull()
+    expect(dropped?.factionMembershipRole).toBeNull()
   })
 })
 

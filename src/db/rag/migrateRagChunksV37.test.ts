@@ -124,7 +124,11 @@ describe('migration v37 install and upgrade', () => {
         'ask_dm_messages',
         'bestiary_species',
         'bestiary_variants',
+        'character_faction_reputations',
+        'faction_relations',
+        'factions',
         'llm_usage_events',
+        'npc_opinions',
         'quest_foe_assignments',
         'rag_backfill_state',
         'rag_chunks'

@@ -12,6 +12,30 @@ export function BackgroundDescriptionField(props: {
   )
 }
 
+export function BackgroundCustomLabelField(props: {
+  label: string
+  disabled: boolean
+  onChange: (value: string) => void
+}): JSX.Element {
+  return (
+    <div className="background-selection-custom-label-row">
+      <label className="background-selection-field-label" htmlFor="background-custom-label">
+        Custom label
+      </label>
+      <input
+        id="background-custom-label"
+        className="background-selection-custom-label"
+        type="text"
+        value={props.label}
+        disabled={props.disabled}
+        onChange={(event) => props.onChange(event.target.value)}
+        placeholder="e.g. River Smuggler"
+        required
+      />
+    </div>
+  )
+}
+
 export function BackgroundStoryField(props: {
   story: string
   disabled: boolean

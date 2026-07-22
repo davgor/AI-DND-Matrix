@@ -39,4 +39,24 @@ describe('resolveNpcAttack', () => {
     expect(result.damage).toBeGreaterThan(0)
     expect(result.targetHpAfter).toBeLessThan(20)
   })
+
+  it('poisoned attacker rolls with disadvantage', () => {
+    const rolls = [18, 4]
+    let i = 0
+    const rng = () => {
+      const roll = rolls[i] ?? 10
+      i += 1
+      return (roll - 1) / 20
+    }
+    const result = resolveNpcAttack({
+      rng,
+      attackBonus: 2,
+      damageRoll,
+      targetAc: 15,
+      targetHp: 20,
+      attackerConditions: ['poisoned']
+    })
+    expect(result.attackRoll).toBe(4)
+    expect(result.hit).toBe(false)
+  })
 })

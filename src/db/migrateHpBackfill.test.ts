@@ -8,6 +8,7 @@ import { createCharacter, getCharacterById } from './repositories/characters'
 import { createRegion } from './repositories/regions'
 import { createNpc, getNpcById } from './repositories/npcs'
 import { migrateHpBackfill } from './migrateHpBackfill'
+import { ensureLegacyRaceKeyColumns } from './testUtils'
 
 function createPreHpMigrationDb(): Database.Database {
   const db = new Database(':memory:')
@@ -31,6 +32,12 @@ function createPreHpMigrationDb(): Database.Database {
   db.exec(`ALTER TABLE npcs ADD COLUMN hair_color TEXT`)
   db.exec(`ALTER TABLE npcs ADD COLUMN age TEXT`)
   db.exec(`ALTER TABLE npcs ADD COLUMN eye_color TEXT`)
+  // createNpc inserts faction columns added in v48.
+  db.exec(`ALTER TABLE npcs ADD COLUMN faction_id TEXT`)
+  db.exec(`ALTER TABLE npcs ADD COLUMN faction_membership_role TEXT`)
+  db.exec(`ALTER TABLE npcs ADD COLUMN deity_id TEXT`)
+  db.exec(`ALTER TABLE npcs ADD COLUMN is_divine_manifestation INTEGER NOT NULL DEFAULT 0`)
+  ensureLegacyRaceKeyColumns(db)
   return db
 }
 

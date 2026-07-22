@@ -20,6 +20,9 @@ export function ensureLegacyRaceKeyColumns(db: Database.Database): void {
   if (!characterColumns.some((column) => column.name === 'background_story')) {
     db.exec('ALTER TABLE characters ADD COLUMN background_story TEXT')
   }
+  if (!characterColumns.some((column) => column.name === 'background_custom_label')) {
+    db.exec('ALTER TABLE characters ADD COLUMN background_custom_label TEXT')
+  }
   const npcColumns = db.prepare('PRAGMA table_info(npcs)').all() as Array<{ name: string }>
   if (!npcColumns.some((column) => column.name === 'race_key')) {
     db.exec('ALTER TABLE npcs ADD COLUMN race_key TEXT')

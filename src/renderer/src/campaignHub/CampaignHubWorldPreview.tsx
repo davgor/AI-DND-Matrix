@@ -3,6 +3,7 @@ import type { CampaignRace } from '../../../shared/raceSelection/types'
 import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
 import { CampaignReviewWorldContent } from '../campaignReview/CampaignReviewWorldContent'
 import { CampaignReviewPantheonSection } from '../campaignReview/CampaignReviewPantheonSection'
+import { CampaignReviewFactionsSection } from '../campaignReview/CampaignReviewFactionsSection'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { FormattedText } from '../shared/FormattedText'
 import { buildHubRegionBlocks } from './hubUtils'
@@ -41,6 +42,41 @@ function HubRegionsSection(props: {
   )
 }
 
+function HubLoreSections(props: {
+  snapshot: PlayAwareHubSnapshot
+  onViewWorldHistory?: () => void
+}): JSX.Element {
+  const { snapshot } = props
+  return (
+    <>
+      {snapshot.campaign ? (
+        <CampaignReviewWorldContent
+          worldName={snapshot.campaign.worldName}
+          worldSummary={snapshot.campaign.worldSummary}
+          onViewHistory={
+            snapshot.campaign.worldHistory && props.onViewWorldHistory
+              ? props.onViewWorldHistory
+              : undefined
+          }
+        />
+      ) : null}
+      <CampaignReviewPantheonSection
+        pantheonSummary={snapshot.campaign?.pantheonSummary ?? ''}
+        deities={snapshot.deities}
+        readOnly
+      />
+      <CampaignReviewFactionsSection
+        factionsSummary={snapshot.campaign?.factionsSummary ?? ''}
+        factionPressure={snapshot.campaign?.factionPressure ?? 'light'}
+        factions={snapshot.factions}
+        relations={snapshot.factionRelations}
+        deities={snapshot.deities}
+        readOnly
+      />
+    </>
+  )
+}
+
 export interface CampaignHubWorldPreviewProps {
   snapshot: PlayAwareHubSnapshot
   sessionRecap: HubSessionRecapState
@@ -63,22 +99,7 @@ export function CampaignHubWorldPreview(props: CampaignHubWorldPreviewProps): JS
   return (
     <div className="campaign-hub-world-preview">
       <HubQuestTeaser summary={focusSummary} />
-      {snapshot.campaign ? (
-        <CampaignReviewWorldContent
-          worldName={snapshot.campaign.worldName}
-          worldSummary={snapshot.campaign.worldSummary}
-          onViewHistory={
-            snapshot.campaign.worldHistory && props.onViewWorldHistory
-              ? props.onViewWorldHistory
-              : undefined
-          }
-        />
-      ) : null}
-      <CampaignReviewPantheonSection
-        pantheonSummary={snapshot.campaign?.pantheonSummary ?? ''}
-        deities={snapshot.deities}
-        readOnly
-      />
+      <HubLoreSections snapshot={snapshot} onViewWorldHistory={props.onViewWorldHistory} />
       {snapshot.currentStateSummary ? <HubCurrentStateSection summary={snapshot.currentStateSummary} /> : null}
       <CampaignReviewStory storyThreads={snapshot.storyThreads} playAware />
       <HubRegionsSection

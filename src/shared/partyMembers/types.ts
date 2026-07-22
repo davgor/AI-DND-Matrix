@@ -154,8 +154,27 @@ export interface CompanionFaceTokenEnqueueRequest {
   appearance: CompanionAppearanceTraits
 }
 
-export function shouldEnqueueCompanionFaceToken(toggleEnabled: boolean): boolean {
-  return toggleEnabled === true
+export interface CompanionFaceTokenEligibility {
+  /** True when a portrait/face-token asset is already bound (stable until regen). */
+  hasFaceToken: boolean
+}
+
+/**
+ * Whether a face-token job should be enqueued for an AI companion.
+ * Reuses the campaign `npcFaceTokenGenerationEnabled` toggle (epic 122 / 139).
+ * Toggle OFF always skips; when ON, skips companions that already have a token.
+ */
+export function shouldEnqueueCompanionFaceToken(
+  toggleEnabled: boolean,
+  eligibility?: CompanionFaceTokenEligibility
+): boolean {
+  if (toggleEnabled !== true) {
+    return false
+  }
+  if (eligibility === undefined) {
+    return true
+  }
+  return eligibility.hasFaceToken !== true
 }
 
 function trimToMax(value: string, max: number): string {
