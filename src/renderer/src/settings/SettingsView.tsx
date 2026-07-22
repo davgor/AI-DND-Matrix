@@ -103,6 +103,9 @@ function ProviderSection(props: { controller: SettingsController }): JSX.Element
         result={controller.llamaRuntimeResult}
         onChange={controller.updateDraft}
         onCheckRuntime={controller.checkLlamaRuntime}
+        onDownloadModel={controller.downloadLlamaModel}
+        onCancelDownload={controller.cancelLlamaDownload}
+        onAcquireRuntime={controller.acquireLlamaRuntime}
       />
     )
   }
@@ -136,7 +139,11 @@ function canSave(controller: SettingsController): boolean {
     return false
   }
   if (controller.draft.mode === 'llamacpp') {
-    return controller.llamaRuntimeChecked
+    const catalogReady =
+      controller.draft.llamaCppCatalogModelId.trim() !== '' &&
+      controller.draft.llamaCppDownloadState === 'ready'
+    const hasServer = controller.draft.llamaCppServerPath.trim() !== ''
+    return controller.llamaRuntimeChecked || (catalogReady && hasServer)
   }
   return true
 }

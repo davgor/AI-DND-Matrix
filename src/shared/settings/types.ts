@@ -1,5 +1,8 @@
 export type ProviderMode = 'claude' | 'openai' | 'gemini' | 'grok' | 'player2' | 'llamacpp'
 
+/** Catalog download lifecycle for local llama.cpp models (020.4 / 020.18). */
+export type LlamaCppDownloadState = 'idle' | 'downloading' | 'ready' | 'failed'
+
 export interface ProviderSettings {
   mode: ProviderMode
   claudeApiKey: string
@@ -12,10 +15,14 @@ export interface ProviderSettings {
   grokModel: string
   llamaCppBaseUrl: string
   llamaCppServerPath: string
+  /** Resolved absolute .gguf path (manual BYO or post-download). */
   llamaCppModelPath: string
   llamaCppCtxSize: number
   llamaCppGpuLayers: string
   llamaCppStartMode: 'managed' | 'attach'
+  /** Curated catalog entry id; empty when using advanced manual paths only. */
+  llamaCppCatalogModelId: string
+  llamaCppDownloadState: LlamaCppDownloadState
   player2BaseUrl: string
 }
 
@@ -35,6 +42,8 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   llamaCppCtxSize: 8192,
   llamaCppGpuLayers: 'all',
   llamaCppStartMode: 'attach',
+  llamaCppCatalogModelId: '',
+  llamaCppDownloadState: 'idle',
   player2BaseUrl: 'http://127.0.0.1:4315'
 }
 

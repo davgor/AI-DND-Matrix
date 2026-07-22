@@ -1,7 +1,7 @@
 # Baseline ignore for ts-prune (one pattern per line)
 # Generated from tsconfig.node.json + tsconfig.web.json
 # Refresh after export moves/deletes: npm run deadcode:refresh
-# Refreshed 2026-07-22 (1331 entries)
+# Refreshed 2026-07-22 (1332 entries)
 
 electron.vite.config.ts:41 - default
 src/agents/bestiary/assignQuestFoes.ts:168 - parseEnemyHintsFromQuestText
@@ -180,25 +180,26 @@ src/agents/providers/gemini.ts:5 - GeminiConfigError
 src/agents/providers/grok.ts:111 - testGrokConnection
 src/agents/providers/grok.ts:20 - GrokTruncationError
 src/agents/providers/grok.ts:9 - GrokConfigError
+src/agents/providers/llamacpp.ts:10 - LlamaCppUnreachableError
+src/agents/providers/llamacpp.ts:12 - LlamaCppTruncationError
+src/agents/providers/llamacpp.ts:9 - LlamaCppRequestError
 src/agents/providers/mockHarness.ts:3 - ScriptedResponse
 src/agents/providers/mockHarness.ts:5 - ScriptedMockProvider
 src/agents/providers/openai.ts:102 - testOpenAiConnection
 src/agents/providers/openai.ts:16 - OpenAiTruncationError
 src/agents/providers/openai.ts:5 - OpenAiConfigError
-src/agents/providers/player2.ts:13 - Player2UnreachableError
-src/agents/providers/player2.ts:21 - Player2TruncationError
-src/agents/providers/player2.ts:26 - Player2AdapterConfig
-src/agents/providers/player2.ts:4 - Player2RequestError
+src/agents/providers/player2.ts:17 - Player2TruncationError
+src/agents/providers/player2.ts:8 - Player2RequestError
+src/agents/providers/player2.ts:9 - Player2UnreachableError
 src/agents/providers/tokenEscalation.ts:15 - DEFAULT_ESCALATION_BASE
 src/agents/providers/tokenEscalation.ts:18 - ESCALATION_MIN_CAP
 src/agents/providers/tokenEscalation.ts:21 - MAX_TOKEN_ESCALATIONS
 src/agents/providers/tokenEscalation.ts:24 - TOKEN_ESCALATION_CEILING
 src/agents/providers/types.ts:51 - MockProvider
 src/agents/providers/types.ts:55 - createMockProvider
-src/agents/providers/withRetry.ts:13 - defaultRetryOptions
-src/agents/providers/withRetry.ts:15 - ProviderUnreachableError
-src/agents/providers/withRetry.ts:4 - RetryLogger
-src/agents/providers/withRetry.ts:8 - RetryOptions
+src/agents/providers/withRetry.ts:26 - ProviderUnreachableError
+src/agents/providers/withRetry.ts:29 - LlamaCppProviderUnreachableError
+src/agents/providers/withRetry.ts:55 - isNonRetryableProviderError
 src/agents/providers/withUsageRecording.ts:10 - UsageRecordingDeps
 src/agents/questNarration.ts:360 - isValidQuestProposal
 src/agents/questNarration.ts:373 - isValidQuestUpdate
@@ -538,8 +539,8 @@ src/main/campaignEditIpc.ts:80 - deleteNpcForCampaign
 src/main/campaignEditIpc.ts:92 - EditWorldSummaryInput
 src/main/campaignEditIpc.ts:97 - editWorldSummary
 src/main/campaignFileCleanup.ts:16 - UnlinkFile
-src/main/campaignIpc.ts:126 - generateCampaignFromPrompt
-src/main/campaignIpc.ts:140 - registerCampaignHandlers
+src/main/campaignIpc.ts:154 - generateCampaignFromPrompt
+src/main/campaignIpc.ts:168 - registerCampaignHandlers
 src/main/campaignIpc.ts:43 - RegionExtras
 src/main/campaignIpc.ts:45 - CampaignBestiaryEntry
 src/main/campaignIpc.ts:63 - listCampaignsForSidebar
@@ -605,9 +606,9 @@ src/main/itemIpc.ts:19 - UnequipItemInput
 src/main/itemIpc.ts:24 - ConsumeItemInput
 src/main/itemIpc.ts:29 - DropItemInput
 src/main/itemIpc.ts:35 - EquipItemResponse
-src/main/llamacpp/lifecycle.ts:14 - LlamaCppLifecycleConfig
-src/main/llamacpp/lifecycle.ts:25 - LlamaCppLifecycleDeps
 src/main/llamacpp/lifecycle.ts:3 - LlamaCppLifecycleState
+src/main/llamacpp/lifecycle.ts:5 - LlamaCppLifecycleError
+src/main/llamacpp/lifecycle.ts:51 - LlamaCppLifecycleManager
 src/main/llmUsageIpc.ts:21 - RecentTotalsFilter
 src/main/llmUsageIpc.ts:74 - BuildUsageExportMeta
 src/main/logBookIpc.ts:12 - CreateLogEntryIpcInput
@@ -656,6 +657,7 @@ src/main/raceIpc.ts:92 - applyRaceSelection
 src/main/rewardNarrationTemplates.ts:9 - formatItemNameList
 src/main/sceneContextCap.ts:13 - SCENE_CONTEXT_MAX_BEATS
 src/main/sceneContextCap.ts:14 - SCENE_CONTEXT_MAX_CHARS
+src/main/settingsRuntime.ts:77 - resolveLlamaCppLifecycleConfig
 src/main/settingsStore.ts:49 - loadSettings
 src/main/settingsStore.ts:79 - saveSettings
 src/main/settingsStore.ts:9 - SecretCodec
@@ -665,7 +667,7 @@ src/main/startingLoadoutIpc.ts:47 - ApplyStartingLoadoutInput
 src/main/startup/bootStages.ts:10 - BootStageFailure
 src/main/startup/bootStages.ts:6 - BootStageSuccess
 src/main/startup/orchestrator.ts:16 - StartupOrchestratorOptions
-src/main/startupIpc.ts:94 - resetStartupForTests
+src/main/startupIpc.ts:148 - resetStartupForTests
 src/main/turnIpc.ts:118 - NpcAttackOutcome
 src/main/turnIpc.ts:124 - NpcReactionResult
 src/main/turnIpc.ts:132 - PartyMemberActionResult
@@ -678,30 +680,30 @@ src/main/turnLockoutPlay.ts:16 - readLockoutStats
 src/main/turnLockoutPlay.ts:20 - persistLockoutStats
 src/main/turnLockoutPlay.ts:30 - intentConsumesAction
 src/main/turnResolveRecovery.ts:17 - resetTurnAttemptLedgerForTests
-src/preload/index.ts:499 - WindowControls
-src/preload/index.ts:500 - CampaignsApi
-src/preload/index.ts:501 - FilesApi
-src/preload/index.ts:502 - CharactersApi
-src/preload/index.ts:503 - LogBookApi
-src/preload/index.ts:504 - NpcDossierApi
-src/preload/index.ts:505 - RelationshipWebApi
-src/preload/index.ts:506 - JournalApi
-src/preload/index.ts:507 - AskDmApi
-src/preload/index.ts:508 - QuestsApi
-src/preload/index.ts:509 - SpellbookApi
-src/preload/index.ts:510 - TurnApi
-src/preload/index.ts:511 - CombatApi
-src/preload/index.ts:512 - ProgressionApi
-src/preload/index.ts:513 - StartupApi
-src/preload/index.ts:514 - GuidedCreationApi
-src/preload/index.ts:515 - CompanionsApi
-src/preload/index.ts:516 - StartingLoadoutApi
-src/preload/index.ts:517 - RaceApi
-src/preload/index.ts:518 - BackgroundApi
-src/preload/index.ts:519 - SettingsApi
-src/preload/index.ts:520 - LlmUsageApi
-src/preload/index.ts:521 - SettingsIntroApi
-src/preload/index.ts:522 - AutoUpdateApi
+src/preload/index.ts:539 - WindowControls
+src/preload/index.ts:540 - CampaignsApi
+src/preload/index.ts:541 - FilesApi
+src/preload/index.ts:542 - CharactersApi
+src/preload/index.ts:543 - LogBookApi
+src/preload/index.ts:544 - NpcDossierApi
+src/preload/index.ts:545 - RelationshipWebApi
+src/preload/index.ts:546 - JournalApi
+src/preload/index.ts:547 - AskDmApi
+src/preload/index.ts:548 - QuestsApi
+src/preload/index.ts:549 - SpellbookApi
+src/preload/index.ts:550 - TurnApi
+src/preload/index.ts:551 - CombatApi
+src/preload/index.ts:552 - ProgressionApi
+src/preload/index.ts:553 - StartupApi
+src/preload/index.ts:554 - GuidedCreationApi
+src/preload/index.ts:555 - CompanionsApi
+src/preload/index.ts:556 - StartingLoadoutApi
+src/preload/index.ts:557 - RaceApi
+src/preload/index.ts:558 - BackgroundApi
+src/preload/index.ts:559 - SettingsApi
+src/preload/index.ts:560 - LlmUsageApi
+src/preload/index.ts:561 - SettingsIntroApi
+src/preload/index.ts:562 - AutoUpdateApi
 src/renderer/src/app/ReadyAppHubView.tsx:10 - ReadyAppHubViewProps
 src/renderer/src/backgroundSelection/BackgroundSelection.tsx:6 - BackgroundSelectionProps
 src/renderer/src/backgroundSelection/BackgroundSelectionGenerateModal.tsx:3 - BackgroundSelectionGenerateModalProps
@@ -787,7 +789,6 @@ src/renderer/src/raceSelection/raceSelectionLogic.ts:94 - isLoreComplete
 src/renderer/src/raceSelection/raceSelectionTestUtils.ts:3 - isElement
 src/renderer/src/raceSelection/raceSelectionTestUtils.ts:7 - walkNodes
 src/renderer/src/relationshipWeb/RelationshipWebPanel.tsx:6 - RelationshipWebPanelProps
-src/renderer/src/settings/LlamaLocalSection.tsx:3 - LlamaLocalSectionProps
 src/renderer/src/settings/Player2Section.tsx:3 - Player2SectionProps
 src/renderer/src/settings/ProviderModeSelector.tsx:3 - ProviderModeSelectorProps
 src/renderer/src/settingsIntro/SettingsIntroModal.tsx:4 - SettingsIntroModalProps

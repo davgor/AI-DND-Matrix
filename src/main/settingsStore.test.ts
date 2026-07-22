@@ -115,4 +115,19 @@ describe('saveSettings', () => {
     const loaded = loadSettings(filePath, unavailableCodec, DEFAULT_PROVIDER_SETTINGS)
     expect(loaded.claudeApiKey).toBe('sk-ant-plain')
   })
+
+  it('round-trips catalog download fields without breaking manual model paths', () => {
+    saveSettings(filePath, passthroughCodec, {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'llamacpp',
+      llamaCppModelPath: 'C:\\models\\manual.gguf',
+      llamaCppCatalogModelId: 'qwen25-7b-instruct-q4-k-m',
+      llamaCppDownloadState: 'ready'
+    })
+
+    const loaded = loadSettings(filePath, passthroughCodec, DEFAULT_PROVIDER_SETTINGS)
+    expect(loaded.llamaCppModelPath).toBe('C:\\models\\manual.gguf')
+    expect(loaded.llamaCppCatalogModelId).toBe('qwen25-7b-instruct-q4-k-m')
+    expect(loaded.llamaCppDownloadState).toBe('ready')
+  })
 })

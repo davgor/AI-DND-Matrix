@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3'
 import { generateAndPersistCampaign } from '../agents/campaignGeneration'
 import { createProviderRegistry, selectProvider } from '../agents/providers/selectProvider'
 import { withTokenEscalation } from '../agents/providers/tokenEscalation'
-import { withRetry } from '../agents/providers/withRetry'
+import { withRetry, type RetryOptions } from '../agents/providers/withRetry'
 import { withUsageRecording } from '../agents/providers/withUsageRecording'
 import type { Provider } from '../agents/providers/types'
 import {
@@ -110,7 +110,7 @@ export function buildAgentProvider(): Provider {
   // doubled cap (each cap attempt keeps its own connectivity retries beneath).
   // 112: usage recording wraps outside escalation so retries aggregate into one event.
   const escalated = withTokenEscalation(
-    withRetry(selectProvider(resolved.agentProvider, registry), logger)
+    withRetry(selectProvider(resolved.agentProvider, registry), logger, retryOptionsFor(resolved))
   )
   const defaultModelId =
     resolved.agentProvider === 'claude' ? resolved.claudeModel : resolved.agentProvider
@@ -121,6 +121,34 @@ export function buildAgentProvider(): Provider {
     warn: (message) => logger.warn(message),
     logInsertError: (message, error) => logger.error(message, error)
   })
+}
+
+function retryOptionsFor(resolved: {
+  agentProvider: string
+  llamaCppBaseUrl: string
+}): RetryOptions {
+  if (resolved.agentProvider !== 'llamacpp') {
+    return { maxAttempts: 3, baseDelayMs: 50 }
+  }
+  return {
+    maxAttempts: 3,
+    baseDelayMs: 50,
+    diagnostics: {
+      providerName: 'llamacpp',
+      hostPort: hostPortFromBaseUrl(resolved.llamaCppBaseUrl),
+      lifecycleState: 'unknown',
+      errorClassHint: 'local'
+    }
+  }
+}
+
+function hostPortFromBaseUrl(baseUrl: string): string {
+  try {
+    const url = new URL(baseUrl)
+    return `${url.hostname}:${url.port || '8080'}`
+  } catch {
+    return '127.0.0.1:8080'
+  }
 }
 
 export async function generateCampaignFromPrompt(

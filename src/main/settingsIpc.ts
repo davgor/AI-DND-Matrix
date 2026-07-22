@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { existsSync } from 'node:fs'
 import { testGeminiConnection } from '../agents/providers/gemini'
 import { testGrokConnection } from '../agents/providers/grok'
 import { testOpenAiConnection } from '../agents/providers/openai'
@@ -151,16 +152,22 @@ async function checkAttachMode(settings: ProviderSettings, deps: LlamaRuntimeChe
 }
 
 function checkManagedMode(settings: ProviderSettings, deps: LlamaRuntimeCheckDeps): ConnectionCheckResult {
-  const pathExists = deps.pathExists ?? (() => false)
+  const pathExists = deps.pathExists ?? existsSync
   const missing: string[] = []
-  if (!pathExists(settings.llamaCppServerPath)) {
+  if (settings.llamaCppServerPath.trim() && !pathExists(settings.llamaCppServerPath)) {
     missing.push('llama-server executable')
   }
-  if (!pathExists(settings.llamaCppModelPath)) {
+  if (settings.llamaCppModelPath.trim() && !pathExists(settings.llamaCppModelPath)) {
     missing.push('model file')
   }
   if (missing.length > 0) {
     return { ok: false, message: `${missing.join(' and ')} not found at the configured path.` }
+  }
+  if (!settings.llamaCppServerPath.trim() && !settings.llamaCppModelPath.trim()) {
+    return {
+      ok: false,
+      message: 'Download a catalog model and acquire a runtime (or set advanced paths) before checking.'
+    }
   }
   return { ok: true, message: 'Runtime executable and model file were both found.' }
 }

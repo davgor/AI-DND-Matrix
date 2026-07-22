@@ -1,0 +1,17 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+ RUN  v4.1.9 C:/Users/davgo/Documents/GitHub/AI DND Matrix
+
+
+ Test Files  2 passed (2)
+      Tests  8 passed (8)
+   Start at  22:22:16
+   Duration  168ms (transform 73ms, setup 0ms, import 98ms, tests 7ms, environment 0ms)
+

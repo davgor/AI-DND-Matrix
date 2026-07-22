@@ -21,6 +21,7 @@ import { registerPromotionHandlers } from './promotionIpc'
 import { registerRecapHandlers } from './recapIpc'
 import { registerLlmUsageHandlers } from './llmUsageIpc'
 import { registerSettingsHandlers } from './settingsIpc'
+import { registerLlamaCppAssetHandlers } from './llamacppAssetsIpc'
 import { registerSettingsIntroHandlers } from './settingsIntroIpc'
 import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
@@ -118,6 +119,7 @@ app.whenReady().then(() => {
   registerNarrationLogHandlers()
   registerPromotionHandlers()
   registerSettingsHandlers()
+  registerLlamaCppAssetHandlers()
   registerLlmUsageHandlers()
   registerSettingsIntroHandlers()
   registerAutoUpdateHandlers()

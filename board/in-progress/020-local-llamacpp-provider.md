@@ -4,7 +4,7 @@ Product goal: a player opens **Settings**, picks an AI model to try, the app **d
 
 Technical spine: llama.cpp (`llama-server`) as a main-process-owned local HTTP provider behind the same registry interface as Claude/Player2. Research defaults live in [docs/research/llamacpp-local-runtime-2026-06-28.md](../../docs/research/llamacpp-local-runtime-2026-06-28.md).
 
-Broken down into sub-tickets 020.1–020.20. This epic is done when all of them are.
+Broken down into sub-tickets 020.1–020.20 (+ 020.21 oxlint/typecheck, 020.22 deadcode). This epic is done when all of them are.
 
 020.1 llama.cpp local-process research spike · 020.2 local process lifecycle manager · 020.3 llama.cpp provider adapter · 020.4 local-provider config wiring + model swap · 020.5 local-provider retry/backoff + failure logging · 020.6 packaged local runtime + userData asset layout · 020.7 packaged/local-provider manual smoke (download path) · 020.8–020.16 smoke parity matrix · **020.17 Settings curated model catalog** · **020.18 in-app model download manager** · **020.19 local runtime discover/acquire** · **020.20 seamless apply from Settings (boot + lifecycle)**
 
@@ -23,17 +23,17 @@ Broken down into sub-tickets 020.1–020.20. This epic is done when all of them 
 |------|--------|-------|
 | Research + defaults | Done | `docs/research/llamacpp-local-runtime-2026-06-28.md` |
 | Settings UI + persistence (mode/paths) | Done | Epic 016 — mode selector, manual paths, validation |
-| Lifecycle manager | Mostly done | `src/main/llamacpp/lifecycle.ts` — attach + managed, health poll, typed errors |
-| Startup boot stage | Partial | Epic 015 stage exists; must fully honor **persisted Settings** (020.20), not `.env` alone |
-| Provider adapter | Scaffold | `llamacpp` still aliases Player2 OpenAI client (020.3) |
-| Config wiring | Partial | Paths/ctx/gpu exist; **catalog + download apply** not done (020.4 remaining + 020.17–020.18) |
-| Retry/logging | Partial | Global `withRetry`; llama-specific diagnostics (020.5) |
-| Packaged / userData layout | Not done | On-demand assets under `userData`; no multi-GB weights in the installer (020.6) |
-| **Model catalog UI** | Not started | 020.17 |
-| **In-app GGUF download** | Not started | 020.18 |
-| **Runtime discover/acquire** | Not started | 020.19 — PATH + optional fetch; winget remains a documented fallback |
-| **Seamless Settings → ready** | Not started | 020.20 |
-| Smoke parity (020.7–020.16) | Not started | Run after download happy path works on reference model |
+| Lifecycle manager | Done | `src/main/llamacpp/lifecycle.ts` — attach + managed, health poll, typed errors |
+| Startup boot stage | Done | Persisted Settings drive boot/apply (020.20); `.env` override/fallback only |
+| Provider adapter | Done | Dedicated llama/OpenAI-chat adapter (020.3) |
+| Config wiring | Done | Paths/ctx/gpu + catalog/download apply (020.4, 020.17–020.18) |
+| Retry/logging | Done | Global `withRetry` + llama-specific diagnostics (020.5) |
+| Packaged / userData layout | Done | On-demand assets under `userData`; lean installer (020.6) |
+| **Model catalog UI** | Done | 020.17 |
+| **In-app GGUF download** | Done | 020.18 |
+| **Runtime discover/acquire** | Done | 020.19 — PATH + optional fetch; winget remains a documented fallback |
+| **Seamless Settings → ready** | Done | 020.20 |
+| Smoke parity (020.7–020.16) | Pending | Still in `board/in-progress`; run after download happy path on reference model |
 
 ## Feasibility constraints (rescoped)
 

@@ -106,7 +106,7 @@ describe('validateProviderSettings: llamacpp mode', () => {
     })
   })
 
-  it('requires server path and model path when start mode is managed', () => {
+  it('requires server path and model path when start mode is managed without catalog', () => {
     const settings = {
       ...DEFAULT_PROVIDER_SETTINGS,
       mode: 'llamacpp' as const,
@@ -123,6 +123,19 @@ describe('validateProviderSettings: llamacpp mode', () => {
       field: 'llamaCppModelPath',
       message: 'Managed mode requires a path to a .gguf model file.'
     })
+  })
+
+  it('allows managed mode without manual model path when catalog download is ready', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'llamacpp' as const,
+      llamaCppStartMode: 'managed' as const,
+      llamaCppServerPath: '',
+      llamaCppModelPath: '',
+      llamaCppCatalogModelId: 'qwen25-7b-instruct-q4-k-m',
+      llamaCppDownloadState: 'ready' as const
+    }
+    expect(validateProviderSettings(settings)).toEqual([])
   })
 
   it('does not require server/model paths when start mode is attach', () => {

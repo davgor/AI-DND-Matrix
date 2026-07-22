@@ -442,7 +442,47 @@ const settings = {
     model: string
   }): Promise<ConnectionCheckResult> => ipcRenderer.invoke('settings:testCloudConnection', input),
   checkLlamaRuntime: (config: ProviderSettings): Promise<ConnectionCheckResult> =>
-    ipcRenderer.invoke('settings:checkLlamaRuntime', config)
+    ipcRenderer.invoke('settings:checkLlamaRuntime', config),
+  startLlamaModelDownload: (
+    catalogModelId: string
+  ): Promise<{ ok: true; modelPath: string } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('llamacpp:startModelDownload', catalogModelId),
+  cancelLlamaModelDownload: (): Promise<void> => ipcRenderer.invoke('llamacpp:cancelModelDownload'),
+  discoverLlamaRuntime: (): Promise<{
+    presence: 'path' | 'userData' | 'missing'
+    serverPath: string | null
+  }> => ipcRenderer.invoke('llamacpp:discoverRuntime'),
+  acquireLlamaRuntime: (): Promise<
+    { ok: true; serverPath: string } | { ok: false; message: string; recoveryHint: string }
+  > => ipcRenderer.invoke('llamacpp:acquireRuntime'),
+  applyLlamaLifecycle: (): Promise<ConnectionCheckResult> =>
+    ipcRenderer.invoke('llamacpp:applyLifecycle'),
+  onLlamaDownloadProgress: (
+    listener: (payload: {
+      catalogModelId: string
+      phase: string
+      bytesReceived: number
+      bytesTotal: number | null
+      percent: number | null
+      errorMessage?: string
+    }) => void
+  ): (() => void) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      payload: {
+        catalogModelId: string
+        phase: string
+        bytesReceived: number
+        bytesTotal: number | null
+        percent: number | null
+        errorMessage?: string
+      }
+    ): void => {
+      listener(payload)
+    }
+    ipcRenderer.on('llamacpp:downloadProgress', handler)
+    return () => ipcRenderer.removeListener('llamacpp:downloadProgress', handler)
+  }
 }
 
 const llmUsage = {

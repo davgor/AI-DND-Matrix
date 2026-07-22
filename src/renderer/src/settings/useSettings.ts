@@ -8,6 +8,7 @@ import type {
 import { DEFAULT_PROVIDER_SETTINGS } from '../../../shared/settings/types'
 import { validateProviderSettings } from '../../../shared/settings/validation'
 import { buildSaveInput, isSettingsDirty, toDraftSettings } from './settingsDraft'
+import { createLlamaSettingsActions } from './useSettingsLlamaActions'
 
 export interface SettingsController {
   draft: ProviderSettings
@@ -33,6 +34,9 @@ export interface SettingsController {
   testPlayer2: () => Promise<void>
   testCloud: () => Promise<void>
   checkLlamaRuntime: () => Promise<void>
+  downloadLlamaModel: () => Promise<void>
+  cancelLlamaDownload: () => Promise<void>
+  acquireLlamaRuntime: () => Promise<void>
 }
 
 interface ApiKeySetFlags {
@@ -184,10 +188,41 @@ async function performSave(state: SettingsState): Promise<void> {
       geminiApiKeySet: redacted.geminiApiKeySet,
       grokApiKeySet: redacted.grokApiKeySet
     })
+    if (nextDraft.mode === 'llamacpp') {
+      const applyResult = await window.settings.applyLlamaLifecycle()
+      state.setLlamaRuntimeResult(applyResult)
+      state.setLlamaRuntimeChecked(applyResult.ok)
+    }
   } catch {
     state.setSaveFailed(true)
   } finally {
     state.setSaving(false)
+  }
+}
+
+function createConnectionActions(state: SettingsState): {
+  testPlayer2: () => Promise<void>
+  testCloud: () => Promise<void>
+  checkLlamaRuntime: () => Promise<void>
+} {
+  return {
+    async testPlayer2(): Promise<void> {
+      state.setPlayerConnectionResult(
+        await window.settings.testPlayer2Connection(state.draft.player2BaseUrl)
+      )
+    },
+    async testCloud(): Promise<void> {
+      const credentials = cloudCredentials(state.draft)
+      if (!credentials) {
+        return
+      }
+      state.setCloudConnectionResult(await window.settings.testCloudConnection(credentials))
+    },
+    async checkLlamaRuntime(): Promise<void> {
+      const result = await window.settings.checkLlamaRuntime(state.draft)
+      state.setLlamaRuntimeResult(result)
+      state.setLlamaRuntimeChecked(result.ok)
+    }
   }
 }
 
@@ -214,33 +249,14 @@ function useSettingsActions(state: SettingsState, onClose: () => void) {
     onClose()
   }
 
-  async function testPlayer2(): Promise<void> {
-    state.setPlayerConnectionResult(await window.settings.testPlayer2Connection(state.draft.player2BaseUrl))
-  }
-
-  async function testCloud(): Promise<void> {
-    const credentials = cloudCredentials(state.draft)
-    if (!credentials) {
-      return
-    }
-    state.setCloudConnectionResult(await window.settings.testCloudConnection(credentials))
-  }
-
-  async function checkLlamaRuntime(): Promise<void> {
-    const result = await window.settings.checkLlamaRuntime(state.draft)
-    state.setLlamaRuntimeResult(result)
-    state.setLlamaRuntimeChecked(result.ok)
-  }
-
   return {
     updateDraft,
     save: () => performSave(state),
     requestClose,
     confirmDiscard,
     cancelDiscard: () => state.setConfirmingDiscard(false),
-    testPlayer2,
-    testCloud,
-    checkLlamaRuntime
+    ...createConnectionActions(state),
+    ...createLlamaSettingsActions(state)
   }
 }
 

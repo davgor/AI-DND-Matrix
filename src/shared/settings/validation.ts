@@ -80,19 +80,31 @@ function validatePlayer2(settings: ProviderSettings): SettingsValidationError[] 
   return []
 }
 
+function catalogModelReady(settings: ProviderSettings): boolean {
+  return (
+    settings.llamaCppCatalogModelId.trim().length > 0 && settings.llamaCppDownloadState === 'ready'
+  )
+}
+
 function validateLlamaCppManagedPaths(settings: ProviderSettings): SettingsValidationError[] {
   if (settings.llamaCppStartMode !== 'managed') {
     return []
   }
   const errors: SettingsValidationError[] = []
-  if (!settings.llamaCppServerPath.trim()) {
+  const usingCatalog = settings.llamaCppCatalogModelId.trim().length > 0
+  if (!settings.llamaCppServerPath.trim() && !usingCatalog) {
     errors.push({
       field: 'llamaCppServerPath',
       message: 'Managed mode requires a path to the llama-server executable.'
     })
   }
-  if (!settings.llamaCppModelPath.trim()) {
-    errors.push({ field: 'llamaCppModelPath', message: 'Managed mode requires a path to a .gguf model file.' })
+  if (!settings.llamaCppModelPath.trim() && !catalogModelReady(settings)) {
+    errors.push({
+      field: 'llamaCppModelPath',
+      message: usingCatalog
+        ? 'Download the selected catalog model before saving, or set an advanced model path.'
+        : 'Managed mode requires a path to a .gguf model file.'
+    })
   }
   return errors
 }
