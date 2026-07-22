@@ -101,6 +101,8 @@ function ProviderSection(props: { controller: SettingsController }): JSX.Element
         draft={controller.draft}
         errors={controller.errors}
         result={controller.llamaRuntimeResult}
+        downloadProgressText={controller.llamaDownloadProgressText}
+        downloadProgressPercent={controller.llamaDownloadProgressPercent}
         onChange={controller.updateDraft}
         onCheckRuntime={controller.checkLlamaRuntime}
         onDownloadModel={controller.downloadLlamaModel}

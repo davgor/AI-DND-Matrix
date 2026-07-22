@@ -189,7 +189,7 @@ export class LlamaCppLifecycleManager {
       { stdio: 'ignore' }
     )
     this.child.on('exit', () => {
-      if (this.state === 'ready') {
+      if (this.state === 'ready' || this.state === 'starting') {
         this.state = 'degraded'
       }
     })
@@ -204,17 +204,31 @@ export class LlamaCppLifecycleManager {
     return this.state
   }
 
+  private assertChildStillRunning(): void {
+    const child = this.child
+    if (!child || child.exitCode === null) {
+      return
+    }
+    const code = child.exitCode
+    throw new LlamaCppLifecycleError(
+      `Local narrative engine exited before becoming ready (code ${code}). Re-acquire the runtime or check the model path.`,
+      'runtime'
+    )
+  }
+
   private async pollUntilReady(): Promise<boolean> {
     const timeoutMs = this.config.startupTimeoutMs ?? DEFAULT_TIMEOUT_MS
     const pollMs = this.config.healthPollIntervalMs ?? DEFAULT_POLL_MS
     const deadline = Date.now() + timeoutMs
     while (Date.now() < deadline) {
+      this.assertChildStillRunning()
       const status = await this.fetchHealth(this.config.baseUrl).catch(() => 0)
       if (status === 200) {
         return true
       }
       await this.sleep(pollMs)
     }
+    this.assertChildStillRunning()
     return false
   }
 }

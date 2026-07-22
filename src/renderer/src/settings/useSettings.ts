@@ -8,7 +8,10 @@ import type {
 import { DEFAULT_PROVIDER_SETTINGS } from '../../../shared/settings/types'
 import { validateProviderSettings } from '../../../shared/settings/validation'
 import { buildSaveInput, isSettingsDirty, toDraftSettings } from './settingsDraft'
-import { createLlamaSettingsActions } from './useSettingsLlamaActions'
+import {
+  createLlamaSettingsActions,
+  subscribeLlamaDownloadProgress
+} from './useSettingsLlamaActions'
 
 export interface SettingsController {
   draft: ProviderSettings
@@ -26,6 +29,8 @@ export interface SettingsController {
   cloudConnectionResult: ConnectionCheckResult | null
   llamaRuntimeResult: ConnectionCheckResult | null
   llamaRuntimeChecked: boolean
+  llamaDownloadProgressText: string | null
+  llamaDownloadProgressPercent: number | null
   updateDraft: (patch: Partial<ProviderSettings>) => void
   save: () => Promise<void>
   requestClose: () => void
@@ -57,6 +62,8 @@ interface SettingsState extends ApiKeySetFlags {
   cloudConnectionResult: ConnectionCheckResult | null
   llamaRuntimeResult: ConnectionCheckResult | null
   llamaRuntimeChecked: boolean
+  llamaDownloadProgressText: string | null
+  llamaDownloadProgressPercent: number | null
   setBaseline: (settings: ProviderSettings) => void
   setDraft: React.Dispatch<React.SetStateAction<ProviderSettings>>
   setApiKeyFlags: (flags: ApiKeySetFlags) => void
@@ -68,6 +75,8 @@ interface SettingsState extends ApiKeySetFlags {
   setCloudConnectionResult: (result: ConnectionCheckResult | null) => void
   setLlamaRuntimeResult: (result: ConnectionCheckResult | null) => void
   setLlamaRuntimeChecked: (value: boolean) => void
+  setLlamaDownloadProgressText: (value: string | null) => void
+  setLlamaDownloadProgressPercent: (value: number | null) => void
 }
 
 function emptyKeyFlags(): ApiKeySetFlags {
@@ -113,6 +122,10 @@ function useSettingsState(): SettingsState {
   const [cloudConnectionResult, setCloudConnectionResult] = useState<ConnectionCheckResult | null>(null)
   const [llamaRuntimeResult, setLlamaRuntimeResult] = useState<ConnectionCheckResult | null>(null)
   const [llamaRuntimeChecked, setLlamaRuntimeChecked] = useState(false)
+  const [llamaDownloadProgressText, setLlamaDownloadProgressText] = useState<string | null>(null)
+  const [llamaDownloadProgressPercent, setLlamaDownloadProgressPercent] = useState<number | null>(
+    null
+  )
 
   return {
     baseline,
@@ -126,6 +139,8 @@ function useSettingsState(): SettingsState {
     cloudConnectionResult,
     llamaRuntimeResult,
     llamaRuntimeChecked,
+    llamaDownloadProgressText,
+    llamaDownloadProgressPercent,
     setBaseline,
     setDraft,
     setApiKeyFlags,
@@ -136,7 +151,9 @@ function useSettingsState(): SettingsState {
     setPlayerConnectionResult,
     setCloudConnectionResult,
     setLlamaRuntimeResult,
-    setLlamaRuntimeChecked
+    setLlamaRuntimeChecked,
+    setLlamaDownloadProgressText,
+    setLlamaDownloadProgressPercent
   }
 }
 
@@ -155,6 +172,13 @@ function useLoadSettingsOnMount(state: SettingsState): void {
       })
     }
     void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+}
+
+function useLlamaDownloadProgressSubscription(state: SettingsState): void {
+  useEffect(() => {
+    return subscribeLlamaDownloadProgress(state)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 }
@@ -263,6 +287,7 @@ function useSettingsActions(state: SettingsState, onClose: () => void) {
 export function useSettings(onClose: () => void): SettingsController {
   const state = useSettingsState()
   useLoadSettingsOnMount(state)
+  useLlamaDownloadProgressSubscription(state)
   const actions = useSettingsActions(state, onClose)
   const flags = currentKeyFlags(state)
   const draftValid = validateProviderSettings(state.draft, validationContext(flags)).length === 0
@@ -283,6 +308,8 @@ export function useSettings(onClose: () => void): SettingsController {
     cloudConnectionResult: state.cloudConnectionResult,
     llamaRuntimeResult: state.llamaRuntimeResult,
     llamaRuntimeChecked: state.llamaRuntimeChecked,
+    llamaDownloadProgressText: state.llamaDownloadProgressText,
+    llamaDownloadProgressPercent: state.llamaDownloadProgressPercent,
     ...actions
   }
 }

@@ -190,4 +190,28 @@ describe('LlamaCppLifecycleManager unexpected exit', () => {
     }
     expect(manager.getState()).toBe('degraded')
   })
+
+  it('fails immediately when the child exits before health becomes ready', async () => {
+    const { child, listeners } = createManagedChild({ onTermExit: false })
+    const spawnProcess = vi.fn(() => child as never)
+    const fetchHealth = vi.fn<(_url: string) => Promise<number>>().mockResolvedValue(0)
+    const manager = new LlamaCppLifecycleManager(
+      { ...managedConfig(), startupTimeoutMs: 60_000, healthPollIntervalMs: 1 },
+      {
+        spawnProcess,
+        fetchHealth,
+        sleep: async () => {
+          child.exitCode = 1
+          for (const handler of listeners.get('exit') ?? []) {
+            handler(1)
+          }
+        }
+      }
+    )
+    await expect(manager.start()).rejects.toMatchObject({
+      category: 'runtime',
+      message: expect.stringMatching(/exited before becoming ready/i)
+    })
+    expect(fetchHealth.mock.calls.length).toBeLessThan(5)
+  })
 })

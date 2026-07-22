@@ -41,9 +41,9 @@ describe('discoverLlamaCppRuntime', () => {
   })
 })
 
-describe('acquireLlamaCppRuntime', () => {
-  it('downloads, extracts, and installs llama-server into userData', async () => {
-    const renames: Array<{ from: string; to: string }> = []
+describe('acquireLlamaCppRuntime full package', () => {
+  it('installs the full runtime payload (exe + sibling libs), not only the binary', async () => {
+    const copies: Array<{ from: string; to: string }> = []
     const installed = await acquireLlamaCppRuntime(
       {
         userDataRoot: USER_DATA,
@@ -56,14 +56,53 @@ describe('acquireLlamaCppRuntime', () => {
         rm: () => undefined,
         extractZip: async () => undefined,
         findBinary: () => 'C:\\staging\\llama-server.exe',
-        rename: (from, to) => {
-          renames.push({ from: String(from), to: String(to) })
+        listDir: () => ['llama-server.exe', 'ggml.dll', 'mtmd.dll'],
+        isDirectory: () => false,
+        copyFile: (from, to) => {
+          copies.push({ from: String(from), to: String(to) })
         },
-        pathExists: (path) => String(path).includes('llama-server')
+        pathExists: (path) => {
+          const normalized = String(path).replace(/\\/g, '/')
+          return (
+            normalized.includes('llama-server') ||
+            normalized.endsWith('.dll')
+          )
+        },
+        platform: 'win32'
       }
     )
-    expect(installed.replace(/\\/g, '/')).toContain('llamacpp/runtime/')
-    expect(renames[0]?.from).toContain('staging')
+    expect(installed.replace(/\\/g, '/')).toContain('llamacpp/runtime/llama-server.exe')
+    expect(copies.some((entry) => entry.from.endsWith('ggml.dll'))).toBe(true)
+    expect(copies.some((entry) => entry.to.replace(/\\/g, '/').includes('llamacpp/runtime/'))).toBe(
+      true
+    )
+  })
+})
+
+describe('acquireLlamaCppRuntime validation', () => {
+  it('rejects a Windows install that has no sibling DLLs', async () => {
+    await expect(
+      acquireLlamaCppRuntime(
+        { userDataRoot: USER_DATA, downloadUrl: 'https://example.test/runtime.zip' },
+        {
+          fetchBytes: async () => new Uint8Array([1]),
+          writeFile: () => undefined,
+          mkdir: () => undefined as never,
+          rm: () => undefined,
+          extractZip: async () => undefined,
+          findBinary: () => 'C:\\staging\\llama-server.exe',
+          listDir: () => ['llama-server.exe'],
+          isDirectory: () => false,
+          copyFile: () => undefined,
+          pathExists: (path) => String(path).includes('llama-server'),
+          platform: 'win32'
+        }
+      )
+    ).rejects.toSatisfy((error: unknown) => {
+      expect(error).toBeInstanceOf(LlamaCppRuntimeError)
+      expect((error as Error).message).toMatch(/DLL/i)
+      return true
+    })
   })
 
   it('throws typed error with recovery hint on acquire failure', async () => {

@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto'
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { createHash, type Hash } from 'node:crypto'
+import { createWriteStream, mkdirSync, renameSync, rmSync, type WriteStream } from 'node:fs'
 import { join } from 'node:path'
 import { catalogModelFileName, llamacppModelsDir } from './paths'
 
@@ -38,28 +38,45 @@ interface ModelDownloadResult {
   catalogModelId: string
 }
 
+interface DownloadToFileResult {
+  bytesReceived: number
+  sha256Hex: string
+}
+
+type ChunkListener = (received: number, total: number | null) => void
+
+/** Minimal writable surface used by streaming download (real fs WriteStream or test double). */
+export interface DownloadWriteStream {
+  write(chunk: Uint8Array): boolean
+  end(cb?: (error?: Error | null) => void): void
+  destroy(error?: Error): void
+  once(event: 'drain', listener: () => void): void
+}
+
+export interface DownloadToFileDeps {
+  fetchImpl?: typeof fetch
+  openWriteStream?: (filePath: string) => DownloadWriteStream
+}
+
 interface ModelDownloadDeps {
-  fetchBytes?: (
+  downloadToFile?: (
     url: string,
+    destPath: string,
     signal: AbortSignal,
-    onChunk: (received: number, total: number | null) => void
-  ) => Promise<Uint8Array>
-  writeFile?: (filePath: string, data: Uint8Array) => void
+    onChunk: ChunkListener
+  ) => Promise<DownloadToFileResult>
   mkdir?: typeof mkdirSync
   rename?: typeof renameSync
   rm?: typeof rmSync
-  sha256Of?: (data: Uint8Array) => string
 }
 
 type ProgressListener = (progress: ModelDownloadProgress) => void
 
 interface ResolvedDownloadDeps {
   mkdir: typeof mkdirSync
-  writeFile: (filePath: string, data: Uint8Array) => void
   rename: typeof renameSync
   rm: typeof rmSync
-  fetchBytes: NonNullable<ModelDownloadDeps['fetchBytes']>
-  sha256Of: (data: Uint8Array) => string
+  downloadToFile: NonNullable<ModelDownloadDeps['downloadToFile']>
 }
 
 let activeAbort: AbortController | null = null
@@ -80,34 +97,154 @@ function percentOf(received: number, total: number | null): number | null {
   return Math.min(100, Math.round((received / total) * 100))
 }
 
-function defaultSha256(data: Uint8Array): string {
-  return createHash('sha256').update(data).digest('hex')
+function openDefaultWriteStream(filePath: string): DownloadWriteStream {
+  const stream: WriteStream = createWriteStream(filePath)
+  return {
+    write(chunk: Uint8Array): boolean {
+      return stream.write(Buffer.from(chunk))
+    },
+    end(cb?: (error?: Error | null) => void): void {
+      stream.end(cb)
+    },
+    destroy(error?: Error): void {
+      stream.destroy(error)
+    },
+    once(event: 'drain', listener: () => void): void {
+      stream.once(event, listener)
+    }
+  }
 }
 
-async function defaultFetchBytes(
-  url: string,
-  signal: AbortSignal,
-  onChunk: (received: number, total: number | null) => void
-): Promise<Uint8Array> {
-  const response = await fetch(url, { signal })
+function contentLengthTotal(response: Response): number | null {
+  const totalHeader = response.headers.get('content-length')
+  if (!totalHeader) {
+    return null
+  }
+  const total = Number(totalHeader)
+  return Number.isFinite(total) && total > 0 ? total : null
+}
+
+async function writeChunkWithBackpressure(
+  stream: DownloadWriteStream,
+  chunk: Uint8Array
+): Promise<void> {
+  const ok = stream.write(chunk)
+  if (ok) {
+    return
+  }
+  await new Promise<void>((resolve) => {
+    stream.once('drain', resolve)
+  })
+}
+
+async function endWriteStream(stream: DownloadWriteStream): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    stream.end((error?: Error | null) => {
+      if (error) {
+        reject(error)
+        return
+      }
+      resolve()
+    })
+  })
+}
+
+interface PumpBodyArgs {
+  body: ReadableStream<Uint8Array>
+  stream: DownloadWriteStream
+  signal: AbortSignal
+  total: number | null
+  onChunk: ChunkListener
+  hash: Hash
+}
+
+async function pumpBodyToFile(args: PumpBodyArgs): Promise<number> {
+  const reader = args.body.getReader()
+  let received = 0
+  try {
+    for (;;) {
+      if (args.signal.aborted) {
+        throw new ModelDownloadError('Download cancelled.', 'cancelled')
+      }
+      const { done, value } = await reader.read()
+      if (done) {
+        break
+      }
+      if (!value || value.byteLength === 0) {
+        continue
+      }
+      args.hash.update(value)
+      await writeChunkWithBackpressure(args.stream, value)
+      received += value.byteLength
+      args.onChunk(received, args.total)
+    }
+    await endWriteStream(args.stream)
+    return received
+  } catch (error) {
+    args.stream.destroy(error instanceof Error ? error : undefined)
+    throw error
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+export interface DefaultDownloadToFileArgs {
+  url: string
+  destPath: string
+  signal: AbortSignal
+  onChunk: ChunkListener
+  deps?: DownloadToFileDeps
+}
+
+/**
+ * Streams an HTTP response body to disk without buffering the full payload in memory.
+ * Exported for unit tests that inject a fake fetch / write stream.
+ */
+export async function defaultDownloadToFile(
+  args: DefaultDownloadToFileArgs
+): Promise<DownloadToFileResult> {
+  const deps = args.deps ?? {}
+  const fetchImpl = deps.fetchImpl ?? fetch
+  const openWriteStream = deps.openWriteStream ?? openDefaultWriteStream
+  const response = await fetchImpl(args.url, { signal: args.signal })
   if (!response.ok) {
     throw new ModelDownloadError(`Download failed with HTTP ${response.status}.`, 'network')
   }
-  const totalHeader = response.headers.get('content-length')
-  const total = totalHeader ? Number(totalHeader) : null
-  const buffer = new Uint8Array(await response.arrayBuffer())
-  onChunk(buffer.byteLength, total)
-  return buffer
+  if (!response.body) {
+    throw new ModelDownloadError('Download response had no body.', 'network')
+  }
+  const stream = openWriteStream(args.destPath)
+  const hash = createHash('sha256')
+  try {
+    const bytesReceived = await pumpBodyToFile({
+      body: response.body,
+      stream,
+      signal: args.signal,
+      total: contentLengthTotal(response),
+      onChunk: args.onChunk,
+      hash
+    })
+    return { bytesReceived, sha256Hex: hash.digest('hex') }
+  } catch (error) {
+    if (error instanceof ModelDownloadError) {
+      throw error
+    }
+    throw new ModelDownloadError(
+      `Disk error while writing model: ${(error as Error).message}`,
+      'disk'
+    )
+  }
 }
 
 function resolveDownloadDeps(deps: ModelDownloadDeps): ResolvedDownloadDeps {
   return {
     mkdir: deps.mkdir ?? mkdirSync,
-    writeFile: deps.writeFile ?? ((path, data) => writeFileSync(path, data)),
     rename: deps.rename ?? renameSync,
     rm: deps.rm ?? rmSync,
-    fetchBytes: deps.fetchBytes ?? defaultFetchBytes,
-    sha256Of: deps.sha256Of ?? defaultSha256
+    downloadToFile:
+      deps.downloadToFile ??
+      ((url, destPath, signal, onChunk) =>
+        defaultDownloadToFile({ url, destPath, signal, onChunk }))
   }
 }
 
@@ -151,15 +288,27 @@ async function writeVerifiedModel(args: WriteVerifiedArgs): Promise<ModelDownloa
   const { request, abort, paths, resolved, onProgress } = args
   resolved.mkdir(paths.modelsDir, { recursive: true })
   emitDownloading(request.catalogModelId, onProgress)
-  const bytes = await fetchModelBytes(request, abort, resolved.fetchBytes, onProgress)
-  writePartial(resolved.writeFile, paths.partialPath, bytes)
-  verifyChecksum(request.sha256, bytes, resolved.sha256Of)
-  resolved.rename(paths.partialPath, paths.finalPath)
+  const downloaded = await fetchModelToFile({
+    request,
+    abort,
+    partialPath: paths.partialPath,
+    resolved,
+    onProgress
+  })
+  verifyChecksum(request.sha256, downloaded.sha256Hex)
+  try {
+    resolved.rename(paths.partialPath, paths.finalPath)
+  } catch (error) {
+    throw new ModelDownloadError(
+      `Disk error while finalizing model: ${(error as Error).message}`,
+      'disk'
+    )
+  }
   onProgress?.({
     catalogModelId: request.catalogModelId,
     phase: 'complete',
-    bytesReceived: bytes.byteLength,
-    bytesTotal: bytes.byteLength,
+    bytesReceived: downloaded.bytesReceived,
+    bytesTotal: downloaded.bytesReceived,
     percent: 100
   })
   return { modelPath: paths.finalPath, catalogModelId: request.catalogModelId }
@@ -220,22 +369,31 @@ export async function downloadCatalogModel(
   }
 }
 
-async function fetchModelBytes(
-  request: ModelDownloadRequest,
-  abort: AbortController,
-  fetchBytes: NonNullable<ModelDownloadDeps['fetchBytes']>,
+interface FetchModelToFileArgs {
+  request: ModelDownloadRequest
+  abort: AbortController
+  partialPath: string
+  resolved: ResolvedDownloadDeps
   onProgress?: ProgressListener
-): Promise<Uint8Array> {
+}
+
+async function fetchModelToFile(args: FetchModelToFileArgs): Promise<DownloadToFileResult> {
+  const { request, abort, partialPath, resolved, onProgress } = args
   try {
-    return await fetchBytes(request.downloadUrl, abort.signal, (received, total) => {
-      onProgress?.({
-        catalogModelId: request.catalogModelId,
-        phase: 'downloading',
-        bytesReceived: received,
-        bytesTotal: total,
-        percent: percentOf(received, total)
-      })
-    })
+    return await resolved.downloadToFile(
+      request.downloadUrl,
+      partialPath,
+      abort.signal,
+      (received, total) => {
+        onProgress?.({
+          catalogModelId: request.catalogModelId,
+          phase: 'downloading',
+          bytesReceived: received,
+          bytesTotal: total,
+          percent: percentOf(received, total)
+        })
+      }
+    )
   } catch (error) {
     if (abort.signal.aborted) {
       throw new ModelDownloadError('Download cancelled.', 'cancelled')
@@ -250,31 +408,12 @@ async function fetchModelBytes(
   }
 }
 
-function writePartial(
-  writeFile: (filePath: string, data: Uint8Array) => void,
-  partialPath: string,
-  bytes: Uint8Array
-): void {
-  try {
-    writeFile(partialPath, bytes)
-  } catch (error) {
-    throw new ModelDownloadError(
-      `Disk error while writing model: ${(error as Error).message}`,
-      'disk'
-    )
-  }
-}
-
-function verifyChecksum(
-  expected: string,
-  bytes: Uint8Array,
-  sha256Of: (data: Uint8Array) => string
-): void {
+function verifyChecksum(expected: string, actualHex: string): void {
   const want = expected.trim().toLowerCase()
   if (!want) {
     return
   }
-  if (sha256Of(bytes).toLowerCase() !== want) {
+  if (actualHex.toLowerCase() !== want) {
     throw new ModelDownloadError(
       'Downloaded model failed integrity check (checksum mismatch).',
       'checksum'

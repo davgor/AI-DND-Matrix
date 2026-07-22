@@ -1,14 +1,14 @@
 import { execFile } from 'node:child_process'
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   readdirSync,
-  renameSync,
   rmSync,
   statSync,
   writeFileSync
 } from 'node:fs'
-import { join } from 'node:path'
+import { basename as nodeBasename, dirname as nodeDirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { defaultAcquiredRuntimePath, llamacppRuntimeDir } from './paths'
 
@@ -48,10 +48,13 @@ interface AcquireRuntimeDeps {
   writeFile?: (filePath: string, data: Uint8Array) => void
   mkdir?: typeof mkdirSync
   rm?: typeof rmSync
-  rename?: typeof renameSync
   extractZip?: (zipPath: string, destDir: string) => Promise<void>
   findBinary?: (rootDir: string) => string | null
   pathExists?: (absolutePath: string) => boolean
+  listDir?: (dirPath: string) => string[]
+  isDirectory?: (absolutePath: string) => boolean
+  copyFile?: (from: string, to: string) => void
+  platform?: NodeJS.Platform
 }
 
 interface ResolvedAcquireDeps {
@@ -59,10 +62,13 @@ interface ResolvedAcquireDeps {
   writeFile: (filePath: string, data: Uint8Array) => void
   mkdir: typeof mkdirSync
   rm: typeof rmSync
-  rename: typeof renameSync
   extractZip: (zipPath: string, destDir: string) => Promise<void>
   findBinary: (rootDir: string) => string | null
   pathExists: (absolutePath: string) => boolean
+  listDir: (dirPath: string) => string[]
+  isDirectory: (absolutePath: string) => boolean
+  copyFile: (from: string, to: string) => void
+  platform: NodeJS.Platform
 }
 
 const RECOVERY =
@@ -105,15 +111,47 @@ export async function lookupLlamaServerOnPathAsync(): Promise<string | null> {
 }
 
 function resolveAcquireDeps(deps: AcquireRuntimeDeps): ResolvedAcquireDeps {
+  return { ...defaultAcquireDeps(), ...pickProvidedAcquireDeps(deps) }
+}
+
+const ACQUIRE_DEP_KEYS = [
+  'fetchBytes',
+  'writeFile',
+  'mkdir',
+  'rm',
+  'extractZip',
+  'findBinary',
+  'pathExists',
+  'listDir',
+  'isDirectory',
+  'copyFile',
+  'platform'
+] as const satisfies ReadonlyArray<keyof AcquireRuntimeDeps>
+
+function pickProvidedAcquireDeps(deps: AcquireRuntimeDeps): Partial<ResolvedAcquireDeps> {
+  const next: Partial<ResolvedAcquireDeps> = {}
+  for (const key of ACQUIRE_DEP_KEYS) {
+    const value = deps[key]
+    if (value !== undefined) {
+      Object.assign(next, { [key]: value })
+    }
+  }
+  return next
+}
+
+function defaultAcquireDeps(): ResolvedAcquireDeps {
   return {
-    fetchBytes: deps.fetchBytes ?? defaultFetchBytes,
-    writeFile: deps.writeFile ?? ((path, data) => writeFileSync(path, data)),
-    mkdir: deps.mkdir ?? mkdirSync,
-    rm: deps.rm ?? rmSync,
-    rename: deps.rename ?? renameSync,
-    extractZip: deps.extractZip ?? defaultExtractZip,
-    findBinary: deps.findBinary ?? findLlamaServerBinary,
-    pathExists: deps.pathExists ?? existsSync
+    fetchBytes: defaultFetchBytes,
+    writeFile: (path, data) => writeFileSync(path, data),
+    mkdir: mkdirSync,
+    rm: rmSync,
+    extractZip: defaultExtractZip,
+    findBinary: findLlamaServerBinary,
+    pathExists: existsSync,
+    listDir: (dir) => readdirSync(dir),
+    isDirectory: (path) => statSync(path).isDirectory(),
+    copyFile: (from, to) => copyFileSync(from, to),
+    platform: process.platform
   }
 }
 
@@ -143,7 +181,8 @@ export async function acquireLlamaCppRuntime(
       input,
       ...resolved,
       zipPath,
-      stagingDir
+      stagingDir,
+      runtimeDir
     })
   } catch (error) {
     if (error instanceof LlamaCppRuntimeError) {
@@ -159,17 +198,29 @@ export async function acquireLlamaCppRuntime(
   }
 }
 
-async function installFromZip(args: {
+interface InstallFromZipArgs extends ResolvedAcquireDeps {
   input: AcquireRuntimeInput
-  fetchBytes: (url: string) => Promise<Uint8Array>
-  writeFile: (filePath: string, data: Uint8Array) => void
-  extractZip: (zipPath: string, destDir: string) => Promise<void>
-  findBinary: (rootDir: string) => string | null
-  rename: typeof renameSync
-  pathExists: (absolutePath: string) => boolean
   zipPath: string
   stagingDir: string
-}): Promise<string> {
+  runtimeDir: string
+}
+
+function pathBasename(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/')
+  const parts = normalized.split('/').filter(Boolean)
+  return parts.at(-1) ?? nodeBasename(filePath)
+}
+
+function pathDirname(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/')
+  const idx = normalized.lastIndexOf('/')
+  if (idx <= 0) {
+    return nodeDirname(filePath)
+  }
+  return normalized.slice(0, idx)
+}
+
+async function installFromZip(args: InstallFromZipArgs): Promise<string> {
   const bytes = await args.fetchBytes(args.input.downloadUrl)
   args.writeFile(args.zipPath, bytes)
   await args.extractZip(args.zipPath, args.stagingDir)
@@ -180,12 +231,55 @@ async function installFromZip(args: {
       RECOVERY
     )
   }
-  const target = defaultAcquiredRuntimePath(args.input.userDataRoot)
-  args.rename(found, target)
-  if (!args.pathExists(target)) {
+  clearInstalledRuntimeFiles(args)
+  copyDirContents(pathDirname(found), args.runtimeDir, args)
+  const target = join(args.runtimeDir, pathBasename(found))
+  assertRuntimePayloadComplete(args, target)
+  return target
+}
+
+function clearInstalledRuntimeFiles(args: InstallFromZipArgs): void {
+  for (const name of args.listDir(args.runtimeDir)) {
+    if (name === '_staging' || name === 'runtime-download.zip') {
+      continue
+    }
+    removeQuietly(args.rm, join(args.runtimeDir, name))
+  }
+}
+
+function copyDirContents(
+  fromDir: string,
+  toDir: string,
+  args: Pick<ResolvedAcquireDeps, 'listDir' | 'isDirectory' | 'mkdir' | 'copyFile'>
+): void {
+  args.mkdir(toDir, { recursive: true })
+  for (const name of args.listDir(fromDir)) {
+    const from = join(fromDir, name)
+    const to = join(toDir, name)
+    if (args.isDirectory(from)) {
+      copyDirContents(from, to, args)
+      continue
+    }
+    args.copyFile(from, to)
+  }
+}
+
+function assertRuntimePayloadComplete(args: InstallFromZipArgs, binaryPath: string): void {
+  if (!args.pathExists(binaryPath)) {
     throw new LlamaCppRuntimeError('Failed to install acquired llama-server binary.', RECOVERY)
   }
-  return target
+  if (args.platform !== 'win32') {
+    return
+  }
+  const dlls = args
+    .listDir(args.runtimeDir)
+    .filter((name) => name.toLowerCase().endsWith('.dll'))
+  if (dlls.length === 0) {
+    throw new LlamaCppRuntimeError(
+      'Runtime install is missing required DLLs next to llama-server.exe. Re-acquire the runtime package.',
+      RECOVERY
+    )
+  }
 }
 
 async function defaultFetchBytes(url: string): Promise<Uint8Array> {

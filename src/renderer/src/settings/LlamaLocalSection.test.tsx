@@ -92,6 +92,33 @@ describe('LlamaLocalSection download state', () => {
   })
 })
 
+describe('LlamaLocalSection download progress', () => {
+  it('renders a progress bar and progress text while downloading', () => {
+    const node = LlamaLocalSection({
+      draft: {
+        ...DEFAULT_PROVIDER_SETTINGS,
+        mode: 'llamacpp',
+        llamaCppCatalogModelId: 'qwen25-7b-instruct-q4-k-m',
+        llamaCppDownloadState: 'downloading'
+      },
+      errors: [],
+      result: null,
+      downloadProgressText: 'Downloading… 26% (1.12 GB / 4.38 GB)',
+      downloadProgressPercent: 26,
+      onChange: () => undefined,
+      onCheckRuntime: async () => undefined
+    })
+    const flat = flattenElements(node)
+    const bar = flat.find(
+      (el) => el.type === 'progress' && el.props?.['aria-label'] === 'Model download progress'
+    )
+    expect(bar).toBeDefined()
+    expect(bar?.props?.value).toBe(26)
+    expect(bar?.props?.max).toBe(100)
+    expect(flat.map(textOf).join(' ')).toMatch(/Downloading… 26%/)
+  })
+})
+
 describe('LlamaLocalSection advanced paths', () => {
   it('keeps advanced manual paths reachable under a disclosure', () => {
     const node = LlamaLocalSection({

@@ -1,4 +1,5 @@
 import type { ProviderSettings } from '../../../shared/settings/types'
+import { formatLlamaDownloadProgress } from './formatLlamaDownloadProgress'
 
 /** Subset of settings state setters needed for llama download/acquire actions. */
 interface LlamaSettingsActionState {
@@ -6,6 +7,8 @@ interface LlamaSettingsActionState {
   setDraft: React.Dispatch<React.SetStateAction<ProviderSettings>>
   setLlamaRuntimeResult: (result: { ok: boolean; message: string } | null) => void
   setLlamaRuntimeChecked: (value: boolean) => void
+  setLlamaDownloadProgressText: (value: string | null) => void
+  setLlamaDownloadProgressPercent: (value: number | null) => void
 }
 
 export function createLlamaSettingsActions(state: LlamaSettingsActionState): {
@@ -20,11 +23,26 @@ export function createLlamaSettingsActions(state: LlamaSettingsActionState): {
   }
 }
 
+/** Subscribe to main-process download progress; returns unsubscribe. */
+export function subscribeLlamaDownloadProgress(state: LlamaSettingsActionState): () => void {
+  return window.settings.onLlamaDownloadProgress((payload) => {
+    state.setLlamaDownloadProgressText(formatLlamaDownloadProgress(payload))
+    state.setLlamaDownloadProgressPercent(
+      payload.phase === 'downloading' || payload.phase === 'complete' ? payload.percent : null
+    )
+    if (payload.phase === 'failed' && payload.errorMessage) {
+      state.setLlamaRuntimeResult({ ok: false, message: payload.errorMessage })
+    }
+  })
+}
+
 async function downloadLlamaModel(state: LlamaSettingsActionState): Promise<void> {
   const catalogId = state.draft.llamaCppCatalogModelId
   if (!catalogId) {
     return
   }
+  state.setLlamaDownloadProgressText('Downloading…')
+  state.setLlamaDownloadProgressPercent(null)
   state.setDraft((current) => ({ ...current, llamaCppDownloadState: 'downloading' }))
   const result = await window.settings.startLlamaModelDownload(catalogId)
   if (result.ok) {
@@ -34,9 +52,12 @@ async function downloadLlamaModel(state: LlamaSettingsActionState): Promise<void
       llamaCppModelPath: result.modelPath,
       llamaCppStartMode: 'managed'
     }))
+    state.setLlamaDownloadProgressText('Download complete.')
+    state.setLlamaDownloadProgressPercent(100)
     return
   }
   state.setDraft((current) => ({ ...current, llamaCppDownloadState: 'failed' }))
+  state.setLlamaDownloadProgressPercent(null)
   state.setLlamaRuntimeResult({ ok: false, message: result.message })
 }
 

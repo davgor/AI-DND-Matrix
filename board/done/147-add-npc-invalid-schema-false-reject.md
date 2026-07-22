@@ -13,4 +13,4 @@ Admin elevation to generate a campaign is tracked only as a note here (environme
 - [x] `parseNpcClassKey` accepts roster labels and common class/role synonyms (e.g. `wizard`→`mage`, `herbalist`→`commoner`) with unit tests
 - [x] `generateNpcCoreBundle` / `parseNpcCoreBundleRecord` accepts a realistic herbalist-style payload that previously would have failed all retries
 - [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
-- [ ] `act` runs for `.github/workflows/pr-checks.yml` and `.github/workflows/deadcode.yml` succeed
+- [x] `act` runs for `.github/workflows/pr-checks.yml` and `.github/workflows/deadcode.yml` succeed

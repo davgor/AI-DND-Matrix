@@ -11,6 +11,7 @@ interface LlamaLocalSectionProps {
   errors: SettingsValidationError[]
   result: ConnectionCheckResult | null
   downloadProgressText?: string | null
+  downloadProgressPercent?: number | null
   runtimeStatusText?: string | null
   onChange: (patch: Partial<ProviderSettings>) => void
   onCheckRuntime: () => Promise<void>
@@ -110,20 +111,34 @@ function downloadActions(props: LlamaLocalSectionProps): JSX.Element {
   )
 }
 
-function statusTexts(props: LlamaLocalSectionProps): JSX.Element | null {
-  if (!props.downloadProgressText && !props.runtimeStatusText) {
+function downloadProgressBar(props: LlamaLocalSectionProps): JSX.Element | null {
+  const downloading = props.draft.llamaCppDownloadState === 'downloading'
+  if (!downloading && !props.downloadProgressText) {
     return null
   }
+  const percent = props.downloadProgressPercent
   return (
-    <>
+    <div className="settings-llama-download-progress" aria-live="polite">
+      {downloading && (
+        <progress
+          className="settings-llama-download-progress-bar"
+          max={100}
+          value={percent == null ? undefined : percent}
+          aria-label="Model download progress"
+        />
+      )}
       {props.downloadProgressText && (
         <p className="settings-help-text">{props.downloadProgressText}</p>
       )}
-      {props.runtimeStatusText && (
-        <p className="settings-help-text">{props.runtimeStatusText}</p>
-      )}
-    </>
+    </div>
   )
+}
+
+function statusTexts(props: LlamaLocalSectionProps): JSX.Element | null {
+  if (!props.runtimeStatusText) {
+    return null
+  }
+  return <p className="settings-help-text">{props.runtimeStatusText}</p>
 }
 
 function startupModeFields(props: LlamaLocalSectionProps): JSX.Element {
@@ -223,6 +238,7 @@ export function LlamaLocalSection(props: LlamaLocalSectionProps): JSX.Element {
       <h3>Local llama.cpp</h3>
       {catalogFieldset(props)}
       {downloadActions(props)}
+      {downloadProgressBar(props)}
       {statusTexts(props)}
       {startupModeFields(props)}
       {advancedPaths(props)}
