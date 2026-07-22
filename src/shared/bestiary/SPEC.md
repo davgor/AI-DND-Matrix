@@ -8,7 +8,7 @@ Builds on catalog retrieve-first (023), creature hydration (031.3 / 042), flagge
 
 | Concept | Meaning |
 |---------|---------|
-| **Species** (`BestiarySpecies`) | Campaign-scoped bestiary entry (e.g. “Rift-beast”). Holds `key`, display `name`, immutable `baseLore` (1–2 paragraphs), `buckets` / `tags`, and `defaultCatalogKey` for mechanical template lookup. |
+| **Species** (`BestiarySpecies`) | Campaign-scoped bestiary entry (e.g. “Rift-beast”). Holds `key`, display `name`, immutable `baseLore` (1–2 paragraphs), optional `visualAppearance` (structured silhouette/colors/marks for creature tokens; null on legacy rows), `buckets` / `tags`, and `defaultCatalogKey` for mechanical template lookup. |
 | **Variant** (`BestiaryVariant`) | Named mutation of a species (`standard`, `alpha`, …). May set `catalogKeyOverride` and/or `modifierProfileId` (engine-owned profile table — not free LLM numbers). Optional `flavorBlurb` for narration only. |
 | **Instance** (`BestiaryInstanceRef`) | Concrete `npcs` row in a region (or staged for a quest), linked via `speciesId` + `variantKey`, with fiction `displayName`. |
 | **Composition plan** (`CompositionPlan`) | Engine-owned encounter mix: slots of `{ speciesKey, variantKey, count }` within `budgetSpent` ≤ `budgetMax`. |
@@ -140,7 +140,7 @@ Fiction display names (“Rift-wolf”) may differ from catalog keys (`dire-wolf
 ## Out of scope / deferred
 
 - Schema/repos (116.2), lore write path (116.3), composition planner implementation (116.4), species pipeline (116.5), create stage (116.6), quest wiring (116.7), spawn/combat wiring (116.8–116.10) — covered by later 116.x tickets (historical 116.1 note).
-- **Campaign Review bestiary panel (116.11)** — deferred. Mechanical delivery (116.1–116.10, 116.12) ships without Review UI; follow up when the Review surface is prioritized.
+- **Campaign Review bestiary panel (116.11)** — **shipped** in epic **126.6**. Review lists prepped species (name, base lore, variants) read-only and hides when the roster is empty.
 
 ## LLM efficiency ceilings
 

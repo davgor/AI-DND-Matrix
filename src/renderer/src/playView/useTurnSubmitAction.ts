@@ -32,6 +32,8 @@ async function applyTurnOutcome(
   state.setDefeatDispositionNarration(outcome.defeatDispositionNarration)
   state.setXpNarration(outcome.xpNarration)
   state.setLootNarration(outcome.lootNarration)
+  state.setLockoutNarration(outcome.lockoutNarration)
+  state.setSpellGrantNarration(outcome.spellGrantNarration)
   state.setPlayerImprisoned(outcome.playerImprisoned)
   if (outcome.dyingResolution?.status !== 'permanently_dead') {
     return

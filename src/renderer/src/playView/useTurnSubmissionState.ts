@@ -14,6 +14,8 @@ export function useTurnSubmissionState() {
   const [defeatDispositionNarration, setDefeatDispositionNarration] = useState<string | null>(null)
   const [lootNarration, setLootNarration] = useState<string | null>(null)
   const [xpNarration, setXpNarration] = useState<string | null>(null)
+  const [lockoutNarration, setLockoutNarration] = useState<string | null>(null)
+  const [spellGrantNarration, setSpellGrantNarration] = useState<string | null>(null)
   const [playerImprisoned, setPlayerImprisoned] = useState(false)
   return {
     inputValue,
@@ -34,6 +36,10 @@ export function useTurnSubmissionState() {
     setLootNarration,
     xpNarration,
     setXpNarration,
+    lockoutNarration,
+    setLockoutNarration,
+    spellGrantNarration,
+    setSpellGrantNarration,
     playerImprisoned,
     setPlayerImprisoned
   }

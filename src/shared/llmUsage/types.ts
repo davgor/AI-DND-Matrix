@@ -2,6 +2,7 @@
 export const LLM_PURPOSE_IDS = [
   'campaign.pantheon',
   'campaign.world',
+  'campaign.faction',
   'campaign.region',
   'campaign.npc',
   'campaign.story',
@@ -30,6 +31,7 @@ export type LlmPurposeBucket = 'setup' | 'play' | 'meta'
 export const LLM_PURPOSE_BUCKETS: Record<LlmPurposeId, LlmPurposeBucket> = {
   'campaign.pantheon': 'setup',
   'campaign.world': 'setup',
+  'campaign.faction': 'setup',
   'campaign.region': 'setup',
   'campaign.npc': 'setup',
   'campaign.story': 'setup',

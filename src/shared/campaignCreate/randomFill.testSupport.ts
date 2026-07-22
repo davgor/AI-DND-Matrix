@@ -36,7 +36,8 @@ export function randomCampaignSetupForm(source?: RandomSource): CampaignSetupFor
     respawnLimit: deathMode === 'respawn' ? randomRespawnLimit(rng) : '',
     regionCount: randomRegionCount(rng),
     npcsPerRegion: randomNpcsPerRegion(rng),
-    npcFaceTokenGenerationEnabled: false
+    npcFaceTokenGenerationEnabled: false,
+    enemyTokenGenerationEnabled: false
   }
   return normalizeFormValues(form)
 }

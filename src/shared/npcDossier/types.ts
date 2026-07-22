@@ -14,6 +14,12 @@ export interface NpcDossierTraits {
   hairColor: string | null
   age: string | null
   eyeColor: string | null
+  /** Bestiary species visual appearance when the NPC links to a species row. */
+  silhouette: string | null
+  sizeClass: string | null
+  primaryColors: string[]
+  distinguishingMarks: string | null
+  textureOrMaterial: string | null
 }
 
 /** Player-known fact from the active character's log book (`relatedEntityId = npcId`). */
@@ -104,7 +110,13 @@ function hasValidNpcDossierAppearanceTraits(row: Record<string, unknown>): boole
   return (
     isNullableString(row['hairColor']) &&
     isNullableString(row['age']) &&
-    isNullableString(row['eyeColor'])
+    isNullableString(row['eyeColor']) &&
+    isNullableString(row['silhouette']) &&
+    isNullableString(row['sizeClass']) &&
+    Array.isArray(row['primaryColors']) &&
+    row['primaryColors'].every((entry) => typeof entry === 'string') &&
+    isNullableString(row['distinguishingMarks']) &&
+    isNullableString(row['textureOrMaterial'])
   )
 }
 

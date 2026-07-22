@@ -5,6 +5,7 @@ import { listCharacterItems } from './repositories/characterItems'
 import { createLegacyEquipDatabase, seedLegacyEquippedItems } from './migrateEquipSlotsLegacyFixture'
 import { migrateEquipSlotValue } from './migrateEquipSlots'
 import { inferAccessorySlotFromName } from './migrateEquipSlotsAccessory'
+import { ensureLegacyRaceKeyColumns } from './testUtils'
 
 describe('migrateEquipSlotValue', () => {
   it('maps legacy weapon and trinket slots', () => {
@@ -23,6 +24,7 @@ describe('migrateEquipSlotValue', () => {
 describe('migration v24 round-trip', () => {
   it('migrates legacy equipped items on fixture database', () => {
     const db = createLegacyEquipDatabase()
+    ensureLegacyRaceKeyColumns(db)
     const campaign = createCampaign(db, { name: 'Legacy', premisePrompt: 'x', deathMode: 'legendary' })
     const character = createCharacter(db, {
       campaignId: campaign.id,

@@ -6,6 +6,11 @@ import {
   DEFAULT_NPCS_PER_REGION,
   DEFAULT_REGION_COUNT
 } from '../../shared/campaignCreate/types'
+import type {
+  FactionKind,
+  FactionPressure,
+  FactionRelationStance
+} from '../../shared/factions'
 import type { AvailableRaceOption } from '../../shared/raceSelection/types'
 import type { CreateCampaignProgressCallback } from '../../shared/campaignCreate/types'
 import type { DeathMode, RespawnRules } from '../../db/repositories/campaigns'
@@ -70,6 +75,10 @@ export interface GeneratedNpc {
   hairColor?: string | null
   age?: string | null
   eyeColor?: string | null
+  /** Optional faction roster key from create/flagged generation (125.4). */
+  factionKey?: string
+  /** Optional membership role string (e.g. acolyte, captain). */
+  membershipRole?: string
 }
 
 export interface NpcCoreBundle {
@@ -140,6 +149,32 @@ export interface GeneratedPantheon {
   deities: GeneratedDeity[]
 }
 
+export interface GeneratedFaction {
+  key: string
+  name: string
+  kind: FactionKind
+  summary: string
+  motivation?: string
+  publicFace?: string
+  methods?: string
+  deityName?: string
+  sortOrder?: number
+}
+
+export interface GeneratedFactionRelation {
+  factionAKey: string
+  factionBKey: string
+  stance: FactionRelationStance
+  summary?: string
+}
+
+export interface GeneratedFactions {
+  factionPressure: FactionPressure
+  factionsSummary: string
+  factions: GeneratedFaction[]
+  relations: GeneratedFactionRelation[]
+}
+
 export interface WorldContext {
   worldName: string
   worldSummary: string
@@ -149,6 +184,7 @@ export interface WorldContext {
 export interface CampaignGenerationResult {
   world: GeneratedWorld
   pantheon: GeneratedPantheon
+  factions: GeneratedFactions
   regions: GeneratedRegion[]
   npcs: GeneratedNpc[]
   bestiary: GeneratedBestiaryRoster
@@ -206,4 +242,5 @@ export interface CampaignSetupInput {
   regionCount?: number
   npcsPerRegion?: number
   npcFaceTokenGenerationEnabled?: boolean
+  enemyTokenGenerationEnabled?: boolean
 }

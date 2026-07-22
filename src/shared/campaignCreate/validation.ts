@@ -96,7 +96,8 @@ export function mapFormToCreateRequest(
     respawnRules: buildRespawnRules(form),
     regionCount: form.regionCount,
     npcsPerRegion: form.npcsPerRegion,
-    npcFaceTokenGenerationEnabled: form.npcFaceTokenGenerationEnabled === true
+    npcFaceTokenGenerationEnabled: form.npcFaceTokenGenerationEnabled === true,
+    enemyTokenGenerationEnabled: form.enemyTokenGenerationEnabled === true
   }
 }
 
@@ -113,6 +114,10 @@ function isValidGenerationCount(
   return !Number.isNaN(resolved) && isInBounds(resolved)
 }
 
+function isOptionalBooleanField(candidate: Record<string, unknown>, key: string): boolean {
+  return candidate[key] === undefined || typeof candidate[key] === 'boolean'
+}
+
 function hasValidCreateCampaignCore(candidate: Record<string, unknown>): boolean {
   if (typeof candidate['sessionId'] !== 'string' || typeof candidate['premisePrompt'] !== 'string') {
     return false
@@ -123,10 +128,10 @@ function hasValidCreateCampaignCore(candidate: Record<string, unknown>): boolean
   if (candidate['deathMode'] !== undefined && !isValidDeathMode(candidate['deathMode'])) {
     return false
   }
-  if (
-    candidate['npcFaceTokenGenerationEnabled'] !== undefined &&
-    typeof candidate['npcFaceTokenGenerationEnabled'] !== 'boolean'
-  ) {
+  if (!isOptionalBooleanField(candidate, 'npcFaceTokenGenerationEnabled')) {
+    return false
+  }
+  if (!isOptionalBooleanField(candidate, 'enemyTokenGenerationEnabled')) {
     return false
   }
   return candidate['name'] === undefined || typeof candidate['name'] === 'string'

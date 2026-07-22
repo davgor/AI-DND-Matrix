@@ -25,17 +25,19 @@ export type CreateCampaignStage =
   | 'canon'
   | 'pantheon'
   | 'world'
+  | 'factions'
   | 'regions'
   | 'npcs'
   | 'bestiary'
   | 'story'
   | 'persist'
 
-/** Bestiary after npcs so signature foes exist before story hooks; before persist. */
+/** Factions after world (pantheon available); bestiary after npcs; before persist. */
 export const CREATE_CAMPAIGN_STAGE_ORDER: readonly CreateCampaignStage[] = [
   'canon',
   'pantheon',
   'world',
+  'factions',
   'regions',
   'npcs',
   'bestiary',
@@ -67,6 +69,8 @@ export interface CreateCampaignRequest {
   npcsPerRegion?: number
   /** Per-campaign NPC face-token generation; default false (epic 122 / 121.1). */
   npcFaceTokenGenerationEnabled?: boolean
+  /** Per-campaign enemy creature-token generation; default false (epic 123.1). */
+  enemyTokenGenerationEnabled?: boolean
 }
 
 export interface CampaignSetupFormValues {
@@ -79,6 +83,7 @@ export interface CampaignSetupFormValues {
   regionCount: number
   npcsPerRegion: number
   npcFaceTokenGenerationEnabled: boolean
+  enemyTokenGenerationEnabled: boolean
 }
 
 export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
@@ -90,5 +95,6 @@ export const DEFAULT_CAMPAIGN_SETUP_FORM: CampaignSetupFormValues = {
   respawnLimit: '',
   regionCount: DEFAULT_REGION_COUNT,
   npcsPerRegion: DEFAULT_NPCS_PER_REGION,
-  npcFaceTokenGenerationEnabled: false
+  npcFaceTokenGenerationEnabled: false,
+  enemyTokenGenerationEnabled: false
 }

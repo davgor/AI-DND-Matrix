@@ -70,7 +70,10 @@ describe('epic 039 review gates', () => {
       regionExtras: [],
       storyThreads: [],
       characters: [],
-      deities: []
+      deities: [],
+      factions: [],
+      factionRelations: [],
+      bestiary: []
     }
     expect(getCampaignReviewContinueBlockers(detail)).toContain('no-npcs')
 
@@ -120,7 +123,10 @@ describe('epic 039 play gate', () => {
       regionExtras: [],
       storyThreads: [],
       characters: [],
-      deities: []
+      deities: [],
+      factions: [],
+      factionRelations: [],
+      bestiary: []
     }
     expect(getCampaignPlayBlockers(blocked)).toHaveLength(1)
     expect(canEnterCampaignPlay(blocked)).toBe(false)

@@ -14,10 +14,13 @@ export function makeTestCampaign(overrides: Partial<Campaign> = {}): Campaign {
     worldSummary: 'A fractured kingdom of mist and stone.\n\nOld oaths bind the living.\n\nWar stirs again.',
     worldHistory: 'Age one.\n\nAge two.\n\nAge three.\n\nAge four.',
     pantheonSummary: '',
+    factionsSummary: '',
+    factionPressure: 'light',
     inGameDate: 12,
     deathMode: 'standard',
     respawnRules: null,
     npcFaceTokenGenerationEnabled: false,
+    enemyTokenGenerationEnabled: false,
     ...overrides
   }
 }
@@ -76,6 +79,8 @@ export function makeTestHubSnapshot(overrides: Partial<PlayAwareHubSnapshot> = {
     storyThreads: [makeTestStoryThread()],
     characters: [],
     deities: [],
+    factions: [],
+    factionRelations: [],
     currentStateSummary: 'Tension rises along the northern border.',
     cast: [makeTestCastMember()],
     questSummariesByCharacterId: [

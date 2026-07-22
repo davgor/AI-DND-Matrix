@@ -5,7 +5,7 @@ import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
-import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editNpcFaceTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editFactionsSummary, editNpcFaceTokenGeneration, editEnemyTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 
 function makeRegion(name: string) {
   return {
@@ -163,6 +163,25 @@ describe('editNpcFaceTokenGeneration', () => {
   })
 })
 
+describe('editEnemyTokenGeneration', () => {
+  it('persists the enemy-token toggle and returns refreshed detail', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Test Campaign',
+      premisePrompt: 'A flooded kingdom.',
+      deathMode: 'legendary'
+    })
+    expect(campaign.enemyTokenGenerationEnabled).toBe(false)
+
+    const detail = editEnemyTokenGeneration(db, {
+      campaignId: campaign.id,
+      enabled: true
+    })
+
+    expect(detail.campaign?.enemyTokenGenerationEnabled).toBe(true)
+  })
+})
+
 describe('editPantheonSummary', () => {
   it('persists pantheon summary and returns refreshed detail', () => {
     const db = createTestDb()
@@ -179,6 +198,27 @@ describe('editPantheonSummary', () => {
     })
 
     expect(detail.campaign?.pantheonSummary).toContain('tide and ash')
+  })
+})
+
+describe('editFactionsSummary', () => {
+  it('persists factions summary and returns factions on detail', () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Test Campaign',
+      premisePrompt: 'A flooded kingdom.',
+      deathMode: 'legendary',
+      factionsSummary: 'Old intrigue.'
+    })
+
+    const detail = editFactionsSummary(db, {
+      campaignId: campaign.id,
+      factionsSummary: 'Harbor courts and tide temples trade favors after every storm.'
+    })
+
+    expect(detail.campaign?.factionsSummary).toContain('Harbor courts')
+    expect(detail.factions).toEqual([])
+    expect(detail.factionRelations).toEqual([])
   })
 })
 

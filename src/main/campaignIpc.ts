@@ -19,6 +19,16 @@ import { listRegionHistoryByRegion } from '../db/repositories/regionHistory'
 import { listStoryThreadsByCampaign, type StoryThread } from '../db/repositories/storyThreads'
 import { listQuestHooksByRegion } from '../db/repositories/worldFacts'
 import { listDeitiesByCampaign, type Deity } from '../db/repositories/deities'
+import {
+  listFactionRelationsByCampaign,
+  listFactionsByCampaign
+} from '../db/repositories/factions'
+import {
+  listBestiarySpecies,
+  listBestiaryVariants
+} from '../db/repositories/bestiary'
+import type { BestiarySpecies, BestiaryVariant } from '../shared/bestiary/types'
+import type { Faction, FactionRelation } from '../shared/factions'
 import { touchLastPlayed } from '../db/repositories/sessions'
 import { loadConfig } from './config'
 import { logger } from './logger'
@@ -32,6 +42,11 @@ const NEW_CAMPAIGN_NAME_LENGTH = 40
 
 export type { RegionExtras } from '../shared/campaign/regionExtras'
 
+export interface CampaignBestiaryEntry {
+  species: BestiarySpecies
+  variants: BestiaryVariant[]
+}
+
 export interface CampaignDetail {
   campaign: Campaign | undefined
   regions: Region[]
@@ -40,6 +55,9 @@ export interface CampaignDetail {
   storyThreads: StoryThread[]
   characters: Character[]
   deities: Deity[]
+  factions: Faction[]
+  factionRelations: FactionRelation[]
+  bestiary: CampaignBestiaryEntry[]
 }
 
 export function listCampaignsForSidebar(db: Database.Database): CampaignWithLastPlayed[] {
@@ -60,6 +78,7 @@ export function buildRegionExtras(db: Database.Database, campaignId: string): Re
 
 export function getCampaignDetail(db: Database.Database, campaignId: string): CampaignDetail {
   const regions = listRegionsByCampaign(db, campaignId)
+  const speciesList = listBestiarySpecies(db, campaignId)
   return {
     campaign: getCampaignById(db, campaignId),
     regions,
@@ -67,7 +86,13 @@ export function getCampaignDetail(db: Database.Database, campaignId: string): Ca
     regionExtras: buildRegionExtras(db, campaignId),
     storyThreads: listStoryThreadsByCampaign(db, campaignId),
     characters: listCharactersByCampaign(db, campaignId),
-    deities: listDeitiesByCampaign(db, campaignId)
+    deities: listDeitiesByCampaign(db, campaignId),
+    factions: listFactionsByCampaign(db, campaignId),
+    factionRelations: listFactionRelationsByCampaign(db, campaignId),
+    bestiary: speciesList.map((species) => ({
+      species,
+      variants: listBestiaryVariants(db, species.id)
+    }))
   }
 }
 

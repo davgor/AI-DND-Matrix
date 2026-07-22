@@ -44,7 +44,11 @@ export function CampaignsRail(props: CampaignsRailProps): JSX.Element {
           selectedCampaignId={props.selectedCampaignId}
           onSelect={controller.handleSelect}
           onNewCampaign={props.onOpenNewCampaign}
+          onImport={() => void controller.importCampaign()}
+          onExport={(id) => void controller.exportCampaign(id)}
+          onDuplicate={(id) => void controller.duplicateCampaign(id)}
           onRequestDelete={props.onRequestDelete}
+          portabilityError={controller.portabilityError}
         />
       )}
     </div>
@@ -81,12 +85,79 @@ function CollapsedCampaignQuickSwitch(props: {
   )
 }
 
+function CampaignRowActions(props: {
+  campaign: CampaignWithLastPlayed
+  onExport: (campaignId: string) => void
+  onDuplicate: (campaignId: string) => void
+  onRequestDelete: (campaign: CampaignWithLastPlayed) => void
+}): JSX.Element {
+  const { campaign } = props
+  return (
+    <>
+      <button
+        type="button"
+        className="campaigns-rail-action"
+        aria-label={`Export ${campaign.name}`}
+        title="Export"
+        onClick={() => props.onExport(campaign.id)}
+      >
+        ↗
+      </button>
+      <button
+        type="button"
+        className="campaigns-rail-action"
+        aria-label={`Duplicate ${campaign.name}`}
+        title="Duplicate"
+        onClick={() => props.onDuplicate(campaign.id)}
+      >
+        ⎘
+      </button>
+      <button
+        type="button"
+        className="campaigns-rail-delete"
+        aria-label={`Delete ${campaign.name}`}
+        onClick={() => props.onRequestDelete(campaign)}
+      >
+        ×
+      </button>
+    </>
+  )
+}
+
+function CampaignRailFooter(props: {
+  onNewCampaign: () => void
+  onImport: () => void
+  portabilityError: string | null
+}): JSX.Element {
+  return (
+    <>
+      {props.portabilityError ? (
+        <p className="campaigns-rail-error" role="alert">
+          {props.portabilityError}
+        </p>
+      ) : null}
+      <div className="campaigns-rail-new">
+        <button type="button" className="campaigns-rail-new-button" onClick={props.onNewCampaign}>
+          New Campaign
+        </button>
+        <button type="button" className="campaigns-rail-import-button" onClick={props.onImport}>
+          Import Campaign…
+        </button>
+      </div>
+    </>
+  )
+}
+
 function ExpandedCampaignList(props: {
   campaigns: CampaignWithLastPlayed[]
   selectedCampaignId: string | null
   onSelect: (campaignId: string) => Promise<void>
   onNewCampaign: () => void
+  onImport: () => void
+  onExport: (campaignId: string) => void
+  onDuplicate: (campaignId: string) => void
   onRequestDelete: (campaign: CampaignWithLastPlayed) => void
+  portabilityError: string | null
 }): JSX.Element {
   return (
     <>
@@ -106,23 +177,21 @@ function ExpandedCampaignList(props: {
                 <span className="campaigns-rail-name">{campaign.name}</span>
                 <span className="campaigns-rail-last-played">{formatLastPlayed(campaign.lastPlayedAt)}</span>
               </button>
-              <button
-                type="button"
-                className="campaigns-rail-delete"
-                aria-label={`Delete ${campaign.name}`}
-                onClick={() => props.onRequestDelete(campaign)}
-              >
-                ×
-              </button>
+              <CampaignRowActions
+                campaign={campaign}
+                onExport={props.onExport}
+                onDuplicate={props.onDuplicate}
+                onRequestDelete={props.onRequestDelete}
+              />
             </div>
           </li>
         ))}
       </ul>
-      <div className="campaigns-rail-new">
-        <button type="button" className="campaigns-rail-new-button" onClick={props.onNewCampaign}>
-          New Campaign
-        </button>
-      </div>
+      <CampaignRailFooter
+        onNewCampaign={props.onNewCampaign}
+        onImport={props.onImport}
+        portabilityError={props.portabilityError}
+      />
     </>
   )
 }

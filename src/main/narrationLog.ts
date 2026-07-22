@@ -3,9 +3,11 @@ import type Database from 'better-sqlite3'
 import type { NpcReactionKind } from '../shared/alignment/types'
 import { stripActionMarkers } from '../shared/alignment/types'
 import { listEventsByCampaign, type Event } from '../db/repositories/events'
+import { getBestiarySpeciesById } from '../db/repositories/bestiary'
 import { getNpcById } from '../db/repositories/npcs'
 import { getDb } from './db'
 import { resolveNpcFaceTokenPath } from './npcFaceTokenAsset'
+import { resolveCreatureTokenPath } from './creatureTokenAsset'
 
 export type LogSpeaker = 'dm' | 'player' | 'npc' | 'partyMember'
 export type PlayerLineKind = 'raw' | 'actionExpression'
@@ -239,6 +241,22 @@ function eventToLogEntries(event: Event): PlayLogEntry[] {
   return []
 }
 
+function resolveEntryFaceTokenPath(db: Database.Database, npcId: string): string | null {
+  const npc = getNpcById(db, npcId)
+  if (!npc) {
+    return null
+  }
+  const npcFaceToken = resolveNpcFaceTokenPath(npc.faceTokenPath)
+  if (npcFaceToken) {
+    return npcFaceToken
+  }
+  if (npc.bestiarySpeciesId && !npc.canSpeak) {
+    const species = getBestiarySpeciesById(db, npc.bestiarySpeciesId)
+    return resolveCreatureTokenPath(species?.creatureTokenPath ?? null)
+  }
+  return null
+}
+
 function enrichNpcFaceTokens(db: Database.Database, entries: PlayLogEntry[]): PlayLogEntry[] {
   const cache = new Map<string, string | null>()
   return entries.map((entry) => {
@@ -247,8 +265,7 @@ function enrichNpcFaceTokens(db: Database.Database, entries: PlayLogEntry[]): Pl
     }
     let faceTokenPath = cache.get(entry.npcId)
     if (faceTokenPath === undefined) {
-      const npc = getNpcById(db, entry.npcId)
-      faceTokenPath = resolveNpcFaceTokenPath(npc?.faceTokenPath ?? null)
+      faceTokenPath = resolveEntryFaceTokenPath(db, entry.npcId)
       cache.set(entry.npcId, faceTokenPath)
     }
     return faceTokenPath ? { ...entry, faceTokenPath } : entry

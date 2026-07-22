@@ -166,10 +166,10 @@ Document factions (kinds, pressure bands, religious/`deity_id`), relations, repu
 
 #### Acceptance criteria
 
-- [ ] SPEC locks pressure bands, kinds, relation stances, reputation clamps, manifestation idempotency
-- [ ] SPEC states narrative-first divinity (no boon economy) and intrigue-as-playpath expectations
-- [ ] Shared TS types exported for DB/IPC/agents
-- [ ] SPEC notes `world_facts.faction_tag` coexistence + `quest_hook` unchanged
+- [x] SPEC locks pressure bands, kinds, relation stances, reputation clamps, manifestation idempotency
+- [x] SPEC states narrative-first divinity (no boon economy) and intrigue-as-playpath expectations
+- [x] Shared TS types exported for DB/IPC/agents
+- [x] SPEC notes `world_facts.faction_tag` coexistence + `quest_hook` unchanged
 
 ### 125.2 DB migration + repositories
 
@@ -179,10 +179,10 @@ Migrations for `factions`, `faction_relations`, `character_faction_reputations`,
 
 #### Acceptance criteria
 
-- [ ] Safe on existing saves; legacy = zero factions
-- [ ] Repo tests: factions, relations, reputation upsert/clamp, NPC FKs, deity link
-- [ ] Reputation isolation test: updates for character A never change character B’s row for the same faction
-- [ ] Campaign delete cascades faction graph + reputations
+- [x] Safe on existing saves; legacy = zero factions
+- [x] Repo tests: factions, relations, reputation upsert/clamp, NPC FKs, deity link
+- [x] Reputation isolation test: updates for character A never change character B’s row for the same faction
+- [x] Campaign delete cascades faction graph + reputations
 
 ### 125.3 Create-time faction stage (pressure, faiths, relations)
 
@@ -192,10 +192,10 @@ Staged generation after world with pantheon context: emit `factionPressure`, ros
 
 #### Acceptance criteria
 
-- [ ] Pressure-weighted roster counts respected after normalize
-- [ ] When deities exist, ≥1 religious faction in medium/heavy (SPEC may soften for light)
-- [ ] Religious factions reference valid `deity_id`s when claimed
-- [ ] Relations persist; contract tests updated; create checklist satisfied for this scope
+- [x] Pressure-weighted roster counts respected after normalize
+- [x] When deities exist, ≥1 religious faction in medium/heavy (SPEC may soften for light)
+- [x] Religious factions reference valid `deity_id`s when claimed
+- [x] Relations persist; contract tests updated; create checklist satisfied for this scope
 
 ### 125.4 NPC association + clergy binding
 
@@ -205,9 +205,9 @@ Extend NPC generate/normalize/persist (create + flagged) for faction membership;
 
 #### Acceptance criteria
 
-- [ ] Prompts receive slim faction roster (incl. faith ↔ deity names)
-- [ ] Persist attaches valid membership; unknown keys ignored safely
-- [ ] Tests: assign / ignore-unknown / religious bias policy per SPEC
+- [x] Prompts receive slim faction roster (incl. faith ↔ deity names)
+- [x] Persist attaches valid membership; unknown keys ignored safely
+- [x] Tests: assign / ignore-unknown / religious bias policy per SPEC
 
 ### 125.5 Review + hub UI
 
@@ -217,9 +217,9 @@ Factions section: summary, pressure indicator, list (kind + deity name for faith
 
 #### Acceptance criteria
 
-- [ ] Review populated after create; hub read-only path works
-- [ ] Religious rows show linked deity label
-- [ ] Component tests: empty vs light vs heavy fixtures
+- [x] Review populated after create; hub read-only path works
+- [x] Religious rows show linked deity label
+- [x] Component tests: empty vs light vs heavy fixtures
 
 ### 125.6 DM play: mint, reputation, relations
 
@@ -229,10 +229,10 @@ Narration schema + side effects: `factionProposals`, `reputationUpdates`, `relat
 
 #### Acceptance criteria
 
-- [ ] Mint + reputation + relation updates restart-safe
-- [ ] Reputation updates require `characterId` (active PC); apply only to that character’s faction row
-- [ ] Unknown FKs rejected; deltas clamped
-- [ ] Stub-provider integration tests; purpose tagging per **112**
+- [x] Mint + reputation + relation updates restart-safe
+- [x] Reputation updates require `characterId` (active PC); apply only to that character’s faction row
+- [x] Unknown FKs rejected; deltas clamped
+- [x] Stub-provider integration tests; purpose tagging per **112**
 
 ### 125.7 Play grounding (factions + surgical pantheon)
 
@@ -242,10 +242,10 @@ Thread slim faction/relation/reputation digests into DM (+ NPC when member). Whe
 
 #### Acceptance criteria
 
-- [ ] Default path stays within **040**-style size assertions
-- [ ] Enriched path only when SPEC triggers say so
-- [ ] NPC members see PC standing with their faction
-- [ ] Tests for inclusion/exclusion triggers
+- [x] Default path stays within **040**-style size assertions
+- [x] Enriched path only when SPEC triggers say so
+- [x] NPC members see PC standing with their faction
+- [x] Tests for inclusion/exclusion triggers
 
 ### 125.8 Deity NPC-ification
 
@@ -255,10 +255,10 @@ Idempotent ensure-NPC-for-deity on manifestation proposal: create/link NPC, opti
 
 #### Acceptance criteria
 
-- [ ] First manifestation creates NPC bound to `deity_id`; second reuses same NPC
-- [ ] Manifested deity can appear in Social with NPC agent grounding
-- [ ] Unit/integration tests for idempotency + missing deity rejection
-- [ ] Forgotten-god manifestation path covered (fixture)
+- [x] First manifestation creates NPC bound to `deity_id`; second reuses same NPC
+- [x] Manifested deity can appear in Social with NPC agent grounding
+- [x] Unit/integration tests for idempotency + missing deity rejection
+- [x] Forgotten-god manifestation path covered (fixture)
 
 ### 125.9 Intrigue playpath verification + smoke
 

@@ -95,10 +95,10 @@ Per-campaign setting: generate enemy creature tokens (default **OFF**), independ
 
 #### Acceptance criteria
 
-- [ ] Campaign stores enemy-token generation enabled flag; default false on create
-- [ ] Settings UI exposes toggle with clear copy (distinct from NPC face-token toggle)
-- [ ] Local-provider default OFF reflected in config/docs; no hard llamacpp dependency for tests
-- [ ] Unit tests: toggle OFF prevents enqueue hooks from firing (stubbed)
+- [x] Campaign stores enemy-token generation enabled flag; default false on create
+- [x] Settings UI exposes toggle with clear copy (distinct from NPC face-token toggle)
+- [x] Local-provider default OFF reflected in config/docs; no hard llamacpp dependency for tests
+- [x] Unit tests: toggle OFF prevents enqueue hooks from firing (stubbed)
 
 ### 123.2 Enemy visual appearance in generation (schema + prompts)
 
@@ -108,10 +108,10 @@ Extend bestiary species generation (**116** / `generateSpecies`) beyond `{"baseL
 
 #### Acceptance criteria
 
-- [ ] Schema + migration for visual appearance fields on bestiary species (nullable where appropriate for legacy rows)
-- [ ] Species lore prompts + JSON parse require/populate appearance fields alongside `baseLore`
-- [ ] Campaign-create / quest / on-demand generation paths use the enriched contract
-- [ ] Unit tests: prompt builder, parse success/failure, serialization; fixtures updated if campaign-create contract affected (follow campaign-create checklist when create stage changes)
+- [x] Schema + migration for visual appearance fields on bestiary species (nullable where appropriate for legacy rows)
+- [x] Species lore prompts + JSON parse require/populate appearance fields alongside `baseLore`
+- [x] Campaign-create / quest / on-demand generation paths use the enriched contract
+- [x] Unit tests: prompt builder, parse success/failure, serialization; fixtures updated if campaign-create contract affected (follow campaign-create checklist when create stage changes)
 
 ### 123.3 Creature-token generation contract + prompt (typed API, mock provider tests)
 
@@ -121,10 +121,10 @@ Typed request/response for enemy creature-token generation: species id/name, vis
 
 #### Acceptance criteria
 
-- [ ] Shared typed API for creature-token generation (species id, appearance, style context)
-- [ ] Prompt enforces token-suitable creature portrait (not environment scene, not battle-map token)
-- [ ] Mock provider tests cover success and failure payloads
-- [ ] No direct UI coupling in generation module
+- [x] Shared typed API for creature-token generation (species id, appearance, style context)
+- [x] Prompt enforces token-suitable creature portrait (not environment scene, not battle-map token)
+- [x] Mock provider tests cover success and failure payloads
+- [x] No direct UI coupling in generation module
 
 ### 123.4 Persist token asset on species + instance resolution
 
@@ -134,10 +134,10 @@ Store generated token asset reference on the bestiary species (or linked asset t
 
 #### Acceptance criteria
 
-- [ ] Successful generation persists asset binding on species; survives app restart
-- [ ] IPC / dossier / Social DTOs expose token URL/path for enemy instances when species has an asset
-- [ ] Missing or corrupt asset does not crash consumers; treated as no token
-- [ ] Unit tests for persist, instance resolution, and missing-asset handling
+- [x] Successful generation persists asset binding on species; survives app restart
+- [x] IPC / dossier / Social DTOs expose token URL/path for enemy instances when species has an asset
+- [x] Missing or corrupt asset does not crash consumers; treated as no token
+- [x] Unit tests for persist, instance resolution, and missing-asset handling
 
 ### 123.5 Generation scheduling on species create / spawn (async; OFF skips)
 
@@ -147,11 +147,11 @@ When campaign toggle is ON, schedule creature-token generation after bestiary sp
 
 #### Acceptance criteria
 
-- [ ] Toggle ON enqueues after species create without blocking create/spawn/combat IPC
-- [ ] Toggle ON enqueues on instance spawn only when species has no token yet (idempotent)
-- [ ] Toggle OFF never enqueues; existing foes without tokens keep fallbacks
-- [ ] Failures logged; gameplay/combat unaffected
-- [ ] Tests with fake queue/provider assert enqueue/skip/idempotent behavior
+- [x] Toggle ON enqueues after species create without blocking create/spawn/combat IPC
+- [x] Toggle ON enqueues on instance spawn only when species has no token yet (idempotent)
+- [x] Toggle OFF never enqueues; existing foes without tokens keep fallbacks
+- [x] Failures logged; gameplay/combat unaffected
+- [x] Tests with fake queue/provider assert enqueue/skip/idempotent behavior
 
 ### 123.6 Social avatar uses enemy token
 
@@ -161,10 +161,10 @@ Update Social stream avatars for enemy / non-speaking combat action rows: render
 
 #### Acceptance criteria
 
-- [ ] Enemy action rows show token image when asset resolves for that `npcId`
-- [ ] Fallback to letter initial when no token or load error
-- [ ] Component tests for token vs initial paths (enemy action entries)
-- [ ] No layout shift that blocks reading the stream during async generation
+- [x] Enemy action rows show token image when asset resolves for that `npcId`
+- [x] Fallback to letter initial when no token or load error
+- [x] Component tests for token vs initial paths (enemy action entries)
+- [x] No layout shift that blocks reading the stream during async generation
 
 ### 123.7 Dossier / journal portrait for enemies
 
@@ -174,10 +174,10 @@ Fill the dossier portrait slot (**105** / same layout as **122.7**) for enemy in
 
 #### Acceptance criteria
 
-- [ ] Portrait renders in dossier for `canSpeak: false` / `role: 'enemy'` when species has a token
-- [ ] Empty state when no token (neutral placeholder or blank—no `<img>` error UI)
-- [ ] Same asset as Social for that foe
-- [ ] Component tests: with token, without token, load failure
+- [x] Portrait renders in dossier for `canSpeak: false` / `role: 'enemy'` when species has a token
+- [x] Empty state when no token (neutral placeholder or blank—no `<img>` error UI)
+- [x] Same asset as Social for that foe
+- [x] Component tests: with token, without token, load failure
 
 ### 123.8 Tests, smoke, delivery gate
 
@@ -187,8 +187,8 @@ End-to-end coverage, manual smoke runbook (toggle ON/OFF, generate foe, Social a
 
 #### Acceptance criteria
 
-- [ ] Automated tests cover 123.1–123.7 critical paths
-- [ ] Runbook: enable toggle, generate/spawn foe, verify async token + Social + dossier; OFF verifies fallbacks
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
-- [ ] `.github/workflows/pr-checks.yml` and `deadcode.yml` pass via **act**
-- [ ] If campaign-create stage/schema changed: `docs/runbooks/campaign-create-change-checklist.md` followed
+- [x] Automated tests cover 123.1–123.7 critical paths
+- [x] Runbook: enable toggle, generate/spawn foe, verify async token + Social + dossier; OFF verifies fallbacks
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
+- [x] `.github/workflows/pr-checks.yml` and `deadcode.yml` pass via **act**
+- [x] If campaign-create stage/schema changed: `docs/runbooks/campaign-create-change-checklist.md` followed

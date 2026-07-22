@@ -9,6 +9,8 @@ import { createRegion } from '../db/repositories/regions'
 import { appendEvent } from '../db/repositories/events'
 import { buildNarrationLog } from './narrationLog'
 import { writeNpcFaceTokenAsset } from './npcFaceTokenAsset'
+import { persistCreatureTokenAsset } from './creatureTokenAsset'
+import { createBestiarySpecies } from '../db/repositories/bestiary'
 
 const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
@@ -181,6 +183,93 @@ describe('buildNarrationLog: npc face token', () => {
     } finally {
       rmSync(baseDir, { recursive: true, force: true })
     }
+  })
+})
+
+function seedEnemyWolfReaction(db: ReturnType<typeof createTestDb>) {
+  const campaign = createCampaign(db, { name: 'Test', premisePrompt: '...', deathMode: 'legendary' })
+  const region = createRegion(db, {
+    campaignId: campaign.id,
+    name: 'Wilds',
+    description: 'Open moor.'
+  })
+  const species = createBestiarySpecies(db, {
+    campaignId: campaign.id,
+    key: 'gray-wolf',
+    name: 'Gray Wolf',
+    baseLore: 'Pack hunters.',
+    buckets: ['beast'],
+    tags: ['wolf']
+  })
+  const foe = createNpc(db, {
+    campaignId: campaign.id,
+    regionId: region.id,
+    name: 'Gray Wolf',
+    role: 'enemy',
+    disposition: 'hostile',
+    canSpeak: false,
+    bestiarySpeciesId: species.id,
+    bestiaryVariantKey: 'standard'
+  })
+  return { campaign, species, foe }
+}
+
+describe('buildNarrationLog: enemy creature token resolved', () => {
+  it('includes faceTokenPath from species creature token for non-speaking enemy NPC lines', () => {
+    const db = createTestDb()
+    const { campaign, species, foe } = seedEnemyWolfReaction(db)
+    const baseDir = mkdtempSync(join(tmpdir(), 'narration-log-creature-token-'))
+    try {
+      const tokenPath = persistCreatureTokenAsset(db, {
+        speciesId: species.id,
+        campaignId: campaign.id,
+        bytesBase64: PNG_BASE64,
+        mimeType: 'image/png',
+        baseDir
+      })
+      appendEvent(db, {
+        campaignId: campaign.id,
+        type: 'npc_reaction',
+        payload: {
+          text: '**The wolf lunges.**',
+          reactionKind: 'action',
+          npcId: foe.id
+        }
+      })
+
+      expect(buildNarrationLog(db, campaign.id)).toEqual([
+        expect.objectContaining({
+          speaker: 'npc',
+          npcId: foe.id,
+          faceTokenPath: tokenPath
+        })
+      ])
+    } finally {
+      rmSync(baseDir, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('buildNarrationLog: enemy creature token missing', () => {
+  it('omits faceTokenPath when species creature token file is missing', () => {
+    const db = createTestDb()
+    const { campaign, species, foe } = seedEnemyWolfReaction(db)
+    db.prepare('UPDATE bestiary_species SET creature_token_path = ? WHERE id = ?').run(
+      '/tmp/missing-creature-token.png',
+      species.id
+    )
+    appendEvent(db, {
+      campaignId: campaign.id,
+      type: 'npc_reaction',
+      payload: {
+        text: '**The wolf lunges.**',
+        reactionKind: 'action',
+        npcId: foe.id
+      }
+    })
+
+    const entry = buildNarrationLog(db, campaign.id)[0]
+    expect(entry?.faceTokenPath).toBeUndefined()
   })
 })
 

@@ -40,6 +40,7 @@ export interface Character extends CharacterGuidedCreationFields {
   raceKey: string | null
   backgroundKey: string | null
   backgroundStory: string | null
+  backgroundCustomLabel: string | null
 }
 
 export interface CreateCharacterInput {
@@ -62,6 +63,7 @@ export interface CreateCharacterInput {
   raceKey?: string | null
   backgroundKey?: string | null
   backgroundStory?: string | null
+  backgroundCustomLabel?: string | null
 }
 
 export interface UpdateCharacterInput {
@@ -103,6 +105,7 @@ interface CharacterRow {
   race_key?: string | null
   background_key?: string | null
   background_story?: string | null
+  background_custom_label?: string | null
 }
 
 function parseObituaryJson(raw: string | null | undefined): CharacterObituary | null {
@@ -155,7 +158,8 @@ function rowToCharacter(row: CharacterRow): Character {
     ownerPlayerCharacterId: row.owner_player_character_id ?? null,
     raceKey: row.race_key ?? null,
     backgroundKey: row.background_key ?? null,
-    backgroundStory: row.background_story ?? null
+    backgroundStory: row.background_story ?? null,
+    backgroundCustomLabel: row.background_custom_label ?? null
   }
 }
 
@@ -204,7 +208,8 @@ function buildCharacterRecord(id: string, input: CreateCharacterInput, values: {
     ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null,
     raceKey: input.raceKey ?? null,
     backgroundKey: input.backgroundKey ?? null,
-    backgroundStory: input.backgroundStory ?? null
+    backgroundStory: input.backgroundStory ?? null,
+    backgroundCustomLabel: input.backgroundCustomLabel ?? null
   }
 }
 
@@ -226,9 +231,9 @@ function insertCharacterRow(
 ): void {
   db.prepare(
     `INSERT INTO characters
-       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment, owner_player_character_id, race_key, background_key, background_story)
+       (id, campaign_id, name, class, stats, inventory, hp, xp, level, currency, kind, source_npc_id, portrait_path, sheet_background_path, guided_creation_phase, alignment, owner_player_character_id, race_key, background_key, background_story, background_custom_label)
      VALUES
-       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment, @ownerPlayerCharacterId, @raceKey, @backgroundKey, @backgroundStory)`
+       (@id, @campaignId, @name, @characterClass, @stats, @inventory, @hp, @xp, @level, @currency, @kind, @sourceNpcId, @portraitPath, @sheetBackgroundPath, @guidedCreationPhase, @alignment, @ownerPlayerCharacterId, @raceKey, @backgroundKey, @backgroundStory, @backgroundCustomLabel)`
   ).run({
     id,
     campaignId: input.campaignId,
@@ -249,7 +254,8 @@ function insertCharacterRow(
     ownerPlayerCharacterId: input.ownerPlayerCharacterId ?? null,
     raceKey: input.raceKey ?? null,
     backgroundKey: input.backgroundKey ?? null,
-    backgroundStory: input.backgroundStory ?? null
+    backgroundStory: input.backgroundStory ?? null,
+    backgroundCustomLabel: input.backgroundCustomLabel ?? null
   })
 }
 

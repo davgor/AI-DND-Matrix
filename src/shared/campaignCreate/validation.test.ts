@@ -51,7 +51,7 @@ describe('validateCampaignSetupForm', () => {
   })
 })
 
-describe('mapFormToCreateRequest', () => {
+describe('mapFormToCreateRequest: premise and counts', () => {
   it('maps premise and defaults name from premise when empty', () => {
     const request = mapFormToCreateRequest(
       { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A flooded kingdom under eternal rain' },
@@ -77,7 +77,9 @@ describe('mapFormToCreateRequest', () => {
     expect(request.regionCount).toBe(1)
     expect(request.npcsPerRegion).toBe(1)
   })
+})
 
+describe('mapFormToCreateRequest: token flags', () => {
   it('maps npcFaceTokenGenerationEnabled (default false)', () => {
     const off = mapFormToCreateRequest(
       { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A quiet village' },
@@ -94,6 +96,24 @@ describe('mapFormToCreateRequest', () => {
       'session-4'
     )
     expect(on.npcFaceTokenGenerationEnabled).toBe(true)
+  })
+
+  it('maps enemyTokenGenerationEnabled (default false)', () => {
+    const off = mapFormToCreateRequest(
+      { ...DEFAULT_CAMPAIGN_SETUP_FORM, premisePrompt: 'A quiet village' },
+      'session-5'
+    )
+    expect(off.enemyTokenGenerationEnabled).toBe(false)
+
+    const on = mapFormToCreateRequest(
+      {
+        ...DEFAULT_CAMPAIGN_SETUP_FORM,
+        premisePrompt: 'A quiet village',
+        enemyTokenGenerationEnabled: true
+      },
+      'session-6'
+    )
+    expect(on.enemyTokenGenerationEnabled).toBe(true)
   })
 })
 
@@ -157,6 +177,28 @@ describe('isValidCreateCampaignRequest: npcFaceTokenGenerationEnabled', () => {
         sessionId: 's1',
         premisePrompt: 'A haunted marsh',
         npcFaceTokenGenerationEnabled: true
+      })
+    ).toBe(true)
+  })
+})
+
+describe('isValidCreateCampaignRequest: enemyTokenGenerationEnabled', () => {
+  it('rejects non-boolean enemyTokenGenerationEnabled', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        enemyTokenGenerationEnabled: 'yes'
+      })
+    ).toBe(false)
+  })
+
+  it('accepts enemyTokenGenerationEnabled boolean', () => {
+    expect(
+      isValidCreateCampaignRequest({
+        sessionId: 's1',
+        premisePrompt: 'A haunted marsh',
+        enemyTokenGenerationEnabled: true
       })
     ).toBe(true)
   })

@@ -4,7 +4,9 @@ import {
   AlignmentShiftWarningBanner,
   DefeatDispositionBanner,
   ImprisonedStatusBanner,
+  LockoutStatusBanner,
   LootRewardBanner,
+  SpellGrantBanner,
   XpRewardBanner
 } from './dmExpositionParts'
 
@@ -23,6 +25,97 @@ export interface PlayStatusAlertsProps {
   defeatDispositionNarration: string | null
   xpNarration: string | null
   lootNarration: string | null
+  lockoutNarration: string | null
+  spellGrantNarration: string | null
+}
+
+function pushIfPresent(
+  alerts: PlayStatusAlertItem[],
+  id: string,
+  transient: boolean,
+  node: JSX.Element | null
+): void {
+  if (node) {
+    alerts.push({ id, transient, node })
+  }
+}
+
+function pushTransientIfShown(input: {
+  alerts: PlayStatusAlertItem[]
+  id: string
+  narration: string | null
+  dismissed: Set<string>
+  node: JSX.Element
+}): void {
+  if (input.narration && !input.dismissed.has(input.id)) {
+    input.alerts.push({ id: input.id, transient: true, node: input.node })
+  }
+}
+
+function pushPersistentPlayStatusAlerts(
+  alerts: PlayStatusAlertItem[],
+  props: PlayStatusAlertsProps
+): void {
+  pushIfPresent(
+    alerts,
+    'alignment',
+    false,
+    props.pendingAlignmentShift ? (
+      <AlignmentShiftWarningBanner
+        pending={props.pendingAlignmentShift}
+        playerAlignment={props.playerAlignment}
+      />
+    ) : null
+  )
+  pushIfPresent(
+    alerts,
+    'imprisoned',
+    false,
+    props.playerImprisoned ? <ImprisonedStatusBanner /> : null
+  )
+  pushIfPresent(
+    alerts,
+    'defeat',
+    false,
+    props.defeatDispositionNarration ? (
+      <DefeatDispositionBanner narrationText={props.defeatDispositionNarration} />
+    ) : null
+  )
+}
+
+function pushTransientPlayStatusAlerts(
+  alerts: PlayStatusAlertItem[],
+  props: PlayStatusAlertsProps,
+  dismissed: Set<string>
+): void {
+  pushTransientIfShown({
+    alerts,
+    id: 'lockout',
+    narration: props.lockoutNarration,
+    dismissed,
+    node: <LockoutStatusBanner narrationText={props.lockoutNarration ?? ''} />
+  })
+  pushTransientIfShown({
+    alerts,
+    id: 'spellGrant',
+    narration: props.spellGrantNarration,
+    dismissed,
+    node: <SpellGrantBanner narrationText={props.spellGrantNarration ?? ''} />
+  })
+  pushTransientIfShown({
+    alerts,
+    id: 'xp',
+    narration: props.xpNarration,
+    dismissed,
+    node: <XpRewardBanner narrationText={props.xpNarration ?? ''} />
+  })
+  pushTransientIfShown({
+    alerts,
+    id: 'loot',
+    narration: props.lootNarration,
+    dismissed,
+    node: <LootRewardBanner narrationText={props.lootNarration ?? ''} />
+  })
 }
 
 export function buildPlayStatusAlerts(
@@ -30,45 +123,25 @@ export function buildPlayStatusAlerts(
   dismissed: Set<string>
 ): PlayStatusAlertItem[] {
   const alerts: PlayStatusAlertItem[] = []
-
-  if (props.pendingAlignmentShift) {
-    alerts.push({
-      id: 'alignment',
-      transient: false,
-      node: (
-        <AlignmentShiftWarningBanner
-          pending={props.pendingAlignmentShift}
-          playerAlignment={props.playerAlignment}
-        />
-      )
-    })
-  }
-  if (props.playerImprisoned) {
-    alerts.push({ id: 'imprisoned', transient: false, node: <ImprisonedStatusBanner /> })
-  }
-  if (props.defeatDispositionNarration) {
-    alerts.push({
-      id: 'defeat',
-      transient: false,
-      node: <DefeatDispositionBanner narrationText={props.defeatDispositionNarration} />
-    })
-  }
-  if (props.xpNarration && !dismissed.has('xp')) {
-    alerts.push({
-      id: 'xp',
-      transient: true,
-      node: <XpRewardBanner narrationText={props.xpNarration} />
-    })
-  }
-  if (props.lootNarration && !dismissed.has('loot')) {
-    alerts.push({
-      id: 'loot',
-      transient: true,
-      node: <LootRewardBanner narrationText={props.lootNarration} />
-    })
-  }
-
+  pushPersistentPlayStatusAlerts(alerts, props)
+  pushTransientPlayStatusAlerts(alerts, props, dismissed)
   return alerts
+}
+
+function useTransientDismiss(
+  value: string | null,
+  id: string,
+  setDismissed: (updater: (current: Set<string>) => Set<string>) => void
+): void {
+  useEffect(() => {
+    if (!value) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      setDismissed((current) => new Set(current).add(id))
+    }, TRANSIENT_DISMISS_MS)
+    return () => window.clearTimeout(timer)
+  }, [value, id, setDismissed])
 }
 
 export function PlayStatusAlerts(props: PlayStatusAlertsProps): JSX.Element | null {
@@ -76,25 +149,10 @@ export function PlayStatusAlerts(props: PlayStatusAlertsProps): JSX.Element | nu
   const [expanded, setExpanded] = useState(false)
   const alerts = buildPlayStatusAlerts(props, dismissed)
 
-  useEffect(() => {
-    if (!props.xpNarration) {
-      return
-    }
-    const timer = window.setTimeout(() => {
-      setDismissed((current) => new Set(current).add('xp'))
-    }, TRANSIENT_DISMISS_MS)
-    return () => window.clearTimeout(timer)
-  }, [props.xpNarration])
-
-  useEffect(() => {
-    if (!props.lootNarration) {
-      return
-    }
-    const timer = window.setTimeout(() => {
-      setDismissed((current) => new Set(current).add('loot'))
-    }, TRANSIENT_DISMISS_MS)
-    return () => window.clearTimeout(timer)
-  }, [props.lootNarration])
+  useTransientDismiss(props.xpNarration, 'xp', setDismissed)
+  useTransientDismiss(props.lootNarration, 'loot', setDismissed)
+  useTransientDismiss(props.lockoutNarration, 'lockout', setDismissed)
+  useTransientDismiss(props.spellGrantNarration, 'spellGrant', setDismissed)
 
   useEffect(() => {
     setDismissed(new Set())

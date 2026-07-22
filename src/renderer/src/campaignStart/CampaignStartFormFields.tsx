@@ -182,6 +182,30 @@ function CampaignStartFaceTokenFields(props: { flow: CampaignStartFlow }): JSX.E
   )
 }
 
+function CampaignStartEnemyTokenFields(props: { flow: CampaignStartFlow }): JSX.Element {
+  const { flow } = props
+  const disabled = flow.submitting
+  return (
+    <label className="campaign-start-checkbox-field">
+      <input
+        type="checkbox"
+        checked={flow.form.enemyTokenGenerationEnabled}
+        disabled={disabled}
+        onChange={(event) =>
+          flow.updateForm({ enemyTokenGenerationEnabled: event.target.checked })
+        }
+      />
+      <span>
+        Generate enemy tokens
+        <span className="campaign-start-field-hint">
+          Off by default and independent of NPC face tokens. When on, combat creatures get async
+          creature portraits for Social and dossiers. Generation never blocks play.
+        </span>
+      </span>
+    </label>
+  )
+}
+
 export function CampaignStartFormFields(props: {
   flow: CampaignStartFlow
   isError: boolean
@@ -195,6 +219,7 @@ export function CampaignStartFormFields(props: {
       <CampaignStartGenerationFields flow={flow} />
       <CampaignStartDeathModeFields flow={flow} />
       <CampaignStartFaceTokenFields flow={flow} />
+      <CampaignStartEnemyTokenFields flow={flow} />
     </>
   )
 }

@@ -98,7 +98,12 @@ describe('dossier DTO guards', () => {
       role: 'innkeeper',
       hairColor: 'auburn',
       age: 'middle-aged',
-      eyeColor: 'green'
+      eyeColor: 'green',
+      silhouette: null,
+      sizeClass: null,
+      primaryColors: [],
+      distinguishingMarks: null,
+      textureOrMaterial: null
     },
     facts: [{ id: 'log-1', title: 'Mira', content: 'Runs the Oak & Ember.', createdAt: '2026-07-01T00:00:00.000Z' }],
     opinion: {

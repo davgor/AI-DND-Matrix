@@ -12,6 +12,8 @@ export function failedTurnSubmission(characterRefreshToken: number): {
   defeatDispositionNarration: null
   xpNarration: null
   lootNarration: null
+  lockoutNarration: null
+  spellGrantNarration: null
   playerImprisoned: false
   dyingResolution?: undefined
 } {
@@ -26,6 +28,8 @@ export function failedTurnSubmission(characterRefreshToken: number): {
     defeatDispositionNarration: null,
     xpNarration: null,
     lootNarration: null,
+    lockoutNarration: null,
+    spellGrantNarration: null,
     playerImprisoned: false,
     dyingResolution: undefined
   }

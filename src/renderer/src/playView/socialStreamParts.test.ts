@@ -185,6 +185,100 @@ describe('SocialMessage face token avatar', () => {
   })
 })
 
+function enemyActionEntry(overrides: Partial<PlayLogEntry> = {}): PlayLogEntry {
+  return entry({
+    speaker: 'npc',
+    text: 'The wolf lunges at you.',
+    speakerName: 'Gray Wolf',
+    npcId: 'npc-gray-wolf',
+    reactionKind: 'action',
+    ...overrides
+  })
+}
+
+describe('SocialMessage enemy action avatar resolved', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('renders a creature token image on enemy action rows when faceTokenPath resolves', () => {
+    const tokenPath = 'C:/data/creature-tokens/camp/gray-wolf.png'
+    renderSocialMessage(root, {
+      entry: enemyActionEntry({ faceTokenPath: tokenPath })
+    })
+
+    const avatar = container.querySelector('.social-avatar')
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    expect(image).toBeTruthy()
+    expect(image.src).toContain('gray-wolf.png')
+    expect(avatar?.textContent).toBe('')
+    expect(container.querySelector('.social-message--other')).not.toBeNull()
+  })
+
+  it('falls back to the letter initial on enemy action rows when no token is available', () => {
+    renderSocialMessage(root, {
+      entry: enemyActionEntry()
+    })
+
+    expect(container.querySelector('.social-avatar-image')).toBeNull()
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('G')
+  })
+})
+
+describe('SocialMessage enemy action avatar fallback', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('falls back to the letter initial when an enemy creature token fails to load', () => {
+    renderSocialMessage(root, {
+      entry: enemyActionEntry({
+        faceTokenPath: 'C:/missing/gray-wolf.png'
+      })
+    })
+
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    expect(image).toBeTruthy()
+    act(() => {
+      image.dispatchEvent(new Event('error'))
+    })
+    expect(container.querySelector('.social-avatar-image')).toBeNull()
+    expect(container.querySelector('.social-avatar')?.textContent).toBe('G')
+  })
+
+  it('keeps the avatar container stable when switching from token to initial fallback', () => {
+    renderSocialMessage(root, {
+      entry: enemyActionEntry({
+        faceTokenPath: 'C:/missing/gray-wolf.png'
+      })
+    })
+
+    const avatarBefore = container.querySelector('.social-avatar')
+    expect(avatarBefore).not.toBeNull()
+    const image = container.querySelector('.social-avatar-image') as HTMLImageElement
+    act(() => {
+      image.dispatchEvent(new Event('error'))
+    })
+    const avatarAfter = container.querySelector('.social-avatar')
+    expect(avatarAfter).toBe(avatarBefore)
+    expect(avatarAfter?.classList.contains('social-avatar')).toBe(true)
+  })
+})
+
 describe('SocialMessage dossier interactions', () => {
   let root: Root
   let container: HTMLDivElement

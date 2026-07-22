@@ -30,6 +30,14 @@ export const CREATE_STAGE_GOOFY_MESSAGES: Record<CreateCampaignStage, readonly s
     'Convincing tectonic plates to cooperate…',
     'Asking the stars to pick a theme…'
   ],
+  factions: [
+    'Brokering peace between rival guilds…',
+    'Counting temple seats and spy cabals…',
+    'Drawing intrigue arrows on the map…',
+    'Naming courts that will betray you later…',
+    'Assigning grudges to every faction…',
+    'Deciding who owns the docks this decade…'
+  ],
   regions: [
     'Drawing borders nobody will respect…',
     'Naming a tavern in every hamlet…',
@@ -95,6 +103,8 @@ export function mapCreateStageToPlayerMessage(stage: CreateCampaignStage | null)
       return 'Assembling the pantheon'
     case 'world':
       return 'Imagining your world'
+    case 'factions':
+      return 'Sketching power blocs'
     case 'regions':
       return 'Shaping regions'
     case 'npcs':
@@ -118,6 +128,8 @@ export function mapCreateStageTraceLabel(stage: CreateCampaignStage): string {
       return 'Pantheon'
     case 'world':
       return 'World'
+    case 'factions':
+      return 'Factions'
     case 'regions':
       return 'Regions'
     case 'npcs':

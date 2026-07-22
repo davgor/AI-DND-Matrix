@@ -36,6 +36,8 @@ export function PlayDmExpositionColumn(props: {
           defeatDispositionNarration={controller.defeatDispositionNarration}
           xpNarration={controller.xpNarration}
           lootNarration={controller.lootNarration}
+          lockoutNarration={controller.lockoutNarration}
+          spellGrantNarration={controller.spellGrantNarration}
         />
       }
     />

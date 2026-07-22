@@ -5,6 +5,7 @@ import type { Region } from '../../db/repositories/regions'
 import type { StoryThread } from '../../db/repositories/storyThreads'
 import type { Deity } from '../../db/repositories/deities'
 import type { RegionExtras } from '../campaign/regionExtras'
+import type { Faction, FactionRelation } from '../factions'
 
 /** Durable life status on player character rows (engine/main authority). */
 export type CharacterLifeStatus = 'alive' | 'dead'
@@ -67,6 +68,8 @@ export interface PlayAwareHubSnapshot {
   storyThreads: StoryThread[]
   characters: Character[]
   deities: Deity[]
+  factions: Faction[]
+  factionRelations: FactionRelation[]
   currentStateSummary: string
   cast: HubCastMember[]
   questSummariesByCharacterId: HubCharacterQuestSummary[]

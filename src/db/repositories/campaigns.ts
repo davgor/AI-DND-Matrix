@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type Database from 'better-sqlite3'
+import { parseFactionPressure, type FactionPressure } from '../../shared/factions'
 import type { PersistedSessionRecap } from '../../shared/sessionRecap'
 
 export type DeathMode = 'legendary' | 'standard' | 'respawn'
@@ -20,10 +21,13 @@ export interface Campaign {
   worldSummary: string
   worldHistory: string
   pantheonSummary: string
+  factionsSummary: string
+  factionPressure: FactionPressure
   inGameDate: number
   deathMode: DeathMode
   respawnRules: RespawnRules | null
   npcFaceTokenGenerationEnabled: boolean
+  enemyTokenGenerationEnabled: boolean
 }
 
 export interface CreateCampaignInput {
@@ -36,7 +40,10 @@ export interface CreateCampaignInput {
   worldSummary?: string
   worldHistory?: string
   pantheonSummary?: string
+  factionsSummary?: string
+  factionPressure?: FactionPressure
   npcFaceTokenGenerationEnabled?: boolean
+  enemyTokenGenerationEnabled?: boolean
 }
 
 interface CampaignRow {
@@ -49,10 +56,17 @@ interface CampaignRow {
   world_summary: string
   world_history: string
   pantheon_summary: string
+  factions_summary?: string | null
+  faction_pressure?: string | null
   in_game_date: number
   death_mode: DeathMode
   respawn_rules: string | null
   npc_face_token_generation_enabled?: number | null
+  enemy_token_generation_enabled?: number | null
+}
+
+function resolveFactionPressure(value: string | null | undefined): FactionPressure {
+  return parseFactionPressure(value) ?? 'light'
 }
 
 function rowToCampaign(row: CampaignRow): Campaign {
@@ -66,10 +80,13 @@ function rowToCampaign(row: CampaignRow): Campaign {
     worldSummary: row.world_summary ?? '',
     worldHistory: row.world_history ?? '',
     pantheonSummary: row.pantheon_summary ?? '',
+    factionsSummary: row.factions_summary ?? '',
+    factionPressure: resolveFactionPressure(row.faction_pressure),
     inGameDate: row.in_game_date,
     deathMode: row.death_mode,
     respawnRules: row.respawn_rules ? (JSON.parse(row.respawn_rules) as RespawnRules) : null,
-    npcFaceTokenGenerationEnabled: row.npc_face_token_generation_enabled === 1
+    npcFaceTokenGenerationEnabled: row.npc_face_token_generation_enabled === 1,
+    enemyTokenGenerationEnabled: row.enemy_token_generation_enabled === 1
   }
 }
 
@@ -88,6 +105,16 @@ function campaignHasNpcFaceTokenColumn(db: Database.Database): boolean {
   return columns.some((column) => column.name === 'npc_face_token_generation_enabled')
 }
 
+function campaignHasEnemyTokenColumn(db: Database.Database): boolean {
+  const columns = db.prepare('PRAGMA table_info(campaigns)').all() as Array<{ name: string }>
+  return columns.some((column) => column.name === 'enemy_token_generation_enabled')
+}
+
+function campaignHasFactionsColumns(db: Database.Database): boolean {
+  const columns = db.prepare('PRAGMA table_info(campaigns)').all() as Array<{ name: string }>
+  return columns.some((column) => column.name === 'factions_summary')
+}
+
 interface InsertCampaignRowInput {
   id: string
   name: string
@@ -99,7 +126,10 @@ interface InsertCampaignRowInput {
   worldSummary: string
   worldHistory: string
   pantheonSummary: string
+  factionsSummary: string
+  factionPressure: FactionPressure
   npcFaceTokenGenerationEnabled: boolean
+  enemyTokenGenerationEnabled: boolean
 }
 
 function serializeRespawnRules(respawnRules: RespawnRules | null): string | null {
@@ -110,34 +140,90 @@ function faceTokenFlagSql(enabled: boolean): number {
   return enabled ? 1 : 0
 }
 
+function buildInsertCampaignParams(row: InsertCampaignRowInput): Record<string, unknown> {
+  return {
+    id: row.id,
+    name: row.name,
+    premisePrompt: row.premisePrompt,
+    createdAt: row.createdAt,
+    deathMode: row.deathMode,
+    respawnRules: serializeRespawnRules(row.respawnRules),
+    worldName: row.worldName,
+    worldSummary: row.worldSummary,
+    worldHistory: row.worldHistory,
+    pantheonSummary: row.pantheonSummary,
+    factionsSummary: row.factionsSummary,
+    factionPressure: row.factionPressure,
+    npcFaceTokenGenerationEnabled: faceTokenFlagSql(row.npcFaceTokenGenerationEnabled),
+    enemyTokenGenerationEnabled: faceTokenFlagSql(row.enemyTokenGenerationEnabled)
+  }
+}
+
+function pushOptionalCampaignColumns(
+  columns: string[],
+  params: string[],
+  flags: { hasNpcFace: boolean; hasEnemy: boolean; hasFactions: boolean }
+): void {
+  if (flags.hasNpcFace) {
+    columns.push('npc_face_token_generation_enabled')
+    params.push('@npcFaceTokenGenerationEnabled')
+  }
+  if (flags.hasEnemy) {
+    columns.push('enemy_token_generation_enabled')
+    params.push('@enemyTokenGenerationEnabled')
+  }
+  if (flags.hasFactions) {
+    columns.push('factions_summary', 'faction_pressure')
+    params.push('@factionsSummary', '@factionPressure')
+  }
+}
+
+function insertCampaignWithOptionalColumns(db: Database.Database, row: InsertCampaignRowInput): void {
+  const columns = [
+    'id',
+    'name',
+    'premise_prompt',
+    'created_at',
+    'death_mode',
+    'respawn_rules',
+    'world_name',
+    'world_summary',
+    'world_history',
+    'pantheon_summary'
+  ]
+  const params = [
+    '@id',
+    '@name',
+    '@premisePrompt',
+    '@createdAt',
+    '@deathMode',
+    '@respawnRules',
+    '@worldName',
+    '@worldSummary',
+    '@worldHistory',
+    '@pantheonSummary'
+  ]
+  pushOptionalCampaignColumns(columns, params, {
+    hasNpcFace: campaignHasNpcFaceTokenColumn(db),
+    hasEnemy: campaignHasEnemyTokenColumn(db),
+    hasFactions: campaignHasFactionsColumns(db)
+  })
+  db.prepare(
+    `INSERT INTO campaigns (${columns.join(', ')})
+     VALUES (${params.join(', ')})`
+  ).run(buildInsertCampaignParams(row))
+}
+
 function insertCampaignWithWorldAndPantheon(db: Database.Database, row: InsertCampaignRowInput): void {
-  if (campaignHasNpcFaceTokenColumn(db)) {
-    db.prepare(
-      `INSERT INTO campaigns (
-         id, name, premise_prompt, created_at, death_mode, respawn_rules,
-         world_name, world_summary, world_history, pantheon_summary,
-         npc_face_token_generation_enabled
-       )
-       VALUES (
-         @id, @name, @premisePrompt, @createdAt, @deathMode, @respawnRules,
-         @worldName, @worldSummary, @worldHistory, @pantheonSummary,
-         @npcFaceTokenGenerationEnabled
-       )`
-    ).run({
-      id: row.id,
-      name: row.name,
-      premisePrompt: row.premisePrompt,
-      createdAt: row.createdAt,
-      deathMode: row.deathMode,
-      respawnRules: serializeRespawnRules(row.respawnRules),
-      worldName: row.worldName,
-      worldSummary: row.worldSummary,
-      worldHistory: row.worldHistory,
-      pantheonSummary: row.pantheonSummary,
-      npcFaceTokenGenerationEnabled: faceTokenFlagSql(row.npcFaceTokenGenerationEnabled)
-    })
+  const hasNpcFace = campaignHasNpcFaceTokenColumn(db)
+  const hasEnemy = campaignHasEnemyTokenColumn(db)
+  const hasFactions = campaignHasFactionsColumns(db)
+
+  if (hasNpcFace || hasEnemy || hasFactions) {
+    insertCampaignWithOptionalColumns(db, row)
     return
   }
+
   db.prepare(
     `INSERT INTO campaigns (
        id, name, premise_prompt, created_at, death_mode, respawn_rules,
@@ -218,7 +304,10 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
   const worldSummary = input.worldSummary ?? ''
   const worldHistory = input.worldHistory ?? ''
   const pantheonSummary = input.pantheonSummary ?? ''
+  const factionsSummary = input.factionsSummary ?? ''
+  const factionPressure = parseFactionPressure(input.factionPressure) ?? 'light'
   const npcFaceTokenGenerationEnabled = input.npcFaceTokenGenerationEnabled === true
+  const enemyTokenGenerationEnabled = input.enemyTokenGenerationEnabled === true
 
   insertCampaignRow(db, {
     id,
@@ -231,7 +320,10 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
     worldSummary,
     worldHistory,
     pantheonSummary,
-    npcFaceTokenGenerationEnabled
+    factionsSummary,
+    factionPressure,
+    npcFaceTokenGenerationEnabled,
+    enemyTokenGenerationEnabled
   })
 
   return {
@@ -244,10 +336,13 @@ export function createCampaign(db: Database.Database, input: CreateCampaignInput
     worldSummary,
     worldHistory,
     pantheonSummary,
+    factionsSummary,
+    factionPressure,
     inGameDate: 0,
     deathMode: input.deathMode,
     respawnRules,
-    npcFaceTokenGenerationEnabled
+    npcFaceTokenGenerationEnabled,
+    enemyTokenGenerationEnabled
   }
 }
 
@@ -314,6 +409,32 @@ export function updateCampaignPantheonSummary(
   db.prepare('UPDATE campaigns SET pantheon_summary = ? WHERE id = ?').run(pantheonSummary, id)
 }
 
+export function updateCampaignFactionsSummary(
+  db: Database.Database,
+  id: string,
+  factionsSummary: string
+): void {
+  if (!campaignHasFactionsColumns(db)) {
+    return
+  }
+  db.prepare('UPDATE campaigns SET factions_summary = ? WHERE id = ?').run(factionsSummary, id)
+}
+
+export function updateCampaignFactionPressure(
+  db: Database.Database,
+  id: string,
+  factionPressure: FactionPressure
+): void {
+  const parsed = parseFactionPressure(factionPressure)
+  if (!parsed) {
+    throw new Error(`Invalid factionPressure: ${String(factionPressure)}`)
+  }
+  if (!campaignHasFactionsColumns(db)) {
+    return
+  }
+  db.prepare('UPDATE campaigns SET faction_pressure = ? WHERE id = ?').run(parsed, id)
+}
+
 export interface UpdateCampaignDeathModeInput {
   deathMode: DeathMode
   respawnRules?: RespawnRules | null
@@ -340,6 +461,17 @@ export function updateCampaignNpcFaceTokenGenerationEnabled(
   db.prepare(
     'UPDATE campaigns SET npc_face_token_generation_enabled = ? WHERE id = ?'
   ).run(enabled ? 1 : 0, id)
+}
+
+export function updateCampaignEnemyTokenGenerationEnabled(
+  db: Database.Database,
+  id: string,
+  enabled: boolean
+): void {
+  db.prepare('UPDATE campaigns SET enemy_token_generation_enabled = ? WHERE id = ?').run(
+    enabled ? 1 : 0,
+    id
+  )
 }
 
 export function advanceInGameDate(db: Database.Database, id: string, days: number): number {

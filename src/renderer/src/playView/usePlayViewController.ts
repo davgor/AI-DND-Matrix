@@ -32,6 +32,8 @@ export interface PlayViewController extends RollVisibilityController, PlayLogCon
   defeatDispositionNarration: string | null
   xpNarration: string | null
   lootNarration: string | null
+  lockoutNarration: string | null
+  spellGrantNarration: string | null
   playerImprisoned: boolean
   notifyPerkChosen: () => void
   obituaryRequest: ReturnType<typeof useObituaryDrafting>['obituaryRequest']
@@ -62,6 +64,8 @@ export function usePlayViewController(campaignId: string, characterId: string): 
     defeatDispositionNarration: turn.defeatDispositionNarration,
     xpNarration: turn.xpNarration,
     lootNarration: turn.lootNarration,
+    lockoutNarration: turn.lockoutNarration,
+    spellGrantNarration: turn.spellGrantNarration,
     playerImprisoned: turn.playerImprisoned,
     notifyPerkChosen: turn.notifyPerkChosen,
     obituaryRequest: obituary.obituaryRequest,

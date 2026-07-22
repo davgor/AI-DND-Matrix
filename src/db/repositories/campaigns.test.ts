@@ -11,8 +11,32 @@ import {
   updateCampaignWorldHistory,
   updateCampaignWorldSummary,
   updateCampaignPantheonSummary,
-  updateCampaignNpcFaceTokenGenerationEnabled
+  updateCampaignNpcFaceTokenGenerationEnabled,
+  updateCampaignEnemyTokenGenerationEnabled
 } from './campaigns'
+
+function expectDefaultCampaignFields(
+  fetched: ReturnType<typeof getCampaignById>,
+  created: ReturnType<typeof createCampaign>
+): void {
+  expect(fetched).toEqual(created)
+  expect(fetched?.deathMode).toBe('legendary')
+  expect(fetched?.respawnRules).toBeNull()
+  expectEmptyCampaignWorldFields(fetched)
+}
+
+function expectEmptyCampaignWorldFields(
+  fetched: ReturnType<typeof getCampaignById>
+): void {
+  expect(fetched?.inGameDate).toBe(0)
+  expect(fetched?.currentStateSummary).toBe('')
+  expect(fetched?.worldName).toBe('')
+  expect(fetched?.worldSummary).toBe('')
+  expect(fetched?.worldHistory).toBe('')
+  expect(fetched?.pantheonSummary).toBe('')
+  expect(fetched?.npcFaceTokenGenerationEnabled).toBe(false)
+  expect(fetched?.enemyTokenGenerationEnabled).toBe(false)
+}
 
 describe('campaigns repository: create + getById round-trip', () => {
   it('round-trips all fields, including null respawn_rules', () => {
@@ -25,18 +49,7 @@ describe('campaigns repository: create + getById round-trip', () => {
       respawnRules: null
     })
 
-    const fetched = getCampaignById(db, created.id)
-
-    expect(fetched).toEqual(created)
-    expect(fetched?.deathMode).toBe('legendary')
-    expect(fetched?.respawnRules).toBeNull()
-    expect(fetched?.inGameDate).toBe(0)
-    expect(fetched?.currentStateSummary).toBe('')
-    expect(fetched?.worldName).toBe('')
-    expect(fetched?.worldSummary).toBe('')
-    expect(fetched?.worldHistory).toBe('')
-    expect(fetched?.pantheonSummary).toBe('')
-    expect(fetched?.npcFaceTokenGenerationEnabled).toBe(false)
+    expectDefaultCampaignFields(getCampaignById(db, created.id), created)
   })
 
   it('round-trips a non-null respawn_rules object', () => {
@@ -220,6 +233,49 @@ describe('campaigns repository: updateCampaignNpcFaceTokenGenerationEnabled', ()
 
     updateCampaignNpcFaceTokenGenerationEnabled(db, created.id, false)
     expect(getCampaignById(db, created.id)?.npcFaceTokenGenerationEnabled).toBe(false)
+  })
+})
+
+describe('campaigns repository: enemyTokenGenerationEnabled', () => {
+  it('defaults to false when omitted at create', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'No Enemy Tokens',
+      premisePrompt: '...',
+      deathMode: 'standard'
+    })
+    expect(created.enemyTokenGenerationEnabled).toBe(false)
+    expect(getCampaignById(db, created.id)?.enemyTokenGenerationEnabled).toBe(false)
+  })
+
+  it('persists when set at create', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'With Enemy Tokens',
+      premisePrompt: '...',
+      deathMode: 'standard',
+      enemyTokenGenerationEnabled: true
+    })
+    expect(created.enemyTokenGenerationEnabled).toBe(true)
+    expect(getCampaignById(db, created.id)?.enemyTokenGenerationEnabled).toBe(true)
+  })
+})
+
+describe('campaigns repository: updateCampaignEnemyTokenGenerationEnabled', () => {
+  it('toggles the enemy-token generation flag', () => {
+    const db = createTestDb()
+    const created = createCampaign(db, {
+      name: 'Test',
+      premisePrompt: '...',
+      deathMode: 'standard'
+    })
+    expect(getCampaignById(db, created.id)?.enemyTokenGenerationEnabled).toBe(false)
+
+    updateCampaignEnemyTokenGenerationEnabled(db, created.id, true)
+    expect(getCampaignById(db, created.id)?.enemyTokenGenerationEnabled).toBe(true)
+
+    updateCampaignEnemyTokenGenerationEnabled(db, created.id, false)
+    expect(getCampaignById(db, created.id)?.enemyTokenGenerationEnabled).toBe(false)
   })
 })
 

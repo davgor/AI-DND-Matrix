@@ -45,7 +45,12 @@ describe('NpcDossierTraitsSection appearance traits when set', () => {
         role: 'innkeeper',
         hairColor: 'auburn',
         age: 'middle-aged',
-        eyeColor: 'green'
+        eyeColor: 'green',
+        silhouette: null,
+        sizeClass: null,
+        primaryColors: [],
+        distinguishingMarks: null,
+        textureOrMaterial: null
       }
     })
     const tree = NpcDossierTraitsSection({
@@ -75,7 +80,12 @@ describe('NpcDossierTraitsSection appearance traits when null', () => {
         role: 'innkeeper',
         hairColor: null,
         age: null,
-        eyeColor: null
+        eyeColor: null,
+        silhouette: null,
+        sizeClass: null,
+        primaryColors: [],
+        distinguishingMarks: null,
+        textureOrMaterial: null
       }
     })
     const tree = NpcDossierTraitsSection({
@@ -103,7 +113,12 @@ describe('NpcDossierTraitsSection null identity keys', () => {
         role: 'wolf',
         hairColor: null,
         age: null,
-        eyeColor: null
+        eyeColor: null,
+        silhouette: null,
+        sizeClass: null,
+        primaryColors: [],
+        distinguishingMarks: null,
+        textureOrMaterial: null
       }
     })
     const tree = NpcDossierTraitsSection({
@@ -119,6 +134,79 @@ describe('NpcDossierTraitsSection null identity keys', () => {
     expect(text).toContain('Background')
     expect(text).toContain('Cautious')
     expect(text).toContain('wolf')
+  })
+})
+
+describe('NpcDossierTraitsSection species appearance when present', () => {
+  it('shows species appearance rows when present', () => {
+    const dossier = baseDossier({
+      canSpeak: false,
+      traits: {
+        temperament: 'aggressive',
+        raceKey: null,
+        alignment: null,
+        genderKey: null,
+        classKey: null,
+        backgroundKey: null,
+        role: 'hostile',
+        hairColor: null,
+        age: null,
+        eyeColor: null,
+        silhouette: 'quadruped wolf-like',
+        sizeClass: 'large',
+        primaryColors: ['violet', 'charcoal'],
+        distinguishingMarks: 'planar scars',
+        textureOrMaterial: 'crackling fur'
+      }
+    })
+    const tree = NpcDossierTraitsSection({
+      traits: dossier.traits,
+      canSpeak: dossier.canSpeak
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).toContain('Silhouette')
+    expect(text).toContain('quadruped wolf-like')
+    expect(text).toContain('Size')
+    expect(text).toContain('large')
+    expect(text).toContain('Colors')
+    expect(text).toContain('violet, charcoal')
+    expect(text).toContain('Marks')
+    expect(text).toContain('planar scars')
+    expect(text).toContain('Texture')
+    expect(text).toContain('crackling fur')
+  })
+})
+
+describe('NpcDossierTraitsSection species appearance when empty', () => {
+  it('omits species appearance rows when empty', () => {
+    const dossier = baseDossier({
+      canSpeak: false,
+      traits: {
+        temperament: 'aggressive',
+        raceKey: null,
+        alignment: null,
+        genderKey: null,
+        classKey: null,
+        backgroundKey: null,
+        role: 'hostile',
+        hairColor: null,
+        age: null,
+        eyeColor: null,
+        silhouette: null,
+        sizeClass: null,
+        primaryColors: [],
+        distinguishingMarks: null,
+        textureOrMaterial: null
+      }
+    })
+    const tree = NpcDossierTraitsSection({
+      traits: dossier.traits,
+      canSpeak: dossier.canSpeak
+    })
+    const text = collectText(tree).join(' ')
+    expect(text).not.toContain('Silhouette')
+    expect(text).not.toContain('Colors')
+    expect(text).not.toContain('Texture')
   })
 })
 

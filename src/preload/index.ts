@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { CreateCampaignResult } from '../main/campaignCreateIpc'
 import type { DeleteCampaignResult } from '../shared/campaignDelete/types'
 import type {
+  CampaignDuplicateResult,
+  CampaignExportResult,
+  CampaignImportResult
+} from '../shared/campaignPortability'
+import type {
   EditNpcDispositionInput,
   EditNpcTraitsInput,
   EditRegionDescriptionInput,
@@ -10,7 +15,9 @@ import type {
   EditWorldHistoryInput,
   EditWorldSummaryInput,
   EditPantheonSummaryInput,
+  EditFactionsSummaryInput,
   EditNpcFaceTokenGenerationInput,
+  EditEnemyTokenGenerationInput,
   GenerateRegionInput,
   GenerateNpcInput
 } from '../main/campaignEditIpc'
@@ -105,8 +112,12 @@ const campaigns = {
     ipcRenderer.invoke('campaigns:editWorldSummary', input),
   editPantheonSummary: (input: EditPantheonSummaryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editPantheonSummary', input),
+  editFactionsSummary: (input: EditFactionsSummaryInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editFactionsSummary', input),
   editNpcFaceTokenGeneration: (input: EditNpcFaceTokenGenerationInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editNpcFaceTokenGeneration', input),
+  editEnemyTokenGeneration: (input: EditEnemyTokenGenerationInput): Promise<CampaignDetail> =>
+    ipcRenderer.invoke('campaigns:editEnemyTokenGeneration', input),
   editWorldHistory: (input: EditWorldHistoryInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:editWorldHistory', input),
   editNpcDisposition: (input: EditNpcDispositionInput): Promise<CampaignDetail> =>
@@ -132,7 +143,12 @@ const campaigns = {
   confirmPromotion: (input: PromoteNpcInput): Promise<CampaignDetail> =>
     ipcRenderer.invoke('campaigns:confirmPromotion', input),
   delete: (campaignId: string): Promise<DeleteCampaignResult> =>
-    ipcRenderer.invoke('campaigns:delete', campaignId)
+    ipcRenderer.invoke('campaigns:delete', campaignId),
+  export: (campaignId: string): Promise<CampaignExportResult> =>
+    ipcRenderer.invoke('campaigns:export', campaignId),
+  import: (): Promise<CampaignImportResult> => ipcRenderer.invoke('campaigns:import'),
+  duplicate: (campaignId: string): Promise<CampaignDuplicateResult> =>
+    ipcRenderer.invoke('campaigns:duplicate', campaignId)
 }
 
 const files = {

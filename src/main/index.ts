@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { resolveBrowserWindowIconPath } from './appIcon'
 import { registerCampaignEditHandlers } from './campaignEditIpc'
 import { registerCampaignDeleteHandlers } from './campaignDeleteIpc'
+import { registerCampaignPortabilityHandlers } from './campaignPortabilityIpc'
 import { registerCampaignCreateHandlers } from './campaignCreateIpc'
 import { registerCampaignHandlers } from './campaignIpc'
 import { registerCampaignHubHandlers } from './campaignHubIpc'
@@ -92,6 +93,7 @@ app.whenReady().then(() => {
   registerCampaignHandlers()
   registerCampaignHubHandlers()
   registerCampaignDeleteHandlers()
+  registerCampaignPortabilityHandlers()
   registerCampaignEditHandlers()
   registerFileUploadHandlers()
   registerCharacterCreationHandlers()

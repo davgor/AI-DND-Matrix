@@ -37,7 +37,7 @@ import type { SlimEvent, SlimLogEntry } from './contextSlim'
 import { loadNarrationContextFields } from './narrationContextFields'
 import { loadDmRagLoreFields } from './dmRagContext'
 import type { Embedder } from '../db/rag/types'
-import { persistSpellGrants } from './narrationSpellContext'
+import { persistSpellGrants, formatSpellGrantNarration } from './narrationSpellContext'
 import { buildActiveQuestsPromptSection } from './questWindow'
 import { buildKnownSpellsPromptSection } from './spellWindow'
 import type { ActiveQuestContext } from './questWindow'
@@ -47,6 +47,15 @@ import {
   type QuestProposal,
   type QuestUpdate
 } from './questNarration'
+import { persistDeityManifestationSideEffect } from './deityManifestation'
+import { persistFactionNarrationSideEffects } from './factionNarration'
+import type {
+  DeityManifestationProposal,
+  FactionProposal,
+  NpcFactionUpdateProposal,
+  RelationUpdateProposal,
+  ReputationUpdateProposal
+} from '../shared/factions'
 import type { CombatIntent } from '../shared/combat/types'
 import { COMBAT_INTENTS } from '../shared/combat/types'
 import { isAttackLethality, type AttackLethality } from '../shared/npcCombat/types'
@@ -79,6 +88,8 @@ export interface IntentInterpretation {
   acceptSurrender?: boolean
   /** True when player proactively offers mercy before NPC reaches 0 HP. */
   offerMercy?: boolean
+  /** Known catalog spell the player used this turn (engine looks up turn cost). */
+  usedCatalogSpellKey?: string
 }
 
 export interface CombatIntentContext {
@@ -132,6 +143,15 @@ function isValidCombatIntentFields(candidate: Record<string, unknown>): boolean 
   return isValidYieldIntentFields(candidate)
 }
 
+function hasValidCheckFields(candidate: Record<string, unknown>): boolean {
+  return (
+    typeof candidate['ability'] === 'string' &&
+    VALID_ABILITIES.includes(candidate['ability'] as Ability) &&
+    typeof candidate['dc'] === 'number' &&
+    typeof candidate['proficient'] === 'boolean'
+  )
+}
+
 export function isValidIntent(value: unknown): value is IntentInterpretation {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -144,15 +164,14 @@ export function isValidIntent(value: unknown): value is IntentInterpretation {
   ) {
     return false
   }
+  const usedSpell = candidate['usedCatalogSpellKey']
+  if (usedSpell !== undefined && typeof usedSpell !== 'string') {
+    return false
+  }
   if (!candidate['checkNeeded']) {
     return true
   }
-  return (
-    typeof candidate['ability'] === 'string' &&
-    VALID_ABILITIES.includes(candidate['ability'] as Ability) &&
-    typeof candidate['dc'] === 'number' &&
-    typeof candidate['proficient'] === 'boolean'
-  )
+  return hasValidCheckFields(candidate)
 }
 
 export function clampIntentDC(intent: IntentInterpretation): IntentInterpretation {
@@ -165,7 +184,7 @@ export function clampIntentDC(intent: IntentInterpretation): IntentInterpretatio
 // Shared between the standalone intent prompt below and the merged
 // intent + routing prompt (040.2, intentAndRoute.ts) so the two never drift.
 export const INTENT_SCHEMA_FIELDS =
-  '{"checkNeeded":bool,"ability":"body|agility|mind|presence","dc":number,"proficient":bool,"actionType"?:"restShort"|"restLong"|"travel"|"modifyItem","travelDays"?:number,"combatIntent"?:"none"|"startEncounter"|"attack"|"endEncounter"|"flee","targetNpcId"?:string,"participantNpcIds"?:string[],"lethality"?:"lethal"|"non_lethal","acceptSurrender"?:bool,"offerMercy"?:bool}'
+  '{"checkNeeded":bool,"ability":"body|agility|mind|presence","dc":number,"proficient":bool,"actionType"?:"restShort"|"restLong"|"travel"|"modifyItem","travelDays"?:number,"combatIntent"?:"none"|"startEncounter"|"attack"|"endEncounter"|"flee","targetNpcId"?:string,"participantNpcIds"?:string[],"lethality"?:"lethal"|"non_lethal","acceptSurrender"?:bool,"offerMercy"?:bool,"usedCatalogSpellKey"?:string}'
 
 export const INTENT_GUIDANCE_LINES: readonly string[] = [
   'Set "actionType" to "restShort" for a short rest (e.g. catching your breath), "restLong" for a long rest (e.g. making camp for the night), or "travel" with an estimated "travelDays" for traveling between regions — and set "checkNeeded" to false for all three, since rest/travel are resolved deterministically by the engine, not by a check.',
@@ -173,7 +192,8 @@ export const INTENT_GUIDANCE_LINES: readonly string[] = [
   'Use combatIntent "startEncounter" only when combat should begin and no encounter is active. Use "attack" with targetNpcId during an active encounter on the player\'s turn. Use "flee" when the player clearly tries to escape (e.g. "I run for the door", "we need to get out") — not for repositioning within the same room. Use "endEncounter" to narratively end combat without a flee attempt.',
   'When hostile NPCs are already present in the region, prefer starting combat once with those existing ids (participantNpcIds when known) — do not invent new foes. Once an encounter is active, prefer "attack" with an exact targetNpcId from present/visible hostiles; never emit another startEncounter while those hostiles remain engaged.',
   'Set "lethality" to "non_lethal" when the player clearly intends to subdue/knock out/incapacitate rather than kill (e.g. "I punch him to knock him out", "I want to spare them"). Omit or use "lethal" otherwise.',
-  'Set "acceptSurrender" to true when the player explicitly accepts a yielding NPC\'s surrender (e.g. "stay down, I won\'t kill you", "I lower my weapon"). Set "offerMercy" to true when the player proactively offers mercy before the NPC has yielded.'
+  'Set "acceptSurrender" to true when the player explicitly accepts a yielding NPC\'s surrender (e.g. "stay down, I won\'t kill you", "I lower my weapon"). Set "offerMercy" to true when the player proactively offers mercy before the NPC has yielded.',
+  'When the player clearly casts or uses a known catalog spell from their spellbook, set "usedCatalogSpellKey" to that exact catalog key. Do not invent keys or lockout durations — the engine looks up turn cost from the catalog.'
 ]
 
 /**
@@ -377,6 +397,8 @@ export interface NarrationContext {
   inactiveLivingPlayersInRegion?: Array<{ id: string; name: string; characterClass: string }>
   activeQuests: ActiveQuestContext[]
   knownSpells: KnownSpellContext[]
+  /** Slim/enriched faction + optional surgical pantheon digest (125.7). */
+  factionPlaySection?: string
 }
 
 interface ProposedItemGrant {
@@ -411,6 +433,11 @@ export interface NarrationResult {
   questUpdates?: QuestUpdate[]
   questCompletions?: string[]
   spellGrants?: Array<{ catalogSpellKey: string }>
+  factionProposals?: FactionProposal[]
+  reputationUpdates?: ReputationUpdateProposal[]
+  relationUpdates?: RelationUpdateProposal[]
+  npcFactionUpdates?: NpcFactionUpdateProposal[]
+  deityManifestation?: DeityManifestationProposal
 }
 
 export async function assembleNarrationContext(input: {
@@ -422,7 +449,12 @@ export async function assembleNarrationContext(input: {
   lastCombatAttack?: Record<string, unknown>
   embedder?: Embedder
 }): Promise<NarrationContext> {
-  const fields = loadNarrationContextFields(input.db, input)
+  const fields = loadNarrationContextFields(input.db, {
+    campaignId: input.campaignId,
+    regionId: input.regionId,
+    characterId: input.characterId,
+    playerInput: input.playerInput
+  })
   const ragLore = await loadDmRagLoreFields({
     db: input.db,
     campaignId: input.campaignId,
@@ -466,11 +498,14 @@ function buildOptionalNarrationSections(context: NarrationContext): string[] {
       `Bestiary recall for present foes (base lore + discovered fact titles — do not invent combat stats): ${JSON.stringify(context.bestiaryRecall)}`
     )
   }
+  if (context.factionPlaySection) {
+    sections.push(context.factionPlaySection)
+  }
   return sections
 }
 
 const NARRATION_SCHEMA_FIELDS =
-  '{"narrationText":string,"sceneUpdate"?:string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"questProposals"?:Array<{"kind":"main"|"side","title":string,"summary":string,"scale":"minor"|"major","regionId"?:string,"objectives"?:string[],"relatedWorldFactId"?:string}>,"questUpdates"?:Array<{"questId":string,"objectiveIndex"?:number,"objectiveDone"?:boolean,"summary"?:string}>,"questCompletions"?:string[],"spellGrants"?:Array<{"catalogSpellKey":string}>,"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"currencyGrants"?:{"amount":number},"itemPurchases"?:Array<{"catalogItemId":string}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"logBookAmendments"?:Array<{"entryId":string,"title"?:string,"content"?:string}>,"logBookDeletions"?:string[],"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean}'
+  '{"narrationText":string,"sceneUpdate"?:string,"worldFact"?:{"content":string,"factionTag"?:string},"storyThreadUpdate"?:{"threadId":string,"state":string,"summary":string},"questProposals"?:Array<{"kind":"main"|"side","title":string,"summary":string,"scale":"minor"|"major","regionId"?:string,"objectives"?:string[],"relatedWorldFactId"?:string}>,"questUpdates"?:Array<{"questId":string,"objectiveIndex"?:number,"objectiveDone"?:boolean,"summary"?:string}>,"questCompletions"?:string[],"spellGrants"?:Array<{"catalogSpellKey":string}>,"proposedPromotionNpcId"?:string,"itemGrants"?:Array<{"catalogItemId":string}|{"proposeNew":{"name":string,"description":string,"itemType":"weapon"|"armor"|"potion"|"magicItem"|"misc","rarityTier":string}}>,"currencyGrants"?:{"amount":number},"itemPurchases"?:Array<{"catalogItemId":string}>,"logBookEntries"?:Array<{"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"logBookAmendments"?:Array<{"entryId":string,"title"?:string,"content"?:string}>,"logBookDeletions"?:string[],"crossCharacterLogBookEntries"?:Array<{"characterId":string,"category":"event"|"place"|"person"|"beast"|"thing","title":string,"content":string,"relatedEntityId"?:string}>,"storyDrivenDeath"?:{"deathCause":"story_sacrifice"},"journalEntry"?:string,"alignmentShiftWarning"?:{"proposedAlignment":string,"warningText":string},"commitAlignmentShift"?:{"newAlignment":string},"clearAlignmentShiftWarning"?:boolean,"factionProposals"?:Array<{"key":string,"name":string,"kind":"civic"|"military"|"mercantile"|"criminal"|"clandestine"|"political"|"religious","summary":string,"motivation"?:string,"publicFace"?:string,"methods"?:string,"deityId"?:string,"deityKey"?:string,"homeRegionId"?:string,"homeRegionKey"?:string}>,"reputationUpdates"?:Array<{"characterId":string,"factionId"?:string,"factionKey"?:string,"delta":number,"reason"?:string}>,"relationUpdates"?:Array<{"factionAId"?:string,"factionAKey"?:string,"factionBId"?:string,"factionBKey"?:string,"stance":"ally"|"rival"|"tense"|"secret"|"war","summary"?:string}>,"npcFactionUpdates"?:Array<{"npcId":string,"factionId"?:string|null,"factionKey"?:string|null,"membershipRole"?:string|null}>,"deityManifestation"?:{"deityId"?:string,"deityKey"?:string,"regionId"?:string}}'
 
 const NARRATION_GUIDANCE_LINES: readonly string[] = [
   'sceneUpdate rewrites the surroundings description only when the location or environment materially changes (arriving somewhere new, weather shifts, the room layout changes). Omit during casual conversation.',
@@ -486,7 +521,9 @@ const NARRATION_GUIDANCE_LINES: readonly string[] = [
   'When inactive player characters share the scene, add crossCharacterLogBookEntries — one entry per affected character id so each protagonist retains the encounter in their own log book.',
   'Optional "journalEntry": a short informal first-person note the player character might jot in their diary after a major beat (quest completion, a notable NPC encounter, a significant choice). Write in their own voice, like personal notes — not a combat log. Omit for routine combat, minor exchanges, or turns where nothing memorable happened.',
   'Propose side quests when NPCs offer jobs; complete quests with questCompletions when objectives resolve. Main story progress should advance via storyThreadUpdate on the linked thread (synced to the main quest automatically).',
-  'Use spellGrants when the player earns a new spell through training, a grimoire, or a story reward — validate catalogSpellKey against known catalog keys only.'
+  'Use spellGrants when the player earns a new spell through training, a grimoire, or a story reward — validate catalogSpellKey against known catalog keys only.',
+  'Use factionProposals to mint a new power bloc (unique key per campaign). Use reputationUpdates with the acting characterId and factionId/factionKey for standing shifts. Use relationUpdates for inter-faction stance changes. Use npcFactionUpdates to set or clear NPC faction membership.',
+  'Use deityManifestation when a god personally appears or answers — engine ensures one speakable NPC per deity (idempotent). Prefer deityId; deityKey may match a slugified deity name. Optional regionId places the manifestation; otherwise the current region is used.'
 ]
 
 // 040.9: narration schema, static guidance, and emphasis rules ride in the
@@ -579,13 +616,18 @@ interface NarrationSideEffectInput {
   characterId?: string
   provider?: Provider
   playerLevel?: number
+  onSpeciesCreated?: (input: { campaignId: string; speciesId: string }) => void
 }
 
 export async function persistNarrationSideEffects(
   db: Database.Database,
   result: NarrationResult,
   input: NarrationSideEffectInput
-): Promise<{ commerce?: CommerceSideEffect; completedQuestIds?: string[] }> {
+): Promise<{
+  commerce?: CommerceSideEffect
+  completedQuestIds?: string[]
+  spellGrantNarration?: string
+}> {
   if (result.worldFact) {
     createWorldFact(db, {
       campaignId: input.campaignId,
@@ -602,31 +644,59 @@ export async function persistNarrationSideEffects(
       result.storyThreadUpdate.summary
     )
   }
-  if (input.characterId) {
-    const questEffects = await persistQuestNarrationSideEffects(db, result, {
-      campaignId: input.campaignId,
-      characterId: input.characterId,
-      ...(input.provider !== undefined ? { provider: input.provider } : {}),
-      ...(typeof input.playerLevel === 'number' ? { playerLevel: input.playerLevel } : {})
-    })
-    const commerce = persistNarrationCommerce(db, input.characterId, result)
-    persistItemGrants(db, input.characterId, result.itemGrants)
-    persistLogBookEntries(db, input.campaignId, input.characterId, result.logBookEntries)
-    persistLogBookAmendments(db, input.characterId, result.logBookAmendments)
-    persistLogBookDeletions(db, input.characterId, result.logBookDeletions)
-    persistCrossCharacterLogBookEntries(db, input.campaignId, result.crossCharacterLogBookEntries)
-    persistJournalEntry(db, input.campaignId, input.characterId, result.journalEntry)
-    persistSpellGrants(db, input.characterId, result.spellGrants)
-    persistAlignmentShiftEffects(db, input.characterId, result)
-    if (result.storyDrivenDeath && input.characterId) {
-      markCharacterDead(db, {
-        characterId: input.characterId,
-        deathCause: result.storyDrivenDeath.deathCause
-      })
-    }
-    return { commerce, completedQuestIds: questEffects.completedQuestIds }
+  if (!input.characterId) {
+    return {}
   }
-  return {}
+  return persistCharacterNarrationSideEffects(db, result, {
+    ...input,
+    characterId: input.characterId
+  })
+}
+
+async function persistCharacterNarrationSideEffects(
+  db: Database.Database,
+  result: NarrationResult,
+  input: NarrationSideEffectInput & { characterId: string }
+): Promise<{
+  commerce?: CommerceSideEffect
+  completedQuestIds?: string[]
+  spellGrantNarration?: string
+}> {
+  const questEffects = await persistQuestNarrationSideEffects(db, result, {
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    ...(input.provider !== undefined ? { provider: input.provider } : {}),
+    ...(typeof input.playerLevel === 'number' ? { playerLevel: input.playerLevel } : {}),
+    ...(input.onSpeciesCreated !== undefined ? { onSpeciesCreated: input.onSpeciesCreated } : {})
+  })
+  const commerce = persistNarrationCommerce(db, input.characterId, result)
+  persistItemGrants(db, input.characterId, result.itemGrants)
+  persistLogBookEntries(db, input.campaignId, input.characterId, result.logBookEntries)
+  persistLogBookAmendments(db, input.characterId, result.logBookAmendments)
+  persistLogBookDeletions(db, input.characterId, result.logBookDeletions)
+  persistCrossCharacterLogBookEntries(db, input.campaignId, result.crossCharacterLogBookEntries)
+  persistJournalEntry(db, input.campaignId, input.characterId, result.journalEntry)
+  const spellGrants = persistSpellGrants(db, input.characterId, result.spellGrants)
+  persistFactionNarrationSideEffects(db, result, {
+    campaignId: input.campaignId,
+    characterId: input.characterId
+  })
+  persistDeityManifestationSideEffect(db, result.deityManifestation, {
+    campaignId: input.campaignId,
+    fallbackRegionId: input.regionId
+  })
+  persistAlignmentShiftEffects(db, input.characterId, result)
+  if (result.storyDrivenDeath) {
+    markCharacterDead(db, {
+      characterId: input.characterId,
+      deathCause: result.storyDrivenDeath.deathCause
+    })
+  }
+  return {
+    commerce,
+    completedQuestIds: questEffects.completedQuestIds,
+    spellGrantNarration: formatSpellGrantNarration(spellGrants.newlyGrantedNames)
+  }
 }
 
 function persistCrossCharacterLogBookEntries(

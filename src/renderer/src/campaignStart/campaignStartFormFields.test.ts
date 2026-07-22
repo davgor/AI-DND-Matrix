@@ -15,4 +15,8 @@ describe('CampaignStartFormFields generation defaults', () => {
   it('defaults NPC face-token generation to OFF', () => {
     expect(DEFAULT_CAMPAIGN_SETUP_FORM.npcFaceTokenGenerationEnabled).toBe(false)
   })
+
+  it('defaults enemy-token generation to OFF', () => {
+    expect(DEFAULT_CAMPAIGN_SETUP_FORM.enemyTokenGenerationEnabled).toBe(false)
+  })
 })

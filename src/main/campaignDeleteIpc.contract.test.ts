@@ -55,11 +55,6 @@ function buildCreateResponses(): string[] {
   ]
 }
 
-function providerForTwoCreates(): ReturnType<typeof createScriptedProvider> {
-  const one = buildCreateResponses()
-  return createScriptedProvider([...one, ...one])
-}
-
 describe('deleteCampaignById contract — post-create footprint', () => {
   it('deletes a freshly created campaign with races, regions, NPCs, and quests', async () => {
     resetCampaignCreateForTests()
@@ -93,13 +88,12 @@ describe('deleteCampaignById contract — post-create footprint', () => {
     const db = createTestDb()
     db.pragma('foreign_keys = ON')
 
-    const provider = providerForTwoCreates()
-    const survivor = await createCampaignFromRequest(db, provider, {
+    const survivor = await createCampaignFromRequest(db, providerForDefaultForm(), {
       ...DEFAULT_CREATE_REQUEST,
       sessionId: 'contract-delete-survivor',
       name: 'Survivor Saga'
     })
-    const doomed = await createCampaignFromRequest(db, provider, {
+    const doomed = await createCampaignFromRequest(db, providerForDefaultForm(), {
       ...DEFAULT_CREATE_REQUEST,
       sessionId: 'contract-delete-doomed',
       name: 'Doomed Tale'

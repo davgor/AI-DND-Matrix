@@ -80,6 +80,11 @@ function baseTraits(overrides: Partial<NpcDossierTraits> = {}): NpcDossierTraits
     hairColor: null,
     age: null,
     eyeColor: null,
+    silhouette: null,
+    sizeClass: null,
+    primaryColors: [],
+    distinguishingMarks: null,
+    textureOrMaterial: null,
     ...overrides
   }
 }

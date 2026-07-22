@@ -8,17 +8,19 @@ export interface BackgroundSelectionProps {
   characterId: string
   savedBackgroundKey?: string | null
   savedBackgroundStory?: string | null
+  savedCustomLabel?: string | null
   onComplete: () => void
   onBack: () => void
 }
 
 export function BackgroundSelection(props: BackgroundSelectionProps): JSX.Element {
-  const selection = useBackgroundSelection(
-    props.campaignId,
-    props.characterId,
-    props.savedBackgroundKey,
-    props.savedBackgroundStory
-  )
+  const selection = useBackgroundSelection({
+    campaignId: props.campaignId,
+    characterId: props.characterId,
+    savedBackgroundKey: props.savedBackgroundKey,
+    savedBackgroundStory: props.savedBackgroundStory,
+    savedCustomLabel: props.savedCustomLabel
+  })
 
   if (selection.loading) {
     return (

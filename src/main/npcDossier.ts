@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import { getBestiarySpeciesById } from '../db/repositories/bestiary'
 import { listLogEntriesRelatedToEntity } from '../db/repositories/logEntries'
 import {
   getNpcById,
@@ -13,6 +14,7 @@ import {
   type NpcDossierTraits
 } from '../shared/npcDossier/types'
 import { resolveNpcFaceTokenPath } from './npcFaceTokenAsset'
+import { resolveCreatureTokenPath } from './creatureTokenAsset'
 export interface GetNpcDossierInput {
   campaignId: string
   characterId: string
@@ -30,7 +32,21 @@ interface GetNpcDossierOptions {
   generateOpinion?: GenerateOpinionFn
 }
 
-function mapTraits(npc: Npc): NpcDossierTraits {
+const EMPTY_SPECIES_APPEARANCE = {
+  silhouette: null,
+  sizeClass: null,
+  primaryColors: [] as string[],
+  distinguishingMarks: null,
+  textureOrMaterial: null
+}
+
+function mapTraits(db: Database.Database, npc: Npc): NpcDossierTraits {
+  const speciesAppearance =
+    npc.bestiarySpeciesId === null
+      ? EMPTY_SPECIES_APPEARANCE
+      : (getBestiarySpeciesById(db, npc.bestiarySpeciesId)?.visualAppearance ??
+        EMPTY_SPECIES_APPEARANCE)
+
   return {
     temperament: npc.temperament,
     raceKey: npc.raceKey,
@@ -41,7 +57,12 @@ function mapTraits(npc: Npc): NpcDossierTraits {
     role: npc.role,
     hairColor: npc.hairColor,
     age: npc.age,
-    eyeColor: npc.eyeColor
+    eyeColor: npc.eyeColor,
+    silhouette: speciesAppearance.silhouette,
+    sizeClass: speciesAppearance.sizeClass,
+    primaryColors: [...speciesAppearance.primaryColors],
+    distinguishingMarks: speciesAppearance.distinguishingMarks,
+    textureOrMaterial: speciesAppearance.textureOrMaterial
   }
 }
 
@@ -100,6 +121,18 @@ async function resolveOpinion(
   return storedOpinion(npc, true)
 }
 
+function resolveDossierFaceTokenPath(db: Database.Database, npc: Npc): string | null {
+  const npcFaceToken = resolveNpcFaceTokenPath(npc.faceTokenPath)
+  if (npcFaceToken) {
+    return npcFaceToken
+  }
+  if (npc.bestiarySpeciesId && !npc.canSpeak) {
+    const species = getBestiarySpeciesById(db, npc.bestiarySpeciesId)
+    return resolveCreatureTokenPath(species?.creatureTokenPath ?? null)
+  }
+  return null
+}
+
 export async function getNpcDossier(
   db: Database.Database,
   input: GetNpcDossierInput,
@@ -117,8 +150,8 @@ export async function getNpcDossier(
     name: npc.name,
     role: npc.role,
     canSpeak: npc.canSpeak,
-    faceTokenPath: resolveNpcFaceTokenPath(npc.faceTokenPath),
-    traits: mapTraits(npc),
+    faceTokenPath: resolveDossierFaceTokenPath(db, npc),
+    traits: mapTraits(db, npc),
     facts: mapFacts(db, input.characterId, input.npcId),
     opinion,
     disposition: npc.disposition

@@ -40,6 +40,8 @@ export function useTurnSubmission(input: {
     defeatDispositionNarration: state.defeatDispositionNarration,
     xpNarration: state.xpNarration,
     lootNarration: state.lootNarration,
+    lockoutNarration: state.lockoutNarration,
+    spellGrantNarration: state.spellGrantNarration,
     playerImprisoned: state.playerImprisoned,
     notifyPerkChosen: () => state.setCharacterRefreshToken((token) => token + 1)
   }

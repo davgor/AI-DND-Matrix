@@ -5,6 +5,13 @@ import { parseGenderKey } from '../../shared/npcGender/types'
 import { parseNpcClassKey } from '../../shared/npcClass/types'
 import { isPresetRaceKey, RACE_ROSTER } from '../../engine/raceSelection/roster'
 import { DEFAULT_ADDITIONAL_REGION_NPC_COUNT } from '../../shared/campaignCreate/types'
+import {
+  FACTION_PRESSURE_BANDS,
+  parseFactionKind,
+  parseFactionPressure,
+  parseFactionRelationStance,
+  pressureAllowsRosterCount
+} from '../../shared/factions'
 import type {
   AdditionalRegionResult,
   CampaignGenerationResult,
@@ -12,6 +19,9 @@ import type {
   GeneratedBestiaryFoe,
   GeneratedBestiaryRoster,
   GeneratedDeity,
+  GeneratedFaction,
+  GeneratedFactionRelation,
+  GeneratedFactions,
   GeneratedNpc,
   GeneratedPantheon,
   GeneratedRegion,
@@ -493,6 +503,22 @@ function readNpcAppearanceFields(record: Record<string, unknown>): Pick<Generate
   })
 }
 
+function readOptionalNpcFactionFields(
+  record: Record<string, unknown>
+): Pick<GeneratedNpc, 'factionKey' | 'membershipRole'> {
+  const factionKey = readString(record, 'factionKey', 'faction_key')
+  const membershipRole = readString(
+    record,
+    'membershipRole',
+    'faction_membership_role',
+    'membership_role'
+  )
+  return {
+    ...(factionKey ? { factionKey } : {}),
+    ...(membershipRole ? { membershipRole } : {})
+  }
+}
+
 function readSpeakingNpcBehaviorFields(
   record: Record<string, unknown>
 ): Pick<
@@ -559,11 +585,20 @@ export function normalizeGeneratedNpc(value: unknown): GeneratedNpc | undefined 
       regionName,
       ...behavior,
       ...readNpcAppearanceFields(record),
+      ...readOptionalNpcFactionFields(record),
       speakingStyleSpecimen: null,
       speakingStyleExamples: null
     }
   }
-  return { name, role, disposition, regionName, ...behavior, ...readNpcAppearanceFields(record) }
+  return {
+    name,
+    role,
+    disposition,
+    regionName,
+    ...behavior,
+    ...readNpcAppearanceFields(record),
+    ...readOptionalNpcFactionFields(record)
+  }
 }
 
 /** Asserts enriched NPCs carry valid speaking-style samples; not wired into one-shot LLM parse (092.3). */
@@ -1077,3 +1112,290 @@ export function isValidGeneratedPantheon(value: unknown): value is GeneratedPant
   const forgottenCount = pantheon.deities.filter((deity) => deity.isForgotten).length
   return forgottenCount >= MIN_FORGOTTEN_DEITIES
 }
+
+// ---------------------------------------------------------------------------
+// Factions normalization (125.3)
+// ---------------------------------------------------------------------------
+
+function unwrapFactionsRecord(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const nested = record.factions_data ?? record.faction_roster
+  if (typeof nested === 'object' && nested !== null && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>
+  }
+  return record
+}
+
+function readSortOrder(record: Record<string, unknown>): number {
+  const raw = record.sortOrder ?? record.sort_order
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return Math.trunc(raw)
+  }
+  return 0
+}
+
+function slugifyFactionKey(raw: string): string {
+  return raw.toLowerCase().replace(/\s+/g, '_')
+}
+
+function applyOptionalFactionFields(
+  faction: GeneratedFaction,
+  record: Record<string, unknown>
+): GeneratedFaction {
+  const motivation = readString(record, 'motivation')
+  const publicFace = readString(record, 'publicFace', 'public_face')
+  const methods = readString(record, 'methods')
+  const deityName = readString(record, 'deityName', 'deity_name', 'deity')
+  return {
+    ...faction,
+    ...(motivation ? { motivation } : {}),
+    ...(publicFace ? { publicFace } : {}),
+    ...(methods ? { methods } : {}),
+    ...(deityName ? { deityName } : {})
+  }
+}
+
+function normalizeGeneratedFaction(value: unknown): GeneratedFaction | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const key = readString(record, 'key', 'faction_key', 'factionKey')
+  const name = readString(record, 'name', 'faction_name', 'factionName')
+  const summary = readString(record, 'summary', 'blurb', 'description')
+  const kind = parseFactionKind(record.kind ?? record.faction_kind ?? record.factionKind)
+  if (!key || !name || !summary || !kind) {
+    return undefined
+  }
+  return applyOptionalFactionFields(
+    {
+      key: slugifyFactionKey(key),
+      name,
+      kind,
+      summary,
+      sortOrder: readSortOrder(record)
+    },
+    record
+  )
+}
+
+function normalizeGeneratedFactionRelation(
+  value: unknown
+): GeneratedFactionRelation | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  const record = value as Record<string, unknown>
+  const factionAKey = readString(record, 'factionAKey', 'faction_a_key', 'a_key')
+  const factionBKey = readString(record, 'factionBKey', 'faction_b_key', 'b_key')
+  const stance = parseFactionRelationStance(record.stance ?? record.relation)
+  if (!factionAKey || !factionBKey || !stance) {
+    return undefined
+  }
+  const normalizedA = slugifyFactionKey(factionAKey)
+  const normalizedB = slugifyFactionKey(factionBKey)
+  if (normalizedA === normalizedB) {
+    return undefined
+  }
+  const summary = readString(record, 'summary', 'hook')
+  return {
+    factionAKey: normalizedA,
+    factionBKey: normalizedB,
+    stance,
+    ...(summary ? { summary } : {})
+  }
+}
+
+function trimFactionsPreferReligious(
+  factions: GeneratedFaction[],
+  max: number
+): GeneratedFaction[] {
+  if (factions.length <= max) {
+    return factions
+  }
+  const ordered = [...factions].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  const kept = [...ordered]
+  while (kept.length > max) {
+    const dropAt = findLastNonReligiousIndex(kept)
+    if (dropAt < 0) {
+      kept.pop()
+    } else {
+      kept.splice(dropAt, 1)
+    }
+  }
+  return kept
+}
+
+function findLastNonReligiousIndex(factions: GeneratedFaction[]): number {
+  for (let i = factions.length - 1; i >= 0; i -= 1) {
+    if (factions[i]!.kind !== 'religious') {
+      return i
+    }
+  }
+  return -1
+}
+
+function relationPairKey(relation: GeneratedFactionRelation): string {
+  return relation.factionAKey < relation.factionBKey
+    ? `${relation.factionAKey}::${relation.factionBKey}`
+    : `${relation.factionBKey}::${relation.factionAKey}`
+}
+
+function trimFactionRelations(
+  relations: GeneratedFactionRelation[],
+  keys: Set<string>,
+  max: number
+): GeneratedFactionRelation[] {
+  const seen = new Set<string>()
+  const valid: GeneratedFactionRelation[] = []
+  for (const relation of relations) {
+    if (!keys.has(relation.factionAKey) || !keys.has(relation.factionBKey)) {
+      continue
+    }
+    const pair = relationPairKey(relation)
+    if (seen.has(pair)) {
+      continue
+    }
+    seen.add(pair)
+    valid.push(relation)
+    if (valid.length >= max) {
+      break
+    }
+  }
+  return valid
+}
+
+function hasMixedFactionKinds(factions: GeneratedFaction[]): boolean {
+  if (factions.length < 3) {
+    return true
+  }
+  return new Set(factions.map((faction) => faction.kind)).size >= 2
+}
+
+function factionKeysAreUnique(factions: GeneratedFaction[]): boolean {
+  const seen = new Set<string>()
+  for (const faction of factions) {
+    if (seen.has(faction.key)) {
+      return false
+    }
+    seen.add(faction.key)
+  }
+  return true
+}
+
+function parseFactionList(raw: unknown): GeneratedFaction[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  const parsed: GeneratedFaction[] = []
+  for (const entry of raw) {
+    const faction = normalizeGeneratedFaction(entry)
+    if (!faction) {
+      return undefined
+    }
+    parsed.push(faction)
+  }
+  return factionKeysAreUnique(parsed) ? parsed : undefined
+}
+
+function parseFactionRelationList(raw: unknown): GeneratedFactionRelation[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  const parsed: GeneratedFactionRelation[] = []
+  for (const entry of raw) {
+    const relation = normalizeGeneratedFactionRelation(entry)
+    if (relation) {
+      parsed.push(relation)
+    }
+  }
+  return parsed
+}
+
+function readFactionPressureFromRecord(
+  record: Record<string, unknown>
+): ReturnType<typeof parseFactionPressure> {
+  return parseFactionPressure(
+    record.factionPressure ?? record.faction_pressure ?? record.pressure
+  )
+}
+
+function assembleNormalizedFactions(
+  pressure: NonNullable<ReturnType<typeof parseFactionPressure>>,
+  factionsSummary: string,
+  parsed: GeneratedFaction[],
+  parsedRelations: GeneratedFactionRelation[]
+): GeneratedFactions {
+  const band = FACTION_PRESSURE_BANDS[pressure]
+  const factions = trimFactionsPreferReligious(parsed, band.maxFactions)
+  const keys = new Set(factions.map((faction) => faction.key))
+  return {
+    factionPressure: pressure,
+    factionsSummary,
+    factions,
+    relations: trimFactionRelations(parsedRelations, keys, band.maxRelations)
+  }
+}
+
+export function normalizeGeneratedFactions(value: unknown): GeneratedFactions | undefined {
+  const record = unwrapFactionsRecord(value)
+  if (!record) {
+    return undefined
+  }
+  const pressure = readFactionPressureFromRecord(record)
+  const factionsSummary =
+    readString(record, 'factionsSummary', 'factions_summary', 'summary') ?? ''
+  if (!pressure || !factionsSummary.trim()) {
+    return undefined
+  }
+  const parsed = parseFactionList(record.factions ?? record.roster)
+  const parsedRelations = parseFactionRelationList(
+    record.relations ?? record.faction_relations ?? []
+  )
+  if (!parsed || !parsedRelations) {
+    return undefined
+  }
+  return assembleNormalizedFactions(pressure, factionsSummary.trim(), parsed, parsedRelations)
+}
+
+function relationsInPressureBand(factions: GeneratedFactions): boolean {
+  const band = FACTION_PRESSURE_BANDS[factions.factionPressure]
+  return (
+    factions.relations.length >= band.minRelations &&
+    factions.relations.length <= band.maxRelations
+  )
+}
+
+function meetsReligiousFactionRequirement(
+  factions: GeneratedFactions,
+  deitiesPresent: boolean | undefined
+): boolean {
+  if (!deitiesPresent) {
+    return true
+  }
+  if (factions.factionPressure === 'light') {
+    return true
+  }
+  return factions.factions.some((faction) => faction.kind === 'religious')
+}
+
+export function isValidGeneratedFactions(
+  value: unknown,
+  options?: { deitiesPresent?: boolean }
+): value is GeneratedFactions {
+  const factions = normalizeGeneratedFactions(value)
+  if (!factions) {
+    return false
+  }
+  if (!pressureAllowsRosterCount(factions.factionPressure, factions.factions.length)) {
+    return false
+  }
+  if (!relationsInPressureBand(factions) || !hasMixedFactionKinds(factions.factions)) {
+    return false
+  }
+  return meetsReligiousFactionRequirement(factions, options?.deitiesPresent)
+}
+

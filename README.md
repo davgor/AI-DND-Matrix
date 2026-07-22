@@ -106,7 +106,7 @@ A custom, simplified tabletop RPG-inspired ruleset, fully deterministic and unit
 - **Death modes** (chosen per campaign): **Legendary** (permanent death + AI obituary), **Standard** (auto-saved snapshot after every resolved action is restored — no explicit player save step; story-driven death can still persist), **Respawn** (world-defined respawn rules mechanically applied: relocate, deduct cost, enforce limits).
 - **Progression**: difficulty-rated XP (LLM rates `easy`–`impossible`; engine applies a fixed fraction of the level span) and agent-assisted level-up perk selection; emergent homebrew detection from tagged play patterns. Known spells live in `stats.knownSpellKeys` and surface in the player spellbook.
 - **In-game time**: a simple day counter per campaign — long rest advances it 1 day, travel advances it by a DM-estimated, engine-clamped amount.
-- **Abilities/spells cost turns, not mana.** Abilities resolve on use; multi-turn costs are narrated in tooltips but turn-lockout enforcement is not yet wired in the engine.
+- **Abilities/spells cost turns, not mana.** Abilities resolve on use; multi-turn catalog costs apply an Action lockout afterward (movement still allowed). The engine looks up turn cost from the spell catalog — not from LLM-supplied durations.
 - **Archetypes & emergent homebrew**: five seed archetypes (Fighter, Rogue, Mage, Cleric, Ranger). Levels 1–20. The engine deterministically detects an emergent direction from repeated tagged events (e.g. a Fighter repeatedly attempting arcane actions crossing a count threshold); only once detected does the DM agent propose flavor for a new feature inside a fixed mechanical template — the engine computes the real numbers, the agent only supplies the fiction.
 
 ## Persistence

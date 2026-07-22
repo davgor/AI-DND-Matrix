@@ -49,6 +49,13 @@ function createRiftBeastSpecies(db: TestDb, campaignId: string) {
     key: 'rift-beast',
     name: 'Rift-beast',
     baseLore: 'Born of torn planar fabric, they hunt in packs near rifts.',
+    visualAppearance: {
+      silhouette: 'quadruped wolf-like',
+      sizeClass: 'large',
+      primaryColors: ['violet'],
+      distinguishingMarks: 'rift scars',
+      textureOrMaterial: 'crackling fur'
+    },
     buckets: ['beast'],
     tags: ['rift', 'pack'],
     defaultCatalogKey: 'wolf',
@@ -123,9 +130,43 @@ describe('bestiary species repository', () => {
     expect(created.campaignId).toBe(campaign.id)
     expect(created.createdAt).toBeTruthy()
     expect(created.updatedAt).toBeTruthy()
+    expect(created.visualAppearance?.silhouette).toBe('quadruped wolf-like')
     expectSpeciesRoundTrip(db, created)
     expectInitialVariants(db, created.id)
     expectVariantUpsert(db, created.id)
+  })
+
+  it('legacy species without appearance round-trips with null visualAppearance', () => {
+    const db = createTestDb()
+    const { campaign } = seedCampaign(db)
+    const created = createBestiarySpecies(db, {
+      campaignId: campaign.id,
+      key: 'legacy-wolf',
+      name: 'Legacy wolf',
+      baseLore: 'Old row without appearance.',
+      buckets: ['beast'],
+      tags: ['wolf']
+    })
+    expect(created.visualAppearance).toBeNull()
+    expect(getBestiarySpeciesById(db, created.id)?.visualAppearance).toBeNull()
+  })
+
+  it('invalid visual_appearance_json reads as null', () => {
+    const db = createTestDb()
+    const { campaign } = seedCampaign(db)
+    const created = createBestiarySpecies(db, {
+      campaignId: campaign.id,
+      key: 'broken-appearance',
+      name: 'Broken',
+      baseLore: 'Corrupt appearance json.',
+      buckets: ['beast'],
+      tags: []
+    })
+    db.prepare('UPDATE bestiary_species SET visual_appearance_json = ? WHERE id = ?').run(
+      '{not json',
+      created.id
+    )
+    expect(getBestiarySpeciesById(db, created.id)?.visualAppearance).toBeNull()
   })
 })
 

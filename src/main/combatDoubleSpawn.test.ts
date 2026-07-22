@@ -18,6 +18,14 @@ import { resolvePlayerTurn } from './turnIpc'
 const LORE =
   'Wolves hunt the borderlands in packs, circling travelers before the first bite falls.'
 
+const LORE_APPEARANCE = {
+  silhouette: 'quadruped canine',
+  sizeClass: 'medium',
+  primaryColors: ['grey'],
+  distinguishingMarks: null,
+  textureOrMaterial: 'matted fur'
+}
+
 function seedScene() {
   const db = createTestDb()
   const campaign = createCampaign(db, {
@@ -79,7 +87,9 @@ describe('startEncounter double-spawn guard (116.10)', () => {
       regionId: region.id,
       player,
       playerInput: 'I attack the wolf',
-      provider: createScriptedProvider([JSON.stringify({ baseLore: LORE })]),
+      provider: createScriptedProvider([
+        JSON.stringify({ baseLore: LORE, visualAppearance: LORE_APPEARANCE })
+      ]),
       rng: () => 0.5
     })
 

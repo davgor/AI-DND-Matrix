@@ -12,6 +12,10 @@ import { buildCombatSummaryForNarration } from './dmCombatContext'
 import { takeRecent } from './contextWindow'
 import { slimEvents, slimLogEntries, type SlimEvent, type SlimLogEntry } from './contextSlim'
 import { windowLogEntriesForNarration } from './logBookWindow'
+import {
+  buildDmFactionPlayPromptSection,
+  loadDmFactionPlayContext
+} from './factionPlayContext'
 import { loadActiveQuestsForCharacter } from './narrationQuestContext'
 import { loadKnownSpellsForNarration } from './narrationSpellContext'
 import type { ActiveQuestContext } from './questWindow'
@@ -130,12 +134,25 @@ function loadNarrationCharacterFields(
   }
 }
 
+function loadFactionPlaySection(
+  db: Database.Database,
+  input: { campaignId: string; characterId: string; playerInput?: string }
+): string | undefined {
+  const digest = loadDmFactionPlayContext(db, {
+    campaignId: input.campaignId,
+    characterId: input.characterId,
+    playerInput: input.playerInput ?? ''
+  })
+  return digest ? buildDmFactionPlayPromptSection(digest) : undefined
+}
+
 export function loadNarrationContextFields(
   db: Database.Database,
   input: {
     campaignId: string
     regionId: string
     characterId: string
+    playerInput?: string
   }
 ): {
   regionStatus: RegionStatus
@@ -151,6 +168,7 @@ export function loadNarrationContextFields(
   inactiveLivingPlayersInRegion: Array<{ id: string; name: string; characterClass: string }> | undefined
   activeQuests: ActiveQuestContext[]
   knownSpells: KnownSpellContext[]
+  factionPlaySection?: string
 } {
   const world = loadNarrationWorldFields(db, input.campaignId, input.regionId, input.characterId)
   const characterFields = loadNarrationCharacterFields(db, {
@@ -159,5 +177,10 @@ export function loadNarrationContextFields(
     characterId: input.characterId,
     presentNpcIds: world.presentNpcs.map((npc) => npc.id)
   })
-  return { ...world, ...characterFields }
+  const factionPlaySection = loadFactionPlaySection(db, input)
+  return {
+    ...world,
+    ...characterFields,
+    ...(factionPlaySection ? { factionPlaySection } : {})
+  }
 }

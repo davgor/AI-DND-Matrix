@@ -50,6 +50,7 @@ interface QuestProposalPersistInput {
   inGameDate: number
   provider?: Provider
   playerLevel?: number
+  onSpeciesCreated?: (input: { campaignId: string; speciesId: string }) => void
 }
 
 function resolveExistingRegionId(db: Database.Database, regionId: string | undefined): string | null {
@@ -116,13 +117,18 @@ async function persistQuestProposal(input: QuestProposalPersistInput): Promise<s
     acceptedInGameDate: status === 'active' ? inGameDate : null
   })
   if (provider) {
-    await assignQuestFoes(db, provider, {
-      campaignId,
-      questId,
-      title: proposal.title,
-      summary: proposal.summary,
-      ...(typeof playerLevel === 'number' ? { playerLevel } : {})
-    })
+    await assignQuestFoes(
+      db,
+      provider,
+      {
+        campaignId,
+        questId,
+        title: proposal.title,
+        summary: proposal.summary,
+        ...(typeof playerLevel === 'number' ? { playerLevel } : {})
+      },
+      { onSpeciesCreated: input.onSpeciesCreated }
+    )
   }
   return questId
 }
@@ -272,6 +278,7 @@ async function persistAllQuestProposals(input: {
   proposals: QuestProposal[]
   provider?: Provider
   playerLevel?: number
+  onSpeciesCreated?: (input: { campaignId: string; speciesId: string }) => void
 }): Promise<void> {
   for (const proposal of input.proposals) {
     await persistQuestProposal({
@@ -281,7 +288,8 @@ async function persistAllQuestProposals(input: {
       proposal,
       inGameDate: input.inGameDate,
       provider: input.provider,
-      playerLevel: input.playerLevel
+      playerLevel: input.playerLevel,
+      onSpeciesCreated: input.onSpeciesCreated
     })
   }
 }
@@ -309,7 +317,13 @@ function completedIdsFromStoryThread(input: {
 export async function persistQuestNarrationSideEffects(
   db: Database.Database,
   result: NarrationResult,
-  input: { campaignId: string; characterId: string; provider?: Provider; playerLevel?: number }
+  input: {
+    campaignId: string
+    characterId: string
+    provider?: Provider
+    playerLevel?: number
+    onSpeciesCreated?: (input: { campaignId: string; speciesId: string }) => void
+  }
 ): Promise<QuestSideEffectResult> {
   const inGameDate = getCampaignById(db, input.campaignId)?.inGameDate ?? 0
   const playerLevel = input.playerLevel ?? getCharacterById(db, input.characterId)?.level
@@ -328,7 +342,8 @@ export async function persistQuestNarrationSideEffects(
     inGameDate,
     proposals: result.questProposals ?? [],
     provider: input.provider,
-    playerLevel
+    playerLevel,
+    onSpeciesCreated: input.onSpeciesCreated
   })
   for (const update of result.questUpdates ?? []) {
     persistQuestUpdate(db, input.characterId, update)

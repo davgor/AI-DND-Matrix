@@ -19,6 +19,7 @@ const ALL_TABLE_NAMES = [
   'catalog_bucket_tags',
   'catalog_creatures',
   'catalog_spells',
+  'character_faction_reputations',
   'character_item_modifications',
   'character_items',
   'character_journal_entries',
@@ -27,6 +28,8 @@ const ALL_TABLE_NAMES = [
   'combat_encounters',
   'deities',
   'events',
+  'faction_relations',
+  'factions',
   'guided_creation_messages',
   'items',
   'llm_usage_events',
@@ -152,6 +155,69 @@ describe('schema migration 42', () => {
       .all()
       .map((row) => (row as { name: string }).name)
     expect(campaignColumns).toContain('npc_face_token_generation_enabled')
+  })
+})
+
+describe('schema migration 50', () => {
+  it('migration 50 adds visual_appearance_json on bestiary_species', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 49)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 50)
+    )
+
+    const speciesColumns = db
+      .prepare('PRAGMA table_info(bestiary_species)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(speciesColumns).toContain('visual_appearance_json')
+  })
+})
+
+describe('schema migration 51', () => {
+  it('migration 51 adds creature_token_path on bestiary_species', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 50)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 51)
+    )
+
+    const speciesColumns = db
+      .prepare('PRAGMA table_info(bestiary_species)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(speciesColumns).toContain('creature_token_path')
+  })
+})
+
+describe('schema migration 47', () => {
+  it('migration 47 adds enemy_token_generation_enabled on campaigns', () => {
+    const db = new Database(':memory:')
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version <= 46)
+    )
+
+    runMigrations(
+      db,
+      migrations.filter((migration) => migration.version === 47)
+    )
+
+    const campaignColumns = db
+      .prepare('PRAGMA table_info(campaigns)')
+      .all()
+      .map((row) => (row as { name: string }).name)
+    expect(campaignColumns).toContain('enemy_token_generation_enabled')
   })
 })
 

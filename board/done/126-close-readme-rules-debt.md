@@ -81,9 +81,9 @@ Author a short umbrella SPEC (or sectioned SPECs under `src/shared/rulesDebt/` /
 
 #### Acceptance criteria
 
-- [ ] Lockout: Action blocked for N turns, movement allowed, persistence field(s) named
-- [ ] Custom background persistence shape documented
-- [ ] Explicit non-goals match this epic’s Out of scope (incl. deferrals to 127/128)
+- [x] Lockout: Action blocked for N turns, movement allowed, persistence field(s) named
+- [x] Custom background persistence shape documented
+- [x] Explicit non-goals match this epic’s Out of scope (incl. deferrals to 127/128)
 
 ### 126.2 Turn-lockout — engine + persistence
 
@@ -93,9 +93,9 @@ Reintroduce pure engine helpers for applying and ticking lockout (successor to d
 
 #### Acceptance criteria
 
-- [ ] `applyTurnLockout` / `tickTurnLockout` (names per SPEC) unit tested for cost N → N ticks clear
-- [ ] Persistence round-trip tested
-- [ ] Engine does not trust LLM-supplied lockout durations for catalog spells (lookup cost)
+- [x] `applyTurnLockout` / `tickTurnLockout` (names per SPEC) unit tested for cost N → N ticks clear
+- [x] Persistence round-trip tested
+- [x] Engine does not trust LLM-supplied lockout durations for catalog spells (lookup cost)
 
 ### 126.3 Turn-lockout — play / combat wiring
 
@@ -105,9 +105,9 @@ Wire intent + combat/exploration turn resolution so using a known spell/ability 
 
 #### Acceptance criteria
 
-- [ ] Integration test: cast cost-1 spell → next Action blocked → following turn Actions allowed
-- [ ] Multi-turn cost (N>1) holds for N Action opportunities
-- [ ] UI or narration surfaces lockout state at least once (banner, disabled affordance, or DM-visible engine message)
+- [x] Integration test: cast cost-1 spell → next Action blocked → following turn Actions allowed
+- [x] Multi-turn cost (N>1) holds for N Action opportunities
+- [x] UI or narration surfaces lockout state at least once (banner, disabled affordance, or DM-visible engine message)
 
 ### 126.4 Spell grants loop — harden + feedback
 
@@ -117,10 +117,10 @@ Audit `spellGrants` → `persistSpellGrants` → spellbook refresh. Fix gaps (in
 
 #### Acceptance criteria
 
-- [ ] Grant of valid catalog key appears in `spellbook:listForCharacter` after the turn
-- [ ] Invalid keys ignored; no partial corrupt `knownSpellKeys`
-- [ ] Player-visible feedback path tested or smoke-documented
-- [ ] Regression test remains green for level-up `spell_access`
+- [x] Grant of valid catalog key appears in `spellbook:listForCharacter` after the turn
+- [x] Invalid keys ignored; no partial corrupt `knownSpellKeys`
+- [x] Player-visible feedback path tested or smoke-documented
+- [x] Regression test remains green for level-up `spell_access`
 
 ### 126.5 Custom backgrounds
 
@@ -130,10 +130,10 @@ Extend onboarding background step with **Custom**: player label + story (generat
 
 #### Acceptance criteria
 
-- [ ] Custom selectable; label required; story persists
-- [ ] Sheet / identity context shows custom label
-- [ ] Roster backgrounds unchanged; migration safe for existing characters
-- [ ] Component/repo tests for custom vs roster paths
+- [x] Custom selectable; label required; story persists
+- [x] Sheet / identity context shows custom label
+- [x] Roster backgrounds unchanged; migration safe for existing characters
+- [x] Component/repo tests for custom vs roster paths
 
 ### 126.6 Bestiary Campaign Review panel
 
@@ -143,10 +143,10 @@ Implement deferred **116.11**: Review section listing prepped species, base lore
 
 #### Acceptance criteria
 
-- [ ] Review shows bestiary for campaigns with prepped species
-- [ ] Empty/legacy campaigns hide or empty-state cleanly
-- [ ] Component tests with fixture species/variants
-- [ ] Updates `src/shared/bestiary/SPEC.md` to mark Review panel no longer deferred
+- [x] Review shows bestiary for campaigns with prepped species
+- [x] Empty/legacy campaigns hide or empty-state cleanly
+- [x] Component tests with fixture species/variants
+- [x] Updates `src/shared/bestiary/SPEC.md` to mark Review panel no longer deferred
 
 ### 126.7 README + verification smoke
 
@@ -156,6 +156,6 @@ Update README Rules Engine bullet to state lockout is enforced. Cross-cutting sm
 
 #### Acceptance criteria
 
-- [ ] README lockout claim matches shipped behavior
-- [ ] Smoke notes cover the four closures in this epic (or point at existing runbooks + deltas)
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] README lockout claim matches shipped behavior
+- [x] Smoke notes cover the four closures in this epic (or point at existing runbooks + deltas)
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

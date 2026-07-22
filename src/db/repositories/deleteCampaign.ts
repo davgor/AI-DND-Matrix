@@ -6,6 +6,13 @@ export interface DeleteCampaignHooks {
 
 function deleteNestedCampaignRows(db: Database.Database, campaignId: string): void {
   db.prepare(
+    `DELETE FROM character_faction_reputations
+     WHERE character_id IN (SELECT id FROM characters WHERE campaign_id = ?)
+        OR faction_id IN (SELECT id FROM factions WHERE campaign_id = ?)`
+  ).run(campaignId, campaignId)
+  db.prepare(`DELETE FROM faction_relations WHERE campaign_id = ?`).run(campaignId)
+  db.prepare(`DELETE FROM factions WHERE campaign_id = ?`).run(campaignId)
+  db.prepare(
     `DELETE FROM npc_memories WHERE npc_id IN (SELECT id FROM npcs WHERE campaign_id = ?)`
   ).run(campaignId)
   db.prepare(

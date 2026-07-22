@@ -37,6 +37,7 @@ function openingScenePlayer(overrides: Partial<Character> = {}): Character {
     raceKey: null,
     backgroundKey: null,
     backgroundStory: null,
+    backgroundCustomLabel: null,
     ...overrides
   }
 }

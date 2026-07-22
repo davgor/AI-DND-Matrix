@@ -28,7 +28,8 @@ export function buildIdentityInterviewAgentContext(
   const raceContext = resolveCharacterRaceContext(input.db, input.campaignId, input.character.raceKey)
   const backgroundContext = resolveCharacterBackgroundContext(
     input.character.backgroundKey,
-    input.character.backgroundStory
+    input.character.backgroundStory,
+    input.character.backgroundCustomLabel
   )
   const gearContext = resolveCharacterStartingGear(
     input.db,

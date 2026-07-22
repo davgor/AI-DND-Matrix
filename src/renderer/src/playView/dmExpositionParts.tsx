@@ -61,6 +61,24 @@ export function LootRewardBanner(props: { narrationText: string }): JSX.Element 
   )
 }
 
+export function LockoutStatusBanner(props: { narrationText: string }): JSX.Element {
+  return (
+    <div className="dm-lockout-status-banner" role="status">
+      <p className="dm-lockout-status-title">Recovering</p>
+      <p>{props.narrationText}</p>
+    </div>
+  )
+}
+
+export function SpellGrantBanner(props: { narrationText: string }): JSX.Element {
+  return (
+    <div className="dm-spell-grant-banner" role="status">
+      <p className="dm-spell-grant-title">Spell learned</p>
+      <p>{props.narrationText}</p>
+    </div>
+  )
+}
+
 export function ImprisonedStatusBanner(): JSX.Element {
   return (
     <div className="dm-imprisoned-status" role="status">

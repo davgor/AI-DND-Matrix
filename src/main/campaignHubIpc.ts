@@ -9,6 +9,10 @@ import type {
 import { getCampaignById } from '../db/repositories/campaigns'
 import { getCharacterById, listCharactersByCampaign } from '../db/repositories/characters'
 import { listDeitiesByCampaign } from '../db/repositories/deities'
+import {
+  listFactionRelationsByCampaign,
+  listFactionsByCampaign
+} from '../db/repositories/factions'
 import { listNpcsByRegion } from '../db/repositories/npcs'
 import { listRegionsByCampaign } from '../db/repositories/regions'
 import { listStoryThreadsByCampaign } from '../db/repositories/storyThreads'
@@ -87,7 +91,10 @@ export function buildHubSnapshot(db: Database.Database, campaignId: string): Pla
     regionExtras: buildRegionExtras(db, campaignId),
     storyThreads: listStoryThreadsByCampaign(db, campaignId),
     characters: listCharactersByCampaign(db, campaignId),
-    deities: listDeitiesByCampaign(db, campaignId)
+    deities: listDeitiesByCampaign(db, campaignId),
+    factions: listFactionsByCampaign(db, campaignId),
+    factionRelations: listFactionRelationsByCampaign(db, campaignId),
+    bestiary: []
   }
 
   return {

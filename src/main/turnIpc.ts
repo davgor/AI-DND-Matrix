@@ -28,6 +28,10 @@ import {
 } from '../agents/turnRoutingHeuristic'
 import type { TurnBeat, TurnRoutingPlan } from '../shared/turnRouting/types'
 import type { Provider } from '../agents/providers/types'
+import {
+  createCreatureTokenSchedulerDeps,
+  maybeEnqueueCreatureTokenAfterSpeciesCreate
+} from './creatureTokenScheduler'
 import { computeCharacterTotalAc, type CommerceSideEffect } from '../db/repositories/itemCommerce'
 import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damage'
 import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
@@ -73,6 +77,7 @@ import { resolveCombatTurn, shouldRouteToCombat } from './combatTurn'
 import { generateObituaryForDeath, type GenerateObituaryInput } from './obituaryIpc'
 import type { CombatAttackResult, CombatStateSnapshot } from '../shared/combat/types'
 import type { FleeTurnOutcome } from '../shared/combat/flee/types'
+import { applyCatalogSpellLockout, tryBlockLockedAction } from './turnLockoutPlay'
 
 export interface TurnInput {
   campaignId: string
@@ -142,6 +147,10 @@ export interface TurnResult {
   itemModification?: { characterItemId: string; kind: string; summary: string }
   commerceEffect?: CommerceSideEffect
   purchaseRejected?: boolean
+  /** Soft-reject / status when Action lockout blocks this turn. */
+  lockoutNarration?: string
+  /** Newly learned spell names for player-visible grant feedback. */
+  spellGrantNarration?: string
 }
 
 function buildTurnResultExtras(
@@ -347,7 +356,9 @@ async function resolveTargetedNpcReaction(
   if (!npc) {
     return undefined
   }
-  const npcContext = await assembleNpcContext(db, npc)
+  const npcContext = await assembleNpcContext(db, npc, {
+    characterId: input.player.id
+  })
   const reaction = await generateNpcReaction(
     provider,
     npc,
@@ -569,6 +580,7 @@ interface BeatExecutionState {
   encounterXpRan?: boolean
   commerceEffect?: CommerceSideEffect
   rewardedQuestIds?: Set<string>
+  spellGrantNarration?: string
 }
 
 async function executeNpcResponseBeat(
@@ -659,10 +671,19 @@ async function applyNarrationPersistence(
     regionId: input.regionId,
     characterId: input.characterId,
     provider: input.provider,
-    playerLevel: input.playerLevel
+    playerLevel: input.playerLevel,
+    onSpeciesCreated: ({ campaignId, speciesId }) => {
+      maybeEnqueueCreatureTokenAfterSpeciesCreate(createCreatureTokenSchedulerDeps(db), {
+        campaignId,
+        speciesId
+      })
+    }
   })
   if (sideEffects.commerce) {
     input.state.commerceEffect = sideEffects.commerce
+  }
+  if (sideEffects.spellGrantNarration) {
+    input.state.spellGrantNarration = sideEffects.spellGrantNarration
   }
   return sideEffects.completedQuestIds ?? []
 }
@@ -994,6 +1015,7 @@ function buildRoutedTurnResult(
     levelsGained: state.levelsGained,
     commerceEffect: state.commerceEffect,
     purchaseRejected: state.commerceEffect?.purchases.some((purchase) => !purchase.ok) ?? false,
+    spellGrantNarration: state.spellGrantNarration,
     ...buildTurnResultExtras(db, characterId, state.narrationResult?.commitAlignmentShift?.newAlignment)
   }
 }
@@ -1263,6 +1285,66 @@ async function interpretTurnIntentAndPlan(
   }
 }
 
+function buildLockoutBlockedTurn(
+  db: Database.Database,
+  characterId: string,
+  message: string
+): TurnResult {
+  return {
+    narrationText: message,
+    lockoutNarration: message,
+    npcReactions: [],
+    partyMemberActions: [],
+    inactivePlayerActions: [],
+    ...buildTurnResultExtras(db, characterId)
+  }
+}
+
+function applyPostTurnCatalogLockout(
+  db: Database.Database,
+  character: Character,
+  usedCatalogSpellKey: string | undefined
+): void {
+  applyCatalogSpellLockout(
+    db,
+    getCharacterById(db, character.id) ?? character,
+    usedCatalogSpellKey
+  )
+}
+
+async function resolveCombatOrRoutedTurn(input: {
+  db: Database.Database
+  provider: Provider
+  turnInput: TurnInput
+  character: Character
+  plan: IntentPlanResult
+  rng: RandomFn
+}): Promise<TurnResult> {
+  if (shouldRouteToCombat(input.db, input.turnInput.campaignId, input.character.id, input.plan.intent)) {
+    const combatResult = await resolveTracedCombatTurn({
+      db: input.db,
+      provider: input.provider,
+      turnInput: input.turnInput,
+      character: input.character,
+      intent: input.plan.intent,
+      rng: input.rng
+    })
+    applyPostTurnCatalogLockout(input.db, input.character, input.plan.intent.usedCatalogSpellKey)
+    return combatResult
+  }
+
+  const routed = await resolveTracedRoutedTurn({
+    db: input.db,
+    provider: input.provider,
+    turnInput: input.turnInput,
+    character: input.character,
+    plan: input.plan,
+    rng: input.rng
+  })
+  applyPostTurnCatalogLockout(input.db, input.character, input.plan.intent.usedCatalogSpellKey)
+  return routed
+}
+
 async function executeResolvedPlayerTurn(
   db: Database.Database,
   provider: Provider,
@@ -1286,18 +1368,15 @@ async function executeResolvedPlayerTurn(
   const plan = await interpretTurnIntentAndPlan(db, provider, turnInput, character)
   logIntentRoute(plan)
 
-  if (shouldRouteToCombat(db, turnInput.campaignId, character.id, plan.intent)) {
-    return resolveTracedCombatTurn({ db, provider, turnInput, character, intent: plan.intent, rng })
+  const lockoutBlock = tryBlockLockedAction(db, character, plan.intent)
+  if (lockoutBlock.blocked) {
+    logCampaignAction('branch', { branch: 'lockout_blocked' })
+    const blocked = buildLockoutBlockedTurn(db, character.id, lockoutBlock.message)
+    logCampaignAction('complete', { branch: 'lockout_blocked', ...summarizeTurnResult(blocked) })
+    return blocked
   }
 
-  return resolveTracedRoutedTurn({
-    db,
-    provider,
-    turnInput,
-    character,
-    plan,
-    rng
-  })
+  return resolveCombatOrRoutedTurn({ db, provider, turnInput, character, plan, rng })
 }
 
 function logIntentRoute(plan: IntentPlanResult): void {

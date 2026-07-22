@@ -17,6 +17,25 @@ function playerImprisonedFromStats(stats: unknown): boolean {
   return defeat?.imprisoned === true
 }
 
+function buildTurnNarrationFields(result: TurnResult) {
+  return {
+    defeatDispositionNarration: result.defeatDispositionNarration ?? null,
+    xpNarration: result.xpNarration ?? null,
+    lootNarration: result.lootNarration ?? null,
+    lockoutNarration: result.lockoutNarration ?? null,
+    spellGrantNarration: result.spellGrantNarration ?? null
+  }
+}
+
+function buildTurnCombatFields(result: TurnResult) {
+  return {
+    pendingAlignmentShift: result.pendingAlignmentShift,
+    combatState: result.combatState ?? null,
+    fleeOutcome: result.fleeOutcome ?? null,
+    dyingResolution: result.dyingResolution
+  }
+}
+
 function buildTurnSubmissionResult(
   result: TurnResult,
   player: { alignment?: Alignment | null; stats?: unknown } | undefined,
@@ -26,15 +45,10 @@ function buildTurnSubmissionResult(
     lastCheck: result.check ?? null,
     characterRefreshToken: characterRefreshToken + 1,
     expositionStatus: idleExposition(),
-    pendingAlignmentShift: result.pendingAlignmentShift,
     playerAlignment: player?.alignment ?? null,
-    combatState: result.combatState ?? null,
-    fleeOutcome: result.fleeOutcome ?? null,
-    defeatDispositionNarration: result.defeatDispositionNarration ?? null,
-    xpNarration: result.xpNarration ?? null,
-    lootNarration: result.lootNarration ?? null,
     playerImprisoned: playerImprisonedFromStats(player?.stats),
-    dyingResolution: result.dyingResolution
+    ...buildTurnCombatFields(result),
+    ...buildTurnNarrationFields(result)
   }
 }
 
@@ -97,6 +111,8 @@ export async function runTurnSubmission(input: {
   defeatDispositionNarration: string | null
   xpNarration: string | null
   lootNarration: string | null
+  lockoutNarration: string | null
+  spellGrantNarration: string | null
   playerImprisoned: boolean
   dyingResolution?: DyingResolution
 }> {

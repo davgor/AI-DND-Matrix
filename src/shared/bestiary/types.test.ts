@@ -189,6 +189,14 @@ describe('species and variant DTO shapes', () => {
       key: 'rift-beast',
       name: 'Rift-beast',
       baseLore: 'Born where the veil thins.',
+      visualAppearance: {
+        silhouette: 'quadruped wolf-like',
+        sizeClass: 'large',
+        primaryColors: ['violet'],
+        distinguishingMarks: null,
+        textureOrMaterial: 'crackling fur'
+      },
+      creatureTokenPath: null,
       buckets: ['beast'],
       tags: ['rift'],
       defaultCatalogKey: 'dire-wolf',

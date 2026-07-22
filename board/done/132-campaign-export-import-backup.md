@@ -71,9 +71,9 @@ Document file shape, included tables/assets, id remapping, and validation errors
 
 #### Acceptance criteria
 
-- [ ] SPEC matches on-disk campaign storage layout
-- [ ] SPEC locks import id policy and secret exclusion
-- [ ] Shared types for IPC results exported
+- [x] SPEC matches on-disk campaign storage layout
+- [x] SPEC locks import id policy and secret exclusion
+- [x] Shared types for IPC results exported
 
 ### 132.2 Export
 
@@ -83,8 +83,8 @@ Main-process export: copy/package campaign save to user-chosen path; progress/er
 
 #### Acceptance criteria
 
-- [ ] Unit/integration: export file exists and opens as SQLite (or zip per SPEC)
-- [ ] No API key material in package (assert absence of known env key patterns if scanned)
+- [x] Unit/integration: export file exists and opens as SQLite (or zip per SPEC)
+- [x] No API key material in package (assert absence of known env key patterns if scanned)
 
 ### 132.3 Import
 
@@ -94,8 +94,8 @@ Import package → new campaign registration → appears in sidebar; open runs m
 
 #### Acceptance criteria
 
-- [ ] Round-trip test: create → export → wipe registration → import → detail loads
-- [ ] Corrupt file → typed error, no orphan registry row
+- [x] Round-trip test: create → export → wipe registration → import → detail loads
+- [x] Corrupt file → typed error, no orphan registry row
 
 ### 132.4 In-app duplicate
 
@@ -105,8 +105,8 @@ Clone campaign to a new id without file picker (if SPEC includes it).
 
 #### Acceptance criteria
 
-- [ ] Duplicate appears as separate sidebar entry; edits don’t affect source
-- [ ] Test isolation of ids
+- [x] Duplicate appears as separate sidebar entry; edits don’t affect source
+- [x] Test isolation of ids
 
 ### 132.5 UI entry points
 
@@ -116,8 +116,8 @@ Wire Export / Import (and Duplicate) into sidebar context menu or Settings — m
 
 #### Acceptance criteria
 
-- [ ] Component tests or IPC-handler tests for enabled actions
-- [ ] Destructive overwrite (if any) requires confirm
+- [x] Component tests or IPC-handler tests for enabled actions
+- [x] Destructive overwrite (if any) requires confirm
 
 ### 132.6 Verification + smoke
 
@@ -127,5 +127,5 @@ Manual smoke notes for friend-machine handoff; full delivery gate including `act
 
 #### Acceptance criteria
 
-- [ ] Smoke notes: export on A → import on B (or second userData profile)
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] Smoke notes: export on A → import on B (or second userData profile)
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

@@ -67,10 +67,50 @@
 .campaigns-rail-new {
   padding: 8px;
   border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.campaigns-rail-new-button {
+.campaigns-rail-new-button,
+.campaigns-rail-import-button {
   width: 100%;
+}
+
+.campaigns-rail-import-button {
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+.campaigns-rail-import-button:hover {
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+  background: var(--surface-sidebar-hover);
+}
+
+.campaigns-rail-action {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  width: 28px;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.campaigns-rail-action:hover {
+  color: var(--text-accent);
+  background: var(--surface-sidebar-hover);
+}
+
+.campaigns-rail-error {
+  margin: 0;
+  padding: 6px 10px;
+  color: var(--color-error);
+  font-size: 11px;
 }
 
 .campaigns-rail-quick-switch {
