@@ -9,6 +9,7 @@ import { createLogEntry } from '../db/repositories/logEntries'
 import {
   bumpNpcPlayerInteractionAt,
   createNpc,
+  getNpcById,
   updateNpcFaceTokenPath,
   updateNpcOpinionSummary
 } from '../db/repositories/npcs'
@@ -16,7 +17,9 @@ import { createRegion } from '../db/repositories/regions'
 import { createBestiarySpecies } from '../db/repositories/bestiary'
 import { persistNpcFaceTokenAsset } from './npcFaceTokenAsset'
 import { persistCreatureTokenAsset } from './creatureTokenAsset'
-import { getNpcDossier } from './npcDossier'
+import { getNpcDossier, getNpcSubjectOpinion } from './npcDossier'
+import { bumpNpcOpinionSubjectInteraction, getNpcOpinion } from '../db/repositories/npcOpinions'
+import { playerOpinionSubject } from '../shared/npcRelationships/types'
 
 function seedDossierFixture(db: ReturnType<typeof createTestDb>) {
   const campaign = createCampaign(db, {
@@ -493,5 +496,98 @@ describe('getNpcDossier: opinion regeneration', () => {
 
     expect(dossier?.opinion.summary).toBe('Previous summary.')
     expect(dossier?.opinion.stale).toBe(true)
+  })
+})
+
+describe('getNpcSubjectOpinion: other PC freshness', () => {
+  it('generates once for another PC, skips when fresh, regenerates when stale', async () => {
+    const db = createTestDb()
+    const { campaign, hero, otherHero, npc } = seedDossierFixture(db)
+    const subject = { subjectType: 'player_character' as const, subjectId: otherHero.id }
+    const generateOpinion = vi.fn(async () => ({
+      summary: 'Wary of the ally.',
+      stance: 'wary' as const
+    }))
+
+    const first = await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      { generateOpinion }
+    )
+    expect(generateOpinion).toHaveBeenCalledTimes(1)
+    expect(first?.summary).toBe('Wary of the ally.')
+    expect(first?.stale).toBe(false)
+
+    const second = await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      { generateOpinion }
+    )
+    expect(generateOpinion).toHaveBeenCalledTimes(1)
+    expect(second?.summary).toBe('Wary of the ally.')
+
+    bumpNpcOpinionSubjectInteraction(
+      db,
+      npc.id,
+      subject,
+      new Date(Date.now() + 60_000).toISOString()
+    )
+    const third = await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      { generateOpinion: async () => ({ summary: 'Updated ally view.', stance: 'hostile' }) }
+    )
+    expect(third?.summary).toBe('Updated ally view.')
+  })
+})
+
+describe('getNpcSubjectOpinion: NPC subject', () => {
+  it('generates NPC-subject opinions without leaking other holders', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    const captain = createNpc(db, {
+      campaignId: campaign.id,
+      regionId: npc.regionId,
+      name: 'Captain',
+      role: 'guard',
+      disposition: 'stern'
+    })
+    const subject = { subjectType: 'npc' as const, subjectId: captain.id }
+
+    await getNpcSubjectOpinion(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id, subject },
+      {
+        generateOpinion: async (ctx) => {
+          expect(ctx.subject.subjectId).toBe(captain.id)
+          expect(ctx.npc.id).toBe(npc.id)
+          return { summary: 'Resents the captain.', stance: 'hostile' }
+        }
+      }
+    )
+
+    const stored = getNpcOpinion(db, npc.id, subject)
+    expect(stored?.summary).toBe('Resents the captain.')
+    expect(getNpcOpinion(db, npc.id, playerOpinionSubject(hero.id))).toBeUndefined()
+  })
+})
+
+describe('getNpcSubjectOpinion: reopen persistence', () => {
+  it('persists player opinion across reopen (restart-shaped)', async () => {
+    const db = createTestDb()
+    const { campaign, hero, npc } = seedDossierFixture(db)
+    await getNpcDossier(
+      db,
+      { campaignId: campaign.id, characterId: hero.id, npcId: npc.id },
+      { generateOpinion: async () => 'Remembers your kindness.' }
+    )
+
+    const reopened = await getNpcDossier(db, {
+      campaignId: campaign.id,
+      characterId: hero.id,
+      npcId: npc.id
+    })
+    expect(reopened?.opinion.summary).toBe('Remembers your kindness.')
+    expect(getNpcById(db, npc.id)?.opinionSummary).toBe('Remembers your kindness.')
   })
 })

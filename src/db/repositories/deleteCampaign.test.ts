@@ -21,6 +21,7 @@ import {
 } from './factions'
 import { deleteCampaignCascade } from './deleteCampaign'
 import { insertLlmUsageEvent } from './llmUsageEvents'
+import { upsertNpcOpinion } from './npcOpinions'
 import { createQuest } from './quests'
 
 const SAMPLE_RACE_LORE = {
@@ -121,6 +122,14 @@ function seedRegionNpcAndCharacter(db: TestDb, campaignId: string, label: string
     kind: 'player',
     portraitPath: `/tmp/${label}-portrait.png`,
     sheetBackgroundPath: `/tmp/${label}-sheet.png`
+  })
+  upsertNpcOpinion(db, {
+    campaignId,
+    npcId: npc.id,
+    subject: { subjectType: 'player_character', subjectId: character.id },
+    summary: `${label} likes the hero.`,
+    generatedAt: '2026-01-01T00:00:00.000Z',
+    stance: 'warm'
   })
   return { region, character }
 }
@@ -235,7 +244,8 @@ const DIRECT_TABLES = [
   'quests',
   'llm_usage_events',
   'factions',
-  'faction_relations'
+  'faction_relations',
+  'npc_opinions'
 ] as const
 
 const NESTED_TABLES = [
@@ -270,6 +280,7 @@ function expectOtherCampaignIntact(db: TestDb, otherId: string): void {
   expect(countForCampaign(db, 'factions', otherId)).toBe(2)
   expect(countForCampaign(db, 'faction_relations', otherId)).toBe(1)
   expect(countForCampaign(db, 'character_faction_reputations', otherId)).toBe(1)
+  expect(countForCampaign(db, 'npc_opinions', otherId)).toBe(1)
   expect(
     (db.prepare('SELECT COUNT(*) as count FROM quest_foe_assignments').get() as { count: number }).count
   ).toBe(1)
@@ -316,6 +327,7 @@ describe('deleteCampaignCascade: foreign keys', () => {
     expect(countForCampaign(db, 'factions', target.id)).toBe(0)
     expect(countForCampaign(db, 'faction_relations', target.id)).toBe(0)
     expect(countForCampaign(db, 'character_faction_reputations', target.id)).toBe(0)
+    expect(countForCampaign(db, 'npc_opinions', target.id)).toBe(0)
   })
 })
 

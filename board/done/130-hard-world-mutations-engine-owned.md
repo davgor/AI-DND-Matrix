@@ -77,9 +77,9 @@ Document typed mutation fields, restore rules, grounding priority, and which rou
 
 #### Acceptance criteria
 
-- [ ] SPEC lists region + person mutation shapes and validation
-- [ ] SPEC defines starvation policy for non-narration routes
-- [ ] Shared types exported
+- [x] SPEC lists region + person mutation shapes and validation
+- [x] SPEC defines starvation policy for non-narration routes
+- [x] Shared types exported
 
 ### 130.2 DB/persist writers
 
@@ -89,9 +89,9 @@ Wire side-effect persistence to `updateRegionStatus` (and NPC life/defeat writer
 
 #### Acceptance criteria
 
-- [ ] Destroy proposal marks region destroyed with cause; restart-safe
-- [ ] Invalid region ids ignored/rejected without corrupt save
-- [ ] Optional worldFact still creatable alongside
+- [x] Destroy proposal marks region destroyed with cause; restart-safe
+- [x] Invalid region ids ignored/rejected without corrupt save
+- [x] Optional worldFact still creatable alongside
 
 ### 130.3 Grounding digests + guards
 
@@ -101,9 +101,9 @@ Assemble slim destroyed/altered digests into DM (and NPC when regional). Guard: 
 
 #### Acceptance criteria
 
-- [ ] Unit tests: destroyed region appears in context
-- [ ] Guard test: illegal pristine assumption handled per SPEC
-- [ ] Budget assertions remain within **040**-style caps
+- [x] Unit tests: destroyed region appears in context
+- [x] Guard test: illegal pristine assumption handled per SPEC
+- [x] Budget assertions remain within **040**-style caps
 
 ### 130.4 Intent/route starvation wiring
 
@@ -113,8 +113,8 @@ Audit turn resolve paths; ensure world-alter intents hit mutation persistence. A
 
 #### Acceptance criteria
 
-- [ ] At least one integration test proves mutation persists on the locked alter path
-- [ ] Document routes that are explicitly non-mutating
+- [x] At least one integration test proves mutation persists on the locked alter path
+- [x] Document routes that are explicitly non-mutating
 
 ### 130.5 Hub sync
 
@@ -124,8 +124,8 @@ Confirm hub snapshot shows destroyed/altered from structured fields after play m
 
 #### Acceptance criteria
 
-- [ ] Hub fixture/test: after mutation, preview reflects destroyed
-- [ ] Legacy empty status still fine
+- [x] Hub fixture/test: after mutation, preview reflects destroyed
+- [x] Legacy empty status still fine
 
 ### 130.6 Verification + smoke
 
@@ -135,5 +135,5 @@ Smoke: burn/alter → leave → reopen → DM grounding knows. Full delivery gat
 
 #### Acceptance criteria
 
-- [ ] Smoke notes written (or runbook delta)
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] Smoke notes written (or runbook delta)
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

@@ -72,7 +72,12 @@ import type {
   BackgroundGenerateStoryInput,
   BackgroundRosterEntry
 } from '../shared/characterBackground/types'
-import type { NpcDossierDto } from '../shared/npcDossier/types'
+import type { NpcDossierDto, NpcDossierOpinion } from '../shared/npcDossier/types'
+import type {
+  OpinionSubject,
+  OpinionSubjectOption,
+  RelationshipWebDto
+} from '../shared/npcRelationships/types'
 import type {
   AskDmListHistoryInput,
   AskDmMessage,
@@ -217,7 +222,27 @@ const npcDossier = {
     campaignId: string
     characterId: string
     npcId: string
-  }): Promise<NpcDossierDto | null> => ipcRenderer.invoke('npcDossier:get', input)
+  }): Promise<NpcDossierDto | null> => ipcRenderer.invoke('npcDossier:get', input),
+  getSubjectOpinion: (input: {
+    campaignId: string
+    characterId: string
+    npcId: string
+    subject: OpinionSubject
+  }): Promise<NpcDossierOpinion | null> =>
+    ipcRenderer.invoke('npcDossier:getSubjectOpinion', input),
+  listOpinionSubjects: (input: {
+    campaignId: string
+    characterId: string
+    npcId: string
+  }): Promise<OpinionSubjectOption[]> =>
+    ipcRenderer.invoke('npcDossier:listOpinionSubjects', input)
+}
+
+const relationshipWeb = {
+  get: (input: {
+    campaignId: string
+    characterId: string
+  }): Promise<RelationshipWebDto> => ipcRenderer.invoke('relationshipWeb:get', input)
 }
 
 const journal = {
@@ -437,6 +462,7 @@ contextBridge.exposeInMainWorld('files', files)
 contextBridge.exposeInMainWorld('characters', characters)
 contextBridge.exposeInMainWorld('logBook', logBook)
 contextBridge.exposeInMainWorld('npcDossier', npcDossier)
+contextBridge.exposeInMainWorld('relationshipWeb', relationshipWeb)
 contextBridge.exposeInMainWorld('journal', journal)
 contextBridge.exposeInMainWorld('askDm', askDm)
 contextBridge.exposeInMainWorld('quests', quests)
@@ -461,6 +487,7 @@ export type FilesApi = typeof files
 export type CharactersApi = typeof characters
 export type LogBookApi = typeof logBook
 export type NpcDossierApi = typeof npcDossier
+export type RelationshipWebApi = typeof relationshipWeb
 export type JournalApi = typeof journal
 export type AskDmApi = typeof askDm
 export type QuestsApi = typeof quests

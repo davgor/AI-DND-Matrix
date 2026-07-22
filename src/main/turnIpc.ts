@@ -35,6 +35,10 @@ import {
 import { computeCharacterTotalAc, type CommerceSideEffect } from '../db/repositories/itemCommerce'
 import { isNaturalTwenty, resolveDamage, type DamageRoll } from '../engine/damage'
 import { DC_MIN, resolveCheck, rollD20 } from '../engine/checks'
+import {
+  advantageModeFromConditions,
+  conditionsFromStats
+} from '../engine/conditions'
 import { resolveModificationTurn } from './modificationTurn'
 import { capSceneContextForPrompt } from './sceneContextCap'
 import { resolveCharacterMaxHp } from '../shared/hp/resolveMaxHp'
@@ -309,12 +313,14 @@ function resolveOutcome(character: Character, intent: IntentInterpretation, rng:
   const abilityScores = (character.stats as { abilityScores?: AbilityScores }).abilityScores
   const abilityScore = abilityScores?.[intent.ability] ?? 10
   const dc = intent.dc ?? DC_MIN
+  const conditions = conditionsFromStats(character.stats)
   const result = resolveCheck({
     rng,
     abilityScore,
     proficient: intent.proficient ?? false,
     proficiencyBonus: proficiencyBonus(character.level),
-    dc
+    dc,
+    mode: advantageModeFromConditions(conditions, intent.ability)
   })
   return { outcome: { success: result.success, total: result.total, dc }, rolled: true, roll: result.roll }
 }

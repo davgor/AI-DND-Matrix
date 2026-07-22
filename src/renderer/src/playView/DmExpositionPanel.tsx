@@ -3,7 +3,12 @@ import type { PlayLogEntry } from '../../../main/narrationLog'
 import type { TurnResult } from '../../../main/turnIpc'
 import type { ExpositionStatus } from '../../../shared/inCampaignLayout/types'
 import type { SceneSummaryInput } from '../../../shared/inCampaignLayout/sceneContext'
-import { DmExpositionSceneHeader, renderFeedLine } from './dmExpositionParts'
+import type { PersonMatchCandidate } from '../../../shared/journal'
+import {
+  DmExpositionSceneHeader,
+  renderFeedLine,
+  type ScenePersonLinkProps
+} from './dmExpositionParts'
 import {
   incomingHighlightClassName,
   useIncomingIdHighlights
@@ -24,6 +29,8 @@ interface DmExpositionPanelProps {
   lastCheck: TurnResult['check'] | null
   combatStrip?: ReactNode
   statusAlerts?: ReactNode
+  personCandidates?: PersonMatchCandidate[]
+  onPersonActivate?: (npcId: string) => void
 }
 
 function formatRoll(check: NonNullable<TurnResult['check']>): string {
@@ -37,6 +44,10 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
     entryIds(props.entries),
     eligibleHighlightIds(props.entries, isSceneSettingEntry)
   )
+  const personLink: ScenePersonLinkProps = {
+    personCandidates: props.personCandidates,
+    onPersonActivate: props.onPersonActivate
+  }
 
   return (
     <div className="play-view-panel play-view-dm-panel dm-exposition-panel">
@@ -45,6 +56,8 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
         sceneContext={props.sceneContext}
         expositionStatus={props.expositionStatus}
         onRetryExposition={props.onRetryExposition}
+        personCandidates={props.personCandidates}
+        onPersonActivate={props.onPersonActivate}
       />
       {props.combatStrip}
       {props.statusAlerts}
@@ -58,7 +71,7 @@ export function DmExpositionPanel(props: DmExpositionPanelProps): JSX.Element {
               'play-view-log-entry'
             )}
           >
-            {renderFeedLine(entry)}
+            {renderFeedLine(entry, personLink)}
           </p>
         ))}
         {props.showRolls && props.lastCheck ? (

@@ -146,6 +146,39 @@
   font-style: italic;
 }
 
+.npc-dossier-opinion-subject {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+}
+
+.npc-dossier-opinion-subject-label {
+  color: var(--text-muted);
+}
+
+.npc-dossier-opinion-subject-select {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-scene);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+}
+
+.npc-dossier-relationship-web-link {
+  margin-top: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-accent);
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
 .npc-dossier-loading,
 .npc-dossier-error {
   padding: 12px 20px 20px;

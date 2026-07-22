@@ -327,3 +327,158 @@ describe('SocialMessage dossier interactions', () => {
     expect(onOpenNpcDossier).not.toHaveBeenCalled()
   })
 })
+
+const personLinkCandidates = [
+  { npcId: 'npc-filo', name: 'Filo' },
+  { npcId: 'npc-mira', name: 'Mira' }
+]
+
+function clickButtonNamed(container: HTMLElement, name: string): void {
+  const button = Array.from(container.querySelectorAll('button')).find(
+    (el) => el.textContent === name
+  )
+  expect(button).toBeTruthy()
+  act(() => {
+    button?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
+
+describe('SocialMessage person links in dialogue prose', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('links another known NPC in dialogue prose and opens with that npcId', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Ask Mira about the gate.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'dialogue'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+    clickButtonNamed(container, 'Mira')
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-mira')
+  })
+})
+
+describe('SocialMessage person links in action prose', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('links another known NPC in non-dialogue action prose', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Points toward Mira.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'action'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+    clickButtonNamed(container, 'Mira')
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-mira')
+  })
+})
+
+describe('SocialMessage person link self-name exclusion', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('does not link the speaker name inside their own bubble prose', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Filo shrugs. Ask Mira.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'dialogue'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+
+    const proseFilo = Array.from(
+      container.querySelectorAll('.social-message-text button')
+    ).find((button) => button.textContent === 'Filo')
+    expect(proseFilo).toBeUndefined()
+
+    const mira = Array.from(container.querySelectorAll('.social-message-text button')).find(
+      (button) => button.textContent === 'Mira'
+    )
+    expect(mira).toBeTruthy()
+  })
+})
+
+describe('SocialMessage avatar and speaker name dossier', () => {
+  let root: Root
+  let container: HTMLDivElement
+
+  beforeEach(() => {
+    ;({ root, container } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('keeps avatar and speaker name opening the speaker dossier', () => {
+    const onOpenNpcDossier = vi.fn()
+    renderSocialMessage(root, {
+      entry: entry({
+        speaker: 'npc',
+        text: 'Ask Mira.',
+        speakerName: 'Filo',
+        npcId: 'npc-filo',
+        reactionKind: 'dialogue'
+      }),
+      onOpenNpcDossier,
+      personCandidates: personLinkCandidates
+    })
+
+    const avatar = container.querySelector('.social-avatar-button') as HTMLButtonElement
+    const speakerName = container.querySelector(
+      '.social-message-name-button'
+    ) as HTMLButtonElement
+    act(() => {
+      avatar.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-filo')
+    onOpenNpcDossier.mockClear()
+    act(() => {
+      speakerName.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(onOpenNpcDossier).toHaveBeenCalledWith('npc-filo')
+  })
+})

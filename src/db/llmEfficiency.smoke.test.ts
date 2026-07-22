@@ -32,9 +32,9 @@ import { ELF_SCOUT_CORE, ELF_SCOUT_FINAL } from './npcCoreBundleFixtures'
 
 // Measured 2026-07: 1,985 chars (slim events/log entries, no raw payloads).
 const NARRATION_USER_PROMPT_CHAR_CEILING = 2_600
-// Measured 2026-07: 5,454 chars (schema + guidance + emphasis, sent once per
-// call as systemPrompt instead of repeated user-prompt boilerplate).
-const NARRATION_SYSTEM_PROMPT_CHAR_CEILING = 7_100
+// Measured 2026-07-21: 7,354 chars (schema + guidance + emphasis + epic 130
+// regionStatusUpdates/npcLifeUpdates fields; sent once per call as systemPrompt).
+const NARRATION_SYSTEM_PROMPT_CHAR_CEILING = 9_600
 // Measured 2026-07: 727 chars with a 5-entry window (windowed transcript +
 // foundation status + latest message only — static identity block excluded;
 // identical for the 10-turn fixture, which is the point).

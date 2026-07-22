@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import type { CampaignWithLastPlayed } from '../../../db/repositories/campaigns'
+import type { PersonMatchCandidate } from '../../../shared/journal'
 import { CampaignsRail } from '../sidebar/CampaignsRail'
 import type { useSidebarController } from '../sidebar/useSidebarController'
+import { useJournalPersonLinks } from '../characterSheet/useJournalPersonLinks'
 import { PlaySheetRail } from './PlaySheetRail'
 import { InCampaignLayout } from '../inCampaign/InCampaignLayout'
 import type { InCampaignLayoutMode } from '../../../shared/inCampaignLayout/types'
@@ -10,38 +12,7 @@ import { PlayerActionPanel } from './PlayerActionPanel'
 import { usePlaySheetModals } from './usePlaySheetModals'
 import type { usePlayViewController } from './usePlayViewController'
 
-function playDmColumn(
-  layoutMode: InCampaignLayoutMode,
-  controller: ReturnType<typeof usePlayViewController>,
-  sceneContext: { regionName: string | null; regionBlurb: string | null }
-): JSX.Element {
-  return (
-    <PlayDmExpositionColumn layoutMode={layoutMode} controller={controller} sceneContext={sceneContext} />
-  )
-}
-
-function playPlayerColumn(
-  controller: ReturnType<typeof usePlayViewController>,
-  characterId: string,
-  onOpenNpcDossier: (npcId: string) => void
-): JSX.Element {
-  return (
-    <PlayerActionPanel
-      entries={controller.playerEntries}
-      inputValue={controller.inputValue}
-      onInputChange={controller.setInputValue}
-      onSubmit={() => void controller.submitAction()}
-      submitting={controller.submitting}
-      inputBlocked={controller.obituaryBlocking}
-      playerImprisoned={controller.playerImprisoned}
-      combatState={controller.combatState}
-      characterId={characterId}
-      onOpenNpcDossier={onOpenNpcDossier}
-    />
-  )
-}
-
-export function PlayViewGrid(props: {
+type PlayViewGridProps = {
   layoutMode: InCampaignLayoutMode
   campaignsController: ReturnType<typeof useSidebarController>
   selectedCampaignId: string | null
@@ -56,8 +27,72 @@ export function PlayViewGrid(props: {
   showOverlayBackdrop: boolean
   onBackdropDismiss: () => void
   overlays?: ReactNode
+}
+
+function playDmColumn(input: {
+  layoutMode: InCampaignLayoutMode
+  controller: ReturnType<typeof usePlayViewController>
+  sceneContext: { regionName: string | null; regionBlurb: string | null }
+  personCandidates: PersonMatchCandidate[]
+  onPersonActivate: (npcId: string) => void
 }): JSX.Element {
+  return (
+    <PlayDmExpositionColumn
+      layoutMode={input.layoutMode}
+      controller={input.controller}
+      sceneContext={input.sceneContext}
+      personCandidates={input.personCandidates}
+      onPersonActivate={input.onPersonActivate}
+    />
+  )
+}
+
+function playPlayerColumn(input: {
+  controller: ReturnType<typeof usePlayViewController>
+  characterId: string
+  onOpenNpcDossier: (npcId: string) => void
+  personCandidates: PersonMatchCandidate[]
+}): JSX.Element {
+  return (
+    <PlayerActionPanel
+      entries={input.controller.playerEntries}
+      inputValue={input.controller.inputValue}
+      onInputChange={input.controller.setInputValue}
+      onSubmit={() => void input.controller.submitAction()}
+      submitting={input.controller.submitting}
+      inputBlocked={input.controller.obituaryBlocking}
+      playerImprisoned={input.controller.playerImprisoned}
+      combatState={input.controller.combatState}
+      characterId={input.characterId}
+      onOpenNpcDossier={input.onOpenNpcDossier}
+      personCandidates={input.personCandidates}
+    />
+  )
+}
+
+function playSheetColumn(input: {
+  campaignId: string
+  characterId: string
+  sheetCollapsed: boolean
+  onToggleSheet: () => void
+  refreshToken: number
+  modals: ReturnType<typeof usePlaySheetModals>
+}): JSX.Element {
+  return (
+    <PlaySheetRail
+      campaignId={input.campaignId}
+      characterId={input.characterId}
+      collapsed={input.sheetCollapsed}
+      onToggleCollapsed={input.onToggleSheet}
+      refreshToken={input.refreshToken}
+      modals={input.modals}
+    />
+  )
+}
+
+export function PlayViewGrid(props: PlayViewGridProps): JSX.Element {
   const modals = usePlaySheetModals()
+  const { personCandidates } = useJournalPersonLinks(props.campaignId, props.characterId)
 
   return (
     <InCampaignLayout
@@ -74,18 +109,27 @@ export function PlayViewGrid(props: {
           onRequestDelete={props.onRequestDelete}
         />
       }
-      dmExposition={playDmColumn(props.layoutMode, props.controller, props.sceneContext)}
-      playerInteraction={playPlayerColumn(props.controller, props.characterId, modals.openDossier)}
-      playerSheet={
-        <PlaySheetRail
-          campaignId={props.campaignId}
-          characterId={props.characterId}
-          collapsed={props.sheetCollapsed}
-          onToggleCollapsed={props.onToggleSheet}
-          refreshToken={props.controller.characterRefreshToken}
-          modals={modals}
-        />
-      }
+      dmExposition={playDmColumn({
+        layoutMode: props.layoutMode,
+        controller: props.controller,
+        sceneContext: props.sceneContext,
+        personCandidates,
+        onPersonActivate: modals.openDossier
+      })}
+      playerInteraction={playPlayerColumn({
+        controller: props.controller,
+        characterId: props.characterId,
+        onOpenNpcDossier: modals.openDossier,
+        personCandidates
+      })}
+      playerSheet={playSheetColumn({
+        campaignId: props.campaignId,
+        characterId: props.characterId,
+        sheetCollapsed: props.sheetCollapsed,
+        onToggleSheet: props.onToggleSheet,
+        refreshToken: props.controller.characterRefreshToken,
+        modals
+      })}
       overlays={props.overlays}
     />
   )

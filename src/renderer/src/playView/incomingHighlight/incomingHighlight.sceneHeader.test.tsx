@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { act } from 'react'
 import type { Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DmExpositionSceneHeader } from '../dmExpositionParts'
 import { INCOMING_HIGHLIGHT_CLASS } from './index'
 import { dmEntry, mountRoot, unmountRoot } from './incomingHighlightTestUtils'
@@ -114,5 +114,44 @@ describe('scene header: no glow when summary unchanged', () => {
     expect(container.querySelector('.dm-exposition-scene')?.className).not.toContain(
       INCOMING_HIGHLIGHT_CLASS
     )
+  })
+})
+
+describe('scene header: person links', () => {
+  let container: HTMLDivElement
+  let root: Root
+
+  beforeEach(() => {
+    ;({ container, root } = mountRoot())
+  })
+
+  afterEach(() => {
+    unmountRoot(root, container)
+  })
+
+  it('opens dossier with npcId when a known name in the scene summary is clicked', () => {
+    const onPersonActivate = vi.fn()
+    act(() => {
+      root.render(
+        <DmExpositionSceneHeader
+          entries={[
+            dmEntry({ id: '1', text: 'Anna waits by the gate.', sceneSetting: true })
+          ]}
+          sceneContext={{}}
+          expositionStatus={{ state: 'idle', errorMessage: null }}
+          onRetryExposition={() => {}}
+          personCandidates={[{ npcId: 'npc-anna', name: 'Anna' }]}
+          onPersonActivate={onPersonActivate}
+        />
+      )
+    })
+    const anna = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Anna'
+    )
+    expect(anna).toBeTruthy()
+    act(() => {
+      anna?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(onPersonActivate).toHaveBeenCalledWith('npc-anna')
   })
 })

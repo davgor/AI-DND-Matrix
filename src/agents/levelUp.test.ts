@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { hasArcaneOption, hasMartialOption, resolveLevelUpPerks } from './levelUp'
+import {
+  buildLevelUpPrompt,
+  hasArcaneOption,
+  hasMartialOption,
+  resolveLevelUpPerks
+} from './levelUp'
 import { createScriptedProvider } from './providers/mockHarness'
 import { parseLevelUpAgentResponse } from '../shared/progression/types'
 import type { LevelSpanContext } from '../shared/progression/types'
@@ -71,5 +76,20 @@ describe('resolveLevelUpPerks', () => {
     const provider = createScriptedProvider(['not json', 'still bad', '{}'])
     const result = await resolveLevelUpPerks(provider, arcaneSpan)
     expect(hasArcaneOption(result)).toBe(true)
+  })
+
+  it('emergent direction shapes fallback offer when LLM fails', async () => {
+    const provider = createScriptedProvider(['not json', 'still bad', '{}'])
+    const ctx: LevelSpanContext = {
+      ...combatSpan,
+      emergentDirection: { tag: 'arcane', count: 3 }
+    }
+    expect(buildLevelUpPrompt(ctx)).toContain('"tag":"arcane"')
+    const result = await resolveLevelUpPerks(provider, ctx)
+    expect(
+      result.perks.some(
+        (perk) => perk.category === 'custom_feature' && perk.flavorTags.includes('arcane')
+      )
+    ).toBe(true)
   })
 })

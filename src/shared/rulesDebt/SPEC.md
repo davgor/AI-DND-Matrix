@@ -94,5 +94,5 @@ Match epic **126** Out of scope:
 - Multi-subject opinions / relationship web (**127**)
 - Scene / Social person links (**128**)
 - Opinions of factions as subjects (**125** reputation)
-- Combat condition disadvantage/auto-fail wiring and emergent homebrew honesty (**131**)
+- Combat condition disadvantage/auto-fail wiring and emergent homebrew honesty — see [`rulesHonesty/SPEC.md`](../rulesHonesty/SPEC.md) (**131**)
 - Formulaic “extra turns spent” magnitude scaling from early **004.17** drafts — v1 lockout uses catalog `cost` only

@@ -73,9 +73,9 @@ Document which Scene/Social text nodes are linkable, Social speaker vs other-nam
 
 #### Acceptance criteria
 
-- [ ] SPEC lists eligible DOM/text surfaces (Scene body, Social dialogue/action lines, exclusions)
-- [ ] Speaker-chrome vs in-prose link rules locked
-- [ ] Explicit reuse of 121 matcher module path
+- [x] SPEC lists eligible DOM/text surfaces (Scene body, Social dialogue/action lines, exclusions)
+- [x] Speaker-chrome vs in-prose link rules locked
+- [x] Explicit reuse of 121 matcher module path
 
 ### 128.2 Scene person links
 
@@ -85,9 +85,9 @@ Render Scene exposition through the shared person-link + emphasis path; activate
 
 #### Acceptance criteria
 
-- [ ] Component/integration test: known name in Scene → click opens dossier with that `npcId`
-- [ ] Unknown name not linked; ambiguous duplicate not linked
-- [ ] Emphasis still renders inside Scene lines
+- [x] Component/integration test: known name in Scene → click opens dossier with that `npcId`
+- [x] Unknown name not linked; ambiguous duplicate not linked
+- [x] Emphasis still renders inside Scene lines
 
 ### 128.3 Social person links
 
@@ -97,9 +97,9 @@ Apply the same linker to Social prose bodies/reactions. Preserve avatar/speaker 
 
 #### Acceptance criteria
 
-- [ ] Other known NPC names inside a message link correctly
-- [ ] Avatar/speaker entry still opens the speaker’s dossier
-- [ ] Component tests cover dialogue + non-dialogue reaction kinds in scope
+- [x] Other known NPC names inside a message link correctly
+- [x] Avatar/speaker entry still opens the speaker’s dossier
+- [x] Component tests cover dialogue + non-dialogue reaction kinds in scope
 
 ### 128.4 Verification + smoke
 
@@ -109,6 +109,6 @@ Smoke: journal (**121**) + Scene + Social all open the same modal for the same N
 
 #### Acceptance criteria
 
-- [ ] Smoke notes cover Scene + Social → dossier
-- [ ] Regression: **121** journal tests remain green
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] Smoke notes cover Scene + Social → dossier
+- [x] Regression: **121** journal tests remain green
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

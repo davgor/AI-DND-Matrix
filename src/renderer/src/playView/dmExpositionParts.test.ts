@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { AlignmentShiftWarningBanner, renderFeedLine, renderNpcLine } from './dmExpositionParts'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  AlignmentShiftWarningBanner,
+  renderFeedLine,
+  renderNpcLine
+} from './dmExpositionParts'
 import { hasEmphasisTypes } from '../test/formattedTextTestUtils'
+import { buttonEntries, collectText } from './askDmTestUtils'
 
 describe('AlignmentShiftWarningBanner', () => {
   it('renders alert role and warning copy when a shift is pending', () => {
@@ -79,5 +84,60 @@ describe('renderNpcLine', () => {
     expect(hasEmphasisTypes(actionInner, ['strong'])).toBe(true)
     expect(dialogue.type).toBe('em')
     expect(action.type).toBe('strong')
+  })
+})
+
+describe('Scene person links', () => {
+  const anna = { npcId: 'npc-anna', name: 'Anna' }
+
+  it('activates a known name in scene feed prose with the matched npcId', () => {
+    const onPersonActivate = vi.fn()
+    const line = renderFeedLine(
+      {
+        speaker: 'dm',
+        text: 'Anna waits by the gate.',
+        id: '1',
+        timestamp: 't'
+      },
+      { personCandidates: [anna], onPersonActivate }
+    )
+    const person = buttonEntries(line).find((button) => button.label === 'Anna')
+    expect(person).toBeDefined()
+    person?.onClick?.()
+    expect(onPersonActivate).toHaveBeenCalledWith('npc-anna')
+  })
+
+  it('does not link unknown or ambiguous duplicate names', () => {
+    const onPersonActivate = vi.fn()
+    const unknown = renderFeedLine(
+      { speaker: 'dm', text: 'A stranger nods.', id: '1', timestamp: 't' },
+      { personCandidates: [anna], onPersonActivate }
+    )
+    expect(buttonEntries(unknown)).toEqual([])
+
+    const ambiguous = renderFeedLine(
+      { speaker: 'dm', text: 'Anna smiles.', id: '2', timestamp: 't' },
+      {
+        personCandidates: [anna, { npcId: 'npc-anna-2', name: 'Anna' }],
+        onPersonActivate
+      }
+    )
+    expect(buttonEntries(ambiguous)).toEqual([])
+    expect(onPersonActivate).not.toHaveBeenCalled()
+  })
+
+  it('keeps emphasis while linking a known name in NPC dialogue', () => {
+    const onPersonActivate = vi.fn()
+    const line = renderNpcLine(
+      { reactionKind: 'dialogue', text: '*Anna* whispers.' },
+      { personCandidates: [anna], onPersonActivate }
+    )
+    expect(hasEmphasisTypes(line.props.children as JSX.Element, ['em'])).toBe(true)
+    expect(collectText(line)).toBe('Anna whispers.')
+    expect(collectText(line)).not.toContain('*')
+    const person = buttonEntries(line).find((button) => button.label === 'Anna')
+    expect(person).toBeDefined()
+    person?.onClick?.()
+    expect(onPersonActivate).toHaveBeenCalledWith('npc-anna')
   })
 })

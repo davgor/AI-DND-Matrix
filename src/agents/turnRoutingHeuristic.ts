@@ -9,7 +9,8 @@ import type { TurnRoutingPlan } from '../shared/turnRouting/types'
 //
 // Bias rule (data-integrity item 1): `dmNarration` is the sole write path for
 // world facts, quests + their rewards, log book, cross-character entries,
-// journal, item grants, commerce, spells, alignment, and story-driven death.
+// journal, item grants, commerce, spells, alignment, story-driven death,
+// and typed world mutations (region status / NPC life — epic 130).
 // Any row that omits it may only fire on turns it can PROVE are inert; every
 // ambiguous signal returns null and defers to LLM routing.
 
@@ -91,7 +92,24 @@ const TRANSACTIONAL_TERMS: readonly string[] = [
   'price', 'prices', 'cost', 'costs', 'gold', 'coin', 'coins'
 ]
 
+// Place/person world-alter verbs — mutations persist only through dmNarration (130.4).
+const WORLD_ALTER_TERMS: readonly string[] = [
+  'burn', 'burns', 'burning', 'burned', 'burnt',
+  'destroy', 'destroys', 'destroying', 'destroyed',
+  'collapse', 'collapses', 'collapsing', 'collapsed',
+  'massacre', 'massacres', 'massacring', 'massacred',
+  'raze', 'razes', 'razing', 'razed',
+  'demolish', 'demolishes', 'demolishing', 'demolished',
+  'sack', 'sacks', 'sacking', 'sacked',
+  'ruin', 'ruins', 'ruining', 'ruined',
+  'torch', 'torches', 'torching', 'torched',
+  'level', 'levels', 'leveling', 'levelled', 'leveled',
+  'rebuild', 'rebuilds', 'rebuilding', 'rebuilt',
+  'restore', 'restores', 'restoring', 'restored'
+]
+
 const TRANSACTIONAL_PATTERN = new RegExp(`\\b(?:${TRANSACTIONAL_TERMS.join('|')})\\b`, 'i')
+const WORLD_ALTER_PATTERN = new RegExp(`\\b(?:${WORLD_ALTER_TERMS.join('|')})\\b`, 'i')
 
 // Commas are excluded here: direct address ("Mira, ...") is normal dialogue.
 // The act-row matcher rejects commas separately — physical phrases must be pure.
@@ -151,6 +169,7 @@ function inertTurnGuardBlocks(signals: TurnRoutingSignals): boolean {
     signals.hasInactivePlayersInRegion ||
     signals.presentNpcs.some((npc) => npc.isHostile) ||
     TRANSACTIONAL_PATTERN.test(signals.playerInput) ||
+    WORLD_ALTER_PATTERN.test(signals.playerInput) ||
     questMentionsSceneEntity(signals)
   )
 }

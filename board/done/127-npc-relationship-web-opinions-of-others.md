@@ -78,9 +78,9 @@ Extend `src/shared/npcDossier/` (or `src/shared/npcRelationships/`) with multi-s
 
 #### Acceptance criteria
 
-- [ ] SPEC replaces “player-only opinion” decision with multi-subject rules
-- [ ] Types for `OpinionSubject` / opinion row / web edge DTO exported
-- [ ] Isolation and anti-spoiler rules explicit
+- [x] SPEC replaces “player-only opinion” decision with multi-subject rules
+- [x] Types for `OpinionSubject` / opinion row / web edge DTO exported
+- [x] Isolation and anti-spoiler rules explicit
 
 ### 127.2 Opinion store + migration
 
@@ -90,9 +90,9 @@ Persist multi-subject opinions; migrate legacy `opinionSummary` / timestamps int
 
 #### Acceptance criteria
 
-- [ ] Existing saves keep “about you” opinion after migration
-- [ ] Isolation: opinion A→B never returned as A→C
-- [ ] Campaign delete cascades
+- [x] Existing saves keep “about you” opinion after migration
+- [x] Isolation: opinion A→B never returned as A→C
+- [x] Campaign delete cascades
 
 ### 127.3 Generate / refresh multi-subject opinions
 
@@ -102,9 +102,9 @@ Agent + IPC: generate opinion for `(npc, subject)` with isolation; refresh only 
 
 #### Acceptance criteria
 
-- [ ] Stub-provider tests for first generate + skip-when-fresh + regenerate-when-stale
-- [ ] Context assembly excludes other NPCs’ private memories
-- [ ] Other-PC and other-NPC subject paths both covered
+- [x] Stub-provider tests for first generate + skip-when-fresh + regenerate-when-stale
+- [x] Context assembly excludes other NPCs’ private memories
+- [x] Other-PC and other-NPC subject paths both covered
 
 ### 127.4 Dossier UX — about others
 
@@ -114,9 +114,9 @@ Opinion section: default “About you”; control to choose another known subjec
 
 #### Acceptance criteria
 
-- [ ] Component tests for subject switch + empty “no opinion yet”
-- [ ] Same modal shell; no second dossier type
-- [ ] Opening from Social still lands on about-you by default
+- [x] Component tests for subject switch + empty “no opinion yet”
+- [x] Same modal shell; no second dossier type
+- [x] Opening from Social still lands on about-you by default
 
 ### 127.5 Relationship web UI
 
@@ -126,9 +126,9 @@ Player-facing web/list of known NPC nodes and opinion edges; activate node → d
 
 #### Acceptance criteria
 
-- [ ] Only known-candidate NPCs appear as nodes
-- [ ] Edges only when an opinion row exists (or explicit empty state)
-- [ ] Component tests for empty campaign vs multi-edge fixture
+- [x] Only known-candidate NPCs appear as nodes
+- [x] Edges only when an opinion row exists (or explicit empty state)
+- [x] Component tests for empty campaign vs multi-edge fixture
 
 ### 127.6 Verification + smoke
 
@@ -138,6 +138,6 @@ Cross-PC opinion + NPC↔NPC opinion + web → dossier smoke notes; full deliver
 
 #### Acceptance criteria
 
-- [ ] Restart persistence verified in tests
-- [ ] Smoke notes: open web, open edge/node, switch dossier subject
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] Restart persistence verified in tests
+- [x] Smoke notes: open web, open edge/node, switch dossier subject
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

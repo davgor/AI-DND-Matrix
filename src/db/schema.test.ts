@@ -35,6 +35,7 @@ const ALL_TABLE_NAMES = [
   'llm_usage_events',
   'log_entries',
   'npc_memories',
+  'npc_opinions',
   'npcs',
   'quest_foe_assignments',
   'quests',
@@ -96,26 +97,21 @@ describe('schema migration 35', () => {
   })
 })
 
-describe('schema migration 39', () => {
-  it('migration 39 adds NPC dossier opinion columns', () => {
+describe('schema migration 52', () => {
+  it('migration 52 adds npc_opinions table', () => {
     const db = new Database(':memory:')
     runMigrations(
       db,
-      migrations.filter((migration) => migration.version <= 38)
+      migrations.filter((migration) => migration.version <= 51)
     )
+    expect(tableNames(db)).not.toContain('npc_opinions')
 
     runMigrations(
       db,
-      migrations.filter((migration) => migration.version === 39)
+      migrations.filter((migration) => migration.version === 52)
     )
 
-    const npcColumns = db
-      .prepare('PRAGMA table_info(npcs)')
-      .all()
-      .map((row) => (row as { name: string }).name)
-    expect(npcColumns).toContain('opinion_summary')
-    expect(npcColumns).toContain('opinion_summary_generated_at')
-    expect(npcColumns).toContain('last_player_interaction_at')
+    expect(tableNames(db)).toContain('npc_opinions')
   })
 })
 

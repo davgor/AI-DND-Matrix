@@ -6,7 +6,7 @@ import { CampaignReviewFactionsSection } from '../campaignReview/CampaignReviewF
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { CampaignHubWorldPreview } from './CampaignHubWorldPreview'
 import { HubSessionRecapSection } from './HubSessionRecapSection'
-import { makeTestHubSnapshot } from './hubTestFixtures'
+import { makeTestHubSnapshot, makeTestRegion } from './hubTestFixtures'
 import type { Faction } from '../../../shared/factions'
 
 function sectionByClass(node: JSX.Element | undefined, className: string): JSX.Element | undefined {
@@ -92,6 +92,21 @@ describe('CampaignHubWorldPreview', () => {
       npcs: []
     })
     expect(findByType(readOnlyCard, EditableField)).toBeUndefined()
+  })
+
+  it('renders destroyed banner from structured region status (130.5)', () => {
+    const snapshot = makeTestHubSnapshot({
+      regions: [makeTestRegion({ status: { destroyed: true, cause: 'siege' } })]
+    })
+    const card = CampaignReviewReadOnlyRegionCard({
+      region: snapshot.regions[0]!,
+      extras: snapshot.regionExtras[0],
+      npcs: []
+    })
+    const banner = sectionByClass(card, 'campaign-review-region-destroyed')
+    expect(banner).toBeDefined()
+    expect(JSON.stringify(banner?.props?.children)).toContain('destroyed')
+    expect(JSON.stringify(banner?.props?.children)).toContain('siege')
   })
 
   it('passes session recap state into HubSessionRecapSection (not Recent events)', () => {

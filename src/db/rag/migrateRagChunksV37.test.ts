@@ -128,6 +128,7 @@ describe('migration v37 install and upgrade', () => {
         'faction_relations',
         'factions',
         'llm_usage_events',
+        'npc_opinions',
         'quest_foe_assignments',
         'rag_backfill_state',
         'rag_chunks'

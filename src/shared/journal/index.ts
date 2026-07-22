@@ -7,4 +7,7 @@ export type {
 } from './types'
 export { matchPersonNames } from './matchPersonNames'
 export { toJournalKnownDossiers } from './knownDossiers'
-export { mergePersonMatchCandidates } from './personCandidates'
+export {
+  excludeSpeakerFromPersonCandidates,
+  mergePersonMatchCandidates
+} from './personCandidates'

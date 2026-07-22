@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { RandomFn } from '../engine/abilities'
 import { resolveFleeDisengage } from '../engine/fleeDisengage'
+import { conditionsFromStats } from '../engine/conditions'
 import { proficiencyBonus } from '../engine/proficiency'
 import { judgeEscapeNarration } from '../agents/fleeNarration'
 import type { Provider } from '../agents/providers/types'
@@ -89,7 +90,8 @@ export function rollFleeDisengageCheck(character: Character, hostile: Threatenin
     playerAgilityScore: abilityScores?.agility ?? DEFAULT_AGILITY_SCORE,
     playerProficient: true,
     proficiencyBonus: proficiencyBonus(character.level),
-    hostileAgilityScore: hostile.agilityScore
+    hostileAgilityScore: hostile.agilityScore,
+    playerConditions: conditionsFromStats(character.stats)
   })
 }
 

@@ -151,6 +151,77 @@ function migrateFactionsV48(db: Database.Database): void {
   addColumnIfMissing(db, 'npcs', 'is_divine_manifestation', 'INTEGER NOT NULL DEFAULT 0')
 }
 
+function createNpcOpinionsTableV52(db: Database.Database): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS npc_opinions (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL REFERENCES campaigns(id),
+      npc_id TEXT NOT NULL REFERENCES npcs(id) ON DELETE CASCADE,
+      subject_type TEXT NOT NULL CHECK (subject_type IN ('player_character', 'npc')),
+      subject_id TEXT NOT NULL,
+      summary TEXT,
+      generated_at TEXT,
+      last_relevant_interaction_at TEXT,
+      stance TEXT NOT NULL DEFAULT 'unknown'
+        CHECK (stance IN ('warm', 'wary', 'hostile', 'unknown')),
+      UNIQUE(npc_id, subject_type, subject_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_npc_opinions_campaign
+      ON npc_opinions(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_npc_opinions_npc
+      ON npc_opinions(npc_id);
+  `)
+}
+
+function migrateLegacyOpinionsIntoTableV52(db: Database.Database): void {
+  const legacyRows = db
+    .prepare(
+      `SELECT id, campaign_id, opinion_summary, opinion_summary_generated_at, last_player_interaction_at
+       FROM npcs WHERE opinion_summary IS NOT NULL`
+    )
+    .all() as Array<{
+    id: string
+    campaign_id: string
+    opinion_summary: string
+    opinion_summary_generated_at: string | null
+    last_player_interaction_at: string | null
+  }>
+
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO npc_opinions (
+       id, campaign_id, npc_id, subject_type, subject_id,
+       summary, generated_at, last_relevant_interaction_at, stance
+     ) VALUES (?, ?, ?, 'player_character', ?, ?, ?, ?, 'unknown')`
+  )
+  const findHero = db.prepare(
+    `SELECT id FROM characters
+     WHERE campaign_id = ? AND kind = 'player'
+     ORDER BY rowid ASC LIMIT 1`
+  )
+
+  for (const row of legacyRows) {
+    const hero = findHero.get(row.campaign_id) as { id: string } | undefined
+    if (!hero) {
+      continue
+    }
+    insert.run(
+      `legacy-${row.id}`,
+      row.campaign_id,
+      row.id,
+      hero.id,
+      row.opinion_summary,
+      row.opinion_summary_generated_at,
+      row.last_player_interaction_at
+    )
+  }
+}
+
+function migrateNpcOpinionsV52(db: Database.Database): void {
+  createNpcOpinionsTableV52(db)
+  migrateLegacyOpinionsIntoTableV52(db)
+}
+
 export const migrations: Migration[] = [
   {
     version: 1,
@@ -836,6 +907,12 @@ export const migrations: Migration[] = [
     version: 51,
     up: (db) => {
       addColumnIfMissing(db, 'bestiary_species', 'creature_token_path', 'TEXT')
+    }
+  },
+  {
+    version: 52,
+    up: (db) => {
+      migrateNpcOpinionsV52(db)
     }
   }
 ]

@@ -1,5 +1,6 @@
 import type { RandomFn } from './abilities'
-import { rollD20 } from './checks'
+import { rollD20WithMode } from './checks'
+import { attackAdvantageMode, type Condition } from './conditions'
 import { isNaturalTwenty, resolveDamage, type DamageRoll } from './damage'
 
 export interface NpcAttackParams {
@@ -8,6 +9,8 @@ export interface NpcAttackParams {
   damageRoll: DamageRoll
   targetAc: number
   targetHp: number
+  /** Attacker conditions — disadvantage applied per CONDITION_EFFECTS. */
+  attackerConditions?: Condition[]
 }
 
 export interface NpcAttackResolution {
@@ -20,7 +23,10 @@ export interface NpcAttackResolution {
 }
 
 export function resolveNpcAttack(params: NpcAttackParams): NpcAttackResolution {
-  const attackRoll = rollD20(params.rng)
+  const attackRoll = rollD20WithMode(
+    params.rng,
+    attackAdvantageMode(params.attackerConditions ?? [])
+  )
   const attackTotal = attackRoll + params.attackBonus
 
   if (attackRoll === 1 || attackTotal < params.targetAc) {

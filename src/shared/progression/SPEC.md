@@ -59,7 +59,7 @@ Built when a ceremony starts. Includes since `stats.lastLevelUpXp`:
 - journal entries (027)
 - log book entries (025)
 - tagged activity counts: `combat`, `arcane`, `social`, `exploration`
-- `detectEmergentDirection` on tagged events
+- `detectEmergentDirection` on tagged events (see [`rulesHonesty/SPEC.md`](../rulesHonesty/SPEC.md) for the full detect → level-up offer → template persist loop)
 - archetype from character row
 
 Tag sources: event payload `activityTag` or inferred from event `type` (`combat_attack` → `combat`, check tags from payload).

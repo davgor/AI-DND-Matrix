@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import type { PlayLogEntry } from '../../../main/narrationLog'
+import {
+  excludeSpeakerFromPersonCandidates,
+  type PersonMatchCandidate
+} from '../../../shared/journal'
 import { FormattedText } from '../shared/FormattedText'
 import { incomingHighlightClassName } from './incomingHighlight'
 
@@ -125,6 +129,7 @@ export function SocialMessage(props: {
   entry: PlayLogEntry
   highlighted?: boolean
   onOpenNpcDossier?: (npcId: string) => void
+  personCandidates?: PersonMatchCandidate[]
 }): JSX.Element {
   const { entry } = props
   const side = socialMessageSide(entry)
@@ -134,6 +139,10 @@ export function SocialMessage(props: {
   const bubbleClass = incomingHighlightClassName(
     props.highlighted === true,
     'social-message-bubble'
+  )
+  const proseCandidates = excludeSpeakerFromPersonCandidates(
+    props.personCandidates ?? [],
+    dossierNpcId
   )
 
   return (
@@ -149,7 +158,13 @@ export function SocialMessage(props: {
       <div className="social-message-body">
         <SocialName name={name} npcId={dossierNpcId} onOpenNpcDossier={props.onOpenNpcDossier} />
         <div className={bubbleClass}>
-          {FormattedText({ as: 'p', className: 'social-message-text', text: entry.text })}
+          {FormattedText({
+            as: 'p',
+            className: 'social-message-text',
+            text: entry.text,
+            personCandidates: proseCandidates,
+            onPersonActivate: props.onOpenNpcDossier
+          })}
         </div>
       </div>
     </div>

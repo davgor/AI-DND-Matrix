@@ -14,3 +14,17 @@ export function mergePersonMatchCandidates(
   }
   return [...byId.values()]
 }
+
+/**
+ * Social prose: drop the current message speaker so avatar/name chrome stays the
+ * primary dossier entry for that NPC (epic 128).
+ */
+export function excludeSpeakerFromPersonCandidates(
+  candidates: PersonMatchCandidate[],
+  speakerNpcId: string | null | undefined
+): PersonMatchCandidate[] {
+  if (!speakerNpcId) {
+    return candidates
+  }
+  return candidates.filter((candidate) => candidate.npcId !== speakerNpcId)
+}

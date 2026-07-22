@@ -158,7 +158,7 @@ describe('assembleNarrationContext + narrate (006.3)', async () => {
     })
 
     const context = await assembleNarrationContext({ db, campaignId: campaign.id, regionId: region.id, characterId: player.id, playerInput: 'test action' })
-    expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira', isHostile: false }])
+    expect(context.presentNpcs).toEqual([{ id: npc.id, name: 'Mira', isHostile: false, alive: true }])
   })
 
   it('excludes already-promoted NPCs from presentNpcs, since they are now party members', async () => {
@@ -217,7 +217,7 @@ describe('bestiary recall in narration context (116.10)', () => {
     })
 
     expect(context.presentNpcs).toEqual([
-      { id: instance.id, name: 'Rift-beast', isHostile: true }
+      { id: instance.id, name: 'Rift-beast', isHostile: true, alive: true }
     ])
     expect(context.bestiaryRecall).toEqual([
       expect.objectContaining({

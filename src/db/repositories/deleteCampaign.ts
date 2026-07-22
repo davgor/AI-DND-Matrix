@@ -1,10 +1,12 @@
 import type Database from 'better-sqlite3'
+import { deleteNpcOpinionsByCampaign } from './npcOpinions'
 
 export interface DeleteCampaignHooks {
   beforeCommit?: () => void
 }
 
 function deleteNestedCampaignRows(db: Database.Database, campaignId: string): void {
+  deleteNpcOpinionsByCampaign(db, campaignId)
   db.prepare(
     `DELETE FROM character_faction_reputations
      WHERE character_id IN (SELECT id FROM characters WHERE campaign_id = ?)

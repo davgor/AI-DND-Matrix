@@ -7,6 +7,7 @@ export function PlaySheetNpcDossierModal(props: {
   npcId: string | null
   isOpen: boolean
   onClose: () => void
+  onOpenNpcDossier?: (npcId: string) => void
 }): JSX.Element {
   const dossierState = useNpcDossier(props.campaignId, props.characterId, props.npcId, props.isOpen)
   return (
@@ -16,6 +17,10 @@ export function PlaySheetNpcDossierModal(props: {
       error={dossierState.error}
       isOpen={props.isOpen}
       onClose={props.onClose}
+      campaignId={props.campaignId}
+      characterId={props.characterId}
+      npcId={props.npcId}
+      onOpenNpcFromWeb={props.onOpenNpcDossier}
     />
   )
 }

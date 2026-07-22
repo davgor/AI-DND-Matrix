@@ -40,7 +40,22 @@ From play mode, open the **Journal** overlay (play sheet → Journal → Open jo
 2. **Known-dossiers list:** In the Journal overlay’s **Known dossiers** section, click a row. Same dossier modal for that `npcId`.
 3. **Close dossier:** Close the dossier with the modal’s close control (or overlay dismiss). Focus/UX matches other play-sheet modals (log book People → dossier); the Journal overlay remains open and usable underneath — no journal-only dossier UI.
 
-Cross-link: [Character journal smoke test](./journal-smoke-test.md) (DB/persist loop).
+Cross-link: [Character journal smoke test](./journal-smoke-test.md) (DB/persist loop). Scene / Social prose links: see [Scene / Social prose entry points](#scene--social-prose-entry-points-epic-128) below.
+
+## Scene / Social prose entry points (epic **128**)
+
+Same candidate set and matcher as journal (`src/shared/journal/SPEC.md`). Scene and Social prose use FormattedText person links; Social avatar/speaker name chrome stays the primary entry for the *speaker*.
+
+1. **Scene summary:** In play mode, with a scene summary that mentions a candidate NPC by name, click the linked name in the Scene header. Same `NpcDossierModal` opens via `modals.openDossier(npcId)`.
+2. **Social bubble (other NPC):** In a Social message whose prose mentions a *different* candidate NPC, click that name inside the bubble. Dossier opens for the matched `npcId` (not nested under speaker chrome).
+3. **Social speaker chrome unchanged:** Avatar / speaker name still open the speaker’s dossier when `npcId` is present. The speaker’s own name inside their bubble is not linked (avoid double controls).
+4. **No spoilers:** An unencountered cast name (not in the candidate set) stays plain text with no link. Ambiguous duplicate display names stay plain text.
+
+Automated coverage (targeted):
+
+```bash
+npx vitest run src/shared/journal/personCandidates.test.ts src/renderer/src/playView/dmExpositionParts.test.ts src/renderer/src/playView/socialStreamParts.test.ts src/renderer/src/characterSheet/CharacterJournalSection.test.tsx src/renderer/src/shared/FormattedText.test.ts
+```
 
 ## Recorded run (template)
 

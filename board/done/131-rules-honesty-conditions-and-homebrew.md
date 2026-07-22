@@ -60,9 +60,9 @@ Document which resolution APIs apply which `ConditionEffect` fields; document em
 
 #### Acceptance criteria
 
-- [ ] SPEC maps each condition → mechanical effect at named call sites
-- [ ] SPEC locks homebrew player-visible loop
-- [ ] Non-goals explicit
+- [x] SPEC maps each condition → mechanical effect at named call sites
+- [x] SPEC locks homebrew player-visible loop
+- [x] Non-goals explicit
 
 ### 131.2 Engine — apply condition effects
 
@@ -72,9 +72,9 @@ Pure helpers (or restore pruned ones) that wrap d20/check/attack inputs with dis
 
 #### Acceptance criteria
 
-- [ ] Unit tests for each condition’s table row
-- [ ] `canAct` remains authoritative for preventsActions
-- [ ] No Electron/DB imports in `/engine`
+- [x] Unit tests for each condition’s table row
+- [x] `canAct` remains authoritative for preventsActions
+- [x] No Electron/DB imports in `/engine`
 
 ### 131.3 Wire combat and check resolution
 
@@ -84,9 +84,9 @@ Call helpers from combat attack resolution and ability-check paths so sheet-visi
 
 #### Acceptance criteria
 
-- [ ] Integration test: poisoned attacker has disadvantage (or equivalent) on attacks
-- [ ] Stunned/unconscious cannot take Actions (existing + reinforced)
-- [ ] UI still displays active conditions
+- [x] Integration test: poisoned attacker has disadvantage (or equivalent) on attacks
+- [x] Stunned/unconscious cannot take Actions (existing + reinforced)
+- [x] UI still displays active conditions
 
 ### 131.4 Emergent homebrew loop
 
@@ -96,9 +96,9 @@ Audit `detectEmergentDirection` → level-up offer → persist. Restore minimal 
 
 #### Acceptance criteria
 
-- [ ] Automated test covers detection influencing a level-up offer payload
-- [ ] README homebrew paragraph matches code
-- [ ] Failure of flavor LLM never blocks engine level-up numbers
+- [x] Automated test covers detection influencing a level-up offer payload
+- [x] README homebrew paragraph matches code
+- [x] Failure of flavor LLM never blocks engine level-up numbers
 
 ### 131.5 README + smoke
 
@@ -108,6 +108,6 @@ Update README Rules Engine bullets; smoke notes for condition effect + homebrew 
 
 #### Acceptance criteria
 
-- [ ] README conditions claim is true
-- [ ] Smoke notes or runbook deltas exist
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass
+- [x] README conditions claim is true
+- [x] Smoke notes or runbook deltas exist
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode`, and `act` PR-checks + deadcode workflows pass

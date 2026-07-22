@@ -3,6 +3,8 @@ import type Database from 'better-sqlite3'
 
 export interface RegionStatus {
   destroyed: boolean
+  /** Structural harm without full destroy (epic 130). */
+  damaged?: boolean
   cause?: string
 }
 

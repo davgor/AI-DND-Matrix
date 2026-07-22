@@ -16,6 +16,7 @@ import {
   buildDmFactionPlayPromptSection,
   loadDmFactionPlayContext
 } from './factionPlayContext'
+import { buildWorldMutationDigest } from '../shared/worldMutations'
 import { loadActiveQuestsForCharacter } from './narrationQuestContext'
 import { loadKnownSpellsForNarration } from './narrationSpellContext'
 import type { ActiveQuestContext } from './questWindow'
@@ -29,6 +30,7 @@ type PresentNpcContext = {
   id: string
   name: string
   isHostile: boolean
+  alive: boolean
 }
 
 function listInactiveLivingPlayersInRegion(
@@ -63,6 +65,7 @@ function loadNarrationWorldFields(
   storyThreadState: { id: string; state: string; summary: string } | null
   presentNpcs: PresentNpcContext[]
   bestiaryRecall: SlimPresentBestiaryGrounding[]
+  worldMutationDigest?: string
 } {
   const region = getRegionById(db, regionId)
   const recentEvents = slimEvents(takeRecent(listEventsByCampaign(db, campaignId)))
@@ -71,7 +74,8 @@ function loadNarrationWorldFields(
   const presentNpcs = regionNpcs.map((npc) => ({
     id: npc.id,
     name: npc.name,
-    isHostile: isHostileNpc(npc)
+    isHostile: isHostileNpc(npc),
+    alive: npc.status.alive
   }))
   const bestiaryRecall = loadPresentBestiaryGrounding(db, {
     characterId,
@@ -80,14 +84,21 @@ function loadNarrationWorldFields(
       bestiarySpeciesId: npc.bestiarySpeciesId
     }))
   })
+  const regionStatus = region?.status ?? { destroyed: false }
+  const worldMutationDigest = buildWorldMutationDigest({
+    regionName: region?.name ?? 'Unknown region',
+    regionStatus,
+    presentNpcs
+  })
   return {
-    regionStatus: region?.status ?? { destroyed: false },
+    regionStatus,
     recentEvents,
     storyThreadState: primaryThread
       ? { id: primaryThread.id, state: primaryThread.state, summary: primaryThread.summary }
       : null,
     presentNpcs,
-    bestiaryRecall
+    bestiaryRecall,
+    ...(worldMutationDigest ? { worldMutationDigest } : {})
   }
 }
 
@@ -169,6 +180,7 @@ export function loadNarrationContextFields(
   activeQuests: ActiveQuestContext[]
   knownSpells: KnownSpellContext[]
   factionPlaySection?: string
+  worldMutationDigest?: string
 } {
   const world = loadNarrationWorldFields(db, input.campaignId, input.regionId, input.characterId)
   const characterFields = loadNarrationCharacterFields(db, {

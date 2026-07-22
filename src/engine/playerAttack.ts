@@ -1,5 +1,6 @@
 import type { RandomFn } from './abilities'
-import { rollD20 } from './checks'
+import { rollD20WithMode } from './checks'
+import { attackAdvantageMode, type Condition } from './conditions'
 import { isNaturalTwenty, type ResistanceProfile } from './damage'
 import { resolveWeaponDamageAgainstProfile } from './weaponDamage'
 import type { AttackLethality } from '../shared/npcCombat/types'
@@ -14,6 +15,8 @@ export interface PlayerAttackParams {
   targetResistances?: ResistanceProfile
   /** Default: 'lethal'. Non-lethal stops at incapacitation rather than kill. */
   lethality?: AttackLethality
+  /** Attacker sheet/NPC conditions — disadvantage applied per CONDITION_EFFECTS. */
+  attackerConditions?: Condition[]
 }
 
 export interface PlayerAttackResolution {
@@ -40,7 +43,10 @@ interface MissInput {
 
 export function resolvePlayerAttackAgainstNpc(params: PlayerAttackParams): PlayerAttackResolution {
   const lethality = params.lethality ?? 'lethal'
-  const attackRoll = rollD20(params.rng)
+  const attackRoll = rollD20WithMode(
+    params.rng,
+    attackAdvantageMode(params.attackerConditions ?? [])
+  )
   const attackTotal = attackRoll + params.attackModifier
   const emptyBreakdown: DamageBreakdown = { components: [], total: 0 }
 
