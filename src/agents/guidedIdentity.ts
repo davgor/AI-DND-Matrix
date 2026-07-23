@@ -160,10 +160,15 @@ function isIdentityInterviewResponse(value: unknown): value is IdentityInterview
 
 function whereStartingRegionIsValid(
   response: IdentityInterviewResponse,
-  regions: IdentityRegionOption[]
+  regions: IdentityRegionOption[],
+  current: IdentityFoundationsStatus
 ): boolean {
   const where = response.foundations.where
   if (!(where.complete && where.summary)) {
+    return true
+  }
+  // Already-locked Where may be re-emitted without startingRegionId.
+  if (isFoundationLocked(current.where)) {
     return true
   }
   const regionId = response.startingRegionId
@@ -395,7 +400,7 @@ export async function runIdentityInterviewTurn(
     (parsed) =>
       isIdentityInterviewResponse(parsed) &&
       foundationsAdvanceInOrder(context.currentFoundations, parsed.foundations) &&
-      whereStartingRegionIsValid(parsed, context.regions)
+      whereStartingRegionIsValid(parsed, context.regions, context.currentFoundations)
         ? parsed
         : undefined,
     {

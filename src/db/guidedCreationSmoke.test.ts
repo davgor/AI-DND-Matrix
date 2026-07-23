@@ -34,84 +34,103 @@ function seedCampaign(db: ReturnType<typeof createTestDb>) {
   return { campaign, player, region }
 }
 
+function identityScriptReplies(regionId: string): string[] {
+  return [
+    JSON.stringify({
+      dmReply: 'Why are you adventuring?',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: false },
+        where: { complete: false },
+        what: { complete: false }
+      },
+      allFoundationsComplete: false
+    }),
+    JSON.stringify({
+      dmReply: 'Where do you start?',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: true, summary: 'Justice.' },
+        where: { complete: false },
+        what: { complete: false }
+      },
+      allFoundationsComplete: false
+    }),
+    JSON.stringify({
+      dmReply: 'What are you doing at the start?',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: true, summary: 'Justice.' },
+        where: { complete: true, summary: 'Starts in Oakhollow.' },
+        what: { complete: false }
+      },
+      allFoundationsComplete: false,
+      startingRegionId: regionId
+    }),
+    JSON.stringify({
+      dmReply: 'Locked in.',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: true, summary: 'Justice.' },
+        where: { complete: true, summary: 'Starts in Oakhollow.' },
+        what: { complete: true, summary: 'Guarding the gate.' }
+      },
+      allFoundationsComplete: true
+    })
+  ]
+}
+
+async function runIdentityPhase(
+  db: ReturnType<typeof createTestDb>,
+  campaignId: string,
+  characterId: string,
+  regionId: string
+): Promise<void> {
+  const identityProvider = createScriptedProvider(identityScriptReplies(regionId))
+  const sendIdentity = (message: string) =>
+    sendGuidedCreationMessage(db, identityProvider, {
+      campaignId,
+      characterId,
+      phase: 'identity',
+      message
+    })
+  expect((await sendIdentity('I am Kael, a knight.')).ok).toBe(true)
+  expect((await sendIdentity('I seek justice.')).ok).toBe(true)
+  expect((await sendIdentity('I start in Oakhollow.')).ok).toBe(true)
+  const identityResult = await sendIdentity('I am guarding the gate.')
+  expect(identityResult.ok).toBe(true)
+  expect(readGuidedCreationFields(db, characterId)?.guidedCreationPhase).toBe('opening_scene')
+}
+
+async function runOpeningScenePhase(
+  db: ReturnType<typeof createTestDb>,
+  campaignId: string,
+  characterId: string
+): Promise<void> {
+  const sceneProvider = createScriptedProvider([
+    JSON.stringify({
+      dmReply: 'We begin in the rain.',
+      proposedOpeningScene: 'Rain drums on the tavern roof.',
+      sceneReady: true
+    })
+  ])
+  const sceneResult = await sendGuidedCreationMessage(db, sceneProvider, {
+    campaignId,
+    characterId,
+    phase: 'opening_scene',
+    message: 'Start in the tavern.'
+  })
+  expect(sceneResult.ok).toBe(true)
+}
+
 describe('guided creation end-to-end smoke', () => {
   it('runs identity and opening-scene phases then allows play entry', async () => {
     const db = createTestDb()
     const { campaign, player, region } = seedCampaign(db)
     expect(canEnterPlay(player)).toBe(false)
     setGuidedCreationPhase(db, player.id, 'identity')
-
-    const identityProvider = createScriptedProvider([
-      JSON.stringify({
-        dmReply: 'Why are you adventuring?',
-        foundations: {
-          who: { complete: true, summary: 'Kael, a knight.' },
-          why: { complete: false },
-          where: { complete: false },
-          what: { complete: false }
-        },
-        allFoundationsComplete: false
-      }),
-      JSON.stringify({
-        dmReply: 'Where do you start?',
-        foundations: {
-          who: { complete: true, summary: 'Kael, a knight.' },
-          why: { complete: true, summary: 'Justice.' },
-          where: { complete: false },
-          what: { complete: false }
-        },
-        allFoundationsComplete: false
-      }),
-      JSON.stringify({
-        dmReply: 'What are you doing at the start?',
-        foundations: {
-          who: { complete: true, summary: 'Kael, a knight.' },
-          why: { complete: true, summary: 'Justice.' },
-          where: { complete: true, summary: 'Starts in Oakhollow.' },
-          what: { complete: false }
-        },
-        allFoundationsComplete: false,
-        startingRegionId: region.id
-      }),
-      JSON.stringify({
-        dmReply: 'Locked in.',
-        foundations: {
-          who: { complete: true, summary: 'Kael, a knight.' },
-          why: { complete: true, summary: 'Justice.' },
-          where: { complete: true, summary: 'Starts in Oakhollow.' },
-          what: { complete: true, summary: 'Guarding the gate.' }
-        },
-        allFoundationsComplete: true
-      })
-    ])
-    const sendIdentity = (message: string) =>
-      sendGuidedCreationMessage(db, identityProvider, {
-        campaignId: campaign.id,
-        characterId: player.id,
-        phase: 'identity',
-        message
-      })
-    expect((await sendIdentity('I am Kael, a knight.')).ok).toBe(true)
-    expect((await sendIdentity('I seek justice.')).ok).toBe(true)
-    expect((await sendIdentity('I start in Oakhollow.')).ok).toBe(true)
-    const identityResult = await sendIdentity('I am guarding the gate.')
-    expect(identityResult.ok).toBe(true)
-    expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('opening_scene')
-
-    const sceneProvider = createScriptedProvider([
-      JSON.stringify({
-        dmReply: 'We begin in the rain.',
-        proposedOpeningScene: 'Rain drums on the tavern roof.',
-        sceneReady: true
-      })
-    ])
-    const sceneResult = await sendGuidedCreationMessage(db, sceneProvider, {
-      campaignId: campaign.id,
-      characterId: player.id,
-      phase: 'opening_scene',
-      message: 'Start in the tavern.'
-    })
-    expect(sceneResult.ok).toBe(true)
+    await runIdentityPhase(db, campaign.id, player.id, region.id)
+    await runOpeningScenePhase(db, campaign.id, player.id)
 
     const fields = readGuidedCreationFields(db, player.id)
     expect(fields?.guidedCreationPhase).toBe('complete')

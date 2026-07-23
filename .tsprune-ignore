@@ -1,7 +1,7 @@
 # Baseline ignore for ts-prune (one pattern per line)
 # Generated from tsconfig.node.json + tsconfig.web.json
 # Refresh after export moves/deletes: npm run deadcode:refresh
-# Refreshed 2026-07-23 (1389 entries)
+# Refreshed 2026-07-23 (1388 entries)
 
 electron.vite.config.ts:41 - default
 src/agents/bestiary/assignQuestFoes.ts:168 - parseEnemyHintsFromQuestText
@@ -145,7 +145,7 @@ src/agents/factionPlayContext.ts:53 - shouldIncludePantheonDigest
 src/agents/fleeNarration.ts:10 - FleeNarrationSchemaError
 src/agents/fleeNarration.ts:15 - FleeNarrationContext
 src/agents/fleeNarration.ts:59 - validateDmEscapeJudgment
-src/agents/guidedIdentity.ts:40 - IdentityKickoffResponse
+src/agents/guidedIdentity.ts:51 - IdentityKickoffResponse
 src/agents/guidedOpeningScene.ts:18 - OpeningSceneContext
 src/agents/guidedOpeningScene.ts:6 - OpeningSceneIdentity
 src/agents/inactivePlayer.ts:139 - InactivePlayerAction
@@ -1074,22 +1074,21 @@ src/shared/guidedCreation/stageRouting.ts:48 - findCompanionsPhasePlayer
 src/shared/guidedCreation/stageRouting.ts:5 - OnboardingStage
 src/shared/guidedCreation/stageRouting.ts:74 - listPlayerCharacters
 src/shared/guidedCreation/types.ts:1 - GUIDED_CREATION_PHASES
-src/shared/guidedCreation/types.ts:106 - GuidedCreationGenerateReplyInput
-src/shared/guidedCreation/types.ts:118 - GuidedCreationSendMessageSuccess
-src/shared/guidedCreation/types.ts:128 - GuidedCreationSendMessageFailure
+src/shared/guidedCreation/types.ts:104 - GuidedCreationKickoffFailure
+src/shared/guidedCreation/types.ts:118 - GuidedCreationGenerateReplyInput
 src/shared/guidedCreation/types.ts:13 - GUIDED_MESSAGE_PHASES
-src/shared/guidedCreation/types.ts:137 - GuidedCreationReadyToEnterPlayInput
-src/shared/guidedCreation/types.ts:142 - GuidedCreationReadyToEnterPlayResult
+src/shared/guidedCreation/types.ts:130 - GuidedCreationSendMessageSuccess
+src/shared/guidedCreation/types.ts:140 - GuidedCreationSendMessageFailure
+src/shared/guidedCreation/types.ts:149 - GuidedCreationReadyToEnterPlayInput
+src/shared/guidedCreation/types.ts:154 - GuidedCreationReadyToEnterPlayResult
 src/shared/guidedCreation/types.ts:16 - GuidedMessageRole
 src/shared/guidedCreation/types.ts:21 - FoundationStatus
 src/shared/guidedCreation/types.ts:47 - IdentityFoundationSpec
-src/shared/guidedCreation/types.ts:53 - IDENTITY_FOUNDATION_SPECS
-src/shared/guidedCreation/types.ts:64 - GuidedCreationSendMessageInput
-src/shared/guidedCreation/types.ts:71 - GuidedCreationKickoffInput
-src/shared/guidedCreation/types.ts:78 - GuidedCreationRevertPhaseInput
-src/shared/guidedCreation/types.ts:83 - GuidedCreationRevertPhaseResult
-src/shared/guidedCreation/types.ts:87 - GuidedCreationKickoffSuccess
-src/shared/guidedCreation/types.ts:92 - GuidedCreationKickoffFailure
+src/shared/guidedCreation/types.ts:76 - GuidedCreationSendMessageInput
+src/shared/guidedCreation/types.ts:83 - GuidedCreationKickoffInput
+src/shared/guidedCreation/types.ts:90 - GuidedCreationRevertPhaseInput
+src/shared/guidedCreation/types.ts:95 - GuidedCreationRevertPhaseResult
+src/shared/guidedCreation/types.ts:99 - GuidedCreationKickoffSuccess
 src/shared/hp/types.ts:10 - MaxHpBreakdown
 src/shared/hp/types.ts:22 - CatalogMonsterHpInput
 src/shared/hp/types.ts:4 - HitDieRollLog
