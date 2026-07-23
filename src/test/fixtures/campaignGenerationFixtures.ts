@@ -1,4 +1,5 @@
 import type { GeneratedBestiaryFoe, GeneratedNpc } from '../../agents/campaignGeneration/types'
+import { formatLabeledBlocks } from '../../agents/skeletonFill'
 
 export function makeRegion(name: string, suffix: string) {
   return {
@@ -65,14 +66,116 @@ export const VALID_WORLD = {
     'Three ages ago the continental shelf cracked during the Sundering, swallowing coastal kingdoms and leaving archipelagos where farmland once stretched to the horizon. Temples rang warning bells for weeks, but the sea still climbed through harbor streets faster than any evacuation plan. Survivors who reached high ground rebuilt as cliff clans who still measure wealth in rope and fresh water.\n\nSalvagers still dredge barnacled crowns and drowned libraries from the inner bays. Scholars argue whether the flood was natural, divine punishment, or sabotage between rival archmages, and every court commissions a different answer. Dredging licenses have become the fastest path to a noble title in port cities.\n\nFor two centuries the Charting Compact mapped safe passages and taxed moorings until guild wars broke the tithe system and beacon fires fell dark. Captains who remembered the old routes became kings of smuggling lanes overnight. The Compact’s seal houses are ruins now, but their ledgers still surface in wreck sales.\n\nIn the last generation explorer crews have pushed past the outer shoals again, returning with cursed ore, missing manifests, and rumors of living reefs that remember every ship that wronged them. Few crews return with the same crew count they left with. Insurance brokers on the inner quay have doubled their rates twice in five years.\n\nToday the inner sea routes are contested again — not by emperors alone, but by storm priests, smuggler princes, and captains who swear the drowned still vote on every treaty. Festival markets flourish beside famine roads, and everyone knows the next squall may rewrite the map. Beacon chains are relit one tower at a time, always too late for someone.'
 }
 
+export function worldLabeledBlocks(world: {
+  worldName: string
+  worldSummary: string
+  worldHistory: string
+}): string {
+  return formatLabeledBlocks({
+    WORLD_NAME: world.worldName,
+    WORLD_SUMMARY: world.worldSummary,
+    WORLD_HISTORY: world.worldHistory
+  })
+}
+
 /** Empty canon recall — original / unrecognized premise. */
-export const EMPTY_CANON_RESPONSE = JSON.stringify({
-  recognizedSetting: false,
-  settingLabel: '',
-  knownPlaces: [],
-  knownCharacters: [],
-  knownDeities: []
+export const EMPTY_CANON_RESPONSE = formatLabeledBlocks({
+  RECOGNIZED_SETTING: 'false',
+  SETTING_LABEL: '',
+  KNOWN_PLACES: '[]',
+  KNOWN_CHARACTERS: '[]',
+  KNOWN_DEITIES: '[]'
 })
+
+export function canonLabeledBlocks(canon: {
+  recognizedSetting: boolean
+  settingLabel: string
+  knownPlaces: string[]
+  knownCharacters: string[]
+  knownDeities?: string[]
+}): string {
+  return formatLabeledBlocks({
+    RECOGNIZED_SETTING: canon.recognizedSetting ? 'true' : 'false',
+    SETTING_LABEL: canon.settingLabel,
+    KNOWN_PLACES: JSON.stringify(canon.knownPlaces),
+    KNOWN_CHARACTERS: JSON.stringify(canon.knownCharacters),
+    KNOWN_DEITIES: JSON.stringify(canon.knownDeities ?? [])
+  })
+}
+
+export function regionsLabeledBlocks(
+  regions: Array<{
+    name: string
+    description: string
+    historyBackstory: string
+    recentHistory: string
+    potentialQuests: string[]
+  }>
+): string {
+  const values: Record<string, string> = {}
+  regions.forEach((region, index) => {
+    values[`REGION_${index}_NAME`] = region.name
+    values[`REGION_${index}_DESCRIPTION`] = region.description
+    values[`REGION_${index}_HISTORY_BACKSTORY`] = region.historyBackstory
+    values[`REGION_${index}_RECENT_HISTORY`] = region.recentHistory
+    values[`REGION_${index}_QUEST_0`] = region.potentialQuests[0] ?? `Quest A in ${region.name}`
+    values[`REGION_${index}_QUEST_1`] = region.potentialQuests[1] ?? `Quest B in ${region.name}`
+  })
+  return formatLabeledBlocks(values)
+}
+
+export function storyLabeledBlocks(thread: { title: string; summary: string }): string {
+  return formatLabeledBlocks({
+    STORY_TITLE: thread.title,
+    STORY_SUMMARY: thread.summary
+  })
+}
+
+export function bestiaryLabeledBlocks(
+  foes: Array<{ name: string; buckets?: string[]; tags?: string[]; lore: string }>
+): string {
+  const values: Record<string, string> = {}
+  foes.forEach((foe, index) => {
+    values[`FOE_${index}_NAME`] = foe.name
+    values[`FOE_${index}_BUCKETS`] = JSON.stringify(foe.buckets ?? ['beast'])
+    values[`FOE_${index}_TAGS`] = JSON.stringify(foe.tags ?? [])
+    values[`FOE_${index}_LORE`] = foe.lore
+  })
+  return formatLabeledBlocks(values)
+}
+
+export function singleNpcLabeledBlocks(
+  _regionName: string,
+  npc: {
+    name: string
+    role: string
+    backstory: string
+    disposition: string
+    temperament: string
+    alignment: string
+    race?: string
+    raceKey?: string
+    background?: string
+    backgroundKey?: string
+    gender?: string
+    genderKey?: string
+    classKey?: string
+    class?: string
+  }
+): string {
+  return formatLabeledBlocks({
+    NPC_NAME: npc.name,
+    NPC_ROLE: npc.role,
+    NPC_BACKSTORY: npc.backstory,
+    NPC_DISPOSITION: npc.disposition,
+    NPC_TEMPERAMENT: npc.temperament,
+    NPC_ALIGNMENT: npc.alignment,
+    NPC_RACE: npc.race ?? npc.raceKey ?? 'human',
+    NPC_BACKGROUND: npc.background ?? npc.backgroundKey ?? 'folk_hero',
+    NPC_GENDER: npc.gender ?? npc.genderKey ?? 'unspecified',
+    NPC_CLASS: npc.class ?? npc.classKey ?? 'commoner'
+  })
+}
 
 export const SHIELD_HERO_CANON = {
   recognizedSetting: true,
@@ -96,7 +199,7 @@ function makeDeity(
   }
 }
 
-/** Valid 8-deity pantheon for scripted providers (2 forgotten). */
+/** Valid 8-deity pantheon object for normalize unit tests (2 forgotten). */
 export const VALID_PANTHEON = {
   pantheonSummary:
     'Faith here is a bargain between living temples and ruin chapels. Major cults argue over oaths and wreck rights while quieter shrines keep older names.\n\nAt least two powers are forgotten — remembered only in cracked idols and tide-marked graves.\n\nPriests still warn travelers which names to speak aloud after dark.',
@@ -112,7 +215,40 @@ export const VALID_PANTHEON = {
   ]
 }
 
-export const VALID_PANTHEON_RESPONSE = JSON.stringify(VALID_PANTHEON)
+/** Extra filler deities so labeled blocks match the 10-slot engine skeleton (161.4). */
+const PANTHEON_SKELETON_FILLER = [
+  makeDeity('Nyxara', { domains: ['night'] }),
+  makeDeity('Durmen', { forgotten: true, domains: ['stone'] })
+]
+
+export function pantheonLabeledBlocks(pantheon: {
+  pantheonSummary: string
+  deities: Array<{
+    name: string
+    epithet: string
+    domains: string[]
+    tenets: string[]
+    blurb: string
+  }>
+}): string {
+  const values: Record<string, string> = {
+    PANTHEON_SUMMARY: pantheon.pantheonSummary
+  }
+  for (let index = 0; index < 10; index += 1) {
+    const deity = pantheon.deities[index] ?? PANTHEON_SKELETON_FILLER[index - pantheon.deities.length]!
+    values[`DEITY_${index}_NAME`] = deity.name
+    values[`DEITY_${index}_EPITHET`] = deity.epithet
+    values[`DEITY_${index}_DOMAINS`] = deity.domains.join(', ')
+    values[`DEITY_${index}_TENETS`] = deity.tenets.join(', ')
+    values[`DEITY_${index}_BLURB`] = deity.blurb
+  }
+  return formatLabeledBlocks(values)
+}
+
+export const VALID_PANTHEON_RESPONSE = pantheonLabeledBlocks({
+  pantheonSummary: VALID_PANTHEON.pantheonSummary,
+  deities: [...VALID_PANTHEON.deities, ...PANTHEON_SKELETON_FILLER]
+})
 
 /** Medium-pressure faction roster with ≥1 religious + ≥2 relations (125.3 default path). */
 export const VALID_MEDIUM_FACTIONS = {
@@ -169,9 +305,24 @@ export const VALID_MEDIUM_FACTIONS = {
   ]
 }
 
-export const VALID_FACTIONS_RESPONSE = JSON.stringify(VALID_MEDIUM_FACTIONS)
+/** Labeled-block dump matching medium+deities engine skeleton (161.3). */
+export const VALID_FACTIONS_RESPONSE = formatLabeledBlocks({
+  FACTIONS_SUMMARY: VALID_MEDIUM_FACTIONS.factionsSummary,
+  FACTION_0_NAME: 'Harbor Council',
+  FACTION_0_SUMMARY: 'Port magistrates who tax moorings and quarrel over salvage licenses.',
+  FACTION_1_NAME: 'Charting Compact Remnant',
+  FACTION_1_SUMMARY:
+    'Surviving beacon crews and insurance brokers who still sell safe-passage charts.',
+  FACTION_2_NAME: 'Temple of Vhalor',
+  FACTION_2_SUMMARY: 'Tide priests who judge broken oaths sworn on water.',
+  FACTION_2_DEITY_NAME: 'Vhalor',
+  FACTION_3_NAME: 'Smuggler Princes',
+  FACTION_3_SUMMARY: 'Captains who run dark lanes past the beacon chains.',
+  RELATION_0_SUMMARY: 'Dock seizures and midnight bribes keep the feud warm.',
+  RELATION_1_SUMMARY: 'Priests demand wreck tithes the council refuses to cede.'
+})
 
-/** Snake_case variant for live-model drift coverage. */
+/** Snake_case object kept for normalize drift unit tests (legacy JSON shape). */
 export const REALISTIC_LLM_FACTIONS = {
   faction_pressure: 'medium',
   factions_summary:
@@ -224,7 +375,29 @@ export const REALISTIC_LLM_FACTIONS = {
   ]
 }
 
-export const REALISTIC_FACTIONS_RESPONSE = JSON.stringify(REALISTIC_LLM_FACTIONS)
+/** Labeled-block dump for cascading create fixtures (161.3). */
+export const REALISTIC_FACTIONS_RESPONSE = formatLabeledBlocks({
+  FACTIONS_SUMMARY:
+    'Caravan leagues, temple wardens, and desert courts trade favors under the Ashen Crown.',
+  FACTION_0_NAME: 'Ashen Caravan League',
+  FACTION_0_SUMMARY: 'Desert traders who schedule every oasis stop.',
+  FACTION_1_NAME: 'Crown Watch',
+  FACTION_1_SUMMARY: 'Frontier riders who seal the pass when winter arrives.',
+  FACTION_2_NAME: 'Temple of Vhalor',
+  FACTION_2_SUMMARY: 'Oath-keepers who bless caravans before the dunes.',
+  FACTION_2_DEITY_NAME: 'Vhalor',
+  FACTION_3_NAME: 'Sandglass Cabal',
+  FACTION_3_SUMMARY: 'Informants who sell envoy routes to the highest bidder.',
+  RELATION_0_SUMMARY: 'Leaked manifests keep the league hunting spies.',
+  RELATION_1_SUMMARY: 'Priests bless the watch before each winter patrol.'
+})
+
+/** Drift case: prose around tags still succeeds (161.6 precursor). */
+export const REALISTIC_FACTIONS_BLOCK_DRIFT_RESPONSE = [
+  'Okay, filling the faction skeleton now.',
+  REALISTIC_FACTIONS_RESPONSE,
+  'Done with factions.'
+].join('\n')
 
 /** Default prepped bestiary roster (N>=3 per 116.6). */
 export const DEFAULT_BESTIARY_FOES: GeneratedBestiaryFoe[] = [
@@ -277,7 +450,36 @@ export const SHIELD_HERO_BESTIARY_FOES: GeneratedBestiaryFoe[] = [
 ]
 
 export function makeBestiarySeedResponse(foes: GeneratedBestiaryFoe[] = DEFAULT_BESTIARY_FOES): string {
-  return JSON.stringify({ foes })
+  return bestiaryLabeledBlocks(foes)
+}
+
+export function makeSingleNpcPayload(
+  regionName: string,
+  npc: ReturnType<typeof makeNpcs>[number] & {
+    temperament?: string
+    alignment?: string
+    race?: string
+    background?: string
+    gender?: string
+    class?: string
+  }
+): string {
+  return singleNpcLabeledBlocks(regionName, {
+    name: npc.name,
+    role: npc.role,
+    backstory: npc.backstory,
+    disposition: npc.disposition,
+    temperament: npc.temperament,
+    alignment: npc.alignment,
+    race: npc.race,
+    raceKey: npc.raceKey,
+    background: npc.background,
+    backgroundKey: npc.backgroundKey,
+    gender: npc.gender,
+    genderKey: npc.genderKey,
+    class: npc.class,
+    classKey: npc.classKey
+  })
 }
 
 /** Shield Hero–shaped pantheon preferring knownDeities names. */
@@ -344,26 +546,38 @@ export function buildCrimsonReachCascadingResponses(input: {
   const responses: string[] = [
     EMPTY_CANON_RESPONSE,
     VALID_PANTHEON_RESPONSE,
-    JSON.stringify(CRIMSON_REACH_LLM_WORLD),
+    worldLabeledBlocks({
+      worldName: CRIMSON_REACH_LLM_WORLD.world_name,
+      worldSummary: CRIMSON_REACH_LLM_WORLD.world_summary,
+      worldHistory: CRIMSON_REACH_LLM_WORLD.world_history
+    }),
     VALID_FACTIONS_RESPONSE
   ]
-  responses.push(JSON.stringify({ regions }))
+  responses.push(regionsLabeledBlocks(regions))
   let npcIndex = 0
   for (const region of regions) {
     for (let slot = 0; slot < input.npcsPerRegion; slot += 1) {
       const base = makeRealisticLlmNpc(region.name, npcIndex)
-      responses.push(JSON.stringify({ npc: { ...base, temperament: 'friendly', race: 'Human' } }))
+      responses.push(
+        singleNpcLabeledBlocks(region.name, {
+          ...base,
+          temperament: 'friendly',
+          race: 'Human',
+          alignment: base.alignment,
+          backstory: base.backstory,
+          disposition: base.disposition,
+          role: base.role,
+          name: base.name
+        })
+      )
       npcIndex += 1
     }
   }
   responses.push(makeBestiarySeedResponse())
   responses.push(
-    JSON.stringify({
-      storyThread: {
-        title: 'Faces in the Snow',
-        state: 'starting',
-        summary: 'Learn who leads the dead-faced bandits before the pass seals for winter.'
-      }
+    storyLabeledBlocks({
+      title: 'Faces in the Snow',
+      summary: 'Learn who leads the dead-faced bandits before the pass seals for winter.'
     })
   )
   return responses
@@ -381,32 +595,52 @@ export function buildRealisticLlmCascadingSeedResponses(input: {
   const responses: string[] = [
     EMPTY_CANON_RESPONSE,
     VALID_PANTHEON_RESPONSE,
-    `\`\`\`json\n${JSON.stringify(REALISTIC_LLM_WORLD)}\n\`\`\``,
+    worldLabeledBlocks({
+      worldName: REALISTIC_LLM_WORLD.world_name,
+      worldSummary: REALISTIC_LLM_WORLD.world_summary,
+      worldHistory: REALISTIC_LLM_WORLD.world_history
+    }),
     REALISTIC_FACTIONS_RESPONSE
   ]
-  responses.push(JSON.stringify({ regions }))
+  responses.push(regionsLabeledBlocks(regions))
   let npcIndex = 0
   for (const region of regions) {
     for (let slot = 0; slot < input.npcsPerRegion; slot += 1) {
-      responses.push(JSON.stringify({ npc: makeRealisticLlmNpc(region.name, npcIndex) }))
+      responses.push(singleNpcLabeledBlocks(region.name, makeRealisticLlmNpc(region.name, npcIndex)))
       npcIndex += 1
     }
   }
   responses.push(makeBestiarySeedResponse())
   responses.push(
-    JSON.stringify({
-      story_thread: {
-        title: 'The Missing Envoy',
-        state: 'starting',
-        summary: 'Find who stopped the upland envoy before winter closes every pass.'
-      }
+    storyLabeledBlocks({
+      title: 'The Missing Envoy',
+      summary: 'Find who stopped the upland envoy before winter closes every pass.'
     })
   )
   return responses
 }
 
-export function makeSingleNpcPayload(_regionName: string, npc: ReturnType<typeof makeNpcs>[number]): string {
-  return JSON.stringify({ npc })
+function defaultCascadingRegions(regionCount: number): ReturnType<typeof makeRegion>[] {
+  if (regionCount === 0) {
+    return []
+  }
+  if (regionCount === 1) {
+    return [makeRegion('Oakhollow', 'old')]
+  }
+  return [makeRegion('Oakhollow', 'old'), makeRegion('The Sunken Crown', 'ruin')]
+}
+
+function pushNpcSlotResponses(
+  responses: string[],
+  regions: ReturnType<typeof makeRegion>[],
+  npcsPerRegion: number
+): void {
+  for (const region of regions) {
+    const npcTemplates = makeNpcs(region.name, region.name.slice(0, 4))
+    for (let index = 0; index < npcsPerRegion; index += 1) {
+      responses.push(makeSingleNpcPayload(region.name, npcTemplates[index]!))
+    }
+  }
 }
 
 export function buildCascadingSeedResponses(input: {
@@ -424,13 +658,7 @@ export function buildCascadingSeedResponses(input: {
   }
   pantheon?: typeof VALID_PANTHEON
 }): string[] {
-  const regions =
-    input.regions ??
-    (input.regionCount === 0
-      ? []
-      : input.regionCount === 1
-        ? [makeRegion('Oakhollow', 'old')]
-        : [makeRegion('Oakhollow', 'old'), makeRegion('The Sunken Crown', 'ruin')])
+  const regions = input.regions ?? defaultCascadingRegions(input.regionCount)
   const storyThread =
     input.storyThread ??
     ({ title: 'The Crown Beneath the Waves', state: 'starting', summary: 'A throne lies hidden.' } as const)
@@ -442,22 +670,19 @@ export function buildCascadingSeedResponses(input: {
     knownDeities: [] as string[]
   }
   const pantheonPayload = input.pantheon ?? VALID_PANTHEON
-
   const responses: string[] = [
-    JSON.stringify(canonPayload),
-    JSON.stringify(pantheonPayload),
-    JSON.stringify(VALID_WORLD),
+    canonLabeledBlocks(canonPayload),
+    pantheonLabeledBlocks({
+      pantheonSummary: pantheonPayload.pantheonSummary,
+      deities: [...pantheonPayload.deities, ...PANTHEON_SKELETON_FILLER].slice(0, 10)
+    }),
+    worldLabeledBlocks(VALID_WORLD),
     VALID_FACTIONS_RESPONSE
   ]
-  responses.push(JSON.stringify({ regions }))
-  for (const region of regions) {
-    const npcTemplates = makeNpcs(region.name, region.name.slice(0, 4))
-    for (let index = 0; index < input.npcsPerRegion; index += 1) {
-      responses.push(makeSingleNpcPayload(region.name, npcTemplates[index]!))
-    }
-  }
+  responses.push(regionsLabeledBlocks(regions))
+  pushNpcSlotResponses(responses, regions, input.npcsPerRegion)
   responses.push(makeBestiarySeedResponse(input.bestiaryFoes))
-  responses.push(JSON.stringify({ storyThread }))
+  responses.push(storyLabeledBlocks({ title: storyThread.title, summary: storyThread.summary }))
   return responses
 }
 
@@ -472,12 +697,15 @@ export function buildShieldHeroCascadingSeedResponses(input: {
   ].slice(0, input.regionCount)
   const characterNames = ['Raphtalia', 'Naofumi Iwatani', 'Filo', 'Motoyasu Kitamura', 'Itsuki Kawasumi', 'Ren Amaki']
   const responses: string[] = [
-    JSON.stringify(SHIELD_HERO_CANON),
-    JSON.stringify(SHIELD_HERO_PANTHEON),
-    JSON.stringify(VALID_WORLD),
+    canonLabeledBlocks(SHIELD_HERO_CANON),
+    pantheonLabeledBlocks({
+      pantheonSummary: SHIELD_HERO_PANTHEON.pantheonSummary,
+      deities: [...SHIELD_HERO_PANTHEON.deities, ...PANTHEON_SKELETON_FILLER].slice(0, 10)
+    }),
+    worldLabeledBlocks(VALID_WORLD),
     VALID_FACTIONS_RESPONSE
   ]
-  responses.push(JSON.stringify({ regions }))
+  responses.push(regionsLabeledBlocks(regions))
   let npcIndex = 0
   for (const region of regions) {
     for (let slot = 0; slot < input.npcsPerRegion; slot += 1) {
@@ -496,12 +724,10 @@ export function buildShieldHeroCascadingSeedResponses(input: {
   }
   responses.push(makeBestiarySeedResponse(SHIELD_HERO_BESTIARY_FOES))
   responses.push(
-    JSON.stringify({
-      storyThread: {
-        title: 'Waves of Calamity',
-        state: 'starting',
-        summary: 'Survive the next wave while Melromarc’s politics sharpen around the Shield Hero.'
-      }
+    storyLabeledBlocks({
+      title: 'Waves of Calamity',
+      summary:
+        'Survive the next wave while Melromarc’s politics sharpen around the Shield Hero.'
     })
   )
   return responses
@@ -513,10 +739,63 @@ export const VALID_GENERATION = JSON.stringify({
   storyThread: { title: 'The Crown Beneath the Waves', state: 'starting', summary: 'A throne lies hidden.' }
 })
 
-export const ADDITIONAL_REGION = JSON.stringify({
+export function additionalRegionLabeledBlocks(
+  region: {
+    name: string
+    description: string
+    historyBackstory: string
+    recentHistory: string
+    potentialQuests: string[]
+  },
+  npcs: Array<{
+    name: string
+    role: string
+    backstory: string
+    disposition: string
+    temperament: string
+    alignment: string
+    raceKey?: string
+    race?: string
+    backgroundKey?: string
+    background?: string
+    genderKey?: string
+    gender?: string
+    classKey?: string
+    class?: string
+  }>
+): string {
+  const values: Record<string, string> = {
+    REGION_NAME: region.name,
+    REGION_DESCRIPTION: region.description,
+    REGION_HISTORY_BACKSTORY: region.historyBackstory,
+    REGION_RECENT_HISTORY: region.recentHistory,
+    REGION_QUEST_0: region.potentialQuests[0] ?? `Quest A in ${region.name}`,
+    REGION_QUEST_1: region.potentialQuests[1] ?? `Quest B in ${region.name}`
+  }
+  npcs.forEach((npc, index) => {
+    values[`NPC_${index}_NAME`] = npc.name
+    values[`NPC_${index}_ROLE`] = npc.role
+    values[`NPC_${index}_BACKSTORY`] = npc.backstory
+    values[`NPC_${index}_DISPOSITION`] = npc.disposition
+    values[`NPC_${index}_TEMPERAMENT`] = npc.temperament
+    values[`NPC_${index}_ALIGNMENT`] = npc.alignment
+    values[`NPC_${index}_RACE`] = npc.race ?? npc.raceKey ?? 'human'
+    values[`NPC_${index}_BACKGROUND`] = npc.background ?? npc.backgroundKey ?? 'folk_hero'
+    values[`NPC_${index}_GENDER`] = npc.gender ?? npc.genderKey ?? 'unspecified'
+    values[`NPC_${index}_CLASS`] = npc.class ?? npc.classKey ?? 'commoner'
+  })
+  return formatLabeledBlocks(values)
+}
+
+export const ADDITIONAL_REGION = additionalRegionLabeledBlocks(
+  makeRegion('Mistfen Crossing', 'marsh'),
+  makeNpcs('Mistfen Crossing', 'Mist')
+)
+
+export const ADDITIONAL_REGION_PARSED = {
   region: makeRegion('Mistfen Crossing', 'marsh'),
   npcs: makeNpcs('Mistfen Crossing', 'Mist')
-})
+}
 
 export const SETUP_INPUT = { name: 'Test Campaign', premisePrompt: 'A flooded kingdom.', deathMode: 'legendary' } as const
 

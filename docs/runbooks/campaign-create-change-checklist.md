@@ -7,10 +7,28 @@ Touches any of these paths? **Run this checklist.**
 | Layer | Key files |
 |-------|-----------|
 | Staged generation | `src/agents/campaignGeneration/index.ts`, `prompts.ts`, `normalize.ts`, `persist.ts`, `src/test/fixtures/campaignGenerationFixtures.ts` |
+| Skeleton fill protocol | `src/agents/skeletonFill.ts`, stage skeleton builders under `src/agents/campaignGeneration/*Skeleton.ts` / `createStageSkeletons.ts` |
 | Create IPC | `src/main/campaignCreateIpc.ts` |
 | Progress / stages | `src/shared/campaignCreate/types.ts`, `stageMessages.ts` |
 | Legacy generate | `src/main/campaignIpc.ts` (`generateCampaignFromPrompt`) |
 | Review after create | `src/renderer/src/campaignReview/*` (world section) |
+
+---
+
+## Output contract (epic 161 — skeleton fill)
+
+Campaign-create stages **do not** ask the model for raw JSON.
+
+1. Engine builds a JSON **skeleton** with `{{TOKEN}}` (string) / `{{@TOKEN}}` (raw JSON fragment) placeholders.
+2. Prompt shows the skeleton + labeled-block instructions (`SKELETON_FILL_PROMPT_RULES`).
+3. Model returns `<<<TOKEN>>>…<<</TOKEN>>>` blocks (prose around tags is OK).
+4. `fillSkeleton` → `JSON.parse` on the engine-authored string → existing `normalize*` / `isValid*`.
+
+Stage helpers select `parseMode: 'skeleton'` via `generateWithRetries` (or `parseGenerationRaw` for additional-region / single-NPC loops). Play-loop agents may still use JSON contracts — do not reintroduce “Respond ONLY with a single JSON object” for **campaign create** stages.
+
+**Fixtures:** cascading seed builders must queue **labeled-block** responses matching the engine skeleton for each migrated stage (see `formatLabeledBlocks` / `*LabeledBlocks` in `campaignGenerationFixtures.ts`). Keep object fixtures only for normalize unit tests that feed parsed objects directly.
+
+**Failure modes:** missing/unknown/malformed tags → `unparseable`; filled JSON that fails normalize → `normalize_failed`; normalize OK but validator rejects → `invalid`. Truncated raw dumps still attach via **020.31** logging.
 
 ---
 
@@ -26,18 +44,18 @@ npx vitest run src/main/campaignCreateIpc.contract.test.ts
 
 **When you change validation or prompts, also:**
 
-1. Update or add a fixture in `src/test/fixtures/campaignGenerationFixtures.ts` that mirrors **real** model drift:
-   - snake_case keys (`world_name`, `region_name`, `story_thread`, `faction_pressure`)
-   - single-newline world paragraphs (not only `\n\n`)
-   - human-readable enums (`Neutral Good`, `friendly`, `Human`, `Merchant`)
-   - markdown JSON fences around world payload
+1. Update or add a fixture in `src/test/fixtures/campaignGenerationFixtures.ts` that mirrors **real** model drift for **labeled blocks**:
+   - Extra prose around `<<<TOKEN>>>` tags
+   - Human-readable enums inside block bodies (`Neutral Good`, `friendly`, `Human`)
+   - Empty / unrecognized canon as `false` + `[]` raw fragments
 2. Add a contract case in `campaignCreateIpc.contract.test.ts` using that fixture (default form: **2 regions, 3 NPCs, standard death**).
 3. Add or extend unit tests in `campaignGeneration.test.ts` for new normalize/coercion rules.
 
 Existing fixtures to reuse:
 
-- `buildRealisticLlmCascadingSeedResponses` — Ashen Crown / desert caravan shape
-- `buildCrimsonReachCascadingResponses` — mountain pass / friendly temperament / `Human` race
+- `buildRealisticLlmCascadingSeedResponses` — Ashen Crown / desert caravan shape (skeleton blocks)
+- `buildCrimsonReachCascadingResponses` — mountain pass / friendly temperament
+- `REALISTIC_FACTIONS_BLOCK_DRIFT_RESPONSE` — prose wrapping faction tags
 
 ---
 
@@ -52,7 +70,7 @@ Initial create runs **canon → pantheon → world → factions → regions → 
 | Regions | Exact `regionCount`; names must match NPC `regionName` after normalize |
 | NPCs | Each slot retries on duplicate names; shortfall top-up runs **before** final validation (`repairNpcShortfall`) |
 | Bestiary | Prepped roster (`MIN_PREPPED_BESTIARY_SPECIES = 3`); see `bestiaryStage.ts` / `docs/runbooks/bestiary-efficiency.md` |
-| Story | `storyThread` or `story_thread` wrapper |
+| Story | `storyThread` wrapper; `state` is engine-owned (`starting`) |
 | Persist | Region lookup is fuzzy (`resolveGeneratedRegionName`); race keys must map to roster (`normalizeRaceKeyForRoster`) |
 
 **Mock provider pitfall:** per-region NPC names must be **globally unique** across regions in test queues. Duplicate prefixes (e.g. two regions both producing `Oakh One`) cause slot rejection and flaky tests.
@@ -83,7 +101,7 @@ npm run build
 
 ## 4. Manual smoke with a real provider (required for prompt/schema changes)
 
-Vitest uses system Node and scripted JSON. **One real create** catches ABI, provider, and coercion gaps.
+Vitest uses system Node and scripted labeled blocks. **One real create** catches ABI, provider, and coercion gaps.
 
 1. If a running Electron/`electron-vite` session locks `better-sqlite3`, kill those repo processes (see delivery-standards) so rebuild can proceed — do not leave verification blocked.
 2. `npm run rebuild:electron` then `npm run dev` (or `npm run build` + launch packaged app).
@@ -119,7 +137,7 @@ If you **only** change create modal labels or progress text (no agent/schema/per
 ```
 Campaign create change:
 - [ ] Contract test updated/passing (campaignCreateIpc.contract.test.ts)
-- [ ] Realistic LLM fixture updated if validation/prompts changed
+- [ ] Realistic LLM fixture updated if validation/prompts changed (labeled blocks)
 - [ ] campaignGeneration.test.ts covers new normalize/coercion rules
 - [ ] npm test / lint / build — pass
 - [ ] One manual create with real provider (default 2 regions, 3 NPCs)

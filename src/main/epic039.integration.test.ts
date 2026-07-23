@@ -4,7 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { buildCascadingSeedResponses, NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { buildCascadingSeedResponses, NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE, additionalRegionLabeledBlocks } from '../test/fixtures/campaignGenerationFixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
 import { generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
 import { canContinueCampaignReview, getCampaignReviewContinueBlockers } from '../shared/campaignReview/campaignReviewValidation'
@@ -77,10 +77,10 @@ describe('epic 039 review gates', () => {
     }
     expect(getCampaignReviewContinueBlockers(detail)).toContain('no-npcs')
 
-    const regionPayload = JSON.stringify({
-      region: makeRegion('Mistfen Crossing'),
-      npcs: makeNpcs('Mistfen Crossing', 'Mist')
-    })
+    const regionPayload = additionalRegionLabeledBlocks(
+      makeRegion('Mistfen Crossing'),
+      makeNpcs('Mistfen Crossing', 'Mist').slice(0, 1)
+    )
     const regionProvider = createScriptedProvider([regionPayload, ...persistNpcEnrichmentResponses(1)])
     const afterRegion = await generateRegionForCampaign(db, regionProvider, {
       campaignId: campaign.id,

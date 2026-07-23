@@ -4,7 +4,7 @@ import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
+import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE, additionalRegionLabeledBlocks } from '../test/fixtures/campaignGenerationFixtures'
 import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editFactionsSummary, editGenerativeTokens, editNpcFaceTokenGeneration, editEnemyTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign, generateBestiarySpeciesForCampaign } from './campaignEditIpc'
 
 function makeRegion(name: string) {
@@ -64,10 +64,10 @@ function makeNpcs(regionName: string, prefix: string) {
   ]
 }
 
-const ADDITIONAL_REGION = JSON.stringify({
-  region: makeRegion('Mistfen Crossing'),
-  npcs: makeNpcs('Mistfen Crossing', 'Mist')
-})
+const ADDITIONAL_REGION = additionalRegionLabeledBlocks(
+  makeRegion('Mistfen Crossing'),
+  makeNpcs('Mistfen Crossing', 'Mist')
+)
 
 function seedCampaignWithRegionAndNpc() {
   const db = createTestDb()
@@ -324,10 +324,7 @@ describe('generateRegionForCampaign', () => {
 
   it('honors a custom npcCount including zero', async () => {
     const { db, campaign } = seedCampaignWithRegionAndNpc()
-    const emptyRegion = JSON.stringify({
-      region: makeRegion('Silent Moor'),
-      npcs: []
-    })
+    const emptyRegion = additionalRegionLabeledBlocks(makeRegion('Silent Moor'), [])
     const provider = createScriptedProvider([emptyRegion])
 
     const detail = await generateRegionForCampaign(db, provider, {

@@ -5,21 +5,24 @@ Caps and escalation behavior are unchanged from 040.x; this doc tracks **112.4 p
 
 ## Campaign setup (`campaign.*`)
 
-| Call site | Module | Purpose |
-|-----------|--------|---------|
-| Pantheon generation | `src/agents/campaignGeneration/index.ts` → `generateCampaignPantheon` | `campaign.pantheon` |
-| World generation | `generateCampaignWorld` | `campaign.world` |
-| Canon recall (soft stage) | `generateCanonRecall` | `campaign.world` |
-| Regions bulk generation | `generateCampaignRegions` | `campaign.region` |
-| Additional region | `generateAdditionalRegion` | `campaign.region` |
-| Story thread | `generateCampaignStoryThread` | `campaign.story` |
-| Campaign bestiary roster stage | `generateCampaignBestiary` | `campaign.npc` |
-| Single NPC shortfall fill | `attemptGenerateSingleNpc` / `generateSingleNpc` | `campaign.npc` |
-| Flagged NPC core bundle | `src/agents/campaignGeneration/flaggedNpc.ts` → `generateNpcCoreBundle` | `campaign.npc` |
-| Flagged NPC final details (speaking / non-speaking) | `generateFlaggedNpcDetails` | `campaign.npc` |
-| NPC speaking style | `src/agents/npcSpeakingStyle.ts` → `generateNpcSpeakingStyle` | `campaign.npc` |
-| World summary regen from history | `src/agents/campaignGeneration/worldSummaryRegen.ts` | `campaign.world` |
-| Bestiary species lore (homebrew) | `src/agents/bestiary/generateSpecies.ts` → `resolveBaseLore` | `campaign.npc` |
+Campaign create stages use **skeleton fill** (epic **161**): engine-owned JSON skeleton + LLM labeled blocks (`<<<TOKEN>>>…<<</TOKEN>>>`), not “Respond ONLY with JSON”. See `docs/runbooks/campaign-create-change-checklist.md` and `src/agents/skeletonFill.ts`.
+
+| Call site | Module | Purpose | Output contract |
+|-----------|--------|---------|-----------------|
+| Pantheon generation | `src/agents/campaignGeneration/index.ts` → `generateCampaignPantheon` | `campaign.pantheon` | skeleton fill |
+| World generation | `generateCampaignWorld` | `campaign.world` | skeleton fill |
+| Canon recall (soft stage) | `generateCanonRecall` | `campaign.world` | skeleton fill |
+| Factions | `generateCampaignFactions` | `campaign.faction` | skeleton fill |
+| Regions bulk generation | `generateCampaignRegions` | `campaign.region` | skeleton fill |
+| Additional region | `generateAdditionalRegion` | `campaign.region` | skeleton fill |
+| Story thread | `generateCampaignStoryThread` | `campaign.story` | skeleton fill |
+| Campaign bestiary roster stage | `generateCampaignBestiary` | `campaign.npc` | skeleton fill |
+| Single NPC shortfall fill | `attemptGenerateSingleNpc` / `generateSingleNpc` | `campaign.npc` | skeleton fill |
+| Flagged NPC core bundle | `src/agents/campaignGeneration/flaggedNpc.ts` → `generateNpcCoreBundle` | `campaign.npc` | (flagged parse — not create skeleton) |
+| Flagged NPC final details (speaking / non-speaking) | `generateFlaggedNpcDetails` | `campaign.npc` | (flagged parse) |
+| NPC speaking style | `src/agents/npcSpeakingStyle.ts` → `generateNpcSpeakingStyle` | `campaign.npc` | JSON / prose per agent |
+| World summary regen from history | `src/agents/campaignGeneration/worldSummaryRegen.ts` | `campaign.world` | JSON (regen path; not staged create) |
+| Bestiary species lore (homebrew) | `src/agents/bestiary/generateSpecies.ts` → `resolveBaseLore` | `campaign.npc` | JSON |
 
 ## Onboarding (`onboarding.*`)
 

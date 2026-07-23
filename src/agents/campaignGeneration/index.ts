@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3'
 import { tryParseJson } from '../jsonResponse'
+import { fillSkeleton } from '../skeletonFill'
 import type { Provider } from '../providers/types'
 import { isTruncationError } from '../providers/tokenEscalation'
 import { ProviderUnreachableError } from '../providers/withRetry'
@@ -32,17 +33,26 @@ import {
 } from './normalize'
 import {
   buildAdditionalRegionPrompt,
+  buildAdditionalRegionSkeleton,
   buildCanonRecallPrompt,
+  buildCanonRecallSkeleton,
   buildFactionsGenerationPrompt,
+  buildFactionsGenerationSkeleton,
   buildPantheonGenerationPrompt,
+  buildPantheonGenerationSkeleton,
   buildRegionsGenerationPrompt,
+  buildRegionsGenerationSkeleton,
   buildSingleNpcPrompt,
+  buildSingleNpcSkeleton,
   buildStoryThreadGenerationPrompt,
-  buildWorldGenerationPrompt
+  buildStoryThreadGenerationSkeleton,
+  buildWorldGenerationPrompt,
+  buildWorldGenerationSkeleton
 } from './prompts'
 import {
   BESTIARY_STAGE_MAX_TOKENS,
   buildBestiaryStagePrompt,
+  buildBestiaryStageSkeleton,
   ensureSignatureBestiaryFoes,
   isValidBestiaryRoster
 } from './bestiaryStage'
@@ -98,6 +108,8 @@ const STORY_THREAD_MAX_TOKENS = 2048
 const ADDITIONAL_REGION_MAX_TOKENS = 4096
 const SINGLE_NPC_MAX_TOKENS = 4096
 
+type GenerationParseMode = 'json' | 'skeleton'
+
 function classifySchemaAttemptFailure<T>(
   parsed: unknown,
   normalized: T | undefined
@@ -124,7 +136,30 @@ function recordSchemaAttemptFailure(
   })
 }
 
-async function generateWithRetries<T>(input: {
+/** Parse LLM raw text: JSON blob path, or skeleton fill → JSON.parse. */
+export function parseGenerationRaw(
+  raw: string,
+  parseMode: GenerationParseMode,
+  skeleton?: string
+): unknown {
+  if (parseMode === 'json') {
+    return tryParseJson(raw)
+  }
+  if (!skeleton) {
+    return undefined
+  }
+  const filled = fillSkeleton(skeleton, raw)
+  if (!filled.ok) {
+    return undefined
+  }
+  try {
+    return JSON.parse(filled.jsonText) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+interface GenerateWithRetriesInput<T> {
   provider: Provider
   buildPrompt: () => string
   maxTokens: number
@@ -132,7 +167,17 @@ async function generateWithRetries<T>(input: {
   normalize: (parsed: unknown) => T | undefined
   isValid: (value: T) => boolean
   errorMessage: string
-}): Promise<T> {
+  /** Default `json`. Use `skeleton` with `buildSkeleton`. */
+  parseMode?: GenerationParseMode
+  buildSkeleton?: () => string
+}
+
+/**
+ * Stage retry loop: generate → parse (JSON or skeleton fill) → normalize → validate.
+ * Exported for skeleton-mode integration tests (161.2).
+ */
+export async function generateWithRetries<T>(input: GenerateWithRetriesInput<T>): Promise<T> {
+  const parseMode = input.parseMode ?? 'json'
   let lastTruncation: unknown
   const failedAttempts: GenerationSchemaFailureAttempt[] = []
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
@@ -141,7 +186,8 @@ async function generateWithRetries<T>(input: {
         maxTokens: input.maxTokens,
         purpose: input.purpose
       })
-      const parsed = tryParseJson(raw)
+      const skeleton = parseMode === 'skeleton' ? input.buildSkeleton?.() : undefined
+      const parsed = parseGenerationRaw(raw, parseMode, skeleton)
       const normalized = input.normalize(parsed)
       if (normalized && input.isValid(normalized)) {
         return normalized
@@ -174,6 +220,8 @@ export async function generateCampaignWorld(
   return generateWithRetries({
     provider,
     buildPrompt: () => buildWorldGenerationPrompt(premisePrompt, pantheon),
+    buildSkeleton: () => buildWorldGenerationSkeleton(),
+    parseMode: 'skeleton',
     maxTokens: WORLD_MAX_TOKENS,
     purpose: 'campaign.world',
     normalize: normalizeGeneratedWorld,
@@ -195,6 +243,8 @@ export async function generateCanonRecall(
     return await generateWithRetries({
       provider,
       buildPrompt: () => buildCanonRecallPrompt(premisePrompt, world),
+      buildSkeleton: () => buildCanonRecallSkeleton(),
+      parseMode: 'skeleton',
       maxTokens: CANON_MAX_TOKENS,
       purpose: 'campaign.world',
       normalize: normalizeCanonRecall,
@@ -217,6 +267,8 @@ export async function generateCampaignPantheon(
   return generateWithRetries({
     provider,
     buildPrompt: () => buildPantheonGenerationPrompt(premisePrompt, canon),
+    buildSkeleton: () => buildPantheonGenerationSkeleton(),
+    parseMode: 'skeleton',
     maxTokens: PANTHEON_MAX_TOKENS,
     purpose: 'campaign.pantheon',
     normalize: normalizeGeneratedPantheon,
@@ -235,6 +287,8 @@ export async function generateCampaignFactions(
   return generateWithRetries({
     provider,
     buildPrompt: () => buildFactionsGenerationPrompt(premisePrompt, world, pantheon),
+    buildSkeleton: () => buildFactionsGenerationSkeleton(premisePrompt, pantheon),
+    parseMode: 'skeleton',
     maxTokens: FACTIONS_MAX_TOKENS,
     purpose: 'campaign.faction',
     normalize: (parsed) => normalizeGeneratedFactions(parsed, { deitiesPresent }),
@@ -258,6 +312,8 @@ export async function generateCampaignRegions(input: {
     provider: input.provider,
     buildPrompt: () =>
       buildRegionsGenerationPrompt(input.premisePrompt, input.world, input.counts, canon),
+    buildSkeleton: () => buildRegionsGenerationSkeleton(input.counts),
+    parseMode: 'skeleton',
     maxTokens: REGIONS_MAX_TOKENS,
     purpose: 'campaign.region',
     normalize: (parsed) => normalizeRegionsGeneration(parsed, input.counts),
@@ -286,6 +342,8 @@ export async function generateCampaignStoryThread(
         input.regions,
         input.deities ?? []
       ),
+    buildSkeleton: () => buildStoryThreadGenerationSkeleton(),
+    parseMode: 'skeleton',
     maxTokens: STORY_THREAD_MAX_TOKENS,
     purpose: 'campaign.story',
     normalize: normalizeStoryThreadGeneration,
@@ -312,6 +370,8 @@ async function generateCampaignBestiary(
     provider,
     buildPrompt: () =>
       buildBestiaryStagePrompt(premisePrompt, input.world, input.regions, input.deities ?? []),
+    buildSkeleton: () => buildBestiaryStageSkeleton(),
+    parseMode: 'skeleton',
     maxTokens: BESTIARY_STAGE_MAX_TOKENS,
     purpose: 'campaign.npc',
     normalize: (parsed) => {
@@ -848,7 +908,7 @@ export async function generateAdditionalRegion(
       }, availableRaces),
       { maxTokens: ADDITIONAL_REGION_MAX_TOKENS, purpose: 'campaign.region' }
     )
-    const parsed = tryParseJson(raw)
+    const parsed = parseGenerationRaw(raw, 'skeleton', buildAdditionalRegionSkeleton(npcCount))
     const normalized = normalizeAdditionalRegion(parsed, npcCount)
     if (
       normalized &&
@@ -892,7 +952,11 @@ async function attemptGenerateSingleNpc(
     maxTokens: SINGLE_NPC_MAX_TOKENS,
     purpose: 'campaign.npc'
   })
-  const parsed = tryParseJson(raw)
+  const parsed = parseGenerationRaw(
+    raw,
+    'skeleton',
+    buildSingleNpcSkeleton(input.regionName)
+  )
   const normalized = normalizeGeneratedSingleNpc(parsed, input.regionName)
   if (
     normalized &&
