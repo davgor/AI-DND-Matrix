@@ -31,6 +31,7 @@ describe('resolveProviderRegistryConfig: env fallback', () => {
     expect(resolved.claudeModel).toBe('env-claude-model')
     expect(resolved.player2BaseUrl).toBe('http://127.0.0.1:4315')
     expect(resolved.llamaCppBaseUrl).toBe('http://127.0.0.1:8080')
+    expect(resolved.llamaCppCtxSize).toBe(8192)
   })
 
   it('falls back to the env Claude API key when persisted settings have an empty one', () => {

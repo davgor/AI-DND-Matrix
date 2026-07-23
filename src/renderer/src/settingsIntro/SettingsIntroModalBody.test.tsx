@@ -58,17 +58,52 @@ describe('SettingsIntroAskLocal', () => {
   })
 })
 
+function findInputById(
+  flat: Array<{ type?: unknown; props?: Record<string, unknown> }>,
+  id: string,
+  inputType: string
+): { type?: unknown; props?: Record<string, unknown> } | undefined {
+  return flat.find(
+    (el) => el.type === 'input' && el.props?.type === inputType && el.props?.id === id
+  )
+}
+
+function expectBackendRadios(
+  flat: Array<{ type?: unknown; props?: Record<string, unknown> }>,
+  gpuId: string,
+  cpuId: string,
+  name: string
+): { type?: unknown; props?: Record<string, unknown> } {
+  const gpu = findInputById(flat, gpuId, 'radio')
+  const cpu = findInputById(flat, cpuId, 'radio')
+  expect(gpu).toBeDefined()
+  expect(cpu).toBeDefined()
+  expect(gpu?.props?.name).toBe(name)
+  expect(cpu?.props?.name).toBe(name)
+  expect(gpu?.props?.checked).toBe(true)
+  expect(cpu?.props?.checked).toBe(false)
+  return cpu as { type?: unknown; props?: Record<string, unknown> }
+}
+
 describe('SettingsIntroAskBackend', () => {
-  it('shows GPU/CPU checkboxes', () => {
+  it('shows GPU/CPU radios and wires selection', () => {
+    const onBackendChange = vi.fn()
     const node = SettingsIntroAskBackend({
       backend: 'vulkan',
-      onBackendChange: () => undefined,
+      onBackendChange,
       onContinue: () => undefined
     })
     const flat = flattenElements(node)
-    expect(flat.some((el) => el.props?.id === 'settings-intro-runtime-gpu')).toBe(true)
-    expect(flat.some((el) => el.props?.id === 'settings-intro-runtime-cpu')).toBe(true)
+    const cpu = expectBackendRadios(
+      flat,
+      'settings-intro-runtime-gpu',
+      'settings-intro-runtime-cpu',
+      'settings-intro-runtime-backend'
+    )
     expect(flat.map(textOf).join(' ')).toMatch(/GPU or CPU/i)
+    const onChangeHandler = cpu.props?.onChange as (() => void) | undefined
+    onChangeHandler?.()
+    expect(onBackendChange).toHaveBeenCalledWith('cpu')
   })
 })
 

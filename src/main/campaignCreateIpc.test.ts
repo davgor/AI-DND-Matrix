@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
+import { LlamaCppTruncationError } from '../agents/providers/llamacpp'
 import { persistNpcEnrichmentResponses, buildCascadingSeedResponses } from '../test/fixtures/campaignGenerationFixtures'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
@@ -94,5 +95,25 @@ describe('createCampaignFromRequest failure', () => {
     const after = db.prepare('SELECT COUNT(*) as count FROM campaigns').get() as { count: number }
     expect(result.ok).toBe(false)
     expect(after.count).toBe(before.count)
+  })
+
+  it('maps provider truncation to an actionable generation failure', async () => {
+    resetCampaignCreateForTests()
+    const db = createTestDb()
+    const provider = {
+      async generate(): Promise<string> {
+        throw new LlamaCppTruncationError('truncated at max_tokens')
+      }
+    }
+    const result = await createCampaignFromRequest(db, provider, {
+      sessionId: 'session-trunc',
+      premisePrompt: 'A mysterious river kingdom'
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.category).toBe('generation')
+      expect(result.message).toMatch(/output limit|context/i)
+      expect(result.message).not.toMatch(/invalid campaign/i)
+    }
   })
 })

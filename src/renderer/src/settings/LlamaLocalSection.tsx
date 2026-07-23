@@ -87,37 +87,39 @@ function catalogFieldset(props: LlamaLocalSectionProps): JSX.Element {
   )
 }
 
+const RUNTIME_BACKEND_OPTIONS: Array<{
+  value: ProviderSettings['llamaCppRuntimeBackend']
+  id: string
+  label: string
+}> = [
+  { value: 'vulkan', id: 'settings-llama-runtime-gpu', label: 'GPU (Vulkan) — recommended' },
+  { value: 'cpu', id: 'settings-llama-runtime-cpu', label: 'CPU' }
+]
+
 function runtimeBackendFields(props: LlamaLocalSectionProps): JSX.Element {
   const backend = props.draft.llamaCppRuntimeBackend
   return (
     <fieldset className="settings-llama-runtime-backend" aria-label="Runtime backend">
       <legend>Runtime backend</legend>
-      <label className="settings-llama-runtime-option" htmlFor="settings-llama-runtime-gpu">
-        <input
-          id="settings-llama-runtime-gpu"
-          type="checkbox"
-          checked={backend === 'vulkan'}
-          onChange={(event) => {
-            if (event.target.checked) {
-              props.onChange({ llamaCppRuntimeBackend: 'vulkan' })
-            }
-          }}
-        />
-        <span>GPU (Vulkan) — recommended</span>
-      </label>
-      <label className="settings-llama-runtime-option" htmlFor="settings-llama-runtime-cpu">
-        <input
-          id="settings-llama-runtime-cpu"
-          type="checkbox"
-          checked={backend === 'cpu'}
-          onChange={(event) => {
-            if (event.target.checked) {
-              props.onChange({ llamaCppRuntimeBackend: 'cpu' })
-            }
-          }}
-        />
-        <span>CPU</span>
-      </label>
+      <div
+        className="settings-llama-runtime-options"
+        role="radiogroup"
+        aria-label="Runtime backend"
+      >
+        {RUNTIME_BACKEND_OPTIONS.map((option) => (
+          <label key={option.value} className="settings-llama-runtime-option" htmlFor={option.id}>
+            <input
+              id={option.id}
+              type="radio"
+              name="settings-llama-runtime-backend"
+              value={option.value}
+              checked={backend === option.value}
+              onChange={() => props.onChange({ llamaCppRuntimeBackend: option.value })}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
       <p className="settings-help-text">
         Pick GPU or CPU, then Acquire runtime. Re-acquire after switching. NVIDIA CUDA / AMD HIP
         builds remain an advanced BYO path.

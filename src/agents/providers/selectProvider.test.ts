@@ -71,7 +71,8 @@ describe('createProviderRegistry', () => {
       grokApiKey: 'grok-key',
       grokModel: 'grok-3',
       player2BaseUrl: 'http://127.0.0.1:4315',
-      llamaCppBaseUrl: 'http://127.0.0.1:8080'
+      llamaCppBaseUrl: 'http://127.0.0.1:8080',
+      llamaCppCtxSize: 8192
     })
 
     expect(registry.claude).toBeDefined()
@@ -93,7 +94,8 @@ describe('createProviderRegistry', () => {
       grokApiKey: 'grok-key',
       grokModel: 'grok-3',
       player2BaseUrl: 'http://127.0.0.1:4315',
-      llamaCppBaseUrl: 'http://127.0.0.1:8080'
+      llamaCppBaseUrl: 'http://127.0.0.1:8080',
+      llamaCppCtxSize: 8192
     })
 
     expect(registry.llamacpp).not.toBe(registry.player2)

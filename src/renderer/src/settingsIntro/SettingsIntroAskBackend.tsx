@@ -1,5 +1,10 @@
 import type { LocalLlmFirstRunBackend } from './runLocalLlmFirstRunSetup'
 
+const BACKEND_OPTIONS: Array<{ value: LocalLlmFirstRunBackend; label: string }> = [
+  { value: 'vulkan', label: 'GPU (Vulkan)' },
+  { value: 'cpu', label: 'CPU' }
+]
+
 export function SettingsIntroAskBackend(props: {
   backend: LocalLlmFirstRunBackend
   onBackendChange: (backend: LocalLlmFirstRunBackend) => void
@@ -14,32 +19,29 @@ export function SettingsIntroAskBackend(props: {
       </p>
       <fieldset className="settings-intro-backend" aria-label="Runtime backend">
         <legend>Hardware</legend>
-        <label className="settings-intro-backend-option" htmlFor="settings-intro-runtime-gpu">
-          <input
-            id="settings-intro-runtime-gpu"
-            type="checkbox"
-            checked={props.backend === 'vulkan'}
-            onChange={(event) => {
-              if (event.target.checked) {
-                props.onBackendChange('vulkan')
-              }
-            }}
-          />
-          <span>GPU (Vulkan)</span>
-        </label>
-        <label className="settings-intro-backend-option" htmlFor="settings-intro-runtime-cpu">
-          <input
-            id="settings-intro-runtime-cpu"
-            type="checkbox"
-            checked={props.backend === 'cpu'}
-            onChange={(event) => {
-              if (event.target.checked) {
-                props.onBackendChange('cpu')
-              }
-            }}
-          />
-          <span>CPU</span>
-        </label>
+        <div
+          className="settings-intro-backend-options"
+          role="radiogroup"
+          aria-label="Hardware"
+        >
+          {BACKEND_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className="settings-intro-backend-option"
+              htmlFor={`settings-intro-runtime-${option.value === 'vulkan' ? 'gpu' : 'cpu'}`}
+            >
+              <input
+                id={`settings-intro-runtime-${option.value === 'vulkan' ? 'gpu' : 'cpu'}`}
+                type="radio"
+                name="settings-intro-runtime-backend"
+                value={option.value}
+                checked={props.backend === option.value}
+                onChange={() => props.onBackendChange(option.value)}
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
       <footer className="settings-intro-actions">
         <button type="button" className="settings-intro-primary" onClick={props.onContinue}>

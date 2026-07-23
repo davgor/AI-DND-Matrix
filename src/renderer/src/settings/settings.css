@@ -280,7 +280,7 @@
 .settings-llama-runtime-backend {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: 0.75rem 0.85rem;
   margin: 0;
   display: flex;
   flex-direction: column;
@@ -288,14 +288,53 @@
 }
 
 .settings-llama-runtime-backend legend {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  padding: 0 4px;
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.settings-llama-runtime-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .settings-llama-runtime-option {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.settings-llama-runtime-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-llama-runtime-option span {
+  display: inline-block;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.settings-llama-runtime-option input:checked + span {
+  border-color: var(--border-strong);
+  background: rgba(201, 166, 107, 0.16);
   color: var(--text-primary);
+}
+
+.settings-llama-runtime-option input:focus-visible + span {
+  outline: 2px solid rgba(201, 166, 107, 0.35);
+  outline-offset: 2px;
+}
+
+.settings-llama-runtime-option:hover span {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
 }

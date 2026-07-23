@@ -1,7 +1,7 @@
 # Baseline ignore for ts-prune (one pattern per line)
 # Generated from tsconfig.node.json + tsconfig.web.json
 # Refresh after export moves/deletes: npm run deadcode:refresh
-# Refreshed 2026-07-22 (1332 entries)
+# Refreshed 2026-07-23 (1329 entries)
 
 electron.vite.config.ts:41 - default
 src/agents/bestiary/assignQuestFoes.ts:168 - parseEnemyHintsFromQuestText
@@ -27,31 +27,31 @@ src/agents/campaignGeneration/index.ts:104 - GeneratedBestiaryFoe
 src/agents/campaignGeneration/index.ts:111 - GeneratedBestiaryRoster
 src/agents/campaignGeneration/index.ts:115 - GeneratedWorld
 src/agents/campaignGeneration/index.ts:118 - generateFlaggedNpcDetails
-src/agents/campaignGeneration/index.ts:119 - generateCampaignWorld
 src/agents/campaignGeneration/index.ts:122 - CanonRecall
 src/agents/campaignGeneration/index.ts:130 - EMPTY_CANON_RECALL
+src/agents/campaignGeneration/index.ts:133 - generateCampaignWorld
 src/agents/campaignGeneration/index.ts:138 - GeneratedDeity
-src/agents/campaignGeneration/index.ts:139 - generateCanonRecall
 src/agents/campaignGeneration/index.ts:147 - GeneratedPantheon
 src/agents/campaignGeneration/index.ts:152 - GeneratedFaction
-src/agents/campaignGeneration/index.ts:159 - generateCampaignPantheon
+src/agents/campaignGeneration/index.ts:153 - generateCanonRecall
 src/agents/campaignGeneration/index.ts:164 - GeneratedFactionRelation
 src/agents/campaignGeneration/index.ts:171 - GeneratedFactions
-src/agents/campaignGeneration/index.ts:175 - generateCampaignFactions
+src/agents/campaignGeneration/index.ts:176 - generateCampaignPantheon
 src/agents/campaignGeneration/index.ts:178 - WorldContext
 src/agents/campaignGeneration/index.ts:184 - CampaignGenerationResult
 src/agents/campaignGeneration/index.ts:19 - CampaignGenerationSchemaError
-src/agents/campaignGeneration/index.ts:193 - generateCampaignRegions
+src/agents/campaignGeneration/index.ts:192 - generateCampaignFactions
 src/agents/campaignGeneration/index.ts:194 - AdditionalRegionResult
 src/agents/campaignGeneration/index.ts:199 - GeneratedSingleNpcResult
 src/agents/campaignGeneration/index.ts:203 - CampaignHistoryContext
 src/agents/campaignGeneration/index.ts:21 - MAX_GENERATION_ATTEMPTS
+src/agents/campaignGeneration/index.ts:210 - generateCampaignRegions
 src/agents/campaignGeneration/index.ts:211 - persistRegionWithNpcs
 src/agents/campaignGeneration/index.ts:213 - AdditionalRegionRequest
-src/agents/campaignGeneration/index.ts:218 - generateCampaignStoryThread
 src/agents/campaignGeneration/index.ts:22 - MAX_CAMPAIGN_SEED_ATTEMPTS
 src/agents/campaignGeneration/index.ts:221 - PersistRegionWithNpcsInput
 src/agents/campaignGeneration/index.ts:232 - PersistGeneratedCampaignOptions
+src/agents/campaignGeneration/index.ts:235 - generateCampaignStoryThread
 src/agents/campaignGeneration/index.ts:237 - CampaignSetupInput
 src/agents/campaignGeneration/index.ts:24 - GenerationCounts
 src/agents/campaignGeneration/index.ts:29 - GenerateCampaignSeedOptions
@@ -65,14 +65,14 @@ src/agents/campaignGeneration/index.ts:467 - persistGeneratedCampaign
 src/agents/campaignGeneration/index.ts:50 - GeneratedRegion
 src/agents/campaignGeneration/index.ts:58 - GeneratedNpc
 src/agents/campaignGeneration/index.ts:59 - generateWorldSummaryFromHistory
-src/agents/campaignGeneration/index.ts:692 - generateCampaignSeed
-src/agents/campaignGeneration/index.ts:770 - generateAdditionalRegion
+src/agents/campaignGeneration/index.ts:709 - generateCampaignSeed
+src/agents/campaignGeneration/index.ts:791 - generateAdditionalRegion
 src/agents/campaignGeneration/index.ts:8 - buildWorldSummaryFromHistoryPrompt
-src/agents/campaignGeneration/index.ts:82 - assembleCampaignHistoryContext
 src/agents/campaignGeneration/index.ts:84 - NpcCoreBundle
+src/agents/campaignGeneration/index.ts:84 - assembleCampaignHistoryContext
 src/agents/campaignGeneration/index.ts:86 - enrichNpcWithSpeakingStyle
 src/agents/campaignGeneration/index.ts:86 - generateNpcCoreBundle
-src/agents/campaignGeneration/index.ts:876 - generateAndPersistCampaign
+src/agents/campaignGeneration/index.ts:897 - generateAndPersistCampaign
 src/agents/campaignGeneration/index.ts:97 - GeneratedStoryThread
 src/agents/campaignGeneration/normalize.ts:274 - meetsWorldHistoryProseStandards
 src/agents/campaignGeneration/normalize.ts:390 - readCanSpeak
@@ -194,10 +194,8 @@ src/agents/providers/player2.ts:9 - Player2UnreachableError
 src/agents/providers/tokenEscalation.ts:15 - DEFAULT_ESCALATION_BASE
 src/agents/providers/tokenEscalation.ts:18 - ESCALATION_MIN_CAP
 src/agents/providers/tokenEscalation.ts:21 - MAX_TOKEN_ESCALATIONS
-src/agents/providers/tokenEscalation.ts:24 - TOKEN_ESCALATION_CEILING
 src/agents/providers/types.ts:51 - MockProvider
 src/agents/providers/types.ts:55 - createMockProvider
-src/agents/providers/withRetry.ts:26 - ProviderUnreachableError
 src/agents/providers/withRetry.ts:29 - LlamaCppProviderUnreachableError
 src/agents/providers/withRetry.ts:55 - isNonRetryableProviderError
 src/agents/providers/withUsageRecording.ts:10 - UsageRecordingDeps
@@ -504,12 +502,12 @@ src/main/bestiaryEncounterSpawn.ts:40 - deriveProvisionalHostileName
 src/main/bestiaryEncounterSpawn.ts:58 - detectThematicSignal
 src/main/bestiaryEncounterSpawn.ts:79 - findMatchingBestiarySpecies
 src/main/campaignActionTrace.ts:23 - setCampaignActionTraceEnabledForTests
-src/main/campaignCreateIpc.ts:114 - registerCampaignCreateHandlers
-src/main/campaignCreateIpc.ts:138 - resetCampaignCreateForTests
-src/main/campaignCreateIpc.ts:30 - CreateCampaignSuccess
-src/main/campaignCreateIpc.ts:35 - CreateCampaignFailure
-src/main/campaignCreateIpc.ts:43 - CreateCampaignSchedulerDeps
-src/main/campaignCreateIpc.ts:77 - createCampaignFromRequest
+src/main/campaignCreateIpc.ts:130 - registerCampaignCreateHandlers
+src/main/campaignCreateIpc.ts:154 - resetCampaignCreateForTests
+src/main/campaignCreateIpc.ts:33 - CreateCampaignSuccess
+src/main/campaignCreateIpc.ts:38 - CreateCampaignFailure
+src/main/campaignCreateIpc.ts:46 - CreateCampaignSchedulerDeps
+src/main/campaignCreateIpc.ts:80 - createCampaignFromRequest
 src/main/campaignEditIpc.ts:105 - EditPantheonSummaryInput
 src/main/campaignEditIpc.ts:110 - editPantheonSummary
 src/main/campaignEditIpc.ts:118 - EditFactionsSummaryInput
@@ -539,13 +537,13 @@ src/main/campaignEditIpc.ts:80 - deleteNpcForCampaign
 src/main/campaignEditIpc.ts:92 - EditWorldSummaryInput
 src/main/campaignEditIpc.ts:97 - editWorldSummary
 src/main/campaignFileCleanup.ts:16 - UnlinkFile
-src/main/campaignIpc.ts:154 - generateCampaignFromPrompt
-src/main/campaignIpc.ts:168 - registerCampaignHandlers
-src/main/campaignIpc.ts:43 - RegionExtras
-src/main/campaignIpc.ts:45 - CampaignBestiaryEntry
-src/main/campaignIpc.ts:63 - listCampaignsForSidebar
-src/main/campaignIpc.ts:67 - buildRegionExtras
-src/main/campaignIpc.ts:99 - selectCampaign
+src/main/campaignIpc.ts:103 - selectCampaign
+src/main/campaignIpc.ts:166 - generateCampaignFromPrompt
+src/main/campaignIpc.ts:180 - registerCampaignHandlers
+src/main/campaignIpc.ts:47 - RegionExtras
+src/main/campaignIpc.ts:49 - CampaignBestiaryEntry
+src/main/campaignIpc.ts:67 - listCampaignsForSidebar
+src/main/campaignIpc.ts:71 - buildRegionExtras
 src/main/campaignPortabilityIpc.ts:19 - ShowSaveDialog
 src/main/campaignPortabilityIpc.ts:20 - ShowOpenDialog
 src/main/campaignPortabilityIpc.ts:21 - ReadAssetBytes
@@ -657,7 +655,7 @@ src/main/raceIpc.ts:92 - applyRaceSelection
 src/main/rewardNarrationTemplates.ts:9 - formatItemNameList
 src/main/sceneContextCap.ts:13 - SCENE_CONTEXT_MAX_BEATS
 src/main/sceneContextCap.ts:14 - SCENE_CONTEXT_MAX_CHARS
-src/main/settingsRuntime.ts:77 - resolveLlamaCppLifecycleConfig
+src/main/settingsRuntime.ts:79 - resolveLlamaCppLifecycleConfig
 src/main/settingsStore.ts:49 - loadSettings
 src/main/settingsStore.ts:79 - saveSettings
 src/main/settingsStore.ts:9 - SecretCodec
@@ -791,7 +789,6 @@ src/renderer/src/raceSelection/raceSelectionTestUtils.ts:7 - walkNodes
 src/renderer/src/relationshipWeb/RelationshipWebPanel.tsx:6 - RelationshipWebPanelProps
 src/renderer/src/settings/Player2Section.tsx:3 - Player2SectionProps
 src/renderer/src/settings/ProviderModeSelector.tsx:3 - ProviderModeSelectorProps
-src/renderer/src/settingsIntro/SettingsIntroModal.tsx:4 - SettingsIntroModalProps
 src/renderer/src/settingsIntro/useSettingsIntro.ts:4 - SettingsIntroController
 src/renderer/src/shared/FormattedText.tsx:7 - FormattedTextProps
 src/renderer/src/sidebar/CampaignsRail.tsx:6 - CampaignsRailProps

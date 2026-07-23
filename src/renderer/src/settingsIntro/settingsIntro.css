@@ -83,24 +83,60 @@
 .settings-intro-backend {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: 0.75rem 0.85rem;
   margin: 0 0 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .settings-intro-backend legend {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  padding: 0 4px;
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.settings-intro-backend-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .settings-intro-backend-option {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.settings-intro-backend-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-intro-backend-option span {
+  display: inline-block;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.settings-intro-backend-option input:checked + span {
+  border-color: var(--border-strong);
+  background: rgba(201, 166, 107, 0.16);
   color: var(--text-primary);
+}
+
+.settings-intro-backend-option input:focus-visible + span {
+  outline: 2px solid rgba(201, 166, 107, 0.35);
+  outline-offset: 2px;
+}
+
+.settings-intro-backend-option:hover span {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
 }
 
 .settings-intro-setup-progress {

@@ -85,7 +85,7 @@ npm run build
 
 Vitest uses system Node and scripted JSON. **One real create** catches ABI, provider, and coercion gaps.
 
-1. Close any running Electron app (unlocks `better-sqlite3` rebuild).
+1. If a running Electron/`electron-vite` session locks `better-sqlite3`, kill those repo processes (see delivery-standards) so rebuild can proceed — do not leave verification blocked.
 2. `npm run rebuild:electron` then `npm run dev` (or `npm run build` + launch packaged app).
 3. Create a campaign with **default counts** (2 regions, 3 NPCs) and a premise similar to recent failures, e.g.:
    - *"After a failed harvest, survivors gather in a mountain pass and face bandits who now wear the faces of the dead."*

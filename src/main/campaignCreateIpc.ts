@@ -3,6 +3,8 @@ import type Database from 'better-sqlite3'
 import { CampaignGenerationSchemaError, generateCampaignSeed, persistGeneratedCampaign } from '../agents/campaignGeneration'
 import type { CampaignSetupInput } from '../agents/campaignGeneration'
 import type { Provider } from '../agents/providers/types'
+import { isTruncationError } from '../agents/providers/tokenEscalation'
+import { ProviderUnreachableError } from '../agents/providers/withRetry'
 import { buildAvailableRaceOptions } from '../agents/raceLore'
 import { buildCreateProgress } from '../shared/campaignCreate/stageMessages'
 import {
@@ -16,6 +18,7 @@ import { listBestiarySpecies } from '../db/repositories/bestiary'
 import type { DeathMode, RespawnRules } from '../db/repositories/campaigns'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
+import { logger } from './logger'
 import {
   createNpcFaceTokenSchedulerDeps,
   maybeEnqueueNpcFaceTokensForNpcs,
@@ -104,6 +107,19 @@ export async function createCampaignFromRequest(
     )
     return { ok: true, detail }
   } catch (error) {
+    logger.error('Campaign create failed', error)
+    if (isTruncationError(error)) {
+      return failure(
+        'generation',
+        'The narrative engine hit its output limit while generating the campaign. Raise local context size in Settings, simplify your premise, or try again.'
+      )
+    }
+    if (error instanceof ProviderUnreachableError) {
+      return failure(
+        'generation',
+        'The narrative engine could not be reached. Check Settings and try again.'
+      )
+    }
     if (error instanceof CampaignGenerationSchemaError) {
       return failure('generation', 'The narrative engine returned an invalid campaign. Try again or simplify your premise.')
     }

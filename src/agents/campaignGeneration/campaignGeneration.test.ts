@@ -9,6 +9,7 @@ import { listQuestHooksByRegion } from '../../db/repositories/worldFacts'
 import { createScriptedProvider } from '../providers/mockHarness'
 import type { ScriptedResponse } from '../providers/mockHarness'
 import type { Provider } from '../providers/types'
+import { LlamaCppTruncationError } from '../providers/llamacpp'
 import { buildAvailableRaceOptions } from '../raceLore'
 import {
   CampaignGenerationSchemaError,
@@ -774,6 +775,21 @@ describe('generateCampaignSeed schema rejection + retry (007.4, generation half)
       CampaignGenerationSchemaError
     )
     expect(provider.calls.length).toBeGreaterThanOrEqual(MAX_GENERATION_ATTEMPTS)
+  })
+
+  it('does not restart the full seed when a stage hits output truncation', async () => {
+    const calls: string[] = []
+    const provider: Provider = {
+      async generate(prompt: string): Promise<string> {
+        calls.push(prompt)
+        throw new LlamaCppTruncationError('truncated at max_tokens')
+      }
+    }
+    await expect(generateCampaignSeed(provider, 'x', { regionCount: 1, npcsPerRegion: 1 })).rejects.toBeInstanceOf(
+      LlamaCppTruncationError
+    )
+    // Canon truncates up to MAX_GENERATION_ATTEMPTS, then aborts — no ×5 outer restart.
+    expect(calls.length).toBe(MAX_GENERATION_ATTEMPTS)
   })
 })
 

@@ -84,7 +84,21 @@ Also run `npm run typecheck` when types/TS config changed or build errors are am
 
 **Campaign create pipeline changes** (generation stages, world/regions/NPC/story schema, `campaignCreateIpc`, `normalize.ts`, `persist.ts`, create progress stages): follow **[campaign-create-change-checklist](../../docs/runbooks/campaign-create-change-checklist.md)** in addition to this gate — contract tests + realistic LLM fixtures + one manual create with a real provider are required before done.
 
-**If `better-sqlite3` rebuild fails** because the dev app holds the `.node` file: note it, ask user to close the app, retry `npm test`, or run targeted vitest skipping DB if impossible.
+**If `better-sqlite3` rebuild fails** because the dev app holds the `.node` file (`EBUSY` / `EPERM` on `better_sqlite3.node`, or `NODE_MODULE_VERSION` mismatch while Electron is running): **do not ask the user to close the app.** Kill the locking processes yourself, then retry `npm test` / `npm run rebuild:node`.
+
+On Windows (PowerShell), stop this repo’s Electron / `electron-vite` / `llama-server` children, e.g.:
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object {
+    $_.CommandLine -and
+    $_.CommandLine -match [regex]::Escape((Get-Location).Path) -and
+    ($_.Name -match 'electron|node|llama-server' -or $_.CommandLine -match 'electron-vite')
+  } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+```
+
+Then re-run `npm test`. Mention briefly in the report that the dev app was stopped to unlock the native module. Only ask the user if kill fails after a retry (e.g. permissions) or they explicitly said not to stop a running session.
 
 ## 4. Close out
 

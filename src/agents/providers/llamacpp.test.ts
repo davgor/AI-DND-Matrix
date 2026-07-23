@@ -4,8 +4,21 @@ import {
   LlamaCppRequestError,
   LlamaCppTruncationError,
   LlamaCppUnreachableError,
+  clampLlamaCompletionMaxTokens,
   createLlamaCppProvider
 } from './llamacpp'
+
+describe('clampLlamaCompletionMaxTokens', () => {
+  it('leaves headroom for the prompt inside the configured ctx window', () => {
+    expect(clampLlamaCompletionMaxTokens(8192, 8192)).toBe(4096)
+    expect(clampLlamaCompletionMaxTokens(8192, 2048)).toBe(2048)
+    expect(clampLlamaCompletionMaxTokens(4096, 8192)).toBe(2048)
+  })
+
+  it('never drops below a usable micro floor when ctx is tiny', () => {
+    expect(clampLlamaCompletionMaxTokens(512, 8192)).toBe(256)
+  })
+})
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -48,6 +61,27 @@ describe('createLlamaCppProvider success', () => {
         ],
         max_tokens: 128
       })
+    })
+  })
+
+  it('clamps max_tokens to leave prompt reserve in the configured ctx window', async () => {
+    await withFetchStub(async () => {
+      vi.mocked(fetch).mockResolvedValue(
+        jsonResponse({
+          choices: [{ message: { role: 'assistant', content: 'ok' } }]
+        })
+      )
+
+      const provider = createLlamaCppProvider({
+        baseUrl: 'http://127.0.0.1:8080',
+        ctxSize: 8192
+      })
+      await provider.generate('look around', { maxTokens: 8192 })
+
+      const body = JSON.parse(vi.mocked(fetch).mock.calls[0]?.[1]?.body as string) as {
+        max_tokens: number
+      }
+      expect(body.max_tokens).toBe(4096)
     })
   })
 })

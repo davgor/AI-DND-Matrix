@@ -19,6 +19,8 @@ export interface ProviderRegistryConfig {
   grokModel: string
   player2BaseUrl: string
   llamaCppBaseUrl: string
+  /** llama-server context window; clamps local completion max_tokens. */
+  llamaCppCtxSize: number
 }
 
 export function selectProvider(
@@ -35,6 +37,9 @@ export function createProviderRegistry(config: ProviderRegistryConfig): Record<A
     gemini: createGeminiProvider({ apiKey: config.geminiApiKey, model: config.geminiModel }),
     grok: createGrokProvider({ apiKey: config.grokApiKey, model: config.grokModel }),
     player2: createPlayer2Provider({ baseUrl: config.player2BaseUrl }),
-    llamacpp: createLlamaCppProvider({ baseUrl: config.llamaCppBaseUrl })
+    llamacpp: createLlamaCppProvider({
+      baseUrl: config.llamaCppBaseUrl,
+      ctxSize: config.llamaCppCtxSize
+    })
   }
 }

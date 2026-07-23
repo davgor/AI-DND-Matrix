@@ -2,7 +2,11 @@ import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import { generateAndPersistCampaign } from '../agents/campaignGeneration'
 import { createProviderRegistry, selectProvider } from '../agents/providers/selectProvider'
-import { withTokenEscalation } from '../agents/providers/tokenEscalation'
+import {
+  TOKEN_ESCALATION_CEILING,
+  withTokenEscalation
+} from '../agents/providers/tokenEscalation'
+import { clampLlamaCompletionMaxTokens } from '../agents/providers/llamacpp'
 import { withRetry, type RetryOptions } from '../agents/providers/withRetry'
 import { withUsageRecording } from '../agents/providers/withUsageRecording'
 import type { Provider } from '../agents/providers/types'
@@ -109,8 +113,16 @@ export function buildAgentProvider(): Provider {
   // 040.14: escalation wraps retry — a truncated response is retried with a
   // doubled cap (each cap attempt keeps its own connectivity retries beneath).
   // 112: usage recording wraps outside escalation so retries aggregate into one event.
+  // 020.29: local ctx clamp lowers the escalation ceiling so retries are not identical.
+  const escalationOptions =
+    resolved.agentProvider === 'llamacpp'
+      ? {
+          ceiling: clampLlamaCompletionMaxTokens(resolved.llamaCppCtxSize, TOKEN_ESCALATION_CEILING)
+        }
+      : undefined
   const escalated = withTokenEscalation(
-    withRetry(selectProvider(resolved.agentProvider, registry), logger, retryOptionsFor(resolved))
+    withRetry(selectProvider(resolved.agentProvider, registry), logger, retryOptionsFor(resolved)),
+    escalationOptions
   )
   const defaultModelId =
     resolved.agentProvider === 'claude' ? resolved.claudeModel : resolved.agentProvider

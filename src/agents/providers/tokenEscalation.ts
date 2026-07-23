@@ -23,6 +23,11 @@ export const MAX_TOKEN_ESCALATIONS = 2
 /** Absolute ceiling — matches the largest hand-tuned band (flaggedNpc details / bulk generation). */
 export const TOKEN_ESCALATION_CEILING = 8192
 
+interface TokenEscalationOptions {
+  /** Optional lower ceiling (e.g. llama.cpp ctx clamp) to avoid identical retries. */
+  ceiling?: number
+}
+
 /**
  * Shared machine-readable marker set by ClaudeTruncationError and
  * Player2TruncationError so callers can detect truncation without importing
@@ -56,28 +61,43 @@ function contextWithUsageAggregation(
   }
 }
 
-function nextCap(currentCap: number): number {
-  return Math.min(currentCap * 2, TOKEN_ESCALATION_CEILING)
+function nextCap(currentCap: number, ceiling: number): number {
+  return Math.min(currentCap * 2, ceiling)
 }
 
-function shouldStopTokenEscalation(error: unknown, escalation: number, cap: number): boolean {
+function shouldStopTokenEscalation(
+  error: unknown,
+  escalation: number,
+  cap: number,
+  ceiling: number
+): boolean {
   if (!isTruncationError(error)) {
     return true
   }
   if (escalation >= MAX_TOKEN_ESCALATIONS) {
     return true
   }
-  return cap <= ESCALATION_MIN_CAP
+  if (cap <= ESCALATION_MIN_CAP) {
+    return true
+  }
+  // Already at the effective ceiling — doubling would not change the request.
+  return cap >= ceiling
 }
 
-export function withTokenEscalation(provider: Provider): Provider {
+export function withTokenEscalation(
+  provider: Provider,
+  options?: TokenEscalationOptions
+): Provider {
+  const ceiling = options?.ceiling ?? TOKEN_ESCALATION_CEILING
   return {
     async generate(prompt: string, context?: GenerateContext): Promise<string> {
       // Token escalation aggregates all attempts under one purpose: intercept
       // per-attempt onUsage from the inner provider, sum snapshots, and emit
       // a single metering callback after the successful final attempt.
-      let cap = context?.maxTokens ?? DEFAULT_ESCALATION_BASE
-      let attemptContext = context
+      let cap = Math.min(context?.maxTokens ?? DEFAULT_ESCALATION_BASE, ceiling)
+      let attemptContext: GenerateContext | undefined = context
+        ? { ...context, maxTokens: cap }
+        : undefined
       let aggregatedUsage: ProviderUsageSnapshot | null = null
       const recordUsage = (usage: ProviderUsageSnapshot): void => {
         aggregatedUsage = sumUsageSnapshots(aggregatedUsage, usage)
@@ -92,10 +112,10 @@ export function withTokenEscalation(provider: Provider): Provider {
           }
           return result
         } catch (error) {
-          if (shouldStopTokenEscalation(error, escalation, cap)) {
+          if (shouldStopTokenEscalation(error, escalation, cap, ceiling)) {
             throw error
           }
-          cap = nextCap(cap)
+          cap = nextCap(cap, ceiling)
           attemptContext = escalatedContext(context, cap)
         }
       }

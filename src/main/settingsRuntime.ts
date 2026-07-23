@@ -24,7 +24,8 @@ function fromEnv(envConfig: AppConfig): ResolvedProviderConfig {
     grokApiKey: envConfig.grokApiKey,
     grokModel: envConfig.grokModel,
     player2BaseUrl: envConfig.player2BaseUrl,
-    llamaCppBaseUrl: envConfig.llamaCppBaseUrl
+    llamaCppBaseUrl: envConfig.llamaCppBaseUrl,
+    llamaCppCtxSize: envConfig.llamaCppCtxSize
   }
 }
 
@@ -56,7 +57,8 @@ function fromPersisted(envConfig: AppConfig, persisted: ProviderSettings): Resol
     grokApiKey: pickKey(persisted.grokApiKey, envConfig.grokApiKey),
     grokModel: pickModel(persisted.grokModel, envConfig.grokModel, DEFAULT_CLOUD_MODELS.grok),
     player2BaseUrl: persisted.player2BaseUrl,
-    llamaCppBaseUrl: persisted.llamaCppBaseUrl
+    llamaCppBaseUrl: persisted.llamaCppBaseUrl,
+    llamaCppCtxSize: persisted.llamaCppCtxSize || envConfig.llamaCppCtxSize
   }
 }
 

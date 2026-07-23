@@ -181,6 +181,7 @@ None (`board/in-progress/` empty aside from `.gitkeep` and unrelated work).
 | Epic | Intent |
 |------|--------|
 | **143** | World grid — spatial data model for persistent world locations (data/APIs first; not m004 sprite play) |
+| **152** | Image provider Settings: cloud/Player2/local-on-rails painters; gate generative tokens until ready (promotes m001.1) |
 
 ### Revisit backlog
 
@@ -194,7 +195,7 @@ None (`board/in-progress/` empty aside from `.gitkeep` and unrelated work).
 
 | Id | Intent |
 |----|--------|
-| **m001** | Image generation for region/scene backgrounds and character visuals with local/cloud fallback; face-token follow-ups → epics **122** / **123** / **139** / **144** |
+| **m001** | Image generation for region/scene backgrounds and character visuals; provider rails promoted to epic **152**; face-token consumers → **122** / **123** / **139** / **144**; backgrounds remain exploratory |
 | **m002** | Host-driven multiplayer with host-side AI routing and guest party-member identities |
 | **m003** | Mod packs that seed homebrew catalog content from structured text files |
 | **m004** | Pixel/sprite grid campaign type (FF + Pokémon-style exploration/combat) forked from the narrative create pipeline |

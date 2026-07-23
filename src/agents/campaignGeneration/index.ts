@@ -1,6 +1,8 @@
 import type Database from 'better-sqlite3'
 import { tryParseJson } from '../jsonResponse'
 import type { Provider } from '../providers/types'
+import { isTruncationError } from '../providers/tokenEscalation'
+import { ProviderUnreachableError } from '../providers/withRetry'
 import type { LlmPurposeId } from '../../shared/llmUsage'
 import {
   meetsRegionTropeDiversity,
@@ -84,13 +86,13 @@ export * from './persist'
 export * from './flaggedNpc'
 export * from './worldSummaryRegen'
 
-const WORLD_MAX_TOKENS = 8192
+const WORLD_MAX_TOKENS = 4096
 const CANON_MAX_TOKENS = 2048
-const PANTHEON_MAX_TOKENS = 8192
-const FACTIONS_MAX_TOKENS = 8192
-const REGIONS_MAX_TOKENS = 8192
+const PANTHEON_MAX_TOKENS = 4096
+const FACTIONS_MAX_TOKENS = 4096
+const REGIONS_MAX_TOKENS = 4096
 const STORY_THREAD_MAX_TOKENS = 2048
-const ADDITIONAL_REGION_MAX_TOKENS = 10240
+const ADDITIONAL_REGION_MAX_TOKENS = 4096
 const SINGLE_NPC_MAX_TOKENS = 4096
 
 async function generateWithRetries<T>(input: {
@@ -102,16 +104,28 @@ async function generateWithRetries<T>(input: {
   isValid: (value: T) => boolean
   errorMessage: string
 }): Promise<T> {
+  let lastTruncation: unknown
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-    const raw = await input.provider.generate(input.buildPrompt(), {
-      maxTokens: input.maxTokens,
-      purpose: input.purpose
-    })
-    const parsed = tryParseJson(raw)
-    const normalized = input.normalize(parsed)
-    if (normalized && input.isValid(normalized)) {
-      return normalized
+    try {
+      const raw = await input.provider.generate(input.buildPrompt(), {
+        maxTokens: input.maxTokens,
+        purpose: input.purpose
+      })
+      const parsed = tryParseJson(raw)
+      const normalized = input.normalize(parsed)
+      if (normalized && input.isValid(normalized)) {
+        return normalized
+      }
+    } catch (error) {
+      if (isTruncationError(error)) {
+        lastTruncation = error
+        continue
+      }
+      throw error
     }
+  }
+  if (lastTruncation) {
+    throw lastTruncation
   }
   throw new CampaignGenerationSchemaError(input.errorMessage)
 }
@@ -151,7 +165,10 @@ export async function generateCanonRecall(
       isValid: isValidCanonRecall,
       errorMessage: 'DM agent did not return a valid canon recall schema after retries'
     })
-  } catch {
+  } catch (error) {
+    if (isTruncationError(error) || error instanceof ProviderUnreachableError) {
+      throw error
+    }
     return EMPTY_CANON_RECALL
   }
 }
@@ -757,7 +774,11 @@ async function tryCampaignSeedAttempt(input: {
 }): Promise<CampaignGenerationResult | undefined> {
   try {
     return await runCampaignSeedAttempt(input)
-  } catch {
+  } catch (error) {
+    // Truncation / unreachable will not improve by restarting from canon — surface them.
+    if (isTruncationError(error) || error instanceof ProviderUnreachableError) {
+      throw error
+    }
     return undefined
   }
 }

@@ -30,6 +30,33 @@ function textOf(node: { props?: Record<string, unknown> }): string {
   return ''
 }
 
+function findInputById(
+  flat: Array<{ type?: unknown; props?: Record<string, unknown> }>,
+  id: string,
+  inputType: string
+): { type?: unknown; props?: Record<string, unknown> } | undefined {
+  return flat.find(
+    (el) => el.type === 'input' && el.props?.type === inputType && el.props?.id === id
+  )
+}
+
+function expectBackendRadios(
+  flat: Array<{ type?: unknown; props?: Record<string, unknown> }>,
+  gpuId: string,
+  cpuId: string,
+  name: string
+): { type?: unknown; props?: Record<string, unknown> } {
+  const gpu = findInputById(flat, gpuId, 'radio')
+  const cpu = findInputById(flat, cpuId, 'radio')
+  expect(gpu).toBeDefined()
+  expect(cpu).toBeDefined()
+  expect(gpu?.props?.name).toBe(name)
+  expect(cpu?.props?.name).toBe(name)
+  expect(gpu?.props?.checked).toBe(true)
+  expect(cpu?.props?.checked).toBe(false)
+  return cpu as { type?: unknown; props?: Record<string, unknown> }
+}
+
 describe('LlamaLocalSection catalog render', () => {
   it('renders the curated catalog with size and VRAM hints', () => {
     const node = LlamaLocalSection({
@@ -154,7 +181,7 @@ describe('LlamaLocalSection advanced paths', () => {
 })
 
 describe('LlamaLocalSection runtime backend', () => {
-  it('exposes GPU and CPU checkboxes and persists the chosen backend', () => {
+  it('exposes GPU and CPU radios and persists the chosen backend', () => {
     const onChange = vi.fn()
     const node = LlamaLocalSection({
       draft: {
@@ -168,23 +195,17 @@ describe('LlamaLocalSection runtime backend', () => {
       onCheckRuntime: async () => undefined
     })
     const flat = flattenElements(node)
-    const gpu = flat.find(
-      (el) => el.type === 'input' && el.props?.type === 'checkbox' && el.props?.id === 'settings-llama-runtime-gpu'
+    const cpu = expectBackendRadios(
+      flat,
+      'settings-llama-runtime-gpu',
+      'settings-llama-runtime-cpu',
+      'settings-llama-runtime-backend'
     )
-    const cpu = flat.find(
-      (el) => el.type === 'input' && el.props?.type === 'checkbox' && el.props?.id === 'settings-llama-runtime-cpu'
-    )
-    expect(gpu).toBeDefined()
-    expect(cpu).toBeDefined()
-    expect(gpu?.props?.checked).toBe(true)
-    expect(cpu?.props?.checked).toBe(false)
     const joined = flat.map(textOf).join(' ')
     expect(joined).toMatch(/GPU \(Vulkan\)/i)
     expect(joined).toMatch(/\bCPU\b/)
-    const onChangeHandler = cpu?.props?.onChange as
-      | ((event: { target: { checked: boolean } }) => void)
-      | undefined
-    onChangeHandler?.({ target: { checked: true } })
+    const onChangeHandler = cpu.props?.onChange as (() => void) | undefined
+    onChangeHandler?.()
     expect(onChange).toHaveBeenCalledWith({ llamaCppRuntimeBackend: 'cpu' })
   })
 })
