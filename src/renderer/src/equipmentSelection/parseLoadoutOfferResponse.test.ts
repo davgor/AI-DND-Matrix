@@ -12,6 +12,22 @@ const sampleOffer: StartingLoadoutOffer = {
 }
 
 describe('parseLoadoutOfferResponse', () => {
+  it('accepts wrapped ok responses with previousSelections', () => {
+    const previousSelections = {
+      weaponName: 'Longsword',
+      armorName: 'Chain Hauberk',
+      offHandItemName: null,
+      spellKeys: ['rallying-strike']
+    }
+    expect(
+      parseLoadoutOfferResponse({ ok: true, offer: sampleOffer, previousSelections })
+    ).toEqual({
+      ok: true,
+      offer: sampleOffer,
+      previousSelections
+    })
+  })
+
   it('accepts wrapped ok responses', () => {
     expect(parseLoadoutOfferResponse({ ok: true, offer: sampleOffer })).toEqual({
       ok: true,

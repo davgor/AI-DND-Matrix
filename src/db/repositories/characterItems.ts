@@ -186,3 +186,7 @@ export function unequipCharacterItemRow(db: Database.Database, characterItemId: 
 export function removeCharacterItemRow(db: Database.Database, characterItemId: string): void {
   db.prepare('DELETE FROM character_items WHERE id = ?').run(characterItemId)
 }
+
+export function clearCharacterItems(db: Database.Database, characterId: string): void {
+  db.prepare('DELETE FROM character_items WHERE character_id = ?').run(characterId)
+}

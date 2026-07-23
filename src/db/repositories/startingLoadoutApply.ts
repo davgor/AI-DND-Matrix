@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { Character } from './characters'
 import type { ValidatedStartingLoadout } from '../../engine/startingLoadout/validate'
-import { addItemToCharacter, equipCharacterItem } from './characterItems'
+import { addItemToCharacter, clearCharacterItems, equipCharacterItem } from './characterItems'
 import { computeCharacterTotalAc } from './itemCommerce'
 import { findCatalogItemByName } from './items'
 import { updateCharacter } from './characters'
@@ -56,6 +56,7 @@ export function applyValidatedLoadoutInTransaction(
   plan: ValidatedStartingLoadout
 ): void {
   const transaction = db.transaction(() => {
+    clearCharacterItems(db, character.id)
     for (const entry of equipRowsFromPlan(plan)) {
       grantAndEquipRow(db, character.id, entry)
     }

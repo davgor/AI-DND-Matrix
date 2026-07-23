@@ -37,6 +37,27 @@ export function canConfirmBackgroundSelection(state: BackgroundSelectionState): 
   return true
 }
 
+export function canGenerateBackgroundStory(props: {
+  state: BackgroundSelectionState
+  submitting: boolean
+  isCustom: boolean
+}): boolean {
+  return (
+    Boolean(props.state.backgroundKey) &&
+    !props.submitting &&
+    (!props.isCustom || Boolean(props.state.customLabel.trim()))
+  )
+}
+
+/** Disabled flag for the Generate button — inverse of canGenerateBackgroundStory. */
+export function isBackgroundStoryGenerateDisabled(props: {
+  state: BackgroundSelectionState
+  submitting: boolean
+  isCustom: boolean
+}): boolean {
+  return !canGenerateBackgroundStory(props)
+}
+
 export function descriptionForSelection(
   roster: BackgroundRosterEntry[],
   backgroundKey: string | null

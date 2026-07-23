@@ -40,6 +40,14 @@ export interface StartingLoadoutSelections {
   spellKeys: string[]
 }
 
+/** Equipped starting gear already on the character (e.g. after companions → equipment back). */
+export interface AppliedStartingLoadoutSnapshot {
+  weaponName: string | null
+  armorName: string | null
+  offHandItemName: string | null
+  spellKeys: string[]
+}
+
 export type ApplyStartingLoadoutResult =
   | { ok: true }
   | {

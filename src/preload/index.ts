@@ -359,7 +359,11 @@ const startup = {
 
 const startingLoadout = {
   getOffer: (input: { characterId: string }): Promise<
-    | { ok: true; offer: import('../shared/startingLoadout/types').StartingLoadoutOffer }
+    | {
+        ok: true
+        offer: import('../shared/startingLoadout/types').StartingLoadoutOffer
+        previousSelections?: import('../shared/startingLoadout/types').AppliedStartingLoadoutSnapshot
+      }
     | {
         ok: false
         reason: string

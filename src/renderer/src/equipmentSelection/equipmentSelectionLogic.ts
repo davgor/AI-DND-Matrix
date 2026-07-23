@@ -1,4 +1,7 @@
-import type { StartingLoadoutOffer } from '../../../shared/startingLoadout/types'
+import type {
+  AppliedStartingLoadoutSnapshot,
+  StartingLoadoutOffer
+} from '../../../shared/startingLoadout/types'
 import { STARTING_OFF_HAND_EMPTY } from '../../../engine/startingLoadout/packages'
 
 export interface EquipmentSelectionState {
@@ -15,6 +18,63 @@ export function initialEquipmentSelectionState(offer: StartingLoadoutOffer): Equ
     offHandChoice: offer.offHand.length > 0 ? null : STARTING_OFF_HAND_EMPTY,
     spellKeys: []
   }
+}
+
+function matchNamedOption(name: string | null, options: ReadonlyArray<{ name: string }>): string | null {
+  if (!name || !options.some((entry) => entry.name === name)) {
+    return null
+  }
+  return name
+}
+
+function resolveHydratedOffHand(
+  offer: StartingLoadoutOffer,
+  offHandItemName: string | null
+): string {
+  if (!offHandOptionsVisible(offer)) {
+    return STARTING_OFF_HAND_EMPTY
+  }
+  if (offHandItemName && offer.offHand.some((entry) => entry.id === offHandItemName)) {
+    return offHandItemName
+  }
+  return STARTING_OFF_HAND_EMPTY
+}
+
+export function hydrateEquipmentSelectionState(
+  offer: StartingLoadoutOffer,
+  applied: AppliedStartingLoadoutSnapshot | null
+): EquipmentSelectionState | null {
+  if (!applied) {
+    return null
+  }
+  const weaponName = matchNamedOption(applied.weaponName, offer.weapons)
+  const armorName = matchNamedOption(applied.armorName, offer.armors)
+  const spellKeys = applied.spellKeys
+    .filter((key) => offer.spells.some((spell) => spell.key === key))
+    .slice(0, offer.spellPickCount)
+
+  if (!weaponName && !armorName && spellKeys.length === 0) {
+    return null
+  }
+
+  return {
+    weaponName,
+    armorName,
+    offHandChoice: resolveHydratedOffHand(offer, applied.offHandItemName),
+    spellKeys
+  }
+}
+
+export function resolveInitialEquipmentSelectionState(
+  offer: StartingLoadoutOffer,
+  applied: AppliedStartingLoadoutSnapshot | null,
+  draft: EquipmentSelectionState | null
+): EquipmentSelectionState {
+  const hydrated = hydrateEquipmentSelectionState(offer, applied)
+  if (hydrated) {
+    return hydrated
+  }
+  return draft ?? initialEquipmentSelectionState(offer)
 }
 
 export function isTwoHandWeaponSelected(

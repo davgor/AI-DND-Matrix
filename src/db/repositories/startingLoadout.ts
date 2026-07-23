@@ -6,7 +6,10 @@ import {
   type LoadoutSpellConstraint,
   type StartingLoadoutInput
 } from '../../engine/startingLoadout/validate'
-import type { ApplyStartingLoadoutResult } from '../../shared/startingLoadout/types'
+import type {
+  AppliedStartingLoadoutSnapshot,
+  ApplyStartingLoadoutResult
+} from '../../shared/startingLoadout/types'
 import { getSpellByKey } from '../catalog/spells'
 import { listCharacterItems } from './characterItems'
 import { findCatalogItemByName } from './items'
@@ -32,6 +35,38 @@ function spellConstraintsFromDb(db: Database.Database, pkg: ReturnType<typeof ge
       minLevel: spell?.constraints.minLevel
     }
   })
+}
+
+function equippedItemName(
+  items: ReturnType<typeof listCharacterItems>,
+  slot: 'mainHand' | 'armor' | 'offHand'
+): string | null {
+  return items.find((row) => row.equippedSlot === slot)?.item.name ?? null
+}
+
+function readKnownSpellKeys(stats: Record<string, unknown>): string[] {
+  return Array.isArray(stats.knownSpellKeys) ? (stats.knownSpellKeys as string[]) : []
+}
+
+export function readAppliedStartingLoadoutSnapshot(
+  db: Database.Database,
+  characterId: string
+): AppliedStartingLoadoutSnapshot | null {
+  const character = getCharacterById(db, characterId)
+  if (!character) {
+    return null
+  }
+  const items = listCharacterItems(db, characterId)
+  const weaponName = equippedItemName(items, 'mainHand')
+  const armorName = equippedItemName(items, 'armor')
+  const offHandItemName = equippedItemName(items, 'offHand')
+  const spellKeys = readKnownSpellKeys(character.stats)
+
+  if (!weaponName && !armorName && spellKeys.length === 0) {
+    return null
+  }
+
+  return { weaponName, armorName, offHandItemName, spellKeys }
 }
 
 export function applyStartingLoadout(

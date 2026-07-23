@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { ReactElement, ReactNode } from 'react'
 import { EquipmentSelectionForm } from './EquipmentSelectionForm'
 import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
+import { ProceedButton } from '../onboarding/ProceedButton'
 import { initialEquipmentSelectionState } from './equipmentSelectionLogic'
 import type { StartingLoadoutOffer } from '../../../shared/startingLoadout/types'
 import { STARTING_OFF_HAND_EMPTY } from '../../../engine/startingLoadout/packages'
@@ -91,5 +92,21 @@ describe('EquipmentSelectionForm', () => {
     expect(findByClassName(backButton, 'onboarding-back-arrow')).toBeDefined()
     backButton.props.onClick()
     expect(onBack).toHaveBeenCalledOnce()
+  })
+
+  it('labels the proceed button for the companions step, not identity interview', () => {
+    const tree = EquipmentSelectionForm({
+      offer: fighterOffer,
+      state: initialEquipmentSelectionState(fighterOffer),
+      setState: () => {},
+      submitting: false,
+      error: null,
+      onConfirm: () => {},
+      onBack: () => {}
+    })
+
+    const proceed = findComponent(tree, ProceedButton)
+    expect(proceed).toBeDefined()
+    expect(proceed!.props.children).toBe('Find your traveling companion')
   })
 })
