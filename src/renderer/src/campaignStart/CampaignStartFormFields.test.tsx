@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as devBuild from '../dev/isRendererDevBuild'
 import { DEFAULT_CAMPAIGN_SETUP_FORM, MAX_REGION_COUNT, MIN_REGION_COUNT } from '../../../shared/campaignCreate/types'
+import { IMAGE_GENERATION_NOT_READY_MESSAGE } from '../../../shared/settings/imageProviderSettings'
 import { CampaignStartFormFields } from './CampaignStartFormFields'
 import type { CampaignStartFlow } from './useCampaignStartFlow'
 
@@ -72,7 +73,8 @@ describe('CampaignStartFormFields random dice', () => {
   it('renders per-field dice controls in dev builds', () => {
     const node = CampaignStartFormFields({
       flow: makeFlow(vi.fn()),
-      isError: false
+      isError: false,
+      imageReady: true
     })
 
     const diceButtons = findDiceButtons(node)
@@ -86,7 +88,8 @@ describe('CampaignStartFormFields random dice', () => {
     const updateForm = vi.fn()
     const node = CampaignStartFormFields({
       flow: makeFlow(updateForm),
-      isError: false
+      isError: false,
+      imageReady: true
     })
 
     const premiseDice = findDiceButtons(node).find(
@@ -104,7 +107,8 @@ describe('CampaignStartFormFields random dice', () => {
     const updateForm = vi.fn()
     const node = CampaignStartFormFields({
       flow: makeFlow(updateForm),
-      isError: false
+      isError: false,
+      imageReady: true
     })
 
     const regionDice = findDiceButtons(node).find(
@@ -115,5 +119,26 @@ describe('CampaignStartFormFields random dice', () => {
     const patch = updateForm.mock.calls[0]?.[0] as { regionCount?: number }
     expect(patch.regionCount).toBeGreaterThanOrEqual(MIN_REGION_COUNT)
     expect(patch.regionCount).toBeLessThanOrEqual(MAX_REGION_COUNT)
+  })
+})
+
+describe('CampaignStartFormFields generative tokens gate', () => {
+  it('disables generative tokens checkbox when image provider not ready', () => {
+    const node = CampaignStartFormFields({
+      flow: makeFlow(vi.fn()),
+      isError: false,
+      imageReady: false
+    })
+    const checkbox = collectElements(node).find(
+      (element) => element.props?.type === 'checkbox'
+    )
+    expect(checkbox?.props.disabled).toBe(true)
+    const joined = collectElements(node)
+      .map((element) => {
+        const children = element.props?.children
+        return typeof children === 'string' ? children : ''
+      })
+      .join(' ')
+    expect(joined).toContain(IMAGE_GENERATION_NOT_READY_MESSAGE)
   })
 })

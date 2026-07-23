@@ -5,3 +5,8 @@ export function nextSettingsIntroStepAfterLocalChoice(
 ): Exclude<SettingsIntroWizardStep, 'askLocal' | 'setup'> {
   return wantLocal ? 'askBackend' : 'providerFallback'
 }
+
+/** After local LLM setup succeeds, offer optional local image onboarding (152.13). */
+export function nextSettingsIntroStepAfterLocalLlmSuccess(): 'askImage' {
+  return 'askImage'
+}

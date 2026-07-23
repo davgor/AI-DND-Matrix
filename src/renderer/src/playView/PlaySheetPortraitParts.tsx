@@ -21,10 +21,12 @@ export function PlaySheetPortraitControls(props: {
   prompt: string
   busy: boolean
   error: string | null
+  imageReady?: boolean
   onPromptChange: (value: string) => void
   onRegenerate: () => void
   onReplace: () => void
 }): JSX.Element {
+  const imageReady = props.imageReady !== false
   return (
     <>
       <label className="play-sheet-portrait-prompt">
@@ -39,8 +41,9 @@ export function PlaySheetPortraitControls(props: {
       <div className="play-sheet-portrait-actions">
         <button
           type="button"
-          disabled={props.busy || props.prompt.trim().length === 0}
+          disabled={props.busy || props.prompt.trim().length === 0 || !imageReady}
           onClick={props.onRegenerate}
+          title={imageReady ? undefined : 'Enable a ready image provider in Settings first.'}
         >
           Regenerate
         </button>
@@ -48,6 +51,11 @@ export function PlaySheetPortraitControls(props: {
           Replace
         </button>
       </div>
+      {!imageReady ? (
+        <p className="play-sheet-portrait-error">
+          Image generation needs a ready image provider in Settings.
+        </p>
+      ) : null}
       {props.error ? <p className="play-sheet-portrait-error">{props.error}</p> : null}
     </>
   )

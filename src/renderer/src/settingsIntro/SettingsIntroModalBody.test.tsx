@@ -44,6 +44,8 @@ function wizardStub(partial: Partial<SettingsIntroWizardController>): SettingsIn
     setBackend: vi.fn(),
     startSetup: vi.fn(),
     retrySetup: vi.fn(),
+    acceptImageSetup: vi.fn(),
+    declineImageSetup: vi.fn(),
     ...partial
   }
 }

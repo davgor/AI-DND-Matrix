@@ -64,6 +64,7 @@ function buildDeps(
     getCampaign: (id) => getCampaignById(db, id),
     getCompanion: (id) => getCharacterById(db, id),
     imageProvider,
+    imageProviderReady: true,
     baseDir,
     logger
   }

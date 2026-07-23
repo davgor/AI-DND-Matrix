@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { listBestiarySpecies } from '../db/repositories/bestiary'
 import {
   listFactionRelationsByCampaign,
@@ -15,6 +15,15 @@ import {
   REALISTIC_FACTIONS_BLOCK_DRIFT_RESPONSE
 } from '../test/fixtures/campaignGenerationFixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
+import { setGenerativeTokensGuardForTests } from './generativeTokensGuard'
+
+beforeEach(() => {
+  setGenerativeTokensGuardForTests(() => ({ ok: true }))
+})
+
+afterEach(() => {
+  setGenerativeTokensGuardForTests(null)
+})
 
 const GENERATION_FAILURE_MESSAGE =
   'The narrative engine returned an invalid campaign. Try again or simplify your premise.'

@@ -11,9 +11,10 @@ import {
   shouldEnqueueNpcFaceToken
 } from '../shared/npcFaceTokens'
 import { persistNpcFaceTokenAsset } from './npcFaceTokenAsset'
+import { mergeSchedulerDeps } from './imageProviderResolve'
 import { logger } from './logger'
 
-export interface NpcFaceTokenSchedulerLogger {
+interface NpcFaceTokenSchedulerLogger {
   warn(message: string, ...args: unknown[]): void
   error(message: string, ...args: unknown[]): void
 }
@@ -23,16 +24,17 @@ export interface NpcFaceTokenSchedulerDeps {
   getCampaign: (campaignId: string) => Campaign | undefined
   getNpc: (npcId: string) => Npc | undefined
   imageProvider: ImageProvider
+  imageProviderReady: boolean
   baseDir: string
   logger: NpcFaceTokenSchedulerLogger
 }
 
-export interface EnqueueNpcFaceTokenJobInput {
+interface EnqueueNpcFaceTokenJobInput {
   campaignId: string
   npcId: string
 }
 
-export type EnqueueNpcFaceTokenJobResult = 'enqueued' | 'skipped'
+type EnqueueNpcFaceTokenJobResult = 'enqueued' | 'skipped'
 
 /** 1×1 PNG — v1 default so toggle ON persists a real asset without cloud/llamacpp. */
 const PLACEHOLDER_PNG_BASE64 =
@@ -78,6 +80,9 @@ function shouldScheduleNpcFaceToken(
   deps: NpcFaceTokenSchedulerDeps,
   input: EnqueueNpcFaceTokenJobInput
 ): boolean {
+  if (!deps.imageProviderReady) {
+    return false
+  }
   const campaign = deps.getCampaign(input.campaignId)
   const npc = deps.getNpc(input.npcId)
   if (!campaign || !npc) {
@@ -156,19 +161,15 @@ export function createNpcFaceTokenSchedulerDeps(
   db: Database.Database,
   overrides?: Partial<NpcFaceTokenSchedulerDeps>
 ): NpcFaceTokenSchedulerDeps {
-  const merged: NpcFaceTokenSchedulerDeps = {
+  return mergeSchedulerDeps(overrides, mockPlaceholderImageProvider, {
     db,
     getCampaign: (id) => getCampaignById(db, id),
     getNpc: (id) => getNpcById(db, id),
     imageProvider: mockPlaceholderImageProvider,
-    baseDir: '',
-    logger,
-    ...overrides
-  }
-  if (!merged.baseDir) {
-    merged.baseDir = resolveDefaultFaceTokenBaseDir()
-  }
-  return merged
+    imageProviderReady: false,
+    baseDir: resolveDefaultFaceTokenBaseDir(),
+    logger
+  })
 }
 
 function resolveDefaultFaceTokenBaseDir(): string {

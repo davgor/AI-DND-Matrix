@@ -1,4 +1,5 @@
 import { SettingsIntroAskBackend } from './SettingsIntroAskBackend'
+import { SettingsIntroAskImage } from './SettingsIntroAskImage'
 import { SettingsIntroAskLocal } from './SettingsIntroAskLocal'
 import { SettingsIntroProviderFallback } from './SettingsIntroProviderFallback'
 import { SettingsIntroSetupProgress } from './SettingsIntroSetupProgress'
@@ -35,6 +36,14 @@ export function SettingsIntroModalBody(props: {
         error={wizard.setupError}
         onRetry={wizard.retrySetup}
         onSkip={props.onDismiss}
+      />
+    )
+  }
+  if (wizard.step === 'askImage') {
+    return (
+      <SettingsIntroAskImage
+        onYes={wizard.acceptImageSetup}
+        onNo={wizard.declineImageSetup}
       />
     )
   }

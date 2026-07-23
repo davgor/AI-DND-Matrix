@@ -2,11 +2,18 @@ import {
   DEFAULT_RAG_EMBEDDER_SETTINGS,
   type RagEmbedderSettings
 } from '../rag/embedderSettings'
+import {
+  DEFAULT_IMAGE_PROVIDER_SETTINGS,
+  type ImageProviderSettings
+} from './imageProviderSettings'
 
 export type ProviderMode = 'claude' | 'openai' | 'gemini' | 'grok' | 'player2' | 'llamacpp'
 
 /** Catalog download lifecycle for local llama.cpp models (020.4 / 020.18). */
 export type LlamaCppDownloadState = 'idle' | 'downloading' | 'ready' | 'failed'
+
+export type { ImageProviderSettings } from './imageProviderSettings'
+export { isImageGenerationReady } from './imageProviderSettings'
 
 export interface ProviderSettings {
   mode: ProviderMode
@@ -33,6 +40,8 @@ export interface ProviderSettings {
   player2BaseUrl: string
   /** Campaign RAG embedder mode / local download (epic 154). */
   ragEmbedder: RagEmbedderSettings
+  /** Image generation provider (epic 152) ΓÇö independent of LLM mode. */
+  imageGeneration: ImageProviderSettings
 }
 
 export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
@@ -55,7 +64,8 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   llamaCppDownloadState: 'idle',
   llamaCppRuntimeBackend: 'vulkan',
   player2BaseUrl: 'http://127.0.0.1:4315',
-  ragEmbedder: { ...DEFAULT_RAG_EMBEDDER_SETTINGS }
+  ragEmbedder: { ...DEFAULT_RAG_EMBEDDER_SETTINGS },
+  imageGeneration: { ...DEFAULT_IMAGE_PROVIDER_SETTINGS }
 }
 
 type ProviderApiKeyField = 'claudeApiKey' | 'openaiApiKey' | 'geminiApiKey' | 'grokApiKey'

@@ -1,10 +1,11 @@
 import type { CampaignDetail } from '../../../main/campaignIpc'
 import type { CampaignStartFlow } from './useCampaignStartFlow'
 import { mapCreateStageTraceLabel } from '../../../shared/campaignCreate/stageMessages'
+import { useImageGenerationReadiness } from '../settings/useImageGenerationReadiness'
 import { CampaignStartFormActions, CampaignStartFormFields } from './CampaignStartFormFields'
 import './campaignStart.css'
 
-export interface CampaignStartModalProps {
+interface CampaignStartModalProps {
   flow: CampaignStartFlow
   onSuccess: (detail: CampaignDetail) => void
 }
@@ -64,6 +65,8 @@ function CampaignStartForm(props: {
 }): JSX.Element {
   const { flow } = props
   const isError = flow.view === 'error'
+  const { ready, loading } = useImageGenerationReadiness()
+  const imageReady = !loading && ready
 
   async function handleSubmit(): Promise<void> {
     const detail = isError ? await flow.retry() : await flow.submit()
@@ -74,7 +77,7 @@ function CampaignStartForm(props: {
 
   return (
     <>
-      <CampaignStartFormFields flow={flow} isError={isError} />
+      <CampaignStartFormFields flow={flow} isError={isError} imageReady={imageReady} />
       <CampaignStartFormActions flow={flow} isError={isError} onSubmit={() => void handleSubmit()} />
     </>
   )

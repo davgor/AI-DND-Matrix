@@ -8,7 +8,7 @@ interface SettingsIntroModalProps {
 }
 
 export function SettingsIntroModal(props: SettingsIntroModalProps): JSX.Element {
-  const wizard = useSettingsIntroWizard(props.onDismiss)
+  const wizard = useSettingsIntroWizard(props.onDismiss, props.onOpenSettings)
   return (
     <div className="settings-intro-overlay" role="presentation">
       <div

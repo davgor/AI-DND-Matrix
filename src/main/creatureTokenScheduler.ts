@@ -13,9 +13,10 @@ import {
   type CreatureTokenGenerateRequest
 } from '../shared/creatureTokens'
 import { persistCreatureTokenAsset } from './creatureTokenAsset'
+import { mergeSchedulerDeps } from './imageProviderResolve'
 import { logger } from './logger'
 
-export interface CreatureTokenSchedulerLogger {
+interface CreatureTokenSchedulerLogger {
   warn(message: string, ...args: unknown[]): void
   error(message: string, ...args: unknown[]): void
 }
@@ -25,16 +26,17 @@ export interface CreatureTokenSchedulerDeps {
   getCampaign: (campaignId: string) => Campaign | undefined
   getSpecies: (speciesId: string) => BestiarySpecies | undefined
   imageProvider: ImageProvider
+  imageProviderReady: boolean
   baseDir: string
   logger: CreatureTokenSchedulerLogger
 }
 
-export interface EnqueueCreatureTokenJobInput {
+interface EnqueueCreatureTokenJobInput {
   campaignId: string
   speciesId: string
 }
 
-export type EnqueueCreatureTokenJobResult = 'enqueued' | 'skipped'
+type EnqueueCreatureTokenJobResult = 'enqueued' | 'skipped'
 
 /** 1×1 PNG — v1 default so toggle ON persists a real asset without cloud/llamacpp. */
 const PLACEHOLDER_PNG_BASE64 =
@@ -77,6 +79,9 @@ function shouldScheduleCreatureToken(
   deps: CreatureTokenSchedulerDeps,
   input: EnqueueCreatureTokenJobInput
 ): boolean {
+  if (!deps.imageProviderReady) {
+    return false
+  }
   const campaign = deps.getCampaign(input.campaignId)
   const species = deps.getSpecies(input.speciesId)
   if (!campaign || !species) {
@@ -159,19 +164,15 @@ export function createCreatureTokenSchedulerDeps(
   db: Database.Database,
   overrides?: Partial<CreatureTokenSchedulerDeps>
 ): CreatureTokenSchedulerDeps {
-  const merged: CreatureTokenSchedulerDeps = {
+  return mergeSchedulerDeps(overrides, mockPlaceholderImageProvider, {
     db,
     getCampaign: (id) => getCampaignById(db, id),
     getSpecies: (id) => getBestiarySpeciesById(db, id),
     imageProvider: mockPlaceholderImageProvider,
-    baseDir: '',
-    logger,
-    ...overrides
-  }
-  if (!merged.baseDir) {
-    merged.baseDir = resolveDefaultCreatureTokenBaseDir()
-  }
-  return merged
+    imageProviderReady: false,
+    baseDir: resolveDefaultCreatureTokenBaseDir(),
+    logger
+  })
 }
 
 function resolveDefaultCreatureTokenBaseDir(): string {

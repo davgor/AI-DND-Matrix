@@ -144,36 +144,63 @@ export function bestiaryLabeledBlocks(
   return formatLabeledBlocks(values)
 }
 
-export function singleNpcLabeledBlocks(
-  _regionName: string,
-  npc: {
-    name: string
-    role: string
-    backstory: string
-    disposition: string
-    temperament: string
-    alignment: string
-    race?: string
-    raceKey?: string
-    background?: string
-    backgroundKey?: string
-    gender?: string
-    genderKey?: string
-    classKey?: string
-    class?: string
+type LabeledNpcFields = {
+  name: string
+  role: string
+  backstory?: string
+  disposition: string
+  temperament?: string
+  alignment?: string
+  race?: string
+  raceKey?: string
+  background?: string
+  backgroundKey?: string
+  gender?: string
+  genderKey?: string
+  classKey?: string
+  class?: string
+}
+
+function firstDefined(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    if (value !== undefined && value !== '') {
+      return value
+    }
   }
-): string {
+  return undefined
+}
+
+function resolveLabeledNpcFields(
+  npc: LabeledNpcFields,
+  fallbackBackstory: string
+): Record<string, string> {
+  return {
+    name: npc.name,
+    role: npc.role,
+    backstory: firstDefined(npc.backstory) ?? fallbackBackstory,
+    disposition: npc.disposition,
+    temperament: firstDefined(npc.temperament) ?? 'balanced',
+    alignment: firstDefined(npc.alignment) ?? 'true_neutral',
+    race: firstDefined(npc.race, npc.raceKey) ?? 'human',
+    background: firstDefined(npc.background, npc.backgroundKey) ?? 'folk_hero',
+    gender: firstDefined(npc.gender, npc.genderKey) ?? 'unspecified',
+    class: firstDefined(npc.class, npc.classKey) ?? 'commoner'
+  }
+}
+
+export function singleNpcLabeledBlocks(_regionName: string, npc: LabeledNpcFields): string {
+  const fields = resolveLabeledNpcFields(npc, `${npc.name} lives and works nearby.`)
   return formatLabeledBlocks({
-    NPC_NAME: npc.name,
-    NPC_ROLE: npc.role,
-    NPC_BACKSTORY: npc.backstory,
-    NPC_DISPOSITION: npc.disposition,
-    NPC_TEMPERAMENT: npc.temperament,
-    NPC_ALIGNMENT: npc.alignment,
-    NPC_RACE: npc.race ?? npc.raceKey ?? 'human',
-    NPC_BACKGROUND: npc.background ?? npc.backgroundKey ?? 'folk_hero',
-    NPC_GENDER: npc.gender ?? npc.genderKey ?? 'unspecified',
-    NPC_CLASS: npc.class ?? npc.classKey ?? 'commoner'
+    NPC_NAME: fields.name,
+    NPC_ROLE: fields.role,
+    NPC_BACKSTORY: fields.backstory,
+    NPC_DISPOSITION: fields.disposition,
+    NPC_TEMPERAMENT: fields.temperament,
+    NPC_ALIGNMENT: fields.alignment,
+    NPC_RACE: fields.race,
+    NPC_BACKGROUND: fields.background,
+    NPC_GENDER: fields.gender,
+    NPC_CLASS: fields.class
   })
 }
 
@@ -464,22 +491,7 @@ export function makeSingleNpcPayload(
     class?: string
   }
 ): string {
-  return singleNpcLabeledBlocks(regionName, {
-    name: npc.name,
-    role: npc.role,
-    backstory: npc.backstory,
-    disposition: npc.disposition,
-    temperament: npc.temperament,
-    alignment: npc.alignment,
-    race: npc.race,
-    raceKey: npc.raceKey,
-    background: npc.background,
-    backgroundKey: npc.backgroundKey,
-    gender: npc.gender,
-    genderKey: npc.genderKey,
-    class: npc.class,
-    classKey: npc.classKey
-  })
+  return singleNpcLabeledBlocks(regionName, npc)
 }
 
 /** Shield Hero–shaped pantheon preferring knownDeities names. */
@@ -747,22 +759,7 @@ export function additionalRegionLabeledBlocks(
     recentHistory: string
     potentialQuests: string[]
   },
-  npcs: Array<{
-    name: string
-    role: string
-    backstory: string
-    disposition: string
-    temperament: string
-    alignment: string
-    raceKey?: string
-    race?: string
-    backgroundKey?: string
-    background?: string
-    genderKey?: string
-    gender?: string
-    classKey?: string
-    class?: string
-  }>
+  npcs: LabeledNpcFields[]
 ): string {
   const values: Record<string, string> = {
     REGION_NAME: region.name,
@@ -773,16 +770,20 @@ export function additionalRegionLabeledBlocks(
     REGION_QUEST_1: region.potentialQuests[1] ?? `Quest B in ${region.name}`
   }
   npcs.forEach((npc, index) => {
-    values[`NPC_${index}_NAME`] = npc.name
-    values[`NPC_${index}_ROLE`] = npc.role
-    values[`NPC_${index}_BACKSTORY`] = npc.backstory
-    values[`NPC_${index}_DISPOSITION`] = npc.disposition
-    values[`NPC_${index}_TEMPERAMENT`] = npc.temperament
-    values[`NPC_${index}_ALIGNMENT`] = npc.alignment
-    values[`NPC_${index}_RACE`] = npc.race ?? npc.raceKey ?? 'human'
-    values[`NPC_${index}_BACKGROUND`] = npc.background ?? npc.backgroundKey ?? 'folk_hero'
-    values[`NPC_${index}_GENDER`] = npc.gender ?? npc.genderKey ?? 'unspecified'
-    values[`NPC_${index}_CLASS`] = npc.class ?? npc.classKey ?? 'commoner'
+    const fields = resolveLabeledNpcFields(
+      npc,
+      `${npc.name} lives and works in ${region.name}.`
+    )
+    values[`NPC_${index}_NAME`] = fields.name
+    values[`NPC_${index}_ROLE`] = fields.role
+    values[`NPC_${index}_BACKSTORY`] = fields.backstory
+    values[`NPC_${index}_DISPOSITION`] = fields.disposition
+    values[`NPC_${index}_TEMPERAMENT`] = fields.temperament
+    values[`NPC_${index}_ALIGNMENT`] = fields.alignment
+    values[`NPC_${index}_RACE`] = fields.race
+    values[`NPC_${index}_BACKGROUND`] = fields.background
+    values[`NPC_${index}_GENDER`] = fields.gender
+    values[`NPC_${index}_CLASS`] = fields.class
   })
   return formatLabeledBlocks(values)
 }

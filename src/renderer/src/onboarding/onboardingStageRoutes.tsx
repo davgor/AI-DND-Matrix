@@ -1,5 +1,6 @@
 import { findGuidedCreationPlayer, type OnboardingStage } from '../../../shared/guidedCreation/stageRouting'
 import { CampaignHub } from '../campaignHub/CampaignHub'
+import { useImageGenerationReadiness } from '../settings/useImageGenerationReadiness'
 import { CampaignReview } from '../campaignReview/CampaignReview'
 import { CharacterSetup } from '../characterSetup/CharacterSetup'
 import { resolveCharacterSetupDraft } from '../characterSetup/characterSetupDraft'
@@ -25,6 +26,7 @@ function ReviewStage(props: OnboardingStageContentProps): JSX.Element {
 }
 
 function CampaignHubStage(props: OnboardingStageContentProps): JSX.Element {
+  const { ready, loading } = useImageGenerationReadiness()
   if (!props.hubSnapshot) {
     return <MainPanel detail={props.detail} />
   }
@@ -32,6 +34,7 @@ function CampaignHubStage(props: OnboardingStageContentProps): JSX.Element {
     <CampaignHub
       snapshot={props.hubSnapshot}
       lastPlayed={props.hubLastPlayed ?? ''}
+      imageProviderReady={!loading && ready}
       onResumeCharacter={props.onHubResumeCharacter ?? (() => {})}
       onCreateCharacter={props.onHubCreateCharacter ?? (() => {})}
       onGenerateRegion={props.onHubGenerateRegion ?? (() => {})}

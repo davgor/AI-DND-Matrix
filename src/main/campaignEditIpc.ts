@@ -47,6 +47,7 @@ import {
   maybeEnqueueNpcFaceTokensForNpcs,
   type NpcFaceTokenSchedulerDeps
 } from './npcFaceTokenScheduler'
+import { assertGenerativeTokensAllowed } from './generativeTokensGuard'
 
 export interface EditRegionDescriptionInput {
   campaignId: string
@@ -144,6 +145,10 @@ export function editGenerativeTokens(
   db: Database.Database,
   input: EditGenerativeTokensInput
 ): CampaignDetail {
+  const guard = assertGenerativeTokensAllowed(input.enabled)
+  if (!guard.ok) {
+    throw new Error(guard.message)
+  }
   updateCampaignGenerativeTokensEnabled(db, input.campaignId, input.enabled)
   return getCampaignDetail(db, input.campaignId)
 }

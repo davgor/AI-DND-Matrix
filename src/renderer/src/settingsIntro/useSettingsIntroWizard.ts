@@ -2,10 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { nextSettingsIntroStepAfterLocalChoice } from '../../../shared/settingsIntro/wizardSteps'
 import type { SettingsIntroWizardStep } from '../../../shared/settingsIntro/types'
 import { formatLlamaDownloadProgress } from '../settings/formatLlamaDownloadProgress'
-import {
-  runLocalLlmFirstRunSetup,
-  type LocalLlmFirstRunBackend
-} from './runLocalLlmFirstRunSetup'
+import { type LocalLlmFirstRunBackend } from './runLocalLlmFirstRunSetup'
+import { declineLocalImagePrompt } from './runLocalImageFirstRunSetup'
+import { useLocalLlmIntroSetup } from './useLocalLlmIntroSetup'
 
 export interface SettingsIntroWizardController {
   step: SettingsIntroWizardStep
@@ -17,6 +16,8 @@ export interface SettingsIntroWizardController {
   setBackend: (backend: LocalLlmFirstRunBackend) => void
   startSetup: () => void
   retrySetup: () => void
+  acceptImageSetup: () => void
+  declineImageSetup: () => void
 }
 
 function useDownloadProgressSubscription(step: SettingsIntroWizardStep): {
@@ -41,33 +42,27 @@ function useDownloadProgressSubscription(step: SettingsIntroWizardStep): {
   return { text, percent, setText, setPercent }
 }
 
-export function useSettingsIntroWizard(onComplete: () => void): SettingsIntroWizardController {
+export function useSettingsIntroWizard(
+  onComplete: () => void,
+  onOpenSettings?: () => void
+): SettingsIntroWizardController {
   const [step, setStep] = useState<SettingsIntroWizardStep>('askLocal')
   const [backend, setBackend] = useState<LocalLlmFirstRunBackend>('vulkan')
   const [setupError, setSetupError] = useState<string | null>(null)
   const { text, percent, setText, setPercent } = useDownloadProgressSubscription(step)
+  const runSetup = useLocalLlmIntroSetup(backend, { setStep, setSetupError, setText, setPercent })
 
-  const runSetup = useCallback(async () => {
-    setStep('setup')
-    setSetupError(null)
-    setText('Preparing local LLM…')
-    setPercent(null)
-    const result = await runLocalLlmFirstRunSetup({
-      backend,
+  const declineImageSetup = useCallback(() => {
+    void declineLocalImagePrompt({
       getSettings: () => window.settings.get(),
-      saveSettings: (input) => window.settings.save(input),
-      acquireRuntime: () => window.settings.acquireLlamaRuntime(),
-      downloadModel: (id) => window.settings.startLlamaModelDownload(id),
-      applyLifecycle: () => window.settings.applyLlamaLifecycle()
-    })
-    if (!result.ok) {
-      setSetupError(result.message)
-      return
-    }
-    setText('Local LLM ready.')
-    setPercent(100)
+      saveSettings: (input) => window.settings.save(input)
+    }).finally(onComplete)
+  }, [onComplete])
+
+  const acceptImageSetup = useCallback(() => {
     onComplete()
-  }, [backend, onComplete, setPercent, setText])
+    onOpenSettings?.()
+  }, [onComplete, onOpenSettings])
 
   return {
     step,
@@ -77,11 +72,9 @@ export function useSettingsIntroWizard(onComplete: () => void): SettingsIntroWiz
     setupError,
     chooseLocal: (wantLocal) => setStep(nextSettingsIntroStepAfterLocalChoice(wantLocal)),
     setBackend,
-    startSetup: () => {
-      void runSetup()
-    },
-    retrySetup: () => {
-      void runSetup()
-    }
+    startSetup: runSetup,
+    retrySetup: runSetup,
+    acceptImageSetup,
+    declineImageSetup
   }
 }

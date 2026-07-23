@@ -34,6 +34,7 @@ import {
   maybeEnqueueCreatureTokensForSpecies,
   type CreatureTokenSchedulerDeps
 } from './creatureTokenScheduler'
+import { assertGenerativeTokensAllowed } from './generativeTokensGuard'
 
 export interface CreateCampaignSuccess {
   ok: true
@@ -175,6 +176,10 @@ export function registerCampaignCreateHandlers(window: BrowserWindow): void {
     }
     if (activeSessionId === raw.sessionId) {
       return failure('busy', 'This campaign request was already submitted.')
+    }
+    const generativeGuard = assertGenerativeTokensAllowed(raw.generativeTokensEnabled === true)
+    if (!generativeGuard.ok) {
+      return failure('validation', generativeGuard.message)
     }
     createInFlight = true
     activeSessionId = raw.sessionId

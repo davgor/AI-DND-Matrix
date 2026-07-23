@@ -63,6 +63,10 @@ export function loadSettings(
       ...fallback.ragEmbedder,
       ...(rest as { ragEmbedder?: ProviderSettings['ragEmbedder'] }).ragEmbedder
     },
+    imageGeneration: {
+      ...fallback.imageGeneration,
+      ...(rest as { imageGeneration?: ProviderSettings['imageGeneration'] }).imageGeneration
+    },
     claudeApiKey: decryptKey(codec, parsed.claudeApiKeyEncrypted),
     openaiApiKey: decryptKey(codec, parsed.openaiApiKeyEncrypted),
     geminiApiKey: decryptKey(codec, parsed.geminiApiKeyEncrypted),

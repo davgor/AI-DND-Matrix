@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { CampaignGenerationSchemaError } from '../agents/campaignGeneration'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
@@ -6,6 +6,15 @@ import { LlamaCppTruncationError } from '../agents/providers/llamacpp'
 import { persistNpcEnrichmentResponses, buildCascadingSeedResponses } from '../test/fixtures/campaignGenerationFixtures'
 import { isValidCreateCampaignRequest } from '../shared/campaignCreate/validation'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
+import { setGenerativeTokensGuardForTests } from './generativeTokensGuard'
+
+beforeEach(() => {
+  setGenerativeTokensGuardForTests(() => ({ ok: true }))
+})
+
+afterEach(() => {
+  setGenerativeTokensGuardForTests(null)
+})
 
 function makeRegion(name: string) {
   return {

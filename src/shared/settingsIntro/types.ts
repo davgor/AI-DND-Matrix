@@ -10,6 +10,7 @@ export type SettingsIntroWizardStep =
   | 'askLocal'
   | 'askBackend'
   | 'setup'
+  | 'askImage'
   | 'providerFallback'
 
 export interface SettingsIntroState {

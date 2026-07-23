@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
@@ -6,6 +6,15 @@ import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE, additionalRegionLabeledBlocks } from '../test/fixtures/campaignGenerationFixtures'
 import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editFactionsSummary, editGenerativeTokens, editNpcFaceTokenGeneration, editEnemyTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign, generateBestiarySpeciesForCampaign } from './campaignEditIpc'
+import { setGenerativeTokensGuardForTests } from './generativeTokensGuard'
+
+beforeEach(() => {
+  setGenerativeTokensGuardForTests(() => ({ ok: true }))
+})
+
+afterEach(() => {
+  setGenerativeTokensGuardForTests(null)
+})
 
 function makeRegion(name: string) {
   return {

@@ -61,6 +61,7 @@ function buildDeps(
     getCampaign: (id) => getCampaignById(db, id),
     getNpc: (id) => getNpcById(db, id),
     imageProvider,
+    imageProviderReady: true,
     baseDir,
     logger
   }

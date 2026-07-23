@@ -41,6 +41,9 @@ function mergeSaveInput(current: ProviderSettings, input: SaveProviderSettingsIn
     ragEmbedder: input.ragEmbedder
       ? { ...current.ragEmbedder, ...input.ragEmbedder }
       : current.ragEmbedder,
+    imageGeneration: input.imageGeneration
+      ? { ...current.imageGeneration, ...input.imageGeneration }
+      : current.imageGeneration,
     claudeApiKey: mergeApiKey(input.claudeApiKey, current.claudeApiKey),
     openaiApiKey: mergeApiKey(input.openaiApiKey, current.openaiApiKey),
     geminiApiKey: mergeApiKey(input.geminiApiKey, current.geminiApiKey),
