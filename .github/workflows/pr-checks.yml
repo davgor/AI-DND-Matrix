@@ -30,11 +30,13 @@ jobs:
         shard: ${{ fromJson(needs.test-plan.outputs.shards) }}
     steps:
       - uses: actions/checkout@v4
+      # No `cache: npm` on Windows: setup-node/actions/cache can silently abort or
+      # corrupt restore (actions/cache#1754). Reliability > ~30s install savings.
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-      - run: npm ci
+      - name: Install dependencies
+        run: node scripts/npm-ci-with-retry.mjs
       - run: npm run rebuild:node
       - name: Ensure Electron binary is installed
         run: node node_modules/electron/install.js
@@ -48,8 +50,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-      - run: npm ci
+      - name: Install dependencies
+        run: node scripts/npm-ci-with-retry.mjs
       - run: npm run lint
 
   build:
@@ -60,7 +62,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-      - run: npm ci
+      - name: Install dependencies
+        run: node scripts/npm-ci-with-retry.mjs
       - run: npm run typecheck
       - run: npm run build

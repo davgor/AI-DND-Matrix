@@ -73,12 +73,17 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.sha }}
 
+      # No `cache: npm` on Windows: setup-node/actions/cache can silently abort
+      # or corrupt restore (actions/cache#1754).
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: node scripts/npm-ci-with-retry.mjs
+
+      - name: Ensure Electron binary is installed
+        run: node node_modules/electron/install.js
 
       - run: npm run package:win
 
