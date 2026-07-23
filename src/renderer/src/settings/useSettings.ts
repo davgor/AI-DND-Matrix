@@ -31,6 +31,7 @@ export interface SettingsController {
   llamaRuntimeChecked: boolean
   llamaDownloadProgressText: string | null
   llamaDownloadProgressPercent: number | null
+  ragDownloadProgressText: string | null
   updateDraft: (patch: Partial<ProviderSettings>) => void
   save: () => Promise<void>
   requestClose: () => void
@@ -42,6 +43,7 @@ export interface SettingsController {
   downloadLlamaModel: () => Promise<void>
   cancelLlamaDownload: () => Promise<void>
   acquireLlamaRuntime: () => Promise<void>
+  downloadRagModel: () => Promise<void>
 }
 
 interface ApiKeySetFlags {
@@ -64,6 +66,7 @@ interface SettingsState extends ApiKeySetFlags {
   llamaRuntimeChecked: boolean
   llamaDownloadProgressText: string | null
   llamaDownloadProgressPercent: number | null
+  ragDownloadProgressText: string | null
   setBaseline: (settings: ProviderSettings) => void
   setDraft: React.Dispatch<React.SetStateAction<ProviderSettings>>
   setApiKeyFlags: (flags: ApiKeySetFlags) => void
@@ -77,6 +80,7 @@ interface SettingsState extends ApiKeySetFlags {
   setLlamaRuntimeChecked: (value: boolean) => void
   setLlamaDownloadProgressText: (value: string | null) => void
   setLlamaDownloadProgressPercent: (value: number | null) => void
+  setRagDownloadProgressText: (value: string | null) => void
 }
 
 function emptyKeyFlags(): ApiKeySetFlags {
@@ -126,6 +130,7 @@ function useSettingsState(): SettingsState {
   const [llamaDownloadProgressPercent, setLlamaDownloadProgressPercent] = useState<number | null>(
     null
   )
+  const [ragDownloadProgressText, setRagDownloadProgressText] = useState<string | null>(null)
 
   return {
     baseline,
@@ -141,6 +146,7 @@ function useSettingsState(): SettingsState {
     llamaRuntimeChecked,
     llamaDownloadProgressText,
     llamaDownloadProgressPercent,
+    ragDownloadProgressText,
     setBaseline,
     setDraft,
     setApiKeyFlags,
@@ -153,7 +159,8 @@ function useSettingsState(): SettingsState {
     setLlamaRuntimeResult,
     setLlamaRuntimeChecked,
     setLlamaDownloadProgressText,
-    setLlamaDownloadProgressPercent
+    setLlamaDownloadProgressPercent,
+    setRagDownloadProgressText
   }
 }
 
@@ -181,6 +188,55 @@ function useLlamaDownloadProgressSubscription(state: SettingsState): void {
     return subscribeLlamaDownloadProgress(state)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+}
+
+function useRagDownloadProgressSubscription(state: SettingsState): void {
+  useEffect(() => {
+    return window.settings.onRagDownloadProgress((payload) => {
+      if (payload.phase === 'ready') {
+        state.setRagDownloadProgressText('Download complete.')
+        return
+      }
+      if (payload.phase === 'failed') {
+        state.setRagDownloadProgressText('Download failed.')
+        return
+      }
+      if (payload.totalBytes && payload.totalBytes > 0) {
+        const pct = Math.min(100, Math.round((payload.receivedBytes / payload.totalBytes) * 100))
+        state.setRagDownloadProgressText(`Downloading… ${pct}%`)
+        return
+      }
+      state.setRagDownloadProgressText('Downloading…')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+}
+
+async function downloadRagModel(state: SettingsState): Promise<void> {
+  const catalogId = state.draft.ragEmbedder.localCatalogModelId
+  state.setRagDownloadProgressText('Downloading…')
+  state.setDraft((current) => ({
+    ...current,
+    ragEmbedder: { ...current.ragEmbedder, localDownloadState: 'downloading' }
+  }))
+  const result = await window.settings.startRagModelDownload(catalogId)
+  if (result.ok) {
+    state.setDraft((current) => ({
+      ...current,
+      ragEmbedder: {
+        ...current.ragEmbedder,
+        localDownloadState: 'ready',
+        localModelPath: result.modelPath
+      }
+    }))
+    state.setRagDownloadProgressText('Download complete.')
+    return
+  }
+  state.setDraft((current) => ({
+    ...current,
+    ragEmbedder: { ...current.ragEmbedder, localDownloadState: 'failed' }
+  }))
+  state.setRagDownloadProgressText(result.message)
 }
 
 function currentKeyFlags(state: SettingsState): ApiKeySetFlags {
@@ -252,7 +308,13 @@ function createConnectionActions(state: SettingsState): {
 
 function useSettingsActions(state: SettingsState, onClose: () => void) {
   function updateDraft(patch: Partial<ProviderSettings>): void {
-    state.setDraft((current) => ({ ...current, ...patch }))
+    state.setDraft((current) => ({
+      ...current,
+      ...patch,
+      ragEmbedder: patch.ragEmbedder
+        ? { ...current.ragEmbedder, ...patch.ragEmbedder }
+        : current.ragEmbedder
+    }))
     state.setErrors([])
     state.setSaveFailed(false)
     state.setLlamaRuntimeChecked(false)
@@ -280,7 +342,8 @@ function useSettingsActions(state: SettingsState, onClose: () => void) {
     confirmDiscard,
     cancelDiscard: () => state.setConfirmingDiscard(false),
     ...createConnectionActions(state),
-    ...createLlamaSettingsActions(state)
+    ...createLlamaSettingsActions(state),
+    downloadRagModel: () => downloadRagModel(state)
   }
 }
 
@@ -288,6 +351,7 @@ export function useSettings(onClose: () => void): SettingsController {
   const state = useSettingsState()
   useLoadSettingsOnMount(state)
   useLlamaDownloadProgressSubscription(state)
+  useRagDownloadProgressSubscription(state)
   const actions = useSettingsActions(state, onClose)
   const flags = currentKeyFlags(state)
   const draftValid = validateProviderSettings(state.draft, validationContext(flags)).length === 0
@@ -310,6 +374,7 @@ export function useSettings(onClose: () => void): SettingsController {
     llamaRuntimeChecked: state.llamaRuntimeChecked,
     llamaDownloadProgressText: state.llamaDownloadProgressText,
     llamaDownloadProgressPercent: state.llamaDownloadProgressPercent,
+    ragDownloadProgressText: state.ragDownloadProgressText,
     ...actions
   }
 }

@@ -43,23 +43,58 @@ describe('guided creation end-to-end smoke', () => {
 
     const identityProvider = createScriptedProvider([
       JSON.stringify({
-        dmReply: 'Tell me more.',
+        dmReply: 'Why are you adventuring?',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: false },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      }),
+      JSON.stringify({
+        dmReply: 'Where do you start?',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: true, summary: 'Justice.' },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      }),
+      JSON.stringify({
+        dmReply: 'What are you doing at the start?',
         foundations: {
           who: { complete: true, summary: 'Kael, a knight.' },
           why: { complete: true, summary: 'Justice.' },
           where: { complete: true, summary: 'Starts in Oakhollow.' },
-          what: { complete: true, summary: 'Steadfast fighter.' }
+          what: { complete: false }
         },
-        allFoundationsComplete: true,
+        allFoundationsComplete: false,
         startingRegionId: region.id
+      }),
+      JSON.stringify({
+        dmReply: 'Locked in.',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: true, summary: 'Justice.' },
+          where: { complete: true, summary: 'Starts in Oakhollow.' },
+          what: { complete: true, summary: 'Guarding the gate.' }
+        },
+        allFoundationsComplete: true
       })
     ])
-    const identityResult = await sendGuidedCreationMessage(db, identityProvider, {
-      campaignId: campaign.id,
-      characterId: player.id,
-      phase: 'identity',
-      message: 'I am Kael, a knight from Oakhollow seeking justice.'
-    })
+    const sendIdentity = (message: string) =>
+      sendGuidedCreationMessage(db, identityProvider, {
+        campaignId: campaign.id,
+        characterId: player.id,
+        phase: 'identity',
+        message
+      })
+    expect((await sendIdentity('I am Kael, a knight.')).ok).toBe(true)
+    expect((await sendIdentity('I seek justice.')).ok).toBe(true)
+    expect((await sendIdentity('I start in Oakhollow.')).ok).toBe(true)
+    const identityResult = await sendIdentity('I am guarding the gate.')
     expect(identityResult.ok).toBe(true)
     expect(readGuidedCreationFields(db, player.id)?.guidedCreationPhase).toBe('opening_scene')
 

@@ -43,8 +43,8 @@ function insertRagChunk(
   db.prepare(
     `INSERT INTO rag_chunks (
       id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
-      text, content_hash, embedding, updated_at
-    ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`
+      text, content_hash, embedding, updated_at, embedder_id, model_id, embedding_dim
+    ) VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     chunk.id,
     campaignId,
@@ -54,7 +54,10 @@ function insertRagChunk(
     chunk.text,
     `hash-${chunk.id}`,
     packEmbedding(chunk.embedding),
-    chunk.updatedAt
+    chunk.updatedAt,
+    'fake',
+    'fake-v1',
+    EMBEDDING_DIMENSION
   )
 }
 
@@ -196,25 +199,23 @@ async function fillsRegionHistoryFromRagHits(): Promise<void> {
   const historyVector = unitVector(2)
   const queryText = 'Tell me about the siege of embers'
   markRagBackfillComplete(db, campaign.id)
-  const entry = createRegionHistoryEntry(db, {
-    regionId: region.id,
-    inGameDate: 100,
-    content: historyText
-  })
-  insertRagChunk(db, campaign.id, {
-    id: 'chunk-history',
-    sourceTable: 'region_history',
-    sourceId: entry.id,
-    text: historyText,
-    embedding: historyVector,
-    updatedAt: '2019-06-01T00:00:00.000Z',
-    regionId: region.id
-  })
   const embedder = createFakeEmbedder({
     fixtures: {
       [queryText]: historyVector,
       [historyText]: historyVector
     }
+  })
+  createRegionHistoryEntry(
+    db,
+    {
+      regionId: region.id,
+      inGameDate: 100,
+      content: historyText
+    },
+    { embedder }
+  )
+  await new Promise<void>((resolve) => {
+    setImmediate(resolve)
   })
   const context = await assembleNarrationContext({
     db,

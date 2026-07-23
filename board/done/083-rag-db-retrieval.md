@@ -1,6 +1,6 @@
 # EPIC: RAG over campaign SQLite (semantic retrieval for agent grounding)
 
-> **Follow-through:** Production `local` embedder shipped here is hashed bag-of-words, not neural semantic embeddings. Finish work (real **local + cloud** embedders, mobile-ready contract) lives in backlog epic **154** (`154-finish-rag-real-embeddings.md`).
+> **Follow-through:** Production `local` embedder shipped here is hashed bag-of-words (now `lexical`), not neural embeddings. Finish work (real **local + cloud** embedders, Settings mode, re-embed, mobile-ready contract) is epic **154** (`154-finish-rag-real-embeddings.md`).
 
 Today every agent call is re-grounded from SQLite, but retrieval is mostly **recency caps + tag filters** (`world_facts` by region/faction, last-N events / `npc_memories` / `region_history`). That works early in a campaign and fails as history grows: relevant older facts fall out of the window, unrelated recent noise burns tokens, and tag miss means the model never sees the fact.
 

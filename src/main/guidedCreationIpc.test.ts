@@ -252,6 +252,37 @@ describe('sendGuidedCreationMessage Where starting region', () => {
     })
     const provider = createScriptedProvider([
       JSON.stringify({
+        dmReply: 'Why are you adventuring?',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: false },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      }),
+      JSON.stringify({
+        dmReply: 'Where do you start?',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: true, summary: 'Justice.' },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      }),
+      JSON.stringify({
+        dmReply: 'What are you doing at the start?',
+        foundations: {
+          who: { complete: true, summary: 'Kael, a knight.' },
+          why: { complete: true, summary: 'Justice.' },
+          where: { complete: true, summary: 'Starts in Blackmire; grew up nearby.' },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false,
+        startingRegionId: region.id
+      }),
+      JSON.stringify({
         dmReply: 'Blackmire it is — you begin among the reeds.',
         foundations: {
           who: { complete: true, summary: 'Kael, a knight.' },
@@ -259,17 +290,21 @@ describe('sendGuidedCreationMessage Where starting region', () => {
           where: { complete: true, summary: 'Starts in Blackmire; grew up nearby.' },
           what: { complete: true, summary: 'A fighter.' }
         },
-        allFoundationsComplete: true,
-        startingRegionId: region.id
+        allFoundationsComplete: true
       })
     ])
 
-    const result = await sendGuidedCreationMessage(db, provider, {
-      campaignId: campaign.id,
-      characterId: player.id,
-      phase: 'identity',
-      message: 'I start in Blackmire.'
-    })
+    const send = (message: string) =>
+      sendGuidedCreationMessage(db, provider, {
+        campaignId: campaign.id,
+        characterId: player.id,
+        phase: 'identity',
+        message
+      })
+    expect((await send('I am Kael, a knight.')).ok).toBe(true)
+    expect((await send('I seek justice.')).ok).toBe(true)
+    expect((await send('I start in Blackmire.')).ok).toBe(true)
+    const result = await send('I am a fighter at the reeds.')
 
     expect(result.ok).toBe(true)
     if (result.ok) {

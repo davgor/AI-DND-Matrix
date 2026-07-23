@@ -22,6 +22,7 @@ import { registerRecapHandlers } from './recapIpc'
 import { registerLlmUsageHandlers } from './llmUsageIpc'
 import { registerSettingsHandlers } from './settingsIpc'
 import { registerLlamaCppAssetHandlers } from './llamacppAssetsIpc'
+import { registerRagEmbedderHandlers } from './rag/ragEmbedderIpc'
 import { registerSettingsIntroHandlers } from './settingsIntroIpc'
 import { registerStartupHandlers, runStartupBoot, shutdownStartupRuntime } from './startupIpc'
 import { registerTurnHandlers } from './turnIpc'
@@ -120,6 +121,7 @@ app.whenReady().then(() => {
   registerPromotionHandlers()
   registerSettingsHandlers()
   registerLlamaCppAssetHandlers()
+  registerRagEmbedderHandlers()
   registerLlmUsageHandlers()
   registerSettingsIntroHandlers()
   registerAutoUpdateHandlers()

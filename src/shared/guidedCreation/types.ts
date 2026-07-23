@@ -51,14 +51,26 @@ export interface IdentityFoundationSpec {
 }
 
 export const IDENTITY_FOUNDATION_SPECS: IdentityFoundationSpec[] = [
-  { key: 'who', label: 'Who', meaning: 'Name, lineage, appearance, and personal history the character claims.' },
-  { key: 'why', label: 'Why', meaning: 'Purpose, motivation, and what drives them into this story.' },
+  {
+    key: 'who',
+    label: 'Who',
+    meaning: 'Confirm name, description, and background details — any other Who details to add.'
+  },
+  {
+    key: 'why',
+    label: 'Why',
+    meaning: 'Why they are here and adventuring — purpose and motivation for this story.'
+  },
   {
     key: 'where',
     label: 'Where',
-    meaning: 'Origin/homeland plus which generated campaign region they start play in.'
+    meaning: 'Which generated campaign region they start play in.'
   },
-  { key: 'what', label: 'What', meaning: 'Nature, role, skills, and defining traits beyond raw stats.' }
+  {
+    key: 'what',
+    label: 'What',
+    meaning: 'What they are doing at the start of the adventure.'
+  }
 ]
 
 export interface GuidedCreationSendMessageInput {

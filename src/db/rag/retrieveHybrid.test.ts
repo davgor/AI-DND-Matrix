@@ -34,8 +34,8 @@ function insertRagChunk(
   db.prepare(
     `INSERT INTO rag_chunks (
       id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
-      text, content_hash, embedding, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      text, content_hash, embedding, updated_at, embedder_id, model_id, embedding_dim
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     chunk.id,
     campaignId,
@@ -47,7 +47,10 @@ function insertRagChunk(
     chunk.text,
     `hash-${chunk.id}`,
     packEmbedding(chunk.embedding),
-    chunk.updatedAt
+    chunk.updatedAt,
+    'fake',
+    'fake-v1',
+    EMBEDDING_DIMENSION
   )
 }
 
@@ -64,7 +67,7 @@ function createThrowingEmbedder(): Embedder {
   return {
     name: 'fake',
     dimension: EMBEDDING_DIMENSION,
-    modelId: 'fake-throw',
+    modelId: 'fake-v1',
     async embed(): Promise<number[][]> {
       throw new Error('embedder unavailable')
     }

@@ -3,8 +3,10 @@ import { MAX_SCHEMA_ATTEMPTS } from './jsonResponse'
 import {
   IDENTITY_TRANSCRIPT_WINDOW,
   allFoundationsComplete,
+  foundationsAdvanceInOrder,
   identityWhoKickoffFallback,
   mergeFoundationStatus,
+  nextIncompleteFoundation,
   runIdentityInterviewKickoff,
   runIdentityInterviewTurn,
   defaultIdentityFoundations
@@ -55,6 +57,13 @@ const VALID_TURN_RESPONSE = JSON.stringify({
   allFoundationsComplete: false
 })
 
+function whoWhyLocked() {
+  const foundations = defaultIdentityFoundations()
+  foundations.who = { complete: true, summary: 'Kael' }
+  foundations.why = { complete: true, summary: 'Justice' }
+  return foundations
+}
+
 function buildTranscript(turnCount: number, earlyContent: string): Array<{ role: 'player' | 'dm'; content: string }> {
   return Array.from({ length: turnCount }, (_, index) => ({
     role: index % 2 === 0 ? ('player' as const) : ('dm' as const),
@@ -66,7 +75,7 @@ describe('runIdentityInterviewKickoff', () => {
   it('returns a who-focused opening prompt before the player speaks', async () => {
     const provider = createScriptedProvider([
       JSON.stringify({
-        dmReply: 'Before we begin — who are you? Tell me about Kael beyond the stats on your sheet.'
+        dmReply: "You're Kael — any other details to add about who you are?"
       })
     ])
     const result = await runIdentityInterviewKickoff(provider, {
@@ -93,13 +102,14 @@ describe('runIdentityInterviewKickoff', () => {
     expect(systemPrompt).toContain('Longsword')
     expect(systemPrompt).toContain('Chain Hauberk')
     expect(systemPrompt).toContain('Rallying Strike')
-    expect(systemPrompt).toContain('Oakhollow')
-    expect(systemPrompt).toContain('Blackmire')
+    expect(systemPrompt).not.toContain('Oakhollow')
+    expect(systemPrompt).not.toContain('Blackmire')
     expect(systemPrompt).toContain('concise')
     expect(systemPrompt.toLowerCase()).toContain('do not restate')
     expect(systemPrompt.toLowerCase()).toContain('established setup')
     expect(systemPrompt.toLowerCase()).toMatch(/do not invent an opening scene/)
-    expect(provider.calls[0]?.prompt).toContain('concise')
+    expect(provider.calls[0]?.prompt).toContain('any other details')
+    expect(provider.calls[0]?.prompt.toLowerCase()).toContain('do not ask about why')
     expect(provider.calls[0]?.prompt.toLowerCase()).toContain('established setup')
     expect(provider.calls[0]?.prompt.toLowerCase()).toMatch(/do not invent an opening scene/)
     expect(provider.calls[0]?.context?.maxTokens).toBe(384)
@@ -107,8 +117,13 @@ describe('runIdentityInterviewKickoff', () => {
 })
 
 describe('identityWhoKickoffFallback', () => {
-  it('names the character in the fallback opener', () => {
-    expect(identityWhoKickoffFallback('Kael')).toContain('Kael')
+  it('names the character and optional background without where/start language', () => {
+    const fallback = identityWhoKickoffFallback('Kael', 'Soldier', 'You served in an army.')
+    expect(fallback).toContain('Kael')
+    expect(fallback).toContain('Soldier')
+    expect(fallback).toContain('You served in an army.')
+    expect(fallback.toLowerCase()).toContain('any other details')
+    expect(fallback.toLowerCase()).not.toMatch(/where|start|region|oakhollow/)
   })
 })
 
@@ -140,11 +155,12 @@ describe('runIdentityInterviewKickoff background context', () => {
     expect(systemPrompt).toContain('You served in an army.')
     expect(systemPrompt).toContain('I marched on the northern border.')
     expect(systemPrompt).toContain('untrusted narrative content')
+    expect(systemPrompt).not.toContain('Oakhollow')
   })
 })
 
 describe('runIdentityInterviewTurn', () => {
-  it('returns partial foundation completion from a valid response', async () => {
+  it('with empty foundations: no regions; strict order; next foundation who', async () => {
     const provider = createScriptedProvider([VALID_TURN_RESPONSE])
     const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'I am Kael.')
     expect(result.foundations.who.complete).toBe(true)
@@ -153,13 +169,78 @@ describe('runIdentityInterviewTurn', () => {
     expect(systemPrompt).toContain('Kael')
     expect(systemPrompt).toContain('Elf')
     expect(systemPrompt).toContain('lawful_good')
-    expect(systemPrompt).toContain('Oakhollow')
-    expect(systemPrompt).toContain('which of these generated regions')
+    expect(systemPrompt).not.toContain('Oakhollow')
+    expect(systemPrompt).not.toContain('Blackmire')
+    expect(systemPrompt.toLowerCase()).toContain('strict order')
+    expect(systemPrompt.toLowerCase()).toContain('ask only')
     expect(systemPrompt).toContain('concise')
     expect(systemPrompt.toLowerCase()).toContain('do not restate')
-    expect(systemPrompt.toLowerCase()).toContain('short distinguishing phrase')
     expect(systemPrompt).toMatch(/never recite score numbers/i)
+    expect(provider.calls[0]?.prompt).toContain('Next foundation to interview (focus dmReply here): who')
     expect(provider.calls[0]?.context?.maxTokens).toBe(384)
+  })
+
+  it('when who+why locked: regions appear and next is where', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Which region do you start in?',
+        foundations: {
+          who: { complete: true, summary: 'Kael' },
+          why: { complete: true, summary: 'Justice' },
+          where: { complete: true, summary: 'Starts in Oakhollow.' },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false,
+        startingRegionId: 'region-oak'
+      })
+    ])
+    const context = {
+      ...IDENTITY_INTERVIEW_CONTEXT,
+      currentFoundations: whoWhyLocked()
+    }
+    await runIdentityInterviewTurn(provider, context, 'Oakhollow.')
+    const systemPrompt = provider.calls[0]?.context?.systemPrompt ?? ''
+    expect(systemPrompt).toContain('Oakhollow')
+    expect(systemPrompt).toContain('Blackmire')
+    expect(systemPrompt).toContain('which of these generated regions')
+    expect(provider.calls[0]?.prompt).toContain('Next foundation to interview (focus dmReply here): where')
+  })
+
+  it('retries when locking where while why is still incomplete', async () => {
+    const valid = JSON.stringify({
+      dmReply: 'Why are you adventuring?',
+      foundations: {
+        who: { complete: true, summary: 'Kael' },
+        why: { complete: true, summary: 'Justice' },
+        where: { complete: false },
+        what: { complete: false }
+      },
+      allFoundationsComplete: false
+    })
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Where do you start?',
+        foundations: {
+          who: { complete: true, summary: 'Kael' },
+          why: { complete: false },
+          where: { complete: true, summary: 'Oakhollow' },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false,
+        startingRegionId: 'region-oak'
+      }),
+      valid
+    ])
+    const currentFoundations = defaultIdentityFoundations()
+    currentFoundations.who = { complete: true, summary: 'Kael' }
+    const result = await runIdentityInterviewTurn(
+      provider,
+      { ...IDENTITY_INTERVIEW_CONTEXT, currentFoundations },
+      'I seek justice.'
+    )
+    expect(result.foundations.why.complete).toBe(true)
+    expect(result.foundations.where.complete).toBe(false)
+    expect(provider.calls).toHaveLength(2)
   })
 
   it('sends the static identity block via systemPrompt, not the user prompt', async () => {
@@ -190,7 +271,7 @@ describe('runIdentityInterviewTurn', () => {
 })
 
 describe('runIdentityInterviewTurn starting region', () => {
-  it('accepts startingRegionId when Where locks to a listed region', async () => {
+  it('accepts startingRegionId when Where locks to a listed region (who+why already locked)', async () => {
     const provider = createScriptedProvider([
       JSON.stringify({
         dmReply: 'Oakhollow it is.',
@@ -198,13 +279,17 @@ describe('runIdentityInterviewTurn starting region', () => {
           who: { complete: true, summary: 'Kael' },
           why: { complete: true, summary: 'Justice' },
           where: { complete: true, summary: 'Starts in Oakhollow; grew up nearby.' },
-          what: { complete: true, summary: 'Fighter' }
+          what: { complete: false }
         },
-        allFoundationsComplete: true,
+        allFoundationsComplete: false,
         startingRegionId: 'region-oak'
       })
     ])
-    const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'Oakhollow.')
+    const result = await runIdentityInterviewTurn(
+      provider,
+      { ...IDENTITY_INTERVIEW_CONTEXT, currentFoundations: whoWhyLocked() },
+      'Oakhollow.'
+    )
     expect(result.startingRegionId).toBe('region-oak')
     expect(result.foundations.where.complete).toBe(true)
   })
@@ -216,9 +301,9 @@ describe('runIdentityInterviewTurn starting region', () => {
         who: { complete: true, summary: 'Kael' },
         why: { complete: true, summary: 'Justice' },
         where: { complete: true, summary: 'Starts in Oakhollow.' },
-        what: { complete: true, summary: 'Fighter' }
+        what: { complete: false }
       },
-      allFoundationsComplete: true,
+      allFoundationsComplete: false,
       startingRegionId: 'region-oak'
     })
     const provider = createScriptedProvider([
@@ -228,13 +313,17 @@ describe('runIdentityInterviewTurn starting region', () => {
           who: { complete: true, summary: 'Kael' },
           why: { complete: true, summary: 'Justice' },
           where: { complete: true, summary: 'A distant land.' },
-          what: { complete: true, summary: 'Fighter' }
+          what: { complete: false }
         },
-        allFoundationsComplete: true
+        allFoundationsComplete: false
       }),
       valid
     ])
-    const result = await runIdentityInterviewTurn(provider, IDENTITY_INTERVIEW_CONTEXT, 'Far away.')
+    const result = await runIdentityInterviewTurn(
+      provider,
+      { ...IDENTITY_INTERVIEW_CONTEXT, currentFoundations: whoWhyLocked() },
+      'Far away.'
+    )
     expect(result.startingRegionId).toBe('region-oak')
     expect(provider.calls).toHaveLength(2)
   })
@@ -242,8 +331,21 @@ describe('runIdentityInterviewTurn starting region', () => {
 
 describe('runIdentityInterviewTurn transcript windowing', () => {
   it('includes at most the last 5 transcript turns in the prompt', async () => {
-    const provider = createScriptedProvider([VALID_TURN_RESPONSE])
-    const context = { ...IDENTITY_INTERVIEW_CONTEXT, transcript: buildTranscript(10, 'early') }
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Why are you here?',
+        foundations: {
+          who: { complete: true, summary: 'Kael, sworn knight of the drowned court.' },
+          why: { complete: true, summary: 'Justice' },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      })
+    ])
+    const currentFoundations = defaultIdentityFoundations()
+    currentFoundations.who = { complete: true, summary: 'Kael, sworn knight of the drowned court.' }
+    const context = { ...IDENTITY_INTERVIEW_CONTEXT, transcript: buildTranscript(10, 'early'), currentFoundations }
     await runIdentityInterviewTurn(provider, context, 'Latest.')
     const prompt = provider.calls[0]?.prompt ?? ''
     expect(prompt).not.toContain('early turn 1')
@@ -253,23 +355,62 @@ describe('runIdentityInterviewTurn transcript windowing', () => {
   })
 
   it('produces an identical prompt for a 10-turn fixture regardless of turns 1-5 content', async () => {
-    const shortEarly = createScriptedProvider([VALID_TURN_RESPONSE])
-    const longEarly = createScriptedProvider([VALID_TURN_RESPONSE])
+    const shortEarly = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Why?',
+        foundations: {
+          who: { complete: true, summary: 'Kael' },
+          why: { complete: false },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      })
+    ])
+    const longEarly = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Why?',
+        foundations: {
+          who: { complete: true, summary: 'Kael' },
+          why: { complete: false },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      })
+    ])
+    const currentFoundations = defaultIdentityFoundations()
+    currentFoundations.who = { complete: true, summary: 'Kael' }
     await runIdentityInterviewTurn(
       shortEarly,
-      { ...IDENTITY_INTERVIEW_CONTEXT, transcript: buildTranscript(10, 'x') },
+      { ...IDENTITY_INTERVIEW_CONTEXT, transcript: buildTranscript(10, 'x'), currentFoundations },
       'Latest.'
     )
     await runIdentityInterviewTurn(
       longEarly,
-      { ...IDENTITY_INTERVIEW_CONTEXT, transcript: buildTranscript(10, 'a much longer early exchange about lineage '.repeat(20)) },
+      {
+        ...IDENTITY_INTERVIEW_CONTEXT,
+        transcript: buildTranscript(10, 'a much longer early exchange about lineage '.repeat(20)),
+        currentFoundations
+      },
       'Latest.'
     )
     expect(shortEarly.calls[0]?.prompt).toBe(longEarly.calls[0]?.prompt)
   })
 
   it('keeps locked foundation summaries in the prompt when their turns aged out', async () => {
-    const provider = createScriptedProvider([VALID_TURN_RESPONSE])
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Why are you adventuring?',
+        foundations: {
+          who: { complete: true, summary: 'Kael, sworn knight of the drowned court.' },
+          why: { complete: true, summary: 'Justice' },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      })
+    ])
     const currentFoundations = defaultIdentityFoundations()
     currentFoundations.who = { complete: true, summary: 'Kael, sworn knight of the drowned court.' }
     const context = {
@@ -280,9 +421,72 @@ describe('runIdentityInterviewTurn transcript windowing', () => {
     await runIdentityInterviewTurn(provider, context, 'Latest.')
     expect(provider.calls[0]?.prompt).toContain('Kael, sworn knight of the drowned court.')
   })
+
+  it('accepts re-emitting already-locked who while newly locking why', async () => {
+    const provider = createScriptedProvider([
+      JSON.stringify({
+        dmReply: 'Why are you here?',
+        foundations: {
+          who: { complete: true, summary: 'Different who re-emit' },
+          why: { complete: true, summary: 'Justice' },
+          where: { complete: false },
+          what: { complete: false }
+        },
+        allFoundationsComplete: false
+      })
+    ])
+    const currentFoundations = defaultIdentityFoundations()
+    currentFoundations.who = { complete: true, summary: 'Kael, original' }
+    const result = await runIdentityInterviewTurn(
+      provider,
+      { ...IDENTITY_INTERVIEW_CONTEXT, currentFoundations },
+      'I seek justice.'
+    )
+    expect(result.foundations.why.complete).toBe(true)
+  })
 })
 
 describe('foundation status helpers', () => {
+  it('nextIncompleteFoundation walks who → why → where → what', () => {
+    const status = defaultIdentityFoundations()
+    expect(nextIncompleteFoundation(status)).toBe('who')
+    status.who = { complete: true, summary: 'Kael' }
+    expect(nextIncompleteFoundation(status)).toBe('why')
+    status.why = { complete: true, summary: 'Justice' }
+    expect(nextIncompleteFoundation(status)).toBe('where')
+    status.where = { complete: true, summary: 'Oakhollow' }
+    expect(nextIncompleteFoundation(status)).toBe('what')
+    status.what = { complete: true, summary: 'Guarding the gate' }
+    expect(nextIncompleteFoundation(status)).toBeNull()
+  })
+
+  it('foundationsAdvanceInOrder rejects where-before-why and accepts locking next only', () => {
+    const current = defaultIdentityFoundations()
+    current.who = { complete: true, summary: 'Kael' }
+    expect(
+      foundationsAdvanceInOrder(current, {
+        ...defaultIdentityFoundations(),
+        who: { complete: true, summary: 'Kael' },
+        where: { complete: true, summary: 'Oakhollow' }
+      })
+    ).toBe(false)
+    expect(
+      foundationsAdvanceInOrder(current, {
+        ...defaultIdentityFoundations(),
+        who: { complete: true, summary: 'Kael' },
+        why: { complete: true, summary: 'Justice' }
+      })
+    ).toBe(true)
+    expect(
+      foundationsAdvanceInOrder(current, {
+        ...defaultIdentityFoundations(),
+        who: { complete: true, summary: 'Kael' },
+        why: { complete: true, summary: 'Justice' },
+        where: { complete: true, summary: 'Oakhollow' }
+      })
+    ).toBe(false)
+  })
+
   it('merges newly completed foundations without dropping prior summaries', () => {
     const current = defaultIdentityFoundations()
     current.who = { complete: true, summary: 'Kael' }

@@ -53,7 +53,7 @@ Ticket workflow and acceptance criteria live under `/board` (`backlog`, `in-prog
 ## Core Design
 
 - **Engine and database are the source of truth.** AI agents read state to produce narration and propose actions; a deterministic rules engine validates and resolves everything (dice, checks, damage, death) before it's persisted. Agents never decide outcomes themselves.
-- **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick. Context assembly is slimmed for token cost (epic **040**); semantic RAG over the save selects relevant lore within a hard injection cap (epic **083**).
+- **Every agent call is re-grounded from SQLite**, never from chat history — this is what makes destroyed regions, dead NPCs, and past choices stick. Context assembly is slimmed for token cost (epic **040**); RAG over the save selects relevant lore within a hard injection cap (epic **083**), with real local neural and cloud embedders (epic **154**) plus lexical fallback when assets/keys are missing.
 - **NPCs have isolated memory.** Each NPC has its own private memory log; it only ever sees its own memories plus world facts explicitly tagged to its region/faction. No NPC can "know" something only another NPC experienced. Speaking style and selective replies keep Social chatter on-character without every NPC answering every line.
 - **Provider-agnostic LLM backend.** A pluggable provider interface backs the DM/NPC/party-member agents — Claude (Anthropic), OpenAI (GPT), Google Gemini, xAI Grok, and [Player2](http://127.0.0.1:4315) (local) are implemented, swappable via Settings or runtime config with no code changes required. Local llama.cpp is backlog (**020**).
 - **Campaign-level world, character-level story.** World name/summary/history, pantheon, regions, NPCs, story threads, events, and `current_state_summary` are shared across all player characters in a campaign. Journal, log book, quest log, known spells, narration/turn history, party roster ownership, `currentRegionId`, and guided-creation state are per character.
@@ -150,7 +150,7 @@ Work is tracked as epics and sub-tickets under `/board`. Epics move `backlog` �
 | 060–062 | **Packaging, XP, CI hygiene** — version in UI; mac `.dmg`; difficulty-rated XP; deadcode/security CI; codebase pruning; smoother auto-updates *(note: ids 060–062 were reused across a few tickets)* |
 | 063–071 | **Prompt & guided polish** — plain-English fantasy tone; mundane-human lore; fandom canon-recall seeding; spellcheck; guided thinking / Where → starting region |
 | 072–082 | **Opening-scene handoff & engineering gates** — Generate reply, opening-scene kickoff / enter-world, rebrand AI-TTRPG, deadcode as a delivery gate |
-| 083 | **RAG over campaign SQLite** — local embedder, chunk index, hybrid retrieval for DM/NPC/party grounding within 040 budgets |
+| 083 | **RAG over campaign SQLite** — chunk index + hybrid retrieval for DM/NPC/party grounding within 040 budgets (lexical default; real embedders in **154**) |
 | 084–092 | **Social stream & NPC voice** — Social/Scene split + streaming window; selective NPC replies; speaking-style samples; auto-update parity |
 | 093–104 | **Balance, branding, release polish** — starting-weapon / ability-score retunes; shield app icon; update-ready copy; deploy/CI harden; hide Character Setup AI Party Members (**100**) |
 | 105 | **NPC dossier modal** — Social / log book entry → Traits → Facts → persisted DM opinion → Disposition |
@@ -183,7 +183,7 @@ None (`board/in-progress/` empty aside from `.gitkeep` and unrelated work).
 | **143** | World grid — spatial data model for persistent world locations (data/APIs first; not m004 sprite play) |
 | **152** | Image provider Settings: cloud/Player2/local-on-rails painters; gate generative tokens until ready (promotes m001.1) |
 | **153** | Campaign page improvements (e.g. generative-tokens toggle only at campaign start) |
-| **154** | Finish RAG: real local **and** cloud semantic embeddings (**083** follow-through; mobile-ready contract) |
+| **154** | Finish RAG: real local MiniLM **and** cloud (OpenAI/Gemini) embeddings + Settings mode picker (**083** follow-through; mobile-ready contract) |
 
 ### Revisit backlog
 

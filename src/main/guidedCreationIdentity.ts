@@ -169,15 +169,22 @@ export async function kickoffIdentityInterviewIfNeeded(
     return { ok: true, kickedOff: false }
   }
 
+  const kickoffContext = buildKickoffInterviewContext(
+    db,
+    input.campaignId,
+    campaign.premisePrompt,
+    character
+  )
   let dmReply: string
   try {
-    const kickoff = await runIdentityInterviewKickoff(
-      provider,
-      buildKickoffInterviewContext(db, input.campaignId, campaign.premisePrompt, character)
-    )
+    const kickoff = await runIdentityInterviewKickoff(provider, kickoffContext)
     dmReply = kickoff.dmReply
   } catch {
-    dmReply = identityWhoKickoffFallback(character.name)
+    dmReply = identityWhoKickoffFallback(
+      character.name,
+      kickoffContext.backgroundLabel,
+      kickoffContext.backgroundDescription
+    )
   }
 
   appendGuidedCreationMessage(db, {

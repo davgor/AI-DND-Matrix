@@ -1,3 +1,8 @@
+import {
+  DEFAULT_RAG_EMBEDDER_SETTINGS,
+  type RagEmbedderSettings
+} from '../rag/embedderSettings'
+
 export type ProviderMode = 'claude' | 'openai' | 'gemini' | 'grok' | 'player2' | 'llamacpp'
 
 /** Catalog download lifecycle for local llama.cpp models (020.4 / 020.18). */
@@ -26,6 +31,8 @@ export interface ProviderSettings {
   /** Official zip backend for Acquire runtime (Vulkan GPU vs CPU). */
   llamaCppRuntimeBackend: 'vulkan' | 'cpu'
   player2BaseUrl: string
+  /** Campaign RAG embedder mode / local download (epic 154). */
+  ragEmbedder: RagEmbedderSettings
 }
 
 export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
@@ -47,7 +54,8 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   llamaCppCatalogModelId: '',
   llamaCppDownloadState: 'idle',
   llamaCppRuntimeBackend: 'vulkan',
-  player2BaseUrl: 'http://127.0.0.1:4315'
+  player2BaseUrl: 'http://127.0.0.1:4315',
+  ragEmbedder: { ...DEFAULT_RAG_EMBEDDER_SETTINGS }
 }
 
 type ProviderApiKeyField = 'claudeApiKey' | 'openaiApiKey' | 'geminiApiKey' | 'grokApiKey'

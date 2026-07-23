@@ -114,8 +114,9 @@ Grok and Claude: **no** public embeddings API — omitted.
 1. `rag_chunks` stores `embedder_id`, `model_id`, `embedding_dim` (schema **v57**).
 2. Pre-154 rows backfill to `lexical` / `hashed-bow-v1` / `256`.
 3. Upsert skips re-embed only when `content_hash` matches **and** row embedder/model/dim matches the active embedder.
-4. Mode/model change → mark campaign backfill incomplete and rebuild embeddings (never cosine across spaces).
-5. Core `Embedder` interface has no Electron/`userData` imports — path injection for local neural stays in main.
+4. Mode/model change → `invalidateCampaignRagForEmbedderChange` wipes campaign chunks + clears backfill completion, then rebuild (never cosine across spaces). Retrieve filters by active `embedder_id` / `model_id` / `embedding_dim`.
+5. Core `Embedder` interface has no Electron/`userData` imports — path injection for local neural stays in main (`userData/rag-embedder/`).
+6. Settings selects mode via `ragEmbedder` on ProviderSettings; `resolveProductionEmbedder` falls back to lexical when not ready.
 
 ## Isolation rules (binding)
 

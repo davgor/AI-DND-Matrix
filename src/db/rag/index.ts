@@ -5,6 +5,24 @@ export {
   type BackfillCampaignRagParams,
   type BackfillCampaignRagResult
 } from './backfill'
+export {
+  clearCampaignRagIndex,
+  invalidateCampaignRagBackfill,
+  invalidateCampaignRagForEmbedderChange
+} from './invalidateRagIndex'
+export {
+  createLocalNeuralEmbedder,
+  LOCAL_NEURAL_FLOAT_TOLERANCE,
+  LOCAL_NEURAL_HUB_MODEL_ID,
+  LOCAL_NEURAL_MODEL_ID,
+  RAG_LOCAL_IDLE_MS,
+  type LocalNeuralEmbedderOptions,
+  type LocalNeuralEncodeBatch
+} from './localNeuralEmbedder'
+export {
+  resolveProductionEmbedder,
+  type ResolveProductionEmbedderParams
+} from './resolveProductionEmbedder'
 export { contentHash } from './contentHash'
 export { cosineSimilarity } from './cosine'
 export { packEmbedding, unpackEmbedding } from './embeddingBlob'

@@ -22,6 +22,9 @@ interface InsertChunkParams {
   regionId?: string | null
   npcId?: string | null
   characterId?: string | null
+  embedderId?: string
+  modelId?: string
+  embeddingDim?: number
 }
 
 function insertRagChunk(
@@ -32,8 +35,8 @@ function insertRagChunk(
   db.prepare(
     `INSERT INTO rag_chunks (
       id, campaign_id, source_table, source_id, region_id, npc_id, character_id,
-      text, content_hash, embedding, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      text, content_hash, embedding, updated_at, embedder_id, model_id, embedding_dim
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     chunk.id,
     campaignId,
@@ -45,7 +48,10 @@ function insertRagChunk(
     chunk.text,
     `hash-${chunk.id}`,
     packEmbedding(chunk.embedding),
-    '2026-01-01T00:00:00.000Z'
+    '2026-01-01T00:00:00.000Z',
+    chunk.embedderId ?? 'fake',
+    chunk.modelId ?? 'fake-v1',
+    chunk.embeddingDim ?? EMBEDDING_DIMENSION
   )
 }
 
@@ -263,5 +269,36 @@ describe('retrieveRelevantChunks npc world facts', () => {
 
     expect(hits).toHaveLength(1)
     expect(hits[0]?.sourceTable).toBe('world_facts')
+  })
+})
+
+describe('retrieveRelevantChunks embedder space filter', () => {
+  it('does not score chunks from a different embedder_id', async () => {
+    const db = createTestDb()
+    const campaignId = createTestCampaign(db, 'Space filter')
+    const vector = unitVector(0)
+    insertRagChunk(db, campaignId, {
+      id: 'chunk-other',
+      sourceTable: 'world_facts',
+      sourceId: 'fact-other',
+      text: 'Foreign space fact.',
+      embedding: vector,
+      embedderId: 'lexical',
+      modelId: 'hashed-bow-v1',
+      embeddingDim: EMBEDDING_DIMENSION
+    })
+
+    const embedder = createFakeEmbedder({
+      fixtures: { q: vector, 'Foreign space fact.': vector }
+    })
+    const hits = await retrieveRelevantChunks({
+      db,
+      campaignId,
+      query: 'q',
+      scope: 'campaign',
+      k: 5,
+      embedder
+    })
+    expect(hits).toEqual([])
   })
 })

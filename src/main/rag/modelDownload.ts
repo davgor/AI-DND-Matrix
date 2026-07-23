@@ -4,7 +4,7 @@
  */
 
 import { createWriteStream } from 'node:fs'
-import { mkdir, writeFile, readFile } from 'node:fs/promises'
+import { access, mkdir, writeFile, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
@@ -33,12 +33,30 @@ export interface RagDownloadDeps {
   onProgress?: (progress: RagModelDownloadProgress) => void
 }
 
+export interface RagModelStatus {
+  catalogModelId: string | null
+  hubModelId: string | null
+  downloadState: RagLocalDownloadState
+  modelPath: string
+  ready: boolean
+}
+
 interface StateFile {
   catalogModelId: string
   hubModelId: string
   downloadState: RagLocalDownloadState
   modelPath: string
 }
+
+/** Hub-relative paths required for Transformers.js local_files_only load. */
+export const RAG_HUB_REQUIRED_FILES = [
+  'config.json',
+  'tokenizer.json',
+  'tokenizer_config.json',
+  'onnx/model_quantized.onnx'
+] as const
+
+export const RAG_HUB_OPTIONAL_FILES = ['tokenizer.model', 'onnx/model.onnx'] as const
 
 function statePath(rootDir: string): string {
   return path.join(rootDir, 'state.json')
@@ -62,10 +80,61 @@ async function writeState(rootDir: string, state: StateFile): Promise<void> {
   await writeFile(statePath(rootDir), JSON.stringify(state, null, 2), 'utf8')
 }
 
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function isRagModelReady(
+  rootDir: string,
+  catalogModelId: string = RAG_LOCAL_REFERENCE_MODEL_ID
+): Promise<boolean> {
+  const entry = getRagLocalCatalogEntry(catalogModelId)
+  if (!entry) {
+    return false
+  }
+  const modelPath = path.join(rootDir, 'models', entry.id)
+  const readyMarker = path.join(modelPath, 'READY')
+  if (!(await pathExists(readyMarker))) {
+    return false
+  }
+  for (const relative of RAG_HUB_REQUIRED_FILES) {
+    if (!(await pathExists(path.join(modelPath, relative)))) {
+      return false
+    }
+  }
+  return true
+}
+
+export async function getRagModelStatus(rootDir: string): Promise<RagModelStatus> {
+  const state = await readRagDownloadState(rootDir)
+  if (!state) {
+    return {
+      catalogModelId: null,
+      hubModelId: null,
+      downloadState: 'idle',
+      modelPath: '',
+      ready: false
+    }
+  }
+  const ready =
+    state.downloadState === 'ready' &&
+    (await isRagModelReady(rootDir, state.catalogModelId))
+  return {
+    catalogModelId: state.catalogModelId,
+    hubModelId: state.hubModelId,
+    downloadState: ready ? 'ready' : state.downloadState === 'ready' ? 'failed' : state.downloadState,
+    modelPath: state.modelPath,
+    ready
+  }
+}
+
 /**
  * Marks a catalog model ready after assets exist under modelPath.
- * Full hub sync is performed by the neural runtime (Transformers.js cache);
- * this records Settings-facing ready state + marker for tests/CI.
  */
 export async function markRagModelReady(
   rootDir: string,
@@ -73,7 +142,12 @@ export async function markRagModelReady(
 ): Promise<RagModelDownloadResult> {
   const entry = requireCatalogEntry(catalogModelId)
   const modelPath = path.join(rootDir, 'models', entry.id)
-  await mkdir(modelPath, { recursive: true })
+  await mkdir(path.join(modelPath, 'onnx'), { recursive: true })
+  for (const relative of RAG_HUB_REQUIRED_FILES) {
+    const target = path.join(modelPath, relative)
+    await mkdir(path.dirname(target), { recursive: true })
+    await writeFile(target, `fixture:${relative}`, 'utf8')
+  }
   await writeFile(path.join(modelPath, 'READY'), entry.hubModelId, 'utf8')
   await writeState(rootDir, {
     catalogModelId: entry.id,
@@ -158,7 +232,7 @@ export async function downloadRagCatalogModel(
   await beginRagDownload(rootDir, entry, modelPath, deps)
 
   try {
-    await fetchHubMarker(entry, modelPath, fetchImpl, deps)
+    await downloadHubFiles(entry, modelPath, fetchImpl, deps)
     return await finishRagDownload(rootDir, entry, modelPath, deps)
   } catch (error) {
     await failRagDownload(rootDir, entry, modelPath, deps)
@@ -174,29 +248,59 @@ function requireCatalogEntry(catalogModelId: string): RagLocalCatalogEntry {
   return entry
 }
 
-async function fetchHubMarker(
+async function downloadHubFiles(
   entry: RagLocalCatalogEntry,
   modelPath: string,
   fetchImpl: typeof fetch,
   deps: RagDownloadDeps
 ): Promise<void> {
-  const url = `https://huggingface.co/${entry.hubModelId}/resolve/main/config.json`
-  const response = await fetchImpl(url)
-  if (!response.ok) {
-    throw new Error(`RAG model download failed with status ${response.status}`)
+  let received = 0
+  for (const relative of RAG_HUB_REQUIRED_FILES) {
+    const bytes = await fetchHubFile({ entry, modelPath, relative, fetchImpl, optional: false })
+    received += bytes
+    deps.onProgress?.({
+      catalogModelId: entry.id,
+      receivedBytes: received,
+      totalBytes: entry.sizeBytes,
+      phase: 'downloading'
+    })
   }
-  const target = path.join(modelPath, 'config.json')
+  for (const relative of RAG_HUB_OPTIONAL_FILES) {
+    try {
+      const bytes = await fetchHubFile({ entry, modelPath, relative, fetchImpl, optional: true })
+      received += bytes
+    } catch {
+      /* optional */
+    }
+  }
+}
+
+async function fetchHubFile(input: {
+  entry: RagLocalCatalogEntry
+  modelPath: string
+  relative: string
+  fetchImpl: typeof fetch
+  optional: boolean
+}): Promise<number> {
+  const url = `https://huggingface.co/${input.entry.hubModelId}/resolve/main/${input.relative}`
+  const response = await input.fetchImpl(url)
+  if (!response.ok) {
+    if (input.optional) {
+      return 0
+    }
+    throw new Error(
+      `RAG model download failed for ${input.relative} with status ${response.status}`
+    )
+  }
+  const target = path.join(input.modelPath, input.relative)
+  await mkdir(path.dirname(target), { recursive: true })
   if (response.body) {
     const nodeStream = Readable.fromWeb(response.body as never)
     await pipeline(nodeStream, createWriteStream(target))
   } else {
-    const text = await response.text()
-    await writeFile(target, text, 'utf8')
+    const buffer = Buffer.from(await response.arrayBuffer())
+    await writeFile(target, buffer)
   }
-  deps.onProgress?.({
-    catalogModelId: entry.id,
-    receivedBytes: entry.sizeBytes,
-    totalBytes: entry.sizeBytes,
-    phase: 'downloading'
-  })
+  const sizeHeader = response.headers.get('content-length')
+  return sizeHeader ? Number(sizeHeader) : 1
 }

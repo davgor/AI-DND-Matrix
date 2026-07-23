@@ -491,6 +491,41 @@ const settings = {
     }
     ipcRenderer.on('llamacpp:downloadProgress', handler)
     return () => ipcRenderer.removeListener('llamacpp:downloadProgress', handler)
+  },
+  getRagEmbedderStatus: (): Promise<{
+    ragEmbedder: import('../shared/rag/embedderSettings').RagEmbedderSettings
+    catalog: readonly import('../shared/rag/localCatalog').RagLocalCatalogEntry[]
+    diskReady: boolean
+    ready: boolean
+    reason: string
+    openaiApiKeySet: boolean
+    geminiApiKeySet: boolean
+  }> => ipcRenderer.invoke('rag:getStatus'),
+  startRagModelDownload: (
+    catalogModelId?: string
+  ): Promise<{ ok: true; modelPath: string } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('rag:startModelDownload', catalogModelId),
+  onRagDownloadProgress: (
+    listener: (payload: {
+      catalogModelId: string
+      receivedBytes: number
+      totalBytes: number | null
+      phase: string
+    }) => void
+  ): (() => void) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      payload: {
+        catalogModelId: string
+        receivedBytes: number
+        totalBytes: number | null
+        phase: string
+      }
+    ): void => {
+      listener(payload)
+    }
+    ipcRenderer.on('rag:downloadProgress', handler)
+    return () => ipcRenderer.removeListener('rag:downloadProgress', handler)
   }
 }
 
