@@ -34,6 +34,13 @@ import {
 } from '../shared/campaignCreate/types'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
+import { generateOrGetBestiarySpecies } from '../agents/bestiary/generateSpecies'
+import { deriveSpeciesNameFromPrompt } from '../shared/bestiary/reviewRoster'
+import {
+  createCreatureTokenSchedulerDeps,
+  maybeEnqueueCreatureTokenAfterSpeciesCreate,
+  type CreatureTokenSchedulerDeps
+} from './creatureTokenScheduler'
 import {
   createNpcFaceTokenSchedulerDeps,
   maybeEnqueueNpcFaceTokenAfterCreate,
@@ -425,6 +432,49 @@ export async function generateNpcForCampaign(
   return getCampaignDetail(db, input.campaignId)
 }
 
+export interface GenerateBestiarySpeciesInput {
+  campaignId: string
+  seedPrompt: string
+}
+
+export async function generateBestiarySpeciesForCampaign(
+  db: Database.Database,
+  provider: ReturnType<typeof buildAgentProvider>,
+  input: GenerateBestiarySpeciesInput,
+  creatureTokenSchedulerDeps?: CreatureTokenSchedulerDeps
+): Promise<CampaignDetail> {
+  const campaign = getCampaignById(db, input.campaignId)
+  if (!campaign) {
+    throw new CampaignGenerationSchemaError(`Campaign "${input.campaignId}" not found`)
+  }
+  const seed = input.seedPrompt.trim()
+  if (!seed) {
+    throw new CampaignGenerationSchemaError('Bestiary seed prompt is required')
+  }
+
+  const name = deriveSpeciesNameFromPrompt(seed)
+  await generateOrGetBestiarySpecies(
+    db,
+    provider,
+    {
+      campaignId: input.campaignId,
+      name,
+      settingHints: seed,
+      tags: ['campaign-custom', 'user-prompt']
+    },
+    {
+      onSpeciesCreated: ({ campaignId, speciesId }) => {
+        maybeEnqueueCreatureTokenAfterSpeciesCreate(
+          creatureTokenSchedulerDeps ?? createCreatureTokenSchedulerDeps(db),
+          { campaignId, speciesId }
+        )
+      }
+    }
+  )
+
+  return getCampaignDetail(db, input.campaignId)
+}
+
 function registerCampaignEditGenerationHandlers(): void {
   ipcMain.handle('campaigns:generateRegion', async (_event, input: GenerateRegionInput) => {
     try {
@@ -449,6 +499,24 @@ function registerCampaignEditGenerationHandlers(): void {
       return { ok: false as const, message }
     }
   })
+
+  ipcMain.handle(
+    'campaigns:generateBestiarySpecies',
+    async (_event, input: GenerateBestiarySpeciesInput) => {
+      try {
+        return {
+          ok: true as const,
+          detail: await generateBestiarySpeciesForCampaign(getDb(), buildAgentProvider(), input)
+        }
+      } catch (error) {
+        const message =
+          error instanceof CampaignGenerationSchemaError
+            ? 'The narrative engine returned an invalid creature. Try again or adjust your seed.'
+            : 'Could not generate the creature. Try again.'
+        return { ok: false as const, message }
+      }
+    }
+  )
 }
 
 export function registerCampaignEditHandlers(): void {

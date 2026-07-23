@@ -20,7 +20,8 @@ import type {
   EditNpcFaceTokenGenerationInput,
   EditEnemyTokenGenerationInput,
   GenerateRegionInput,
-  GenerateNpcInput
+  GenerateNpcInput,
+  GenerateBestiarySpeciesInput
 } from '../main/campaignEditIpc'
 import type { PlayAwareHubSnapshot } from '../shared/campaignHub/types'
 import type { SessionRecapResult } from '../shared/sessionRecap'
@@ -148,6 +149,10 @@ const campaigns = {
     input: GenerateNpcInput
   ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
     ipcRenderer.invoke('campaigns:generateNpc', input),
+  generateBestiarySpecies: (
+    input: GenerateBestiarySpeciesInput
+  ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('campaigns:generateBestiarySpecies', input),
   generateRecap: (campaignId: string): Promise<string> =>
     ipcRenderer.invoke('campaigns:generateRecap', campaignId),
   getOrGenerateSessionRecap: (campaignId: string): Promise<SessionRecapResult> =>

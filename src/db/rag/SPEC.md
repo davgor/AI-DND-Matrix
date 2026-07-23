@@ -96,6 +96,27 @@ Fallback mapping (match current loaders):
 
 CI and unit tests use a scripted/fake embedder only — never a network embedder.
 
+## Embedders (epic 154)
+
+| Id | Kind | Dim | Notes |
+|----|------|-----|-------|
+| `lexical` | Hashed bag-of-words | 256 | Legacy **083** default; formerly mislabeled `local` |
+| `local` | Alias | 256 | Deprecated alias → `lexical` |
+| `fake` | Test | 256 | CI only |
+| `local_neural` | MiniLM ONNX | 384 | Factory + downloaded assets (**154.3–154.4**) |
+| `openai` | Cloud | 1536 default | `createOpenAIEmbedder` + API key (**154.8**) |
+| `gemini` | Cloud | 768 | `createGeminiEmbedder` + API key (**154.8**) |
+
+Grok and Claude: **no** public embeddings API — omitted.
+
+### Migration / vector-space contract
+
+1. `rag_chunks` stores `embedder_id`, `model_id`, `embedding_dim` (schema **v57**).
+2. Pre-154 rows backfill to `lexical` / `hashed-bow-v1` / `256`.
+3. Upsert skips re-embed only when `content_hash` matches **and** row embedder/model/dim matches the active embedder.
+4. Mode/model change → mark campaign backfill incomplete and rebuild embeddings (never cosine across spaces).
+5. Core `Embedder` interface has no Electron/`userData` imports — path injection for local neural stays in main.
+
 ## Isolation rules (binding)
 
 1. Scope `npc` + `npcId`: memory chunks only for that `npc_id`.

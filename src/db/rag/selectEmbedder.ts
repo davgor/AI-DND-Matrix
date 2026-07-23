@@ -1,20 +1,34 @@
 import { createFakeEmbedder } from './fakeEmbedder'
-import { createLocalEmbedder } from './localEmbedder'
+import { createLexicalEmbedder } from './localEmbedder'
 import type { Embedder, EmbedderName } from './types'
 
-const EMBEDDERS: Record<EmbedderName, () => Embedder> = {
-  local: createLocalEmbedder,
-  fake: createFakeEmbedder
+const CLOUD_FACTORY_HINT: Record<string, string> = {
+  openai: 'createOpenAIEmbedder with an API key (not selectEmbedder).',
+  gemini: 'createGeminiEmbedder with an API key (not selectEmbedder).',
+  local_neural:
+    'createLocalNeuralEmbedder with acquired model assets (not selectEmbedder).'
 }
 
-function isEmbedderName(value: string): value is EmbedderName {
-  return value === 'local' || value === 'fake'
+function normalizeEmbedderName(name: string): string {
+  return name.trim().toLowerCase()
 }
 
-export function selectEmbedder(name: EmbedderName | string = 'local'): Embedder {
-  const resolved = name.trim().toLowerCase()
-  if (!isEmbedderName(resolved)) {
-    throw new Error(`Unknown embedder "${name}". Supported: local, fake`)
+export function selectEmbedder(name: EmbedderName | string = 'lexical'): Embedder {
+  const resolved = normalizeEmbedderName(name)
+
+  if (resolved === 'lexical' || resolved === 'local') {
+    return createLexicalEmbedder()
   }
-  return EMBEDDERS[resolved]()
+  if (resolved === 'fake') {
+    return createFakeEmbedder()
+  }
+
+  const factoryHint = CLOUD_FACTORY_HINT[resolved]
+  if (factoryHint) {
+    throw new Error(`Embedder "${resolved}" requires ${factoryHint}`)
+  }
+
+  throw new Error(
+    `Unknown embedder "${name}". Supported: lexical, local (alias), fake; factories for local_neural, openai, gemini.`
+  )
 }

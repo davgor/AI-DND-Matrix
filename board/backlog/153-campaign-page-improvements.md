@@ -7,6 +7,10 @@ Polish and product fixes for the **campaign review / campaign page** surfaces (p
 | # | Slice |
 |---|--------|
 | 1 | Remove mid-campaign **"Use generative tokens?"** checkbox from campaign review — flag is set only at campaign start |
+| 2 | Pantheon modal fills campaign content area (not stuck at ~520px) |
+| 3 | Factions: high-level summary on page; **View Factions** modal for roster/relations details |
+| 4 | Bestiary: summary + modal with default/campaign filter, search, and prompt **Add** |
+| 5 | Bestiary under Factions; dividers on Pantheon / Factions / Bestiary / Story |
 | … | Further campaign-page items land as `153.M` under this epic |
 
 ## Definition of done

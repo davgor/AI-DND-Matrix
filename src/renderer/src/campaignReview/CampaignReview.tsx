@@ -79,6 +79,7 @@ function CampaignReviewMainSections(props: {
   regionBlocks: ReturnType<typeof buildRegionBlocks>
   campaignRaces: ReturnType<typeof useCampaignRaces>
   savers: ReturnType<typeof createCampaignReviewSavers>
+  onDetailChange: (detail: CampaignDetail) => void
   onGenerateNpc: (regionId: string) => void
 }): JSX.Element {
   return (
@@ -104,8 +105,12 @@ function CampaignReviewMainSections(props: {
         deities={props.detail.deities}
         onSaveSummary={props.savers.saveFactionsSummary}
       />
+      <CampaignReviewBestiarySection
+        campaignId={props.campaignId}
+        entries={props.detail.bestiary}
+        onDetailChange={props.onDetailChange}
+      />
       <CampaignReviewStory storyThreads={props.detail.storyThreads} />
-      <CampaignReviewBestiarySection entries={props.detail.bestiary} />
       <CampaignReviewRegions
         regionBlocks={props.regionBlocks}
         campaignRaces={props.campaignRaces}
@@ -136,6 +141,7 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
         regionBlocks={regionBlocks}
         campaignRaces={campaignRaces}
         savers={savers}
+        onDetailChange={props.onDetailChange}
         onGenerateNpc={setGenerateNpcRegionId}
       />
       <CampaignReviewFooter

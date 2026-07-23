@@ -64,6 +64,7 @@ function createThrowingEmbedder(): Embedder {
   return {
     name: 'fake',
     dimension: EMBEDDING_DIMENSION,
+    modelId: 'fake-throw',
     async embed(): Promise<number[][]> {
       throw new Error('embedder unavailable')
     }

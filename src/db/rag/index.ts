@@ -8,8 +8,24 @@ export {
 export { contentHash } from './contentHash'
 export { cosineSimilarity } from './cosine'
 export { packEmbedding, unpackEmbedding } from './embeddingBlob'
+export {
+  createGeminiEmbedder,
+  GEMINI_DEFAULT_MODEL,
+  GEMINI_EMBEDDING_DIMENSION,
+  GeminiEmbedderConfigError,
+  GeminiEmbedderRequestError,
+  type GeminiEmbedderOptions
+} from './cloud/geminiEmbedder'
+export {
+  createOpenAIEmbedder,
+  OPENAI_DEFAULT_MODEL,
+  OPENAI_EMBEDDING_DIMENSION,
+  OpenAIEmbedderConfigError,
+  OpenAIEmbedderRequestError,
+  type OpenAIEmbedderOptions
+} from './cloud/openaiEmbedder'
 export { createFakeEmbedder, type FakeEmbedder, type FakeEmbedderOptions } from './fakeEmbedder'
-export { createLocalEmbedder } from './localEmbedder'
+export { createLexicalEmbedder, createLocalEmbedder } from './localEmbedder'
 export {
   RAG_CHUNK_INJECTION_CAP,
   hybridRankScore,
@@ -29,5 +45,11 @@ export {
   type RetrieveRelevantChunksParams
 } from './retrieve'
 export { selectEmbedder } from './selectEmbedder'
-export { EMBEDDING_DIMENSION, type Embedder, type EmbedderName } from './types'
+export {
+  EMBEDDING_DIMENSION,
+  LEXICAL_EMBEDDING_DIMENSION,
+  LOCAL_NEURAL_EMBEDDING_DIMENSION,
+  type Embedder,
+  type EmbedderName
+} from './types'
 export { resolveEmbedder, upsertRagChunk, type UpsertRagChunkInput } from './upsertChunk'

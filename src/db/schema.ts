@@ -11,6 +11,7 @@ import { migrateCharacterBackgroundCharactersV31 } from './migrateCharacterBackg
 import { migrateCompanionsGuidedPhaseV44 } from './migrateCompanionsGuidedPhaseV44'
 import { seedStarterItemCatalog } from './seedStarterItems'
 import { migrateRagChunksV37 } from './rag/migrateRagChunksV37'
+import { migrateRagEmbedderMetaV57 } from './rag/migrateRagEmbedderMetaV57'
 
 function addColumnIfMissing(
   db: Database.Database,
@@ -945,6 +946,20 @@ export const migrations: Migration[] = [
     version: 55,
     up: (db) => {
       addColumnIfMissing(db, 'characters', 'portrait_prompt', 'TEXT')
+    }
+  },
+  // Ticket 155 — expand creature seed catalog from 16 → 48 conventional foes
+  {
+    version: 56,
+    up: (db) => {
+      seedCreatureAndSpellCatalogV1(db)
+    }
+  },
+  // Epic 154 — RAG embedder identity on chunks (lexical → neural/cloud re-embed)
+  {
+    version: 57,
+    up: (db) => {
+      migrateRagEmbedderMetaV57(db)
     }
   }
 ]

@@ -42,4 +42,7 @@ seeding step required.
 
 - **v1** (TAXONOMY_VERSION 1): initial creature dataset (16 entries
   covering all 8 v1 buckets) and spell dataset (12 entries covering all
-  5 seed archetypes).
+  5 seed archetypes). Creature roster later expanded to **48** conventional
+  TTRPG foes (still TAXONOMY_VERSION 1; same upsert-by-key import — new keys
+  only; no version bumps on the original 16). Existing installs pick up the
+  new keys via schema migration **v56** (`seedCreatureAndSpellCatalogV1`).

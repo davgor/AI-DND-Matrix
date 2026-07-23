@@ -182,6 +182,8 @@ None (`board/in-progress/` empty aside from `.gitkeep` and unrelated work).
 |------|--------|
 | **143** | World grid — spatial data model for persistent world locations (data/APIs first; not m004 sprite play) |
 | **152** | Image provider Settings: cloud/Player2/local-on-rails painters; gate generative tokens until ready (promotes m001.1) |
+| **153** | Campaign page improvements (e.g. generative-tokens toggle only at campaign start) |
+| **154** | Finish RAG: real local **and** cloud semantic embeddings (**083** follow-through; mobile-ready contract) |
 
 ### Revisit backlog
 

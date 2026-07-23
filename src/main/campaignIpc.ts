@@ -27,11 +27,8 @@ import {
   listFactionRelationsByCampaign,
   listFactionsByCampaign
 } from '../db/repositories/factions'
-import {
-  listBestiarySpecies,
-  listBestiaryVariants
-} from '../db/repositories/bestiary'
-import type { BestiarySpecies, BestiaryVariant } from '../shared/bestiary/types'
+import type { BestiaryReviewEntry } from '../shared/bestiary/reviewRoster'
+import { buildCampaignBestiaryRoster } from './campaignBestiaryRoster'
 import type { Faction, FactionRelation } from '../shared/factions'
 import { touchLastPlayed } from '../db/repositories/sessions'
 import { loadConfig } from './config'
@@ -46,10 +43,7 @@ const NEW_CAMPAIGN_NAME_LENGTH = 40
 
 export type { RegionExtras } from '../shared/campaign/regionExtras'
 
-export interface CampaignBestiaryEntry {
-  species: BestiarySpecies
-  variants: BestiaryVariant[]
-}
+export type CampaignBestiaryEntry = BestiaryReviewEntry
 
 export interface CampaignDetail {
   campaign: Campaign | undefined
@@ -61,7 +55,7 @@ export interface CampaignDetail {
   deities: Deity[]
   factions: Faction[]
   factionRelations: FactionRelation[]
-  bestiary: CampaignBestiaryEntry[]
+  bestiary: BestiaryReviewEntry[]
 }
 
 export function listCampaignsForSidebar(db: Database.Database): CampaignWithLastPlayed[] {
@@ -82,7 +76,6 @@ export function buildRegionExtras(db: Database.Database, campaignId: string): Re
 
 export function getCampaignDetail(db: Database.Database, campaignId: string): CampaignDetail {
   const regions = listRegionsByCampaign(db, campaignId)
-  const speciesList = listBestiarySpecies(db, campaignId)
   return {
     campaign: getCampaignById(db, campaignId),
     regions,
@@ -93,10 +86,7 @@ export function getCampaignDetail(db: Database.Database, campaignId: string): Ca
     deities: listDeitiesByCampaign(db, campaignId),
     factions: listFactionsByCampaign(db, campaignId),
     factionRelations: listFactionRelationsByCampaign(db, campaignId),
-    bestiary: speciesList.map((species) => ({
-      species,
-      variants: listBestiaryVariants(db, species.id)
-    }))
+    bestiary: buildCampaignBestiaryRoster(db, campaignId)
   }
 }
 

@@ -81,4 +81,32 @@ describe('CampaignReviewPantheonModal', () => {
     expect(text).toContain('Domains:')
     expect(text).toContain('Keep every oath')
   })
+
+  it('uses content-width overlay and pantheon modal class for full-column layout', () => {
+    const tree = CampaignReviewPantheonModal({
+      deities: [makeDeity()],
+      onClose: () => undefined
+    })
+    expect(tree.props.className).toContain('campaign-review-overlay--content-width')
+    const dialog = tree.props.children as JSX.Element
+    expect(dialog.props.className).toContain('campaign-review-pantheon-modal')
+  })
+})
+
+describe('CampaignReview pantheon modal CSS (153.2)', () => {
+  it('fills the content-width overlay like world history and uses a tall body', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const css = readFileSync(join(__dirname, 'campaignReview.css'), 'utf8')
+    expect(css).toMatch(
+      /\.campaign-review-overlay--content-width\s+\.campaign-review-pantheon-modal[\s\S]*?\{[^}]*width:\s*100%/
+    )
+    expect(css).toMatch(
+      /\.campaign-review-overlay--content-width\s+\.campaign-review-pantheon-modal[\s\S]*?\{[^}]*max-width:\s*none/
+    )
+    expect(css).toMatch(/\.campaign-review-pantheon-modal\s*\{[^}]*max-height:\s*min\(90vh/s)
+    expect(css).toMatch(
+      /\.campaign-review-pantheon-modal\s+\.campaign-review-pantheon-body\s*\{[^}]*max-height:\s*none/s
+    )
+  })
 })
