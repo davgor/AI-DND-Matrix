@@ -15,7 +15,7 @@ import { createCampaignReviewSavers } from './campaignReviewSavers'
 import { useCampaignRaces } from './useCampaignRaces'
 import './campaignReview.css'
 
-export interface CampaignReviewProps {
+interface CampaignReviewProps {
   detail: CampaignDetail
   onDetailChange: (detail: CampaignDetail) => void
   onContinue: () => void
