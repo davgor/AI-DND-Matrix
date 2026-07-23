@@ -157,7 +157,6 @@ src/agents/intentAndRoute.ts:178 - selectFallbackNpcResponders
 src/agents/intentAndRoute.ts:54 - ensureDmNarrationBeat
 src/agents/itemModification.ts:11 - ItemModificationContext
 src/agents/itemModification.ts:18 - buildItemModificationPrompt
-src/agents/jsonResponse.ts:108 - GenerateJsonWithRetryOptions
 src/agents/jsonResponse.ts:5 - MAX_SCHEMA_ATTEMPTS
 src/agents/levelUp.ts:10 - LevelUpAgentResult
 src/agents/levelUp.ts:128 - hasMartialOption

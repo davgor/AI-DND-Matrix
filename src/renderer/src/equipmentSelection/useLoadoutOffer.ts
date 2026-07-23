@@ -88,7 +88,21 @@ function useFetchLoadoutOffer(characterId: string, setters: OfferSetters): void 
       return
     }
     return beginOfferFetch(characterId, setters)
-  }, [characterId, setters])
+    // setState identities are stable; do not depend on the setters object identity.
+  }, [characterId])
+}
+
+function usePersistEquipmentDraft(
+  characterId: string,
+  initialized: boolean,
+  state: EquipmentSelectionState | null
+): void {
+  useEffect(() => {
+    if (!initialized || !state) {
+      return
+    }
+    writeEquipmentSelectionDraft(characterId, state)
+  }, [characterId, initialized, state])
 }
 
 function useLoadoutOffer(characterId: string) {
@@ -100,13 +114,7 @@ function useLoadoutOffer(characterId: string) {
   const setters: OfferSetters = { setOffer, setState, setInitialized, setLoading, setError }
 
   useFetchLoadoutOffer(characterId, setters)
-
-  useEffect(() => {
-    if (!initialized || !state) {
-      return
-    }
-    writeEquipmentSelectionDraft(characterId, state)
-  }, [characterId, initialized, state])
+  usePersistEquipmentDraft(characterId, initialized, state)
 
   return { offer, state, setState, loading, error, setError }
 }

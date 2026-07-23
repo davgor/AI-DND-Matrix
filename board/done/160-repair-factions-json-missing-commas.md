@@ -9,7 +9,7 @@ Campaign create fails at the factions stage with `CampaignGenerationSchemaError:
 
 ## Acceptance criteria
 
-- [ ] `tryParseJson` inserts missing commas between adjacent JSON values/properties (unit-tested with the live Eldergloom factions dump that lacked commas before `deityName`)
-- [ ] `tryParseJson` splits array objects when a duplicate key restarts a peer object (unit-tested with the mashed `relations` dump)
-- [ ] Repaired dumps pass `isValidGeneratedFactions(..., { deitiesPresent: true })` (normalize + pressure bands)
-- [ ] Campaign-create checklist smoke (`campaignCreateIpc.contract.test.ts` + related) and full delivery gate + act pass
+- [x] `tryParseJson` inserts missing commas between adjacent JSON values/properties (unit-tested with the live Eldergloom factions dump that lacked commas before `deityName`)
+- [x] `tryParseJson` splits array objects when a duplicate key restarts a peer object (unit-tested with the mashed `relations` dump)
+- [x] Repaired dumps pass `isValidGeneratedFactions(..., { deitiesPresent: true })` (normalize + pressure bands)
+- [x] Campaign-create checklist smoke (`campaignCreateIpc.contract.test.ts` + related) and full delivery gate + act pass
