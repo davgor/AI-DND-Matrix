@@ -10,22 +10,99 @@ function stripCodeFence(raw: string): string {
   return match ? match[1] : trimmed
 }
 
-function extractJsonObject(raw: string): string {
+/**
+ * Scan brace-balanced top-level `{...}` objects, respecting JSON string escapes.
+ * Local models often emit two objects (e.g. worldSummary then worldHistory).
+ */
+function extractBalancedJsonObjectSlices(raw: string): string[] {
   const stripped = stripCodeFence(raw)
-  const start = stripped.indexOf('{')
-  const end = stripped.lastIndexOf('}')
-  if (start >= 0 && end > start) {
-    return stripped.slice(start, end + 1)
+  const slices: string[] = []
+  let index = 0
+  while (index < stripped.length) {
+    const start = stripped.indexOf('{', index)
+    if (start < 0) {
+      break
+    }
+    const end = findBalancedObjectEnd(stripped, start)
+    if (end < 0) {
+      break
+    }
+    slices.push(stripped.slice(start, end + 1))
+    index = end + 1
   }
-  return stripped
+  return slices
+}
+
+function findBalancedObjectEnd(text: string, start: number): number {
+  let depth = 0
+  let inString = false
+  let escape = false
+  for (let cursor = start; cursor < text.length; cursor += 1) {
+    const char = text[cursor]
+    if (inString) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (char === '\\') {
+        escape = true
+        continue
+      }
+      if (char === '"') {
+        inString = false
+      }
+      continue
+    }
+    if (char === '"') {
+      inString = true
+      continue
+    }
+    if (char === '{') {
+      depth += 1
+      continue
+    }
+    if (char !== '}') {
+      continue
+    }
+    depth -= 1
+    if (depth === 0) {
+      return cursor
+    }
+  }
+  return -1
+}
+
+function mergeParsedJsonObjects(values: unknown[]): unknown {
+  if (values.length === 0) {
+    return undefined
+  }
+  if (values.length === 1) {
+    return values[0]
+  }
+  const merged: Record<string, unknown> = {}
+  for (const value of values) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      return undefined
+    }
+    Object.assign(merged, value as Record<string, unknown>)
+  }
+  return merged
 }
 
 export function tryParseJson(raw: string): unknown {
-  try {
-    return JSON.parse(extractJsonObject(raw))
-  } catch {
+  const slices = extractBalancedJsonObjectSlices(raw)
+  if (slices.length === 0) {
     return undefined
   }
+  const parsed: unknown[] = []
+  for (const slice of slices) {
+    try {
+      parsed.push(JSON.parse(slice))
+    } catch {
+      return undefined
+    }
+  }
+  return mergeParsedJsonObjects(parsed)
 }
 
 export interface GenerateJsonWithRetryOptions<T> {

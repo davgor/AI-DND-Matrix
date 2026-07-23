@@ -10,10 +10,13 @@ import { createScriptedProvider } from '../providers/mockHarness'
 import type { ScriptedResponse } from '../providers/mockHarness'
 import type { Provider } from '../providers/types'
 import { LlamaCppTruncationError } from '../providers/llamacpp'
+import { tryParseJson } from '../jsonResponse'
 import { buildAvailableRaceOptions } from '../raceLore'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
+  SCHEMA_FAILURE_RAW_LOG_MAX_CHARS,
+  formatSchemaFailureAttemptsLog,
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
@@ -50,6 +53,8 @@ import {
   VALID_FACTIONS_RESPONSE,
   EMPTY_CANON_RESPONSE,
   VALID_PANTHEON_RESPONSE,
+  LIVE_SPLIT_WORLD_JSON_DUMP,
+  LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND,
   buildCascadingSeedResponses,
   buildShieldHeroCascadingSeedResponses,
   makeBestiarySeedResponse,
@@ -121,6 +126,68 @@ describe('normalizeGeneratedWorld', () => {
   })
 })
 
+const BLOB_WORLD_HISTORY_TOPICS = [
+  'Titans raised the first ridge walls before mortal kingdoms had names',
+  'Forge clans sealed pacts in ore and blood along the high passes',
+  'Sword-lords carved marches from the wreck of the Godwrought War',
+  'Veiled restorers quieted the passes but left unfinished watchtowers',
+  'River seers now dream of maps that rewrite themselves after every storm',
+  'Salt merchants bought noble titles with dredged crowns from drowned vaults',
+  'Beacon fires went dark when the Compact’s tithe wars emptied the towers',
+  'Explorer crews returned with cursed ore and missing manifests',
+  'Smuggler princes claim the drowned still vote on every treaty',
+  'Festival markets bloom beside famine roads while beacon chains relight too late'
+]
+
+function buildSentenceBlobWorld(): {
+  worldName: string
+  worldSummary: string
+  worldHistory: string
+} {
+  const worldSummary = [
+    'Calderin is a highland basin ringed by wind-cut mesas and dry riverbeds.',
+    'Caravan towers mark the only reliable wells between the salt flats and the timber line.',
+    'Herders still move flocks along the ridge roads each spring.',
+    'Toll keepers argue with free riders over which spring belongs to which clan.',
+    'Border forts are understaffed after the last raid season.',
+    'Everyone knows the next drought will decide who keeps their grazing rights.'
+  ].join(' ')
+  const worldHistory = BLOB_WORLD_HISTORY_TOPICS.map((topic) => `${topic}.`).join(' ')
+  return { worldName: 'Calderin', worldSummary, worldHistory }
+}
+
+describe('normalizeGeneratedWorld reshape', () => {
+  it('reshapes enough sentences into required paragraphs without inventing filler', () => {
+    const blobWorld = buildSentenceBlobWorld()
+    const normalized = normalizeGeneratedWorld(blobWorld)
+    expect(normalized).toBeDefined()
+    expect(isValidGeneratedWorld(normalized)).toBe(true)
+    expect(countParagraphs(normalized!.worldSummary)).toBe(3)
+    expect(countParagraphs(normalized!.worldHistory)).toBe(5)
+    expect(normalized!.worldSummary).toContain('highland basin')
+    expect(normalized!.worldHistory).toContain('Titans raised')
+    expect(normalized!.worldSummary).not.toMatch(/travelers still tell/i)
+  })
+})
+
+describe('live local split world JSON dump (020.32)', () => {
+  it('parses, normalizes, and accepts the captured two-object Qwen dump', async () => {
+    const parsed = tryParseJson(LIVE_SPLIT_WORLD_JSON_DUMP)
+    const normalized = normalizeGeneratedWorld(parsed)
+    expect(normalized?.worldName).toBe('Aetheris')
+    expect(normalized?.worldHistory).toContain('Gornath')
+    expect(isValidGeneratedWorld(normalized)).toBe(true)
+
+    const provider = createScriptedProvider([LIVE_SPLIT_WORLD_JSON_DUMP])
+    const world = await generateCampaignWorld(
+      provider,
+      'The party is hired to investigate strange lights rise from the old quarries at dusk in a ruined monastery ruled by a mercenary company.'
+    )
+    expect(world.worldName).toBe('Aetheris')
+    expect(world.worldSummary.length).toBeGreaterThan(40)
+  })
+})
+
 describe('normalizeGeneratedFactions: valid fixtures', () => {
   it('accepts camelCase medium fixtures and pressure band counts', () => {
     const normalized = normalizeGeneratedFactions(VALID_MEDIUM_FACTIONS)
@@ -184,8 +251,58 @@ describe('normalizeGeneratedFactions: trimming', () => {
     }
     expect(isValidGeneratedFactions(thin, { deitiesPresent: true })).toBe(false)
   })
+})
 
-  it('rejects medium rosters without religious factions when deities exist', () => {
+describe('normalizeGeneratedFactions religious promote (020.33)', () => {
+  it('promotes a faith-linked faction to religious when medium pressure and deities exist', () => {
+    const noReligiousKind = {
+      factionPressure: 'medium',
+      factionsSummary: 'Stormbringers and Weavers vie for influence.',
+      factions: [
+        {
+          key: 'stormbringers',
+          name: 'Stormbringers',
+          kind: 'civic',
+          summary: 'Mages who harness storms and bargain with storm gods.',
+          deityName: 'Kaelon'
+        },
+        { key: 'weavers', name: 'Weavers', kind: 'mercantile', summary: 'Trade guilds.' },
+        { key: 'hunters', name: 'Hunters', kind: 'military', summary: 'Border patrols.' }
+      ],
+      relations: [
+        { factionAKey: 'stormbringers', factionBKey: 'weavers', stance: 'tense' },
+        { factionAKey: 'weavers', factionBKey: 'hunters', stance: 'rival' }
+      ]
+    }
+    const normalized = normalizeGeneratedFactions(noReligiousKind, { deitiesPresent: true })
+    expect(normalized?.factions.find((faction) => faction.key === 'stormbringers')?.kind).toBe(
+      'religious'
+    )
+    expect(isValidGeneratedFactions(noReligiousKind, { deitiesPresent: true })).toBe(true)
+  })
+})
+
+describe('normalizeGeneratedFactions live dump (020.33)', () => {
+  it('accepts the live Qwen medium dump after religious-kind coercion', () => {
+    expect(
+      isValidGeneratedFactions(LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND, {
+        deitiesPresent: false
+      })
+    ).toBe(true)
+    const normalized = normalizeGeneratedFactions(LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND, {
+      deitiesPresent: true
+    })
+    expect(normalized?.factions.some((faction) => faction.kind === 'religious')).toBe(true)
+    expect(
+      isValidGeneratedFactions(LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND, {
+        deitiesPresent: true
+      })
+    ).toBe(true)
+  })
+})
+
+describe('normalizeGeneratedFactions secular medium (020.33)', () => {
+  it('leaves secular medium rosters alone when no deities are present', () => {
     const noFaith = {
       factionPressure: 'medium',
       factionsSummary: 'Secular courts only.',
@@ -199,8 +316,12 @@ describe('normalizeGeneratedFactions: trimming', () => {
         { factionAKey: 'b', factionBKey: 'c', stance: 'tense' }
       ]
     }
-    expect(isValidGeneratedFactions(noFaith, { deitiesPresent: true })).toBe(false)
     expect(isValidGeneratedFactions(noFaith, { deitiesPresent: false })).toBe(true)
+    expect(
+      normalizeGeneratedFactions(noFaith, { deitiesPresent: false })?.factions.every(
+        (faction) => faction.kind !== 'religious'
+      )
+    ).toBe(true)
   })
 })
 
@@ -554,7 +675,9 @@ describe('buildWorldGenerationPrompt', () => {
     expect(prompt).toContain('Tyria')
     expect(prompt).toContain('science fiction')
     expect(prompt).toContain('five paragraphs')
-    expect(prompt).toContain('three full sentences')
+    expect(prompt).toContain('two full sentences')
+    expect(prompt).toContain('single JSON object')
+    expect(prompt).toContain('Do NOT emit a second JSON object')
     expect(prompt).not.toContain('"regions"')
   })
 
@@ -790,6 +913,78 @@ describe('generateCampaignSeed schema rejection + retry (007.4, generation half)
     )
     // Canon truncates up to MAX_GENERATION_ATTEMPTS, then aborts — no ×5 outer restart.
     expect(calls.length).toBe(MAX_GENERATION_ATTEMPTS)
+  })
+})
+
+describe('generateCampaignSeed world schema fail-fast (020.30)', () => {
+  it('does not restart the full seed when world schema fails after stage retries', async () => {
+    const calls: string[] = []
+    const provider: Provider = {
+      async generate(prompt: string): Promise<string> {
+        calls.push(prompt)
+        if (prompt.includes('knownPlaces') || prompt.includes('recognizedSetting')) {
+          return EMPTY_CANON_RESPONSE
+        }
+        if (prompt.includes('pantheonSummary') || prompt.includes('isForgotten')) {
+          return VALID_PANTHEON_RESPONSE
+        }
+        return 'not a valid world payload'
+      }
+    }
+    await expect(
+      generateCampaignSeed(provider, 'A quiet farming valley', { regionCount: 1, npcsPerRegion: 1 })
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof CampaignGenerationSchemaError && /valid world schema/i.test(error.message)
+    )
+    // canon + pantheon + world×3 — not ×5 full seed restarts.
+    expect(calls.length).toBe(2 + MAX_GENERATION_ATTEMPTS)
+  })
+})
+
+describe('generateWithRetries schema failure diagnostics (020.31)', () => {
+  it('attaches truncated raw responses and reasons to CampaignGenerationSchemaError', async () => {
+    const huge = `not-json-${'x'.repeat(5000)}`
+    const provider = createScriptedProvider([
+      'not json at all',
+      JSON.stringify({ worldName: 'OnlyName' }),
+      huge
+    ])
+    let caught: unknown
+    try {
+      await generateCampaignWorld(provider, 'A quiet farming valley')
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(CampaignGenerationSchemaError)
+    const schemaError = caught as CampaignGenerationSchemaError
+    expect(schemaError.failedAttempts).toHaveLength(MAX_GENERATION_ATTEMPTS)
+    expect(schemaError.failedAttempts[0]).toMatchObject({
+      attempt: 1,
+      reason: 'unparseable',
+      raw: 'not json at all'
+    })
+    expect(schemaError.failedAttempts[1]).toMatchObject({
+      attempt: 2,
+      reason: 'normalize_failed'
+    })
+    expect(schemaError.failedAttempts[2]?.reason).toBe('unparseable')
+    expect(schemaError.failedAttempts[2]?.raw.length).toBeLessThanOrEqual(
+      SCHEMA_FAILURE_RAW_LOG_MAX_CHARS + 40
+    )
+    expect(schemaError.failedAttempts[2]?.raw).toContain('[truncated')
+  })
+
+  it('formats schema failure attempts for the main log', () => {
+    const error = new CampaignGenerationSchemaError('DM agent did not return a valid world schema after retries', [
+      { attempt: 1, reason: 'unparseable', raw: 'nope' },
+      { attempt: 2, reason: 'invalid', raw: '{"worldName":"X"}' }
+    ])
+    const formatted = formatSchemaFailureAttemptsLog(error)
+    expect(formatted).toContain('valid world schema')
+    expect(formatted).toContain('reason=unparseable')
+    expect(formatted).toContain('nope')
+    expect(formatted).toContain('reason=invalid')
   })
 })
 

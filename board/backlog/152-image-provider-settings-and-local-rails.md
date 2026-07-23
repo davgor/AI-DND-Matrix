@@ -51,6 +51,7 @@ Broken down into sub-tickets **152.1–152.13**. This epic is done when all of t
 - Campaign hub: when campaign generative tokens are ON but image provider is OFF/not ready, banner **“Campaign requires an image provider”** and character **Resume** is disabled until Settings is fixed (or campaign flag turned off)
 - Schedulers (**122**/**123**/**139**/**144**) use the live provider; placeholder PNG mock is not the production default when Enable is ON
 - Smoke runbook covers cloud key path, Player2 path, local download path, hub Resume gate, post-LLM prompt decline, and idle unload
+- `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass; **act** CI (`pr-checks`, `deadcode`) succeeds
 
 ## Relationship to other epics
 
@@ -82,6 +83,7 @@ Pin the local reference stack (runtime binary, API shape, reference model id, VR
 - [ ] Research doc checked in with recommended local runtime + one reference catalog model (size, VRAM, RAM)
 - [ ] Player2 image capability and path documented (or explicitly “unavailable → drop from v1 selectable list”)
 - [ ] Cloud vendor endpoints and auth headers summarized for adapter implementers
+- [ ] Recommended idle-unload timer default documented (cold start acceptable)
 
 ### 152.2 — Settings image-provider types, defaults, persistence
 
@@ -113,14 +115,18 @@ Settings catalog for local image weights (size / VRAM hints). Download manager w
 - [ ] Download progress + failure recovery tested
 - [ ] Assets land under documented `userData` layout
 
-### 152.5 — Local runtime acquire + lifecycle
+### 152.5 — Local runtime acquire + lifecycle (idle unload)
 
 Discover/acquire the local image runtime into `userData`; managed start/stop/health analogous to llama lifecycle. Stop-before-replace if binaries are swapped.
+
+**Idle policy:** after the job queue is empty, start an idle timer; on expiry, stop/unload the managed runtime (free VRAM). Next job cold-starts the runtime. **Never** stop while any job is queued or in flight. Idle timer duration pinned in research doc (tunable constant OK).
 
 #### Acceptance criteria
 
 - [ ] Lifecycle unit tests: start, health ready, stop, typed errors when missing
-- [ ] Apply from Settings boots managed runtime when Local + Enable ON
+- [ ] Apply from Settings boots managed runtime when Local + Enable ON (or deferred until first job — document choice; cold start OK either way)
+- [ ] Idle timer stops runtime only when queue depth is 0; tests prove no stop while jobs pending/in flight
+- [ ] After idle stop, next `generateImage` cold-starts successfully
 - [ ] Lean-installer constraint documented (no fat runtime in `.exe`)
 
 ### 152.6 — Settings UI: provider select, download, enable
@@ -141,6 +147,7 @@ Single shared helper: `isImageGenerationReady(settings) → boolean` (+ reason c
 
 - [ ] Unit tests for each mode: ready / missing key / missing download / runtime down / Enable OFF
 - [ ] IPC or settings snapshot exposes readiness to renderer without leaking secrets
+- [ ] Idle-stopped local runtime still counts as **ready** for gating (Enable ON + assets present); cold start happens on demand — “not ready” is config/Enable, not “currently unloaded”
 
 ### 152.8 — Wire token schedulers to configured provider
 
@@ -169,7 +176,7 @@ Campaign start + Campaign Review **Use generative tokens?** disabled when not re
 
 ### 152.10 — Dual-load / VRAM UX hints
 
-When LLM mode is Local (GPU) and image mode is Local, Settings shows an explicit warning about VRAM contention and suggested mitigations (CPU LLM, unload, or cloud/Player2 images).
+When LLM mode is Local (GPU) and image mode is Local, Settings shows an explicit warning about VRAM contention and suggested mitigations (CPU LLM, unload, or cloud/Player2 images). Idle unload (152.5) is the primary automatic mitigation; copy may mention it.
 
 #### Acceptance criteria
 
@@ -178,13 +185,14 @@ When LLM mode is Local (GPU) and image mode is Local, Settings shows an explicit
 
 ### 152.11 — Manual smoke runbook
 
-`docs/runbooks/image-provider-smoke.md`: Enable OFF gate; one cloud painter; Player2 if in v1; local download → one face-token or PC icon success; failure/fallback path; hub mismatch (campaign tokens ON + image provider OFF → banner + Resume disabled).
+`docs/runbooks/image-provider-smoke.md`: Enable OFF gate; one cloud painter; Player2 if in v1; local download → one face-token or PC icon success; failure/fallback path; hub mismatch (campaign tokens ON + image provider OFF → banner + Resume disabled); post–local-LLM prompt accept/decline; idle unload then cold-start paint.
 
 #### Acceptance criteria
 
 - [ ] Runbook checked in and linked from epic / README runbooks list if one exists
 - [ ] Steps match shipped Settings labels
 - [ ] Hub Resume-gate steps included
+- [ ] Prompt decline and idle-unload cold-start steps included
 
 ### 152.12 — Delivery gate
 
@@ -195,3 +203,19 @@ Full verification for the epic.
 - [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
 - [ ] `act` workflows `pr-checks.yml` and `deadcode.yml` succeed
 - [ ] All 152.x criteria checked; epic moved to `board/done/`
+
+### 152.13 — Post–local-LLM local image provider prompt
+
+After Local LLM setup completes (first-run intro / Settings local happy path from **020.25**), prompt: set up local image generation now?
+
+- **Accept** → enter local image catalog download + runtime acquire rails (Enable ON when ready).
+- **Decline** → image provider Enable **OFF**; no download required; user can opt in later from Settings → Image generation.
+- Do not re-nag every launch after an explicit decline (persist a “declined / asked” flag; Settings remains the re-entry point). Dev builds may force-show if that matches **020.25** always-first-time policy — document the chosen parity.
+
+#### Acceptance criteria
+
+- [ ] Prompt appears only after Local LLM setup success (unit/component or flow test)
+- [ ] Decline leaves image Enable OFF and does not start image download
+- [ ] Accept starts local image onboarding rails
+- [ ] Explicit decline is not re-prompted every app launch (unless documented dev exception)
+- [ ] Smoke runbook covers accept and decline

@@ -4,9 +4,9 @@ Product goal: a player opens **Settings**, picks an AI model to try, the app **d
 
 Technical spine: llama.cpp (`llama-server`) as a main-process-owned local HTTP provider behind the same registry interface as Claude/Player2. Research defaults live in [docs/research/llamacpp-local-runtime-2026-06-28.md](../../docs/research/llamacpp-local-runtime-2026-06-28.md).
 
-Broken down into sub-tickets 020.1–020.20 (+ 020.21 oxlint/typecheck, 020.22 deadcode, 020.23 GPU runtime backend, 020.24 backend checkboxes, **020.25 first-run local LLM onboarding**, **020.26 uninstall remove local LLM**, **020.27 stop managed runtime before re-acquire**, **020.28 GPU/CPU radios**, **020.29 local campaign world ctx/max_tokens clamp**). This epic is done when all of them are.
+Broken down into sub-tickets 020.1–020.20 (+ 020.21 oxlint/typecheck, 020.22 deadcode, 020.23 GPU runtime backend, 020.24 backend checkboxes, **020.25 first-run local LLM onboarding**, **020.26 uninstall remove local LLM**, **020.27 stop managed runtime before re-acquire**, **020.28 GPU/CPU radios**, **020.29 local campaign world ctx/max_tokens clamp**, **020.30 fail-fast world schema / no ×5 seed restart**, **020.31 log failed generation responses**, **020.32 merge split world JSON objects**, **020.33 coerce religious faction normalize**). This epic is done when all of them are.
 
-020.1 llama.cpp local-process research spike · 020.2 local process lifecycle manager · 020.3 llama.cpp provider adapter · 020.4 local-provider config wiring + model swap · 020.5 local-provider retry/backoff + failure logging · 020.6 packaged local runtime + userData asset layout · 020.7 packaged/local-provider manual smoke (download path) · 020.8–020.16 smoke parity matrix · **020.17 Settings curated model catalog** · **020.18 in-app model download manager** · **020.19 local runtime discover/acquire** · **020.20 seamless apply from Settings (boot + lifecycle)** · **020.23 Vulkan/CPU runtime backend acquire** · **020.24 GPU/CPU backend checkboxes** · **020.25 first-run local LLM onboarding** · **020.26 uninstall remove local LLM** · **020.28 GPU/CPU radios** · **020.29 local campaign world ctx clamp**
+020.1 llama.cpp local-process research spike · 020.2 local process lifecycle manager · 020.3 llama.cpp provider adapter · 020.4 local-provider config wiring + model swap · 020.5 local-provider retry/backoff + failure logging · 020.6 packaged local runtime + userData asset layout · 020.7 packaged/local-provider manual smoke (download path) · 020.8–020.16 smoke parity matrix · **020.17 Settings curated model catalog** · **020.18 in-app model download manager** · **020.19 local runtime discover/acquire** · **020.20 seamless apply from Settings (boot + lifecycle)** · **020.23 Vulkan/CPU runtime backend acquire** · **020.24 GPU/CPU backend checkboxes** · **020.25 first-run local LLM onboarding** · **020.26 uninstall remove local LLM** · **020.28 GPU/CPU radios** · **020.29 local campaign world ctx clamp** · **020.30 fail-fast world schema** · **020.31 log failed generation responses** · **020.32 merge split world JSON** · **020.33 coerce religious faction**
 
 ## Target user experience (v1)
 
@@ -39,6 +39,10 @@ Broken down into sub-tickets 020.1–020.20 (+ 020.21 oxlint/typecheck, 020.22 d
 | **Stop before re-acquire** | Done | 020.27 — stop managed llama-server before runtime DLL replace |
 | **GPU/CPU radios** | Done | 020.28 — radio controls matching app theme (replaces checkbox chrome) |
 | **Local world ctx clamp** | Done | 020.29 — clamp max_tokens to ctx; fail fast on truncation |
+| **Fail-fast world schema** | Done | 020.30 — no ×5 seed restart on stage schema failure; reshape world prose |
+| **Log failed generation responses** | Done | 020.31 — attach/log raw schema-failure attempts for local debug |
+| **Merge split world JSON** | Done | 020.32 — merge consecutive JSON objects from local world dumps |
+| **Coerce religious faction** | Done | 020.33 — promote faith-linked faction to religious on medium/heavy |
 | **Seamless Settings → ready** | Done | 020.20 |
 | Smoke parity (020.7–020.16) | Pending | Still in `board/in-progress`; run after download happy path on reference model |
 

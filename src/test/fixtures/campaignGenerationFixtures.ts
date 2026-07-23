@@ -520,6 +520,85 @@ export const ADDITIONAL_REGION = JSON.stringify({
 
 export const SETUP_INPUT = { name: 'Test Campaign', premisePrompt: 'A flooded kingdom.', deathMode: 'legendary' } as const
 
+/**
+ * Live local (Qwen 7B) world dump: model emitted two JSON objects instead of one.
+ * From 020.31 schema-failure logs — attempt 2 (Aetheris).
+ */
+export const LIVE_SPLIT_WORLD_JSON_DUMP = [
+  '{"worldName":"Aetheris","worldSummary":"Aetheris is an archipelago where ancient storms and forgotten knowledge shape the fate of its people. The sky is always a canvas of swirling clouds, and the sea whispers secrets between waves. Villages and towns cling to the rugged coasts, their wooden homes weathered by tempests and salt. Each dawn brings a new alignment of stars, guiding the faithful through the night.\\n\\nThe ruins of the old quarries and the crumbling monastery at the heart of the archipelago are shrouded in mystery. Strange lights flicker at dusk, and the whispers of Nyx and Thorn echo through the forgotten halls. People live in fear, but also in hope, that the answers to their prayers lie hidden within the shadows of the past.\\n\\nTensions define Aetheris today: guilds vie for control over trade routes and charting rights, while temples argue over the balance of power between the living and the forgotten. The storms bring both destruction and opportunity, and the people of Aetheris learn to navigate the ever-changing landscape of faith and fury."}',
+  '',
+  '{"worldHistory":"Three ages ago, the land of Aetheris was united under a single banner, ruled by the mighty Gornath and the revered Nyx. The storms brought bountiful harvests, and the sea offered endless riches. However, a great storm in the heart of the archipelago marked the beginning of the end. Temples of Gornath and Nyx clashed, each claiming the favor of the storm gods and the wisdom of the ancient knowledge keepers.\\n\\nIn the ensuing centuries, Aetheris fragmented into smaller kingdoms and independent towns. The Charting Guilds were formed to map the treacherous waters, but their power soon became contested by the Storm Priests, who claimed to control the fury of the seas. The old quarries and the ruined monastery became symbols of the forgotten gods, Nyx and Thorn, whose power had been banished.\\n\\nFor two centuries, the Charting Guilds and Storm Priests vied for dominance, until a great plague swept through the archipelago. The survivors, desperate for answers, turned to the ancient ruins and the whispers of the forgotten gods. In the last generation, explorer crews have returned with tales of living reefs and cursed ore, reigniting the age-old conflicts between the living and the forgotten.\\n\\nToday, Aetheris is a place where every captain and temple leader wonders if the next storm will bring a new age of unity or another cycle of strife. The old quarries and the ruined monastery continue to draw the curious and the brave, promising both danger and enlightenment. The fate of Aetheris lies in the balance, held aloft by the storm clouds and the whispers of the forgotten."}'
+].join('\n')
+
+/** Live local factions dump (020.33): medium pressure, no kind=religious despite pantheon. */
+export const LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND = {
+  factionPressure: 'medium',
+  factionsSummary:
+    'The Stormbringers seek to control the skies, while the Weavers weave the threads of trade. Both face the Aldorin and Drakath guardianship and the threat of the upright wolves in the passes.',
+  factions: [
+    {
+      key: 'stormbringers',
+      name: 'Stormbringers Guild',
+      kind: 'civic',
+      summary: 'Mages who harness the storms for power and protection.',
+      motivation: 'To control the skies and protect Faelornis from storms.',
+      publicFace: 'Benefactors of the storms, providers of safety and magic.',
+      methods: 'Spellcasting, weather manipulation, alliances with storm gods.',
+      sortOrder: 0
+    },
+    {
+      key: 'weavers',
+      name: 'Weavers Guild',
+      kind: 'mercantile',
+      summary: 'Crafters who spin the threads of trade and commerce.',
+      motivation: 'To establish and maintain the flow of goods and ideas across the land.',
+      publicFace: 'Artisans of trade, guardians of the marketplaces.',
+      methods: 'Trade negotiation, market control, guild diplomacy.',
+      sortOrder: 1
+    },
+    {
+      key: 'aldrin_drakath',
+      name: 'Guardians of the Passes',
+      kind: 'military',
+      summary: 'Ancient beings who protect the mountain passes and the secrets within.',
+      motivation: 'To safeguard the land from threats both known and unknown.',
+      publicFace: 'The guardians of the ancient ways, keepers of the mountain paths.',
+      methods: 'Patrols, fortifications, ritualistic defense.',
+      sortOrder: 2
+    },
+    {
+      key: 'upright_wolves',
+      name: 'Upright Wolves',
+      kind: 'clandestine',
+      summary: 'Wolves that walk upright and move through the passes, their purpose unclear.',
+      motivation: 'Unknown, may be seeking passage, resources, or something else.',
+      publicFace: 'Whispered legends of strange beasts.',
+      methods: 'Stealth, mystery, movement through the passes.',
+      sortOrder: 3
+    }
+  ],
+  relations: [
+    {
+      factionAKey: 'stormbringers',
+      factionBKey: 'weavers',
+      stance: 'tense',
+      summary: 'Competition for resources and influence over the people.'
+    },
+    {
+      factionAKey: 'stormbringers',
+      factionBKey: 'aldrin_drakath',
+      stance: 'rival',
+      summary: 'Conflicts over the control of the skies and the mountains.'
+    },
+    {
+      factionAKey: 'weavers',
+      factionBKey: 'aldrin_drakath',
+      stance: 'rival',
+      summary: 'Disputes over the safe passage of trade and goods.'
+    }
+  ]
+}
+
 /** Scripted retired-adventurer review responses for campaign persist tests. */
 export function npcReviewResponses(count: number): string[] {
   return Array.from({ length: count }, () => '{"upgrade":false}')

@@ -41,7 +41,7 @@ const WORLD_JSON_EXAMPLE = JSON.stringify({
 
 const WORLD_PARAGRAPH_SHAPE_RULES = [
   'Each paragraph must be separated by a blank line (two newlines).',
-  'Each paragraph must contain at least three full sentences — not one long sentence, not semicolon-stacked clauses, not a single run-on epic line.',
+  'Each paragraph must contain at least two full sentences — not one long sentence, not semicolon-stacked clauses, not a single run-on epic line.',
   'Write concrete fantasy description with names, places, factions, and everyday sensory detail in normal sentences.'
 ].join('\n')
 
@@ -284,7 +284,8 @@ export function buildWorldGenerationPrompt(
       : '',
     'Example world object:',
     WORLD_JSON_EXAMPLE,
-    'Respond ONLY with a single JSON object:',
+    'Respond ONLY with a single JSON object that includes worldName, worldSummary, and worldHistory together.',
+    'Do NOT emit a second JSON object for worldHistory or any other field.',
     '{"worldName":string,"worldSummary":string,"worldHistory":string}'
   ]
     .filter((line) => line.length > 0)
@@ -391,6 +392,8 @@ const FACTIONS_RULES = [
   'Roster counts (inclusive): light 2–4 factions / 0–2 relations; medium 3–7 / 2–5; heavy 6–10 / 4–10.',
   'Mix kinds across civic, military, mercantile, criminal, clandestine, political, religious — not an all-same-kind roster.',
   'When deities exist and pressure is medium or heavy, include at least one religious faction linked by deityName to a pantheon deity name.',
+  'REQUIRED: that faith bloc must use kind "religious" — do not mark temples/cults as civic or mercantile even if they also trade or govern.',
+  'Omit inventing new gods; deityName must match a pantheon deity name when set.',
   'Religious factions should set deityName to an exact pantheon deity name when tied to a known god; heresies may omit it.',
   'factionsSummary: 1–2 short paragraphs on how power blocs relate in this setting.',
   'Each faction needs: key (stable slug), name, kind, summary; optional motivation, publicFace, methods, deityName, sortOrder.',

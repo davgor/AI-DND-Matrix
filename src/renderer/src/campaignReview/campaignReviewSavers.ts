@@ -28,10 +28,6 @@ export function createCampaignReviewSavers(
     saveFactionsSummary: async (factionsSummary: string): Promise<void> => {
       const next = await window.campaigns.editFactionsSummary({ campaignId, factionsSummary })
       onDetailChange(next)
-    },
-    saveGenerativeTokens: async (enabled: boolean): Promise<void> => {
-      const next = await window.campaigns.editGenerativeTokens({ campaignId, enabled })
-      onDetailChange(next)
     }
   }
 }

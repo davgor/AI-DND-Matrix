@@ -56,9 +56,9 @@ import {
   MAX_CAMPAIGN_SEED_ATTEMPTS,
   MAX_GENERATION_ATTEMPTS,
   resolveAdditionalRegionNpcCount,
-  resolveInitialGenerationCounts
+  resolveInitialGenerationCounts,
+  truncateSchemaFailureRaw
 } from './types'
-import type { Campaign } from '../../db/repositories/campaigns'
 import type {
   AdditionalRegionRequest,
   AdditionalRegionResult,
@@ -75,10 +75,13 @@ import type {
   GeneratedStoryThread,
   GeneratedWorld,
   GenerationCounts,
+  GenerationSchemaFailureAttempt,
+  GenerationSchemaFailureReason,
   GenerateCampaignSeedOptions,
   WorldContext
 } from './types'
 import { EMPTY_CANON_RECALL } from './types'
+import type { Campaign } from '../../db/repositories/campaigns'
 
 export * from './types'
 export { assembleCampaignHistoryContext } from './prompts'
@@ -86,7 +89,7 @@ export * from './persist'
 export * from './flaggedNpc'
 export * from './worldSummaryRegen'
 
-const WORLD_MAX_TOKENS = 4096
+const WORLD_MAX_TOKENS = 2048
 const CANON_MAX_TOKENS = 2048
 const PANTHEON_MAX_TOKENS = 4096
 const FACTIONS_MAX_TOKENS = 4096
@@ -94,6 +97,32 @@ const REGIONS_MAX_TOKENS = 4096
 const STORY_THREAD_MAX_TOKENS = 2048
 const ADDITIONAL_REGION_MAX_TOKENS = 4096
 const SINGLE_NPC_MAX_TOKENS = 4096
+
+function classifySchemaAttemptFailure<T>(
+  parsed: unknown,
+  normalized: T | undefined
+): GenerationSchemaFailureReason {
+  if (parsed === undefined) {
+    return 'unparseable'
+  }
+  if (normalized === undefined) {
+    return 'normalize_failed'
+  }
+  return 'invalid'
+}
+
+function recordSchemaAttemptFailure(
+  failedAttempts: GenerationSchemaFailureAttempt[],
+  attempt: number,
+  raw: string,
+  reason: GenerationSchemaFailureReason
+): void {
+  failedAttempts.push({
+    attempt,
+    raw: truncateSchemaFailureRaw(raw),
+    reason
+  })
+}
 
 async function generateWithRetries<T>(input: {
   provider: Provider
@@ -105,6 +134,7 @@ async function generateWithRetries<T>(input: {
   errorMessage: string
 }): Promise<T> {
   let lastTruncation: unknown
+  const failedAttempts: GenerationSchemaFailureAttempt[] = []
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
     try {
       const raw = await input.provider.generate(input.buildPrompt(), {
@@ -116,6 +146,12 @@ async function generateWithRetries<T>(input: {
       if (normalized && input.isValid(normalized)) {
         return normalized
       }
+      recordSchemaAttemptFailure(
+        failedAttempts,
+        attempt,
+        raw,
+        classifySchemaAttemptFailure(parsed, normalized)
+      )
     } catch (error) {
       if (isTruncationError(error)) {
         lastTruncation = error
@@ -127,7 +163,7 @@ async function generateWithRetries<T>(input: {
   if (lastTruncation) {
     throw lastTruncation
   }
-  throw new CampaignGenerationSchemaError(input.errorMessage)
+  throw new CampaignGenerationSchemaError(input.errorMessage, failedAttempts)
 }
 
 export async function generateCampaignWorld(
@@ -201,7 +237,7 @@ export async function generateCampaignFactions(
     buildPrompt: () => buildFactionsGenerationPrompt(premisePrompt, world, pantheon),
     maxTokens: FACTIONS_MAX_TOKENS,
     purpose: 'campaign.faction',
-    normalize: normalizeGeneratedFactions,
+    normalize: (parsed) => normalizeGeneratedFactions(parsed, { deitiesPresent }),
     isValid: (factions) => isValidGeneratedFactions(factions, { deitiesPresent }),
     errorMessage: 'DM agent did not return a valid factions schema after retries'
   })
@@ -775,8 +811,13 @@ async function tryCampaignSeedAttempt(input: {
   try {
     return await runCampaignSeedAttempt(input)
   } catch (error) {
-    // Truncation / unreachable will not improve by restarting from canon — surface them.
-    if (isTruncationError(error) || error instanceof ProviderUnreachableError) {
+    // Truncation / unreachable / stage schema failures will not improve by
+    // restarting from canon — surface them (stages already retried locally).
+    if (
+      isTruncationError(error) ||
+      error instanceof ProviderUnreachableError ||
+      error instanceof CampaignGenerationSchemaError
+    ) {
       throw error
     }
     return undefined

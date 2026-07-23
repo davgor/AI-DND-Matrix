@@ -29,6 +29,28 @@ describe('tryParseJson', () => {
   it('returns undefined for genuinely malformed input', () => {
     expect(tryParseJson('not json at all')).toBeUndefined()
   })
+
+  it('merges consecutive top-level JSON objects (local world split dump)', () => {
+    const raw = [
+      '{"worldName":"Aeloria","worldSummary":"Summary paragraph one. Summary paragraph two."}',
+      '',
+      '{"worldHistory":"History paragraph one. History paragraph two."}'
+    ].join('\n')
+    expect(tryParseJson(raw)).toEqual({
+      worldName: 'Aeloria',
+      worldSummary: 'Summary paragraph one. Summary paragraph two.',
+      worldHistory: 'History paragraph one. History paragraph two.'
+    })
+  })
+
+  it('keeps a single object when prose wraps one JSON blob', () => {
+    const raw = 'Sure:\n{"worldName":"Tyria","worldSummary":"A.","worldHistory":"B."}\nDone.'
+    expect(tryParseJson(raw)).toEqual({
+      worldName: 'Tyria',
+      worldSummary: 'A.',
+      worldHistory: 'B.'
+    })
+  })
 })
 
 describe('generateJsonWithRetry success paths', () => {

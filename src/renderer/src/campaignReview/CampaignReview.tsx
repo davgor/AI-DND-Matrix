@@ -10,7 +10,6 @@ import { CampaignReviewFooter, CampaignReviewStory } from './CampaignReviewSecti
 import { CampaignReviewWorldSection } from './CampaignReviewWorldSection'
 import { CampaignReviewPantheonSection } from './CampaignReviewPantheonSection'
 import { CampaignReviewFactionsSection } from './CampaignReviewFactionsSection'
-import { CampaignReviewGenerativeTokensToggle } from './CampaignReviewGenerativeTokensToggle'
 import { CampaignReviewBestiarySection } from './CampaignReviewBestiarySection'
 import { createCampaignReviewSavers } from './campaignReviewSavers'
 import { useCampaignRaces } from './useCampaignRaces'
@@ -74,20 +73,6 @@ function CampaignReviewFactionsBlock(props: {
   )
 }
 
-function CampaignReviewGenerativeTokensBlock(props: {
-  enabled: boolean
-  onChange: (enabled: boolean) => void
-}): JSX.Element {
-  return (
-    <CampaignReviewGenerativeTokensToggle
-      enabled={props.enabled}
-      onChange={(enabled) => {
-        void props.onChange(enabled)
-      }}
-    />
-  )
-}
-
 function CampaignReviewMainSections(props: {
   detail: CampaignDetail
   campaignId: string
@@ -145,12 +130,6 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
   return (
     <div className="campaign-review">
       <CampaignReviewHeader campaignName={detail.campaign?.name} />
-      {detail.campaign ? (
-        <CampaignReviewGenerativeTokensBlock
-          enabled={detail.campaign.generativeTokensEnabled === true}
-          onChange={savers.saveGenerativeTokens}
-        />
-      ) : null}
       <CampaignReviewMainSections
         detail={detail}
         campaignId={campaignId}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
+import { CampaignGenerationSchemaError } from '../agents/campaignGeneration'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
 import { LlamaCppTruncationError } from '../agents/providers/llamacpp'
 import { persistNpcEnrichmentResponses, buildCascadingSeedResponses } from '../test/fixtures/campaignGenerationFixtures'
@@ -115,5 +116,84 @@ describe('createCampaignFromRequest failure', () => {
       expect(result.message).toMatch(/output limit|context/i)
       expect(result.message).not.toMatch(/invalid campaign/i)
     }
+  })
+})
+
+describe('createCampaignFromRequest world schema messaging (020.30)', () => {
+  it('maps world schema failure to a world-specific generation message', async () => {
+    resetCampaignCreateForTests()
+    const db = createTestDb()
+    const provider = {
+      async generate(): Promise<string> {
+        throw new CampaignGenerationSchemaError(
+          'DM agent did not return a valid world schema after retries'
+        )
+      }
+    }
+    const result = await createCampaignFromRequest(db, provider, {
+      sessionId: 'session-world-schema',
+      premisePrompt: 'A mysterious river kingdom'
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.category).toBe('generation')
+      expect(result.message).toMatch(/world/i)
+      expect(result.message).not.toMatch(/invalid campaign/i)
+    }
+  })
+})
+
+describe('createCampaignFromRequest factions schema messaging (020.33)', () => {
+  it('maps factions schema failure to a factions-specific generation message', async () => {
+    resetCampaignCreateForTests()
+    const db = createTestDb()
+    const provider = {
+      async generate(): Promise<string> {
+        throw new CampaignGenerationSchemaError(
+          'DM agent did not return a valid factions schema after retries'
+        )
+      }
+    }
+    const result = await createCampaignFromRequest(db, provider, {
+      sessionId: 'session-factions-schema',
+      premisePrompt: 'A mysterious river kingdom'
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.category).toBe('generation')
+      expect(result.message).toMatch(/factions/i)
+      expect(result.message).not.toMatch(/invalid campaign/i)
+    }
+  })
+})
+
+describe('createCampaignFromRequest schema failure logging (020.31)', () => {
+  it('logs attached failed attempt payloads via the create logger', async () => {
+    resetCampaignCreateForTests()
+    const db = createTestDb()
+    const logLines: string[] = []
+    const provider = {
+      async generate(): Promise<string> {
+        throw new CampaignGenerationSchemaError(
+          'DM agent did not return a valid world schema after retries',
+          [{ attempt: 1, reason: 'unparseable', raw: 'LOCAL_MODEL_WORLD_DUMP' }]
+        )
+      }
+    }
+    const result = await createCampaignFromRequest(
+      db,
+      provider,
+      { sessionId: 'session-world-log', premisePrompt: 'A mysterious river kingdom' },
+      {
+        log: {
+          error: (message: string, ...args: unknown[]) => {
+            logLines.push([message, ...args.map(String)].join(' '))
+          }
+        }
+      }
+    )
+    expect(result.ok).toBe(false)
+    expect(logLines.some((line) => line.includes('LOCAL_MODEL_WORLD_DUMP'))).toBe(true)
+    expect(logLines.some((line) => /schema failure details/i.test(line))).toBe(true)
   })
 })
