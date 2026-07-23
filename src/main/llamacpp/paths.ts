@@ -40,8 +40,12 @@ interface ResolvedLlamaCppAssetPaths {
 const RECOVERY =
   'Open Settings → Local → retry download or acquire runtime, then Apply.'
 
-function llamacppRoot(userDataRoot: string): string {
-  return join(userDataRoot, 'llamacpp')
+/** Stable subdirectory under Electron userData for models + acquired runtime. */
+export const LLAMACPP_USERDATA_DIR_NAME = 'llamacpp'
+
+/** Absolute path to `{userData}/llamacpp` — uninstall may delete this tree only. */
+export function llamacppRoot(userDataRoot: string): string {
+  return join(userDataRoot, LLAMACPP_USERDATA_DIR_NAME)
 }
 
 export function llamacppModelsDir(userDataRoot: string): string {

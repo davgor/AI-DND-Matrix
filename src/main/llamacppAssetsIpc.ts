@@ -3,7 +3,8 @@ import { existsSync } from 'node:fs'
 import { findLlamaCppCatalogEntry } from '../shared/settings/llamaCppCatalog'
 import {
   DEFAULT_PROVIDER_SETTINGS,
-  type ConnectionCheckResult
+  type ConnectionCheckResult,
+  type ProviderSettings
 } from '../shared/settings/types'
 import {
   cancelModelDownload,
@@ -11,10 +12,10 @@ import {
   type ModelDownloadProgress
 } from './llamacpp/modelDownload'
 import {
-  DEFAULT_WINDOWS_RUNTIME_ZIP_URL,
   acquireLlamaCppRuntime,
   discoverLlamaCppRuntime,
-  lookupLlamaServerOnPathAsync
+  lookupLlamaServerOnPathAsync,
+  resolveWindowsRuntimeZipUrl
 } from './llamacpp/runtimeAcquire'
 import { resolveLlamaCppLifecycleConfig } from './settingsRuntime'
 import { loadConfig } from './config'
@@ -24,7 +25,7 @@ import {
   loadSettings,
   saveSettings
 } from './settingsStore'
-import { reapplyLlamaLifecycleFromSettings } from './startupIpc'
+import { reapplyLlamaLifecycleFromSettings, shutdownStartupRuntime } from './startupIpc'
 
 function userDataRoot(): string {
   return app.isPackaged ? app.getPath('userData') : `${process.cwd()}/.data`
@@ -98,13 +99,20 @@ async function acquireRuntime(): Promise<
   const filePath = getSettingsFilePath()
   const codec = createElectronSecretCodec()
   try {
-    const serverPath = await acquireLlamaCppRuntime({
-      userDataRoot: userDataRoot(),
-      downloadUrl: DEFAULT_WINDOWS_RUNTIME_ZIP_URL
-    })
     const current = loadSettings(filePath, codec, DEFAULT_PROVIDER_SETTINGS)
+    const backend = normalizeRuntimeBackend(current.llamaCppRuntimeBackend)
+    const serverPath = await acquireLlamaCppRuntime(
+      {
+        userDataRoot: userDataRoot(),
+        downloadUrl: resolveWindowsRuntimeZipUrl(backend)
+      },
+      {
+        beforeReplace: () => shutdownStartupRuntime()
+      }
+    )
     saveSettings(filePath, codec, {
       ...current,
+      llamaCppRuntimeBackend: backend,
       llamaCppServerPath: serverPath,
       llamaCppStartMode: 'managed'
     })
@@ -116,6 +124,12 @@ async function acquireRuntime(): Promise<
         : 'Open Settings → retry acquire, or install via winget / GitHub.'
     return { ok: false, message: (error as Error).message, recoveryHint }
   }
+}
+
+function normalizeRuntimeBackend(
+  value: string | undefined
+): ProviderSettings['llamaCppRuntimeBackend'] {
+  return value === 'cpu' ? 'cpu' : 'vulkan'
 }
 
 async function applyLlamaLifecycleFromSettings(): Promise<ConnectionCheckResult> {

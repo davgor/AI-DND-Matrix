@@ -1,51 +1,47 @@
-import {
-  PLAYER2_INSTALL_URL,
-  SETTINGS_INTRO_PROVIDER_OPTIONS
-} from '../../../shared/settingsIntro/types'
+import { SettingsIntroAskBackend } from './SettingsIntroAskBackend'
+import { SettingsIntroAskLocal } from './SettingsIntroAskLocal'
+import { SettingsIntroProviderFallback } from './SettingsIntroProviderFallback'
+import { SettingsIntroSetupProgress } from './SettingsIntroSetupProgress'
+import type { SettingsIntroWizardController } from './useSettingsIntroWizard'
 
 export function SettingsIntroModalBody(props: {
+  wizard: SettingsIntroWizardController
   onDismiss: () => void
   onOpenSettings: () => void
 }): JSX.Element {
+  const { wizard } = props
+  if (wizard.step === 'askLocal') {
+    return (
+      <SettingsIntroAskLocal
+        onYes={() => wizard.chooseLocal(true)}
+        onNo={() => wizard.chooseLocal(false)}
+      />
+    )
+  }
+  if (wizard.step === 'askBackend') {
+    return (
+      <SettingsIntroAskBackend
+        backend={wizard.backend}
+        onBackendChange={wizard.setBackend}
+        onContinue={wizard.startSetup}
+      />
+    )
+  }
+  if (wizard.step === 'setup') {
+    return (
+      <SettingsIntroSetupProgress
+        progressText={wizard.setupProgressText}
+        progressPercent={wizard.setupProgressPercent}
+        error={wizard.setupError}
+        onRetry={wizard.retrySetup}
+        onSkip={props.onDismiss}
+      />
+    )
+  }
   return (
-    <>
-      <h2 id="settings-intro-title">Set up your AI provider</h2>
-      <p className="settings-intro-lead">
-        Before you start a campaign, choose how this app talks to the models that power your DM,
-        NPCs, and party members (prompt-generated companions after equipment, or mid-play
-        promotion).
-      </p>
-      <p className="settings-intro-settings-callout">
-        Open <strong>Settings</strong> with the <strong>gear icon</strong> in the top-right corner
-        of the window.
-      </p>
-      <ul className="settings-intro-provider-list">
-        {SETTINGS_INTRO_PROVIDER_OPTIONS.map((option) => (
-          <li key={option.id}>
-            {option.label}
-            {option.default ? <span className="settings-intro-default-tag"> (default)</span> : null}
-          </li>
-        ))}
-      </ul>
-      <p className="settings-intro-install-note">
-        Player2 runs locally on your machine. If you do not have it installed yet, visit{' '}
-        <button
-          type="button"
-          className="settings-intro-install-link"
-          onClick={() => void window.settingsIntro.openPlayer2InstallPage()}
-        >
-          {PLAYER2_INSTALL_URL}
-        </button>{' '}
-        to download and install it, then return here to confirm the connection in Settings.
-      </p>
-      <footer className="settings-intro-actions">
-        <button type="button" onClick={props.onDismiss}>
-          Got it
-        </button>
-        <button type="button" className="settings-intro-primary" onClick={props.onOpenSettings}>
-          Open Settings
-        </button>
-      </footer>
-    </>
+    <SettingsIntroProviderFallback
+      onDismiss={props.onDismiss}
+      onOpenSettings={props.onOpenSettings}
+    />
   )
 }

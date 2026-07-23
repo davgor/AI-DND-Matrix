@@ -10,9 +10,12 @@ import {
 } from 'node:fs'
 import { basename as nodeBasename, dirname as nodeDirname, join } from 'node:path'
 import { promisify } from 'node:util'
+import type { ProviderSettings } from '../../shared/settings/types'
 import { defaultAcquiredRuntimePath, llamacppRuntimeDir } from './paths'
 
 const execFileAsync = promisify(execFile)
+
+type LlamaCppRuntimeBackend = ProviderSettings['llamaCppRuntimeBackend']
 
 type RuntimePresence = 'path' | 'userData' | 'missing'
 
@@ -55,6 +58,8 @@ interface AcquireRuntimeDeps {
   isDirectory?: (absolutePath: string) => boolean
   copyFile?: (from: string, to: string) => void
   platform?: NodeJS.Platform
+  /** Stop managed llama-server before overwriting runtime DLLs (avoids EBUSY). */
+  beforeReplace?: () => Promise<void>
 }
 
 interface ResolvedAcquireDeps {
@@ -69,14 +74,26 @@ interface ResolvedAcquireDeps {
   isDirectory: (absolutePath: string) => boolean
   copyFile: (from: string, to: string) => void
   platform: NodeJS.Platform
+  beforeReplace: () => Promise<void>
 }
 
 const RECOVERY =
   'Open Settings → Local → Acquire runtime (or install via winget / GitHub), then Apply.'
 
-/** Pinned Windows CPU runtime zip for v1 acquire (update when bumping smoke baseline). */
-export const DEFAULT_WINDOWS_RUNTIME_ZIP_URL =
-  'https://github.com/ggml-org/llama.cpp/releases/download/b10069/llama-b10069-bin-win-cpu-x64.zip'
+/** Pinned llama.cpp release tag for Windows runtime acquire. */
+const LLAMACPP_RUNTIME_RELEASE = 'b10069'
+
+/** Resolve the official Windows zip URL for a GPU/CPU backend. */
+export function resolveWindowsRuntimeZipUrl(backend: LlamaCppRuntimeBackend): string {
+  const artifact =
+    backend === 'cpu'
+      ? `llama-${LLAMACPP_RUNTIME_RELEASE}-bin-win-cpu-x64.zip`
+      : `llama-${LLAMACPP_RUNTIME_RELEASE}-bin-win-vulkan-x64.zip`
+  return `https://github.com/ggml-org/llama.cpp/releases/download/${LLAMACPP_RUNTIME_RELEASE}/${artifact}`
+}
+
+/** Default Windows acquire target: Vulkan GPU build (CPU selectable in Settings). */
+export const DEFAULT_WINDOWS_RUNTIME_ZIP_URL = resolveWindowsRuntimeZipUrl('vulkan')
 
 export function discoverLlamaCppRuntime(input: DiscoverRuntimeInput): DiscoverRuntimeResult {
   const pathExists = input.pathExists ?? existsSync
@@ -125,7 +142,8 @@ const ACQUIRE_DEP_KEYS = [
   'listDir',
   'isDirectory',
   'copyFile',
-  'platform'
+  'platform',
+  'beforeReplace'
 ] as const satisfies ReadonlyArray<keyof AcquireRuntimeDeps>
 
 function pickProvidedAcquireDeps(deps: AcquireRuntimeDeps): Partial<ResolvedAcquireDeps> {
@@ -151,7 +169,8 @@ function defaultAcquireDeps(): ResolvedAcquireDeps {
     listDir: (dir) => readdirSync(dir),
     isDirectory: (path) => statSync(path).isDirectory(),
     copyFile: (from, to) => copyFileSync(from, to),
-    platform: process.platform
+    platform: process.platform,
+    beforeReplace: async () => undefined
   }
 }
 
@@ -231,6 +250,7 @@ async function installFromZip(args: InstallFromZipArgs): Promise<string> {
       RECOVERY
     )
   }
+  await args.beforeReplace()
   clearInstalledRuntimeFiles(args)
   copyDirContents(pathDirname(found), args.runtimeDir, args)
   const target = join(args.runtimeDir, pathBasename(found))

@@ -97,6 +97,16 @@
   font-size: 12px;
 }
 
+.settings-check-verbose {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 8px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.4;
+  max-height: 220px;
+  overflow: auto;
+}
+
 .settings-secret-badge {
   font-size: 11px;
   color: var(--color-success);
@@ -265,4 +275,27 @@
   cursor: pointer;
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+.settings-llama-runtime-backend {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-llama-runtime-backend legend {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0 4px;
+}
+
+.settings-llama-runtime-option {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-primary);
 }

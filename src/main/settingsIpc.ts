@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron'
-import { existsSync } from 'node:fs'
 import { testGeminiConnection } from '../agents/providers/gemini'
 import { testGrokConnection } from '../agents/providers/grok'
 import { testOpenAiConnection } from '../agents/providers/openai'
@@ -9,7 +8,10 @@ import { isTruncationError } from '../agents/providers/tokenEscalation'
 import { DEFAULT_PROVIDER_SETTINGS, type ConnectionCheckResult } from '../shared/settings/types'
 import type { ProviderMode, ProviderSettings, RedactedProviderSettings, SaveProviderSettingsInput } from '../shared/settings/types'
 import { redactProviderSettings, validateProviderSettings } from '../shared/settings/validation'
+import { checkLlamaRuntimeConfig } from './llamacpp/runtimeCheck'
 import { createElectronSecretCodec, getSettingsFilePath, loadSettings, saveSettings, type SecretCodec } from './settingsStore'
+
+export { checkLlamaRuntimeConfig } from './llamacpp/runtimeCheck'
 
 export class SettingsValidationFailedError extends Error {
   constructor(readonly errors: { field: string; message: string }[]) {
@@ -135,51 +137,6 @@ async function testCloudProviderConnection(
     return testGeminiConnection(apiKey, input.model)
   }
   return testGrokConnection(apiKey, input.model)
-}
-
-interface LlamaRuntimeCheckDeps {
-  fetchHealth?: (url: string) => Promise<number>
-  pathExists?: (path: string) => boolean
-}
-
-async function checkAttachMode(settings: ProviderSettings, deps: LlamaRuntimeCheckDeps): Promise<ConnectionCheckResult> {
-  const fetchHealth = deps.fetchHealth ?? (async (url) => (await fetch(`${url}/health`)).status)
-  const status = await fetchHealth(settings.llamaCppBaseUrl).catch(() => 0)
-  if (status === 200) {
-    return { ok: true, message: 'Local llama.cpp runtime is reachable and healthy.' }
-  }
-  return { ok: false, message: 'Could not reach the local llama.cpp runtime. Is llama-server running?' }
-}
-
-function checkManagedMode(settings: ProviderSettings, deps: LlamaRuntimeCheckDeps): ConnectionCheckResult {
-  const pathExists = deps.pathExists ?? existsSync
-  const missing: string[] = []
-  if (settings.llamaCppServerPath.trim() && !pathExists(settings.llamaCppServerPath)) {
-    missing.push('llama-server executable')
-  }
-  if (settings.llamaCppModelPath.trim() && !pathExists(settings.llamaCppModelPath)) {
-    missing.push('model file')
-  }
-  if (missing.length > 0) {
-    return { ok: false, message: `${missing.join(' and ')} not found at the configured path.` }
-  }
-  if (!settings.llamaCppServerPath.trim() && !settings.llamaCppModelPath.trim()) {
-    return {
-      ok: false,
-      message: 'Download a catalog model and acquire a runtime (or set advanced paths) before checking.'
-    }
-  }
-  return { ok: true, message: 'Runtime executable and model file were both found.' }
-}
-
-export async function checkLlamaRuntimeConfig(
-  settings: ProviderSettings,
-  deps: LlamaRuntimeCheckDeps = {}
-): Promise<ConnectionCheckResult> {
-  if (settings.llamaCppStartMode === 'managed') {
-    return checkManagedMode(settings, deps)
-  }
-  return checkAttachMode(settings, deps)
 }
 
 export function registerSettingsHandlers(): void {

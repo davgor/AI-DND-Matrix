@@ -1,11 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_WINDOWS_RUNTIME_ZIP_URL,
   LlamaCppRuntimeError,
   acquireLlamaCppRuntime,
-  discoverLlamaCppRuntime
+  discoverLlamaCppRuntime,
+  resolveWindowsRuntimeZipUrl
 } from './runtimeAcquire'
 
 const USER_DATA = 'C:\\Users\\test\\AppData\\Roaming\\AI-TTRPG'
+
+describe('resolveWindowsRuntimeZipUrl', () => {
+  it('defaults happy-path acquire to the pinned Vulkan GPU build', () => {
+    expect(DEFAULT_WINDOWS_RUNTIME_ZIP_URL).toContain('win-vulkan-x64')
+    expect(resolveWindowsRuntimeZipUrl('vulkan')).toBe(DEFAULT_WINDOWS_RUNTIME_ZIP_URL)
+    expect(resolveWindowsRuntimeZipUrl('vulkan')).toMatch(
+      /llama-b\d+-bin-win-vulkan-x64\.zip$/
+    )
+  })
+
+  it('resolves the CPU backend to the pinned CPU zip', () => {
+    expect(resolveWindowsRuntimeZipUrl('cpu')).toContain('win-cpu-x64')
+    expect(resolveWindowsRuntimeZipUrl('cpu')).not.toContain('vulkan')
+  })
+})
 
 describe('discoverLlamaCppRuntime', () => {
   it('returns PATH hit when lookup finds a binary', () => {
@@ -76,6 +93,41 @@ describe('acquireLlamaCppRuntime full package', () => {
     expect(copies.some((entry) => entry.to.replace(/\\/g, '/').includes('llamacpp/runtime/'))).toBe(
       true
     )
+  })
+})
+
+describe('acquireLlamaCppRuntime stop before replace', () => {
+  it('stops the managed runtime before clearing or copying locked install files', async () => {
+    const events: string[] = []
+    await acquireLlamaCppRuntime(
+      {
+        userDataRoot: USER_DATA,
+        downloadUrl: 'https://example.test/runtime.zip'
+      },
+      {
+        fetchBytes: async () => new Uint8Array([1]),
+        writeFile: () => undefined,
+        mkdir: () => undefined as never,
+        rm: () => {
+          events.push('rm')
+        },
+        extractZip: async () => undefined,
+        findBinary: () => 'C:\\staging\\llama-server.exe',
+        listDir: () => ['llama-server.exe', 'ggml-base.dll'],
+        isDirectory: () => false,
+        copyFile: () => {
+          events.push('copy')
+        },
+        pathExists: (path) => String(path).includes('llama-server') || String(path).endsWith('.dll'),
+        platform: 'win32',
+        beforeReplace: async () => {
+          events.push('stop')
+        }
+      }
+    )
+    expect(events[0]).toBe('stop')
+    expect(events.indexOf('stop')).toBeLessThan(events.indexOf('rm'))
+    expect(events.indexOf('stop')).toBeLessThan(events.indexOf('copy'))
   })
 })
 

@@ -90,6 +90,21 @@ describe('LlamaLocalSection download state', () => {
     })
     expect(flattenElements(node).some((el) => textOf(el) === 'Ready')).toBe(true)
   })
+
+  it('renders verbose multi-line check output in a pre block', () => {
+    const message = 'Local llama.cpp check failed.\nmode: managed\nbody: {"error":"boom"}'
+    const node = LlamaLocalSection({
+      draft: { ...DEFAULT_PROVIDER_SETTINGS, mode: 'llamacpp' },
+      errors: [],
+      result: { ok: false, message },
+      onChange: () => undefined,
+      onCheckRuntime: async () => undefined
+    })
+    const pre = flattenElements(node).find((el) => el.type === 'pre')
+    expect(pre).toBeDefined()
+    expect(String(pre?.props?.className)).toMatch(/settings-check-verbose/)
+    expect(textOf(pre!)).toContain('body: {"error":"boom"}')
+  })
 })
 
 describe('LlamaLocalSection download progress', () => {
@@ -135,5 +150,41 @@ describe('LlamaLocalSection advanced paths', () => {
     const flat = flattenElements(node)
     expect(flat.some((el) => el.type === 'details')).toBe(true)
     expect(flat.map(textOf).join(' ')).toMatch(/Advanced: manual server/i)
+  })
+})
+
+describe('LlamaLocalSection runtime backend', () => {
+  it('exposes GPU and CPU checkboxes and persists the chosen backend', () => {
+    const onChange = vi.fn()
+    const node = LlamaLocalSection({
+      draft: {
+        ...DEFAULT_PROVIDER_SETTINGS,
+        mode: 'llamacpp',
+        llamaCppRuntimeBackend: 'vulkan'
+      },
+      errors: [],
+      result: null,
+      onChange,
+      onCheckRuntime: async () => undefined
+    })
+    const flat = flattenElements(node)
+    const gpu = flat.find(
+      (el) => el.type === 'input' && el.props?.type === 'checkbox' && el.props?.id === 'settings-llama-runtime-gpu'
+    )
+    const cpu = flat.find(
+      (el) => el.type === 'input' && el.props?.type === 'checkbox' && el.props?.id === 'settings-llama-runtime-cpu'
+    )
+    expect(gpu).toBeDefined()
+    expect(cpu).toBeDefined()
+    expect(gpu?.props?.checked).toBe(true)
+    expect(cpu?.props?.checked).toBe(false)
+    const joined = flat.map(textOf).join(' ')
+    expect(joined).toMatch(/GPU \(Vulkan\)/i)
+    expect(joined).toMatch(/\bCPU\b/)
+    const onChangeHandler = cpu?.props?.onChange as
+      | ((event: { target: { checked: boolean } }) => void)
+      | undefined
+    onChangeHandler?.({ target: { checked: true } })
+    expect(onChange).toHaveBeenCalledWith({ llamaCppRuntimeBackend: 'cpu' })
   })
 })

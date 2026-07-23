@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  LLAMACPP_USERDATA_DIR_NAME,
   LlamaCppAssetError,
   catalogModelFileName,
   llamacppModelsDir,
+  llamacppRoot,
   llamacppRuntimeDir,
   resolveLlamaCppAssetPaths
 } from './paths'
@@ -10,6 +12,13 @@ import {
 const USER_DATA = 'C:\\Users\\test\\AppData\\Roaming\\AI-TTRPG'
 
 describe('llamacpp userData layout helpers', () => {
+  it('builds the uninstall target root under userData/llamacpp', () => {
+    expect(LLAMACPP_USERDATA_DIR_NAME).toBe('llamacpp')
+    expect(llamacppRoot(USER_DATA).replace(/\\/g, '/')).toBe(
+      'C:/Users/test/AppData/Roaming/AI-TTRPG/llamacpp'
+    )
+  })
+
   it('builds models and runtime directories under userData/llamacpp', () => {
     expect(llamacppModelsDir(USER_DATA).replace(/\\/g, '/')).toBe(
       'C:/Users/test/AppData/Roaming/AI-TTRPG/llamacpp/models'

@@ -10,7 +10,7 @@ describe('shouldShowSettingsIntro', () => {
     expect(shouldShowSettingsIntro(true, false)).toBe(false)
   })
 
-  it('always shows in dev when SHOW_POPUP forces it', () => {
+  it('always shows when dev force-show is enabled', () => {
     expect(shouldShowSettingsIntro(true, true)).toBe(true)
     expect(shouldShowSettingsIntro(false, true)).toBe(true)
   })

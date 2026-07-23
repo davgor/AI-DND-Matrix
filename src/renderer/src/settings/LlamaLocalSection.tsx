@@ -87,11 +87,51 @@ function catalogFieldset(props: LlamaLocalSectionProps): JSX.Element {
   )
 }
 
+function runtimeBackendFields(props: LlamaLocalSectionProps): JSX.Element {
+  const backend = props.draft.llamaCppRuntimeBackend
+  return (
+    <fieldset className="settings-llama-runtime-backend" aria-label="Runtime backend">
+      <legend>Runtime backend</legend>
+      <label className="settings-llama-runtime-option" htmlFor="settings-llama-runtime-gpu">
+        <input
+          id="settings-llama-runtime-gpu"
+          type="checkbox"
+          checked={backend === 'vulkan'}
+          onChange={(event) => {
+            if (event.target.checked) {
+              props.onChange({ llamaCppRuntimeBackend: 'vulkan' })
+            }
+          }}
+        />
+        <span>GPU (Vulkan) — recommended</span>
+      </label>
+      <label className="settings-llama-runtime-option" htmlFor="settings-llama-runtime-cpu">
+        <input
+          id="settings-llama-runtime-cpu"
+          type="checkbox"
+          checked={backend === 'cpu'}
+          onChange={(event) => {
+            if (event.target.checked) {
+              props.onChange({ llamaCppRuntimeBackend: 'cpu' })
+            }
+          }}
+        />
+        <span>CPU</span>
+      </label>
+      <p className="settings-help-text">
+        Pick GPU or CPU, then Acquire runtime. Re-acquire after switching. NVIDIA CUDA / AMD HIP
+        builds remain an advanced BYO path.
+      </p>
+    </fieldset>
+  )
+}
+
 function downloadActions(props: LlamaLocalSectionProps): JSX.Element {
   const canDownload = props.draft.llamaCppCatalogModelId.trim().length > 0
   const downloading = props.draft.llamaCppDownloadState === 'downloading'
   return (
     <div className="settings-llama-actions">
+      {runtimeBackendFields(props)}
       <button
         type="button"
         disabled={!canDownload || downloading}
@@ -224,9 +264,15 @@ function runtimeCheckRow(props: LlamaLocalSectionProps): JSX.Element {
         Check runtime
       </button>
       {props.result && (
-        <p className={props.result.ok ? 'settings-check-ok' : 'settings-check-failed'}>
+        <pre
+          className={
+            props.result.ok
+              ? 'settings-check-ok settings-check-verbose'
+              : 'settings-check-failed settings-check-verbose'
+          }
+        >
           {props.result.message}
-        </p>
+        </pre>
       )}
     </>
   )

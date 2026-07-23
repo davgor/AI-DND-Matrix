@@ -23,6 +23,8 @@ export interface ProviderSettings {
   /** Curated catalog entry id; empty when using advanced manual paths only. */
   llamaCppCatalogModelId: string
   llamaCppDownloadState: LlamaCppDownloadState
+  /** Official zip backend for Acquire runtime (Vulkan GPU vs CPU). */
+  llamaCppRuntimeBackend: 'vulkan' | 'cpu'
   player2BaseUrl: string
 }
 
@@ -44,6 +46,7 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   llamaCppStartMode: 'attach',
   llamaCppCatalogModelId: '',
   llamaCppDownloadState: 'idle',
+  llamaCppRuntimeBackend: 'vulkan',
   player2BaseUrl: 'http://127.0.0.1:4315'
 }
 

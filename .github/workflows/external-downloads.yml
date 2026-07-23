@@ -1,0 +1,27 @@
+name: External Downloads
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Daily 14:00 UTC — catch link rot between PRs
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-external-downloads:
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message || '', '[skip ci]') }}
+    name: Verify external download URLs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Probe CPU/GPU runtime zips and catalog GGUFs
+        run: node scripts/check-external-downloads.mjs
