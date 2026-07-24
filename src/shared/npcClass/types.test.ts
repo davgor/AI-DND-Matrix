@@ -21,8 +21,18 @@ describe('parseNpcClassKey', () => {
     expect(parseNpcClassKey(' commoner ')).toBe('commoner')
   })
 
+  it('maps common LLM class and role synonyms onto the roster (147)', () => {
+    expect(parseNpcClassKey('wizard')).toBe('mage')
+    expect(parseNpcClassKey('Healer')).toBe('cleric')
+    expect(parseNpcClassKey('herbalist')).toBe('commoner')
+    expect(parseNpcClassKey('gardener')).toBe('commoner')
+    expect(parseNpcClassKey('soldier')).toBe('fighter')
+    expect(parseNpcClassKey('druid')).toBe('ranger')
+    expect(parseNpcClassKey('bard')).toBe('commoner')
+  })
+
   it('rejects unknown keys', () => {
-    expect(parseNpcClassKey('bard')).toBeUndefined()
+    expect(parseNpcClassKey('archmage-supreme')).toBeUndefined()
     expect(parseNpcClassKey('')).toBeUndefined()
   })
 })

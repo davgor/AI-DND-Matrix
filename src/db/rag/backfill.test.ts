@@ -209,3 +209,86 @@ describe('backfillCampaignRag then retrieve', () => {
     expect(hits[0]?.score).toBeGreaterThan(hits[1]?.score ?? 0)
   })
 })
+
+describe('154.5 re-embed after invalidate', () => {
+  it('re-embeds after invalidate when modelId changes', async () => {
+    const db = createTestDb()
+    const { campaignId } = seedCampaign(db)
+    insertWorldFactRaw({ db, campaignId, id: randomUUID(), content: 'The keep burned.' })
+
+    const first = createFakeEmbedder()
+    await backfillCampaignRag({ db, campaignId, embedder: first })
+    expect(first.callCount).toBe(1)
+    expect(getBackfillCompletedAt(db, campaignId)).not.toBeNull()
+
+    const { invalidateCampaignRagForEmbedderChange } = await import('./invalidateRagIndex')
+    invalidateCampaignRagForEmbedderChange(db, campaignId)
+    expect(countRagChunks(db, campaignId)).toBe(0)
+    expect(getBackfillCompletedAt(db, campaignId)).toBeNull()
+
+    const second = createFakeEmbedder()
+    const result = await backfillCampaignRag({ db, campaignId, embedder: second })
+    expect(result.processed).toBe(1)
+    expect(second.callCount).toBe(1)
+    expect(countRagChunks(db, campaignId)).toBe(1)
+  })
+})
+
+describe('154.5 partial failure', () => {
+  it('does not mark complete when embed throws mid-backfill', async () => {
+    const db = createTestDb()
+    const { campaignId } = seedCampaign(db)
+    insertWorldFactRaw({ db, campaignId, id: randomUUID(), content: 'Fact one.' })
+    insertWorldFactRaw({ db, campaignId, id: randomUUID(), content: 'Fact two.' })
+
+    let calls = 0
+    const base = createFakeEmbedder()
+    const flaky = {
+      name: base.name,
+      dimension: base.dimension,
+      modelId: base.modelId,
+      get callCount() {
+        return calls
+      },
+      async embed(texts: string[]) {
+        calls += 1
+        if (calls >= 2) {
+          throw new Error('embed failed')
+        }
+        return base.embed(texts)
+      }
+    }
+
+    await expect(backfillCampaignRag({ db, campaignId, embedder: flaky, batchSize: 1 })).rejects.toThrow(
+      /embed failed/
+    )
+    expect(getBackfillCompletedAt(db, campaignId)).toBeNull()
+  })
+})
+
+describe('154.5 retrieve after wipe', () => {
+  it('retrieve ignores foreign embedder_id space after wipe', async () => {
+    const db = createTestDb()
+    const { campaignId } = seedCampaign(db)
+    const factId = randomUUID()
+    insertWorldFactRaw({ db, campaignId, id: factId, content: 'Paraphrase target.' })
+
+    const lexicalLike = createFakeEmbedder({
+      fixtures: { 'Paraphrase target.': unitVector(0), q: unitVector(0) }
+    })
+    await backfillCampaignRag({ db, campaignId, embedder: lexicalLike })
+
+    const { invalidateCampaignRagForEmbedderChange } = await import('./invalidateRagIndex')
+    invalidateCampaignRagForEmbedderChange(db, campaignId)
+
+    const hits = await retrieveRelevantChunks({
+      db,
+      campaignId,
+      query: 'q',
+      scope: 'campaign',
+      k: 5,
+      embedder: lexicalLike
+    })
+    expect(hits).toEqual([])
+  })
+})

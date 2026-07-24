@@ -1,8 +1,15 @@
 import { ipcMain, type BrowserWindow } from 'electron'
 import type Database from 'better-sqlite3'
-import { CampaignGenerationSchemaError, generateCampaignSeed, persistGeneratedCampaign } from '../agents/campaignGeneration'
+import {
+  CampaignGenerationSchemaError,
+  formatSchemaFailureAttemptsLog,
+  generateCampaignSeed,
+  persistGeneratedCampaign
+} from '../agents/campaignGeneration'
 import type { CampaignSetupInput } from '../agents/campaignGeneration'
 import type { Provider } from '../agents/providers/types'
+import { isTruncationError } from '../agents/providers/tokenEscalation'
+import { ProviderUnreachableError } from '../agents/providers/withRetry'
 import { buildAvailableRaceOptions } from '../agents/raceLore'
 import { buildCreateProgress } from '../shared/campaignCreate/stageMessages'
 import {
@@ -16,6 +23,7 @@ import { listBestiarySpecies } from '../db/repositories/bestiary'
 import type { DeathMode, RespawnRules } from '../db/repositories/campaigns'
 import { buildAgentProvider, getCampaignDetail, type CampaignDetail } from './campaignIpc'
 import { getDb } from './db'
+import { logger } from './logger'
 import {
   createNpcFaceTokenSchedulerDeps,
   maybeEnqueueNpcFaceTokensForNpcs,
@@ -26,6 +34,7 @@ import {
   maybeEnqueueCreatureTokensForSpecies,
   type CreatureTokenSchedulerDeps
 } from './creatureTokenScheduler'
+import { assertGenerativeTokensAllowed } from './generativeTokensGuard'
 
 export interface CreateCampaignSuccess {
   ok: true
@@ -40,9 +49,14 @@ export interface CreateCampaignFailure {
 
 export type CreateCampaignResult = CreateCampaignSuccess | CreateCampaignFailure
 
+export interface CreateCampaignLog {
+  error: (message: string, ...args: unknown[]) => void
+}
+
 export interface CreateCampaignSchedulerDeps {
   faceToken?: NpcFaceTokenSchedulerDeps
   creatureToken?: CreatureTokenSchedulerDeps
+  log?: CreateCampaignLog
 }
 
 let mainWindow: BrowserWindow | undefined
@@ -72,6 +86,40 @@ function failure(
   message: string
 ): CreateCampaignFailure {
   return { ok: false, category, message }
+}
+
+function mapCreateCampaignError(error: unknown): CreateCampaignFailure {
+  if (isTruncationError(error)) {
+    return failure(
+      'generation',
+      'The narrative engine hit its output limit while generating the campaign. Raise local context size in Settings, simplify your premise, or try again.'
+    )
+  }
+  if (error instanceof ProviderUnreachableError) {
+    return failure(
+      'generation',
+      'The narrative engine could not be reached. Check Settings and try again.'
+    )
+  }
+  if (error instanceof CampaignGenerationSchemaError) {
+    if (/valid world schema/i.test(error.message)) {
+      return failure(
+        'generation',
+        'The narrative engine could not build a valid world for this premise. Try a simpler premise, or switch AI providers in Settings.'
+      )
+    }
+    if (/valid factions schema/i.test(error.message)) {
+      return failure(
+        'generation',
+        'The narrative engine could not build valid factions for this premise. Try again, simplify your premise, or switch AI providers in Settings.'
+      )
+    }
+    return failure(
+      'generation',
+      'The narrative engine returned an invalid campaign. Try again or simplify your premise.'
+    )
+  }
+  return failure('persistence', 'Could not save the new campaign. Check disk space and try again.')
 }
 
 export async function createCampaignFromRequest(
@@ -104,10 +152,15 @@ export async function createCampaignFromRequest(
     )
     return { ok: true, detail }
   } catch (error) {
+    const log = schedulerDeps?.log ?? logger
+    log.error('Campaign create failed', error)
     if (error instanceof CampaignGenerationSchemaError) {
-      return failure('generation', 'The narrative engine returned an invalid campaign. Try again or simplify your premise.')
+      const details = formatSchemaFailureAttemptsLog(error)
+      if (details) {
+        log.error(details)
+      }
     }
-    return failure('persistence', 'Could not save the new campaign. Check disk space and try again.')
+    return mapCreateCampaignError(error)
   }
 }
 
@@ -123,6 +176,10 @@ export function registerCampaignCreateHandlers(window: BrowserWindow): void {
     }
     if (activeSessionId === raw.sessionId) {
       return failure('busy', 'This campaign request was already submitted.')
+    }
+    const generativeGuard = assertGenerativeTokensAllowed(raw.generativeTokensEnabled === true)
+    if (!generativeGuard.ok) {
+      return failure('validation', generativeGuard.message)
     }
     createInFlight = true
     activeSessionId = raw.sessionId

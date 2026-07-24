@@ -17,59 +17,57 @@ vi.mock('electron', () => ({
 
 let dir: string
 let filePath: string
-const originalShowPopup = process.env['SHOW_POPUP']
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'settings-intro-ipc-test-'))
   filePath = join(dir, 'settings-intro.json')
-  delete process.env['SHOW_POPUP']
 })
 
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
-  if (originalShowPopup === undefined) {
-    delete process.env['SHOW_POPUP']
-  } else {
-    process.env['SHOW_POPUP'] = originalShowPopup
-  }
 })
 
 describe('getSettingsIntroState', () => {
-  it('shows on first launch when not forced by dev env', () => {
-    expect(getSettingsIntroState(filePath)).toEqual({ shouldShow: true, devForceShow: false })
+  it('shows on first launch in unpackaged/dev', () => {
+    expect(getSettingsIntroState(filePath, false)).toEqual({
+      shouldShow: true,
+      devForceShow: true
+    })
   })
 
-  it('hides after dismissal when SHOW_POPUP is not forcing display', () => {
+  it('always shows in unpackaged/dev even after dismissal', () => {
     markSettingsIntroDismissed(filePath)
-    expect(getSettingsIntroState(filePath)).toEqual({ shouldShow: false, devForceShow: false })
+    expect(getSettingsIntroState(filePath, false)).toEqual({
+      shouldShow: true,
+      devForceShow: true
+    })
   })
 
-  it('always shows when SHOW_POPUP=true in dev', () => {
-    process.env['SHOW_POPUP'] = 'true'
+  it('hides after dismissal when packaged', () => {
     markSettingsIntroDismissed(filePath)
-    expect(getSettingsIntroState(filePath)).toEqual({ shouldShow: true, devForceShow: true })
+    expect(getSettingsIntroState(filePath, true)).toEqual({
+      shouldShow: false,
+      devForceShow: false
+    })
   })
 })
 
 describe('dismissSettingsIntro', () => {
-  it('persists dismissal unless dev force show is enabled', () => {
-    dismissSettingsIntro(filePath)
-    expect(readFileSync(filePath, 'utf-8')).toContain('"dismissed": true')
-    expect(getSettingsIntroState(filePath).shouldShow).toBe(false)
+  it('does not persist dismissal in unpackaged/dev builds', () => {
+    dismissSettingsIntro(filePath, false)
+    expect(getSettingsIntroState(filePath, false).shouldShow).toBe(true)
   })
 
-  it('does not persist dismissal when SHOW_POPUP=true', () => {
-    process.env['SHOW_POPUP'] = 'true'
-    dismissSettingsIntro(filePath)
-    expect(getSettingsIntroState(filePath).shouldShow).toBe(true)
+  it('persists dismissal when packaged', () => {
+    dismissSettingsIntro(filePath, true)
+    expect(readFileSync(filePath, 'utf-8')).toContain('"dismissed": true')
+    expect(getSettingsIntroState(filePath, true).shouldShow).toBe(false)
   })
 })
 
 describe('isDevForceShowPopup', () => {
-  it('is true only when SHOW_POPUP=true in dev', () => {
-    process.env['SHOW_POPUP'] = 'true'
-    expect(isDevForceShowPopup()).toBe(true)
-    process.env['SHOW_POPUP'] = 'false'
-    expect(isDevForceShowPopup()).toBe(false)
+  it('is true when unpackaged and false when packaged', () => {
+    expect(isDevForceShowPopup(false)).toBe(true)
+    expect(isDevForceShowPopup(true)).toBe(false)
   })
 })

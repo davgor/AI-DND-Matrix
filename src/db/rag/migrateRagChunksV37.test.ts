@@ -47,7 +47,10 @@ const RAG_CHUNK_COLUMNS = [
   'text',
   'content_hash',
   'embedding',
-  'updated_at'
+  'updated_at',
+  'embedder_id',
+  'model_id',
+  'embedding_dim'
 ]
 
 const RAG_CHUNK_INDEXES = [

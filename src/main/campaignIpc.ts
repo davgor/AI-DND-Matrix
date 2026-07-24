@@ -2,8 +2,13 @@ import { ipcMain } from 'electron'
 import type Database from 'better-sqlite3'
 import { generateAndPersistCampaign } from '../agents/campaignGeneration'
 import { createProviderRegistry, selectProvider } from '../agents/providers/selectProvider'
-import { withTokenEscalation } from '../agents/providers/tokenEscalation'
-import { withRetry } from '../agents/providers/withRetry'
+import {
+  TOKEN_ESCALATION_CEILING,
+  withTokenEscalation
+} from '../agents/providers/tokenEscalation'
+import { clampLlamaCompletionMaxTokens } from '../agents/providers/llamacpp'
+import { withRetry, type RetryOptions } from '../agents/providers/withRetry'
+import { withSharedSerialQueue } from '../agents/providers/withSerialQueue'
 import { withUsageRecording } from '../agents/providers/withUsageRecording'
 import type { Provider } from '../agents/providers/types'
 import {
@@ -23,11 +28,8 @@ import {
   listFactionRelationsByCampaign,
   listFactionsByCampaign
 } from '../db/repositories/factions'
-import {
-  listBestiarySpecies,
-  listBestiaryVariants
-} from '../db/repositories/bestiary'
-import type { BestiarySpecies, BestiaryVariant } from '../shared/bestiary/types'
+import type { BestiaryReviewEntry } from '../shared/bestiary/reviewRoster'
+import { buildCampaignBestiaryRoster } from './campaignBestiaryRoster'
 import type { Faction, FactionRelation } from '../shared/factions'
 import { touchLastPlayed } from '../db/repositories/sessions'
 import { loadConfig } from './config'
@@ -42,10 +44,7 @@ const NEW_CAMPAIGN_NAME_LENGTH = 40
 
 export type { RegionExtras } from '../shared/campaign/regionExtras'
 
-export interface CampaignBestiaryEntry {
-  species: BestiarySpecies
-  variants: BestiaryVariant[]
-}
+export type CampaignBestiaryEntry = BestiaryReviewEntry
 
 export interface CampaignDetail {
   campaign: Campaign | undefined
@@ -57,7 +56,7 @@ export interface CampaignDetail {
   deities: Deity[]
   factions: Faction[]
   factionRelations: FactionRelation[]
-  bestiary: CampaignBestiaryEntry[]
+  bestiary: BestiaryReviewEntry[]
 }
 
 export function listCampaignsForSidebar(db: Database.Database): CampaignWithLastPlayed[] {
@@ -78,7 +77,6 @@ export function buildRegionExtras(db: Database.Database, campaignId: string): Re
 
 export function getCampaignDetail(db: Database.Database, campaignId: string): CampaignDetail {
   const regions = listRegionsByCampaign(db, campaignId)
-  const speciesList = listBestiarySpecies(db, campaignId)
   return {
     campaign: getCampaignById(db, campaignId),
     regions,
@@ -89,10 +87,7 @@ export function getCampaignDetail(db: Database.Database, campaignId: string): Ca
     deities: listDeitiesByCampaign(db, campaignId),
     factions: listFactionsByCampaign(db, campaignId),
     factionRelations: listFactionRelationsByCampaign(db, campaignId),
-    bestiary: speciesList.map((species) => ({
-      species,
-      variants: listBestiaryVariants(db, species.id)
-    }))
+    bestiary: buildCampaignBestiaryRoster(db, campaignId)
   }
 }
 
@@ -109,18 +104,61 @@ export function buildAgentProvider(): Provider {
   // 040.14: escalation wraps retry — a truncated response is retried with a
   // doubled cap (each cap attempt keeps its own connectivity retries beneath).
   // 112: usage recording wraps outside escalation so retries aggregate into one event.
+  // 020.29: local ctx clamp lowers the escalation ceiling so retries are not identical.
+  const escalationOptions =
+    resolved.agentProvider === 'llamacpp'
+      ? {
+          ceiling: clampLlamaCompletionMaxTokens(resolved.llamaCppCtxSize, TOKEN_ESCALATION_CEILING)
+        }
+      : undefined
   const escalated = withTokenEscalation(
-    withRetry(selectProvider(resolved.agentProvider, registry), logger)
+    withRetry(selectProvider(resolved.agentProvider, registry), logger, retryOptionsFor(resolved)),
+    escalationOptions
   )
+  // 166: llama-server often 500s under concurrent completions; queue outside retry
+  // so one logical generate (including backoff) finishes before the next starts.
+  const gated =
+    resolved.agentProvider === 'llamacpp' ? withSharedSerialQueue(escalated) : escalated
   const defaultModelId =
     resolved.agentProvider === 'claude' ? resolved.claudeModel : resolved.agentProvider
-  return withUsageRecording(escalated, {
+  return withUsageRecording(gated, {
     getDb,
     providerName: resolved.agentProvider,
     defaultModelId,
     warn: (message) => logger.warn(message),
     logInsertError: (message, error) => logger.error(message, error)
   })
+}
+
+/** Cloud providers recover quickly; local llama needs longer pauses after HTTP 500. */
+const LLAMACPP_RETRY_BASE_DELAY_MS = 750
+
+function retryOptionsFor(resolved: {
+  agentProvider: string
+  llamaCppBaseUrl: string
+}): RetryOptions {
+  if (resolved.agentProvider !== 'llamacpp') {
+    return { maxAttempts: 3, baseDelayMs: 50 }
+  }
+  return {
+    maxAttempts: 3,
+    baseDelayMs: LLAMACPP_RETRY_BASE_DELAY_MS,
+    diagnostics: {
+      providerName: 'llamacpp',
+      hostPort: hostPortFromBaseUrl(resolved.llamaCppBaseUrl),
+      lifecycleState: 'unknown',
+      errorClassHint: 'local'
+    }
+  }
+}
+
+function hostPortFromBaseUrl(baseUrl: string): string {
+  try {
+    const url = new URL(baseUrl)
+    return `${url.hostname}:${url.port || '8080'}`
+  } catch {
+    return '127.0.0.1:8080'
+  }
 }
 
 export async function generateCampaignFromPrompt(

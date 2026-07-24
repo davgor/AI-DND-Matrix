@@ -241,6 +241,75 @@ describe('sendGuidedCreationMessage identity summary lock-in', () => {
   })
 })
 
+function whereRegionIdentityReplies(regionId: string): string[] {
+  return [
+    JSON.stringify({
+      dmReply: 'Why are you adventuring?',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: false },
+        where: { complete: false },
+        what: { complete: false }
+      },
+      allFoundationsComplete: false
+    }),
+    JSON.stringify({
+      dmReply: 'Where do you start?',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: true, summary: 'Justice.' },
+        where: { complete: false },
+        what: { complete: false }
+      },
+      allFoundationsComplete: false
+    }),
+    JSON.stringify({
+      dmReply: 'What are you doing at the start?',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: true, summary: 'Justice.' },
+        where: { complete: true, summary: 'Starts in Blackmire; grew up nearby.' },
+        what: { complete: false }
+      },
+      allFoundationsComplete: false,
+      startingRegionId: regionId
+    }),
+    JSON.stringify({
+      dmReply: 'Blackmire it is — you begin among the reeds.',
+      foundations: {
+        who: { complete: true, summary: 'Kael, a knight.' },
+        why: { complete: true, summary: 'Justice.' },
+        where: { complete: true, summary: 'Starts in Blackmire; grew up nearby.' },
+        what: { complete: true, summary: 'A fighter.' }
+      },
+      allFoundationsComplete: true
+    })
+  ]
+}
+
+async function sendWhereRegionIdentityTurns(
+  db: ReturnType<typeof createTestDb>,
+  provider: ReturnType<typeof createScriptedProvider>,
+  campaignId: string,
+  characterId: string
+): Promise<void> {
+  const send = (message: string) =>
+    sendGuidedCreationMessage(db, provider, {
+      campaignId,
+      characterId,
+      phase: 'identity',
+      message
+    })
+  expect((await send('I am Kael, a knight.')).ok).toBe(true)
+  expect((await send('I seek justice.')).ok).toBe(true)
+  expect((await send('I start in Blackmire.')).ok).toBe(true)
+  const result = await send('I am a fighter at the reeds.')
+  expect(result.ok).toBe(true)
+  if (result.ok) {
+    expect(result.allFoundationsComplete).toBe(true)
+  }
+}
+
 describe('sendGuidedCreationMessage Where starting region', () => {
   it('persists currentRegionId when Where locks to a generated region', async () => {
     const db = createTestDb()
@@ -250,31 +319,9 @@ describe('sendGuidedCreationMessage Where starting region', () => {
       name: 'Blackmire',
       description: 'A flooded fen.'
     })
-    const provider = createScriptedProvider([
-      JSON.stringify({
-        dmReply: 'Blackmire it is — you begin among the reeds.',
-        foundations: {
-          who: { complete: true, summary: 'Kael, a knight.' },
-          why: { complete: true, summary: 'Justice.' },
-          where: { complete: true, summary: 'Starts in Blackmire; grew up nearby.' },
-          what: { complete: true, summary: 'A fighter.' }
-        },
-        allFoundationsComplete: true,
-        startingRegionId: region.id
-      })
-    ])
+    const provider = createScriptedProvider(whereRegionIdentityReplies(region.id))
+    await sendWhereRegionIdentityTurns(db, provider, campaign.id, player.id)
 
-    const result = await sendGuidedCreationMessage(db, provider, {
-      campaignId: campaign.id,
-      characterId: player.id,
-      phase: 'identity',
-      message: 'I start in Blackmire.'
-    })
-
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.allFoundationsComplete).toBe(true)
-    }
     const updated = getCharacterById(db, player.id)
     expect(updated).toBeTruthy()
     expect((updated!.stats as { currentRegionId?: string }).currentRegionId).toBe(region.id)

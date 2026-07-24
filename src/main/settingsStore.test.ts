@@ -115,4 +115,47 @@ describe('saveSettings', () => {
     const loaded = loadSettings(filePath, unavailableCodec, DEFAULT_PROVIDER_SETTINGS)
     expect(loaded.claudeApiKey).toBe('sk-ant-plain')
   })
+
+  it('round-trips catalog download fields without breaking manual model paths', () => {
+    saveSettings(filePath, passthroughCodec, {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'llamacpp',
+      llamaCppModelPath: 'C:\\models\\manual.gguf',
+      llamaCppCatalogModelId: 'qwen25-7b-instruct-q4-k-m',
+      llamaCppDownloadState: 'ready'
+    })
+
+    const loaded = loadSettings(filePath, passthroughCodec, DEFAULT_PROVIDER_SETTINGS)
+    expect(loaded.llamaCppModelPath).toBe('C:\\models\\manual.gguf')
+    expect(loaded.llamaCppCatalogModelId).toBe('qwen25-7b-instruct-q4-k-m')
+    expect(loaded.llamaCppDownloadState).toBe('ready')
+  })
+
+  it('round-trips imageGeneration settings with Enable defaulting OFF on backfill', () => {
+    saveSettings(filePath, passthroughCodec, {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      imageGeneration: {
+        ...DEFAULT_PROVIDER_SETTINGS.imageGeneration,
+        enabled: true,
+        mode: 'openai',
+        openaiImageModel: 'gpt-image-1'
+      }
+    })
+
+    const loaded = loadSettings(filePath, passthroughCodec, DEFAULT_PROVIDER_SETTINGS)
+    expect(loaded.imageGeneration.enabled).toBe(true)
+    expect(loaded.imageGeneration.mode).toBe('openai')
+    expect(loaded.imageGeneration.openaiImageModel).toBe('gpt-image-1')
+  })
+
+  it('backfills imageGeneration from defaults when missing from older settings files', () => {
+    writeFileSync(
+      filePath,
+      JSON.stringify({ claudeApiKeyEncrypted: '', rest: { mode: 'player2' } }),
+      'utf-8'
+    )
+    const loaded = loadSettings(filePath, passthroughCodec, DEFAULT_PROVIDER_SETTINGS)
+    expect(loaded.imageGeneration.enabled).toBe(false)
+    expect(loaded.imageGeneration.mode).toBe('openai')
+  })
 })

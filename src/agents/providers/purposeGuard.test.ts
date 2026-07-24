@@ -20,6 +20,7 @@ const EXCLUDED_RELATIVE = new Set([
   'src/agents/providers/tokenEscalation.ts',
   'src/agents/providers/types.ts',
   'src/agents/providers/withRetry.ts',
+  'src/agents/providers/withSerialQueue.ts',
   'src/agents/providers/withUsageRecording.ts'
 ])
 

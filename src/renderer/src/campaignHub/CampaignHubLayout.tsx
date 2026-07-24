@@ -12,6 +12,7 @@ export interface CampaignHubLayoutProps {
   lastPlayed: string
   sidebar?: ReactNode
   actionsDisabled: boolean
+  imageProviderMismatch: boolean
   obituaryCharacterId: string | null
   worldHistoryOpen: boolean
   onViewWorldHistory: () => void
@@ -32,6 +33,11 @@ export function CampaignHubLayout(props: CampaignHubLayoutProps): JSX.Element {
     <div className="campaign-hub">
       {props.sidebar ? <div className="campaign-hub-sidebar">{props.sidebar}</div> : null}
       <div className="campaign-hub-body">
+        {props.imageProviderMismatch ? (
+          <p className="campaign-hub-image-provider-banner" role="status">
+            Campaign requires an image provider
+          </p>
+        ) : null}
         <main className="campaign-hub-center">
           <CampaignHubHeader campaign={campaign ?? null} lastPlayed={props.lastPlayed} />
           <CampaignHubWorldPreview

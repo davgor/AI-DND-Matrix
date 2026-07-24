@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_PROVIDER_SETTINGS } from '../shared/settings/types'
 import type { AppConfig } from './config'
-import { resolveProviderRegistryConfig } from './settingsRuntime'
+import { resolveLlamaCppLifecycleConfig, resolveProviderRegistryConfig } from './settingsRuntime'
 
 const envConfig: AppConfig = {
   agentProvider: 'player2',
@@ -31,6 +31,7 @@ describe('resolveProviderRegistryConfig: env fallback', () => {
     expect(resolved.claudeModel).toBe('env-claude-model')
     expect(resolved.player2BaseUrl).toBe('http://127.0.0.1:4315')
     expect(resolved.llamaCppBaseUrl).toBe('http://127.0.0.1:8080')
+    expect(resolved.llamaCppCtxSize).toBe(8192)
   })
 
   it('falls back to the env Claude API key when persisted settings have an empty one', () => {
@@ -94,5 +95,50 @@ describe('resolveProviderRegistryConfig: persisted prefs', () => {
     const resolved = resolveProviderRegistryConfig(envConfig, persisted)
     expect(resolved.agentProvider).toBe('llamacpp')
     expect(resolved.llamaCppBaseUrl).toBe('http://127.0.0.1:8081')
+  })
+})
+
+describe('resolveLlamaCppLifecycleConfig', () => {
+  it('uses env lifecycle fields when nothing is persisted', () => {
+    const resolved = resolveLlamaCppLifecycleConfig(
+      {
+        ...envConfig,
+        llamaCppServerPath: 'C:\\env\\llama-server.exe',
+        llamaCppModelPath: 'C:\\env\\model.gguf',
+        llamaCppCtxSize: 4096,
+        llamaCppGpuLayers: '20',
+        llamaCppStartMode: 'managed'
+      },
+      null
+    )
+    expect(resolved).toMatchObject({
+      serverPath: 'C:\\env\\llama-server.exe',
+      modelPath: 'C:\\env\\model.gguf',
+      ctxSize: 4096,
+      gpuLayers: '20',
+      startMode: 'managed'
+    })
+  })
+
+  it('honors config-only swaps of path, ctx, and gpu from persisted settings', () => {
+    const persisted = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'llamacpp' as const,
+      llamaCppBaseUrl: 'http://127.0.0.1:8090',
+      llamaCppServerPath: 'C:\\settings\\llama-server.exe',
+      llamaCppModelPath: 'C:\\settings\\qwen.gguf',
+      llamaCppCtxSize: 16384,
+      llamaCppGpuLayers: '33',
+      llamaCppStartMode: 'managed' as const,
+      llamaCppCatalogModelId: 'qwen25-7b-instruct-q4-k-m',
+      llamaCppDownloadState: 'ready' as const
+    }
+    const resolved = resolveLlamaCppLifecycleConfig(envConfig, persisted)
+    expect(resolved.baseUrl).toBe('http://127.0.0.1:8090')
+    expect(resolved.serverPath).toBe('C:\\settings\\llama-server.exe')
+    expect(resolved.modelPath).toBe('C:\\settings\\qwen.gguf')
+    expect(resolved.ctxSize).toBe(16384)
+    expect(resolved.gpuLayers).toBe('33')
+    expect(resolved.startMode).toBe('managed')
   })
 })

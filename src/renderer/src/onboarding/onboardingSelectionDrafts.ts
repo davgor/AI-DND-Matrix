@@ -1,8 +1,10 @@
 import type { BackgroundSelectionState } from '../backgroundSelection/backgroundSelectionLogic'
+import type { EquipmentSelectionState } from '../equipmentSelection/equipmentSelectionLogic'
 import type { RaceSelectionState } from '../raceSelection/raceSelectionLogic'
 
 const RACE_DRAFT_PREFIX = 'onboarding-race-draft:'
 const BACKGROUND_DRAFT_PREFIX = 'onboarding-background-draft:'
+const EQUIPMENT_DRAFT_PREFIX = 'onboarding-equipment-draft:'
 
 function readDraft<T>(key: string): T | null {
   try {
@@ -54,4 +56,12 @@ export function writeBackgroundSelectionDraft(characterId: string, state: Backgr
 
 export function clearBackgroundSelectionDraft(characterId: string): void {
   clearDraft(`${BACKGROUND_DRAFT_PREFIX}${characterId}`)
+}
+
+export function readEquipmentSelectionDraft(characterId: string): EquipmentSelectionState | null {
+  return readDraft<EquipmentSelectionState>(`${EQUIPMENT_DRAFT_PREFIX}${characterId}`)
+}
+
+export function writeEquipmentSelectionDraft(characterId: string, state: EquipmentSelectionState): void {
+  writeDraft(`${EQUIPMENT_DRAFT_PREFIX}${characterId}`, state)
 }

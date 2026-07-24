@@ -1,0 +1,20 @@
+# EPIC: Campaign page improvements
+
+Polish and product fixes for the **campaign review / campaign page** surfaces (post-create world review before continue, and related hub/review chrome). Generative-token preference stays a **campaign-start** decision only.
+
+## Scope
+
+| # | Slice |
+|---|--------|
+| 1 | Remove mid-campaign **"Use generative tokens?"** checkbox from campaign review — flag is set only at campaign start |
+| 2 | Pantheon modal fills campaign content area (not stuck at ~520px) |
+| 3 | Factions: high-level summary on page; **View Factions** modal for roster/relations details |
+| 4 | Bestiary: summary + modal with default/campaign filter, search, and prompt **Add** |
+| 5 | Bestiary under Factions; dividers on Pantheon / Factions / Bestiary / Story |
+| … | Further campaign-page items land as `153.M` under this epic |
+
+## Definition of done
+
+- Campaign review no longer offers a generative-tokens toggle; start form still does
+- Sub-tickets checked off with delivery gate (test / lint / build / deadcode / `act`)
+- Epic stays open until remaining campaign-page slices are done

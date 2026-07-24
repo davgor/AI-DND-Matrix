@@ -53,6 +53,7 @@ function buildCreatureTokenDeps(
     getCampaign: (id) => getCampaignById(db, id),
     getSpecies: (id) => getBestiarySpeciesById(db, id),
     imageProvider: provider,
+    imageProviderReady: true,
     baseDir,
     logger: { warn: vi.fn(), error: vi.fn() }
   }

@@ -1,11 +1,20 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createTestDb } from '../db/testUtils'
 import { createCampaign } from '../db/repositories/campaigns'
 import { createNpc } from '../db/repositories/npcs'
 import { createRegion } from '../db/repositories/regions'
 import { createScriptedProvider } from '../agents/providers/mockHarness'
-import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE } from '../test/fixtures/campaignGenerationFixtures'
-import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editFactionsSummary, editGenerativeTokens, editNpcFaceTokenGeneration, editEnemyTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign } from './campaignEditIpc'
+import { NPC_SPEAKING_STYLE_RESPONSE, persistNpcEnrichmentResponses, RACE_LORE_RESPONSE, additionalRegionLabeledBlocks } from '../test/fixtures/campaignGenerationFixtures'
+import { editNpcDisposition, editNpcTraits, editRegionDescription, editWorldHistory, editPantheonSummary, editFactionsSummary, editGenerativeTokens, editNpcFaceTokenGeneration, editEnemyTokenGeneration, deleteNpcForCampaign, deleteRegionForCampaign, generateNpcForCampaign, generateRegionForCampaign, generateBestiarySpeciesForCampaign } from './campaignEditIpc'
+import { setGenerativeTokensGuardForTests } from './generativeTokensGuard'
+
+beforeEach(() => {
+  setGenerativeTokensGuardForTests(() => ({ ok: true }))
+})
+
+afterEach(() => {
+  setGenerativeTokensGuardForTests(null)
+})
 
 function makeRegion(name: string) {
   return {
@@ -64,10 +73,10 @@ function makeNpcs(regionName: string, prefix: string) {
   ]
 }
 
-const ADDITIONAL_REGION = JSON.stringify({
-  region: makeRegion('Mistfen Crossing'),
-  npcs: makeNpcs('Mistfen Crossing', 'Mist')
-})
+const ADDITIONAL_REGION = additionalRegionLabeledBlocks(
+  makeRegion('Mistfen Crossing'),
+  makeNpcs('Mistfen Crossing', 'Mist')
+)
 
 function seedCampaignWithRegionAndNpc() {
   const db = createTestDb()
@@ -324,10 +333,7 @@ describe('generateRegionForCampaign', () => {
 
   it('honors a custom npcCount including zero', async () => {
     const { db, campaign } = seedCampaignWithRegionAndNpc()
-    const emptyRegion = JSON.stringify({
-      region: makeRegion('Silent Moor'),
-      npcs: []
-    })
+    const emptyRegion = additionalRegionLabeledBlocks(makeRegion('Silent Moor'), [])
     const provider = createScriptedProvider([emptyRegion])
 
     const detail = await generateRegionForCampaign(db, provider, {
@@ -414,6 +420,52 @@ describe('generateNpcForCampaign', () => {
         campaignId: campaign.id,
         regionId: region.id,
         seedPrompt: '   '
+      })
+    ).rejects.toThrow(/seed/i)
+  })
+})
+
+describe('generateBestiarySpeciesForCampaign', () => {
+  const loreResponse = JSON.stringify({
+    baseLore:
+      'Coral Titans ambush coastal roads at low tide, hauling wagons under reef shells. Fishers mark the tide by their clicking claws.',
+    visualAppearance: {
+      silhouette: 'massive crab',
+      sizeClass: 'huge',
+      primaryColors: ['coral', 'teal'],
+      distinguishingMarks: 'wagon-sized reef shell',
+      textureOrMaterial: 'barnacle-crusted chitin'
+    }
+  })
+
+  it('creates a campaign-specific species from a user prompt', async () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Tide Campaign',
+      premisePrompt: 'Coastal roads and reef monsters.',
+      deathMode: 'standard'
+    })
+    const provider = createScriptedProvider([loreResponse])
+    const detail = await generateBestiarySpeciesForCampaign(db, provider, {
+      campaignId: campaign.id,
+      seedPrompt: 'Coral Titan\nA wagon-sized reef crab that ambushes coastal roads.'
+    })
+    const custom = detail.bestiary.filter((entry) => entry.origin === 'campaign')
+    expect(custom.some((entry) => entry.species.name === 'Coral Titan')).toBe(true)
+    expect(custom.some((entry) => entry.species.tags.includes('user-prompt'))).toBe(true)
+  })
+
+  it('rejects an empty seed prompt', async () => {
+    const db = createTestDb()
+    const campaign = createCampaign(db, {
+      name: 'Tide Campaign',
+      premisePrompt: 'Coastal roads.',
+      deathMode: 'standard'
+    })
+    await expect(
+      generateBestiarySpeciesForCampaign(db, createScriptedProvider([]), {
+        campaignId: campaign.id,
+        seedPrompt: '  '
       })
     ).rejects.toThrow(/seed/i)
   })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createFakeEmbedder } from './fakeEmbedder'
-import { createLocalEmbedder } from './localEmbedder'
+import { createLexicalEmbedder, createLocalEmbedder } from './localEmbedder'
 import { selectEmbedder } from './selectEmbedder'
 import { EMBEDDING_DIMENSION } from './types'
 
@@ -9,15 +9,21 @@ function l2Norm(vector: number[]): number {
 }
 
 describe('selectEmbedder', () => {
-  it('defaults to the local embedder', () => {
+  it('defaults to the lexical embedder (legacy local alias)', () => {
     const embedder = selectEmbedder()
-    expect(embedder.name).toBe('local')
+    expect(embedder.name).toBe('lexical')
     expect(embedder.dimension).toBe(EMBEDDING_DIMENSION)
+    expect(embedder.modelId).toBe('hashed-bow-v1')
   })
 
-  it('selects the local embedder by name', () => {
+  it('selects lexical by name', () => {
+    const embedder = selectEmbedder('lexical')
+    expect(embedder.name).toBe('lexical')
+  })
+
+  it('aliases legacy local name to lexical', () => {
     const embedder = selectEmbedder('local')
-    expect(embedder.name).toBe('local')
+    expect(embedder.name).toBe('lexical')
   })
 
   it('selects the fake embedder for tests', () => {
@@ -25,11 +31,20 @@ describe('selectEmbedder', () => {
     expect(embedder.name).toBe('fake')
   })
 
+  it('rejects unknown embedder names clearly', () => {
+    expect(() => selectEmbedder('not-a-real-embedder')).toThrow(/Unknown embedder/i)
+  })
+
+  it('rejects cloud names without a configured factory (use create*Embedder)', () => {
+    expect(() => selectEmbedder('openai')).toThrow(/requires createOpenAIEmbedder|API key|factory/i)
+    expect(() => selectEmbedder('gemini')).toThrow(/requires createGeminiEmbedder|API key|factory/i)
+  })
+
   it('reads RAG_EMBEDDER when passed as config name', () => {
     const previous = process.env.RAG_EMBEDDER
     process.env.RAG_EMBEDDER = 'fake'
     try {
-      const embedder = selectEmbedder(process.env.RAG_EMBEDDER ?? 'local')
+      const embedder = selectEmbedder(process.env.RAG_EMBEDDER ?? 'lexical')
       expect(embedder.name).toBe('fake')
     } finally {
       if (previous === undefined) {
@@ -41,9 +56,9 @@ describe('selectEmbedder', () => {
   })
 })
 
-describe('createLocalEmbedder', () => {
+describe('createLexicalEmbedder', () => {
   it('returns fixed-dimension vectors for each input text', async () => {
-    const embedder = createLocalEmbedder()
+    const embedder = createLexicalEmbedder()
     const vectors = await embedder.embed(['hello world', 'foo bar'])
 
     expect(vectors).toHaveLength(2)
@@ -53,7 +68,7 @@ describe('createLocalEmbedder', () => {
   })
 
   it('is deterministic for identical text', async () => {
-    const embedder = createLocalEmbedder()
+    const embedder = createLexicalEmbedder()
     const first = await embedder.embed(['test text'])
     const second = await embedder.embed(['test text'])
 
@@ -61,17 +76,24 @@ describe('createLocalEmbedder', () => {
   })
 
   it('returns different vectors for different text', async () => {
-    const embedder = createLocalEmbedder()
+    const embedder = createLexicalEmbedder()
     const [hello, goodbye] = await embedder.embed(['hello', 'goodbye'])
 
     expect(hello).not.toEqual(goodbye)
   })
 
   it('L2-normalizes non-empty vectors', async () => {
-    const embedder = createLocalEmbedder()
+    const embedder = createLexicalEmbedder()
     const [vector] = await embedder.embed(['some text here'])
 
     expect(l2Norm(vector)).toBeCloseTo(1, 5)
+  })
+})
+
+describe('createLocalEmbedder (deprecated alias)', () => {
+  it('returns the lexical embedder', () => {
+    const embedder = createLocalEmbedder()
+    expect(embedder.name).toBe('lexical')
   })
 })
 

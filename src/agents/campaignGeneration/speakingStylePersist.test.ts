@@ -14,7 +14,8 @@ import {
   makeNpcs,
   makeRegion,
   RACE_LORE_RESPONSE,
-  SHIELD_HERO_CANON
+  SHIELD_HERO_CANON,
+  singleNpcLabeledBlocks
 } from '../../test/fixtures/campaignGenerationFixtures'
 import type { GeneratedBestiaryRoster, GeneratedNpc } from './types'
 import { buildAvailableRaceOptions } from '../raceLore'
@@ -333,12 +334,9 @@ describe('persistGeneratedCampaign faction membership', () => {
 describe('generateSingleNpc speaking-style post-pass', () => {
   it('enriches speaking NPC with fandom hint when preferredCanonName is set', async () => {
     const region = makeRegion('Melromarc Outskirts', 'mel')
-    const npcPayload = JSON.stringify({
-      npc: {
-        ...makeNpcs(region.name, 'Canon')[0]!,
-        name: 'Raphtalia',
-        regionName: region.name
-      }
+    const npcPayload = singleNpcLabeledBlocks(region.name, {
+      ...makeNpcs(region.name, 'Canon')[0]!,
+      name: 'Raphtalia'
     })
     const provider = createScriptedProvider([npcPayload, SPEAKING_STYLE_RESPONSE])
     const result = await generateSingleNpc(provider, {

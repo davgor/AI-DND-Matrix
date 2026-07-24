@@ -2,6 +2,7 @@ import type { AgentProviderName, ProviderRegistryConfig } from '../agents/provid
 import { DEFAULT_CLOUD_MODELS } from '../shared/settings/modelCatalogs'
 import type { ProviderMode, ProviderSettings } from '../shared/settings/types'
 import type { AppConfig } from './config'
+import type { LlamaCppLifecycleConfig } from './llamacpp/lifecycle'
 
 interface ResolvedProviderConfig extends ProviderRegistryConfig {
   agentProvider: AgentProviderName
@@ -23,7 +24,8 @@ function fromEnv(envConfig: AppConfig): ResolvedProviderConfig {
     grokApiKey: envConfig.grokApiKey,
     grokModel: envConfig.grokModel,
     player2BaseUrl: envConfig.player2BaseUrl,
-    llamaCppBaseUrl: envConfig.llamaCppBaseUrl
+    llamaCppBaseUrl: envConfig.llamaCppBaseUrl,
+    llamaCppCtxSize: envConfig.llamaCppCtxSize
   }
 }
 
@@ -33,6 +35,14 @@ function pickKey(persisted: string, envValue: string | undefined): string | unde
 
 function pickModel(persisted: string, envValue: string, fallback: string): string {
   return persisted || envValue || fallback
+}
+
+function pickOptionalPath(persisted: string, envValue: string | undefined): string | undefined {
+  const trimmed = persisted.trim()
+  if (trimmed) {
+    return trimmed
+  }
+  return envValue
 }
 
 function fromPersisted(envConfig: AppConfig, persisted: ProviderSettings): ResolvedProviderConfig {
@@ -47,7 +57,8 @@ function fromPersisted(envConfig: AppConfig, persisted: ProviderSettings): Resol
     grokApiKey: pickKey(persisted.grokApiKey, envConfig.grokApiKey),
     grokModel: pickModel(persisted.grokModel, envConfig.grokModel, DEFAULT_CLOUD_MODELS.grok),
     player2BaseUrl: persisted.player2BaseUrl,
-    llamaCppBaseUrl: persisted.llamaCppBaseUrl
+    llamaCppBaseUrl: persisted.llamaCppBaseUrl,
+    llamaCppCtxSize: persisted.llamaCppCtxSize || envConfig.llamaCppCtxSize
   }
 }
 
@@ -59,4 +70,32 @@ export function resolveProviderRegistryConfig(
     return fromEnv(envConfig)
   }
   return fromPersisted(envConfig, persisted)
+}
+
+/**
+ * Maps env + persisted Settings into lifecycle config.
+ * Happy path: Settings alone; `.env` remains override/dev fallback when Settings fields are empty.
+ */
+export function resolveLlamaCppLifecycleConfig(
+  envConfig: AppConfig,
+  persisted: ProviderSettings | null
+): LlamaCppLifecycleConfig {
+  if (!persisted) {
+    return {
+      baseUrl: envConfig.llamaCppBaseUrl,
+      serverPath: envConfig.llamaCppServerPath,
+      modelPath: envConfig.llamaCppModelPath,
+      ctxSize: envConfig.llamaCppCtxSize,
+      gpuLayers: envConfig.llamaCppGpuLayers,
+      startMode: envConfig.llamaCppStartMode
+    }
+  }
+  return {
+    baseUrl: persisted.llamaCppBaseUrl || envConfig.llamaCppBaseUrl,
+    serverPath: pickOptionalPath(persisted.llamaCppServerPath, envConfig.llamaCppServerPath),
+    modelPath: pickOptionalPath(persisted.llamaCppModelPath, envConfig.llamaCppModelPath),
+    ctxSize: persisted.llamaCppCtxSize || envConfig.llamaCppCtxSize,
+    gpuLayers: persisted.llamaCppGpuLayers || envConfig.llamaCppGpuLayers,
+    startMode: persisted.llamaCppStartMode
+  }
 }

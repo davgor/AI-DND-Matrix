@@ -106,7 +106,7 @@ describe('validateProviderSettings: llamacpp mode', () => {
     })
   })
 
-  it('requires server path and model path when start mode is managed', () => {
+  it('requires server path and model path when start mode is managed without catalog', () => {
     const settings = {
       ...DEFAULT_PROVIDER_SETTINGS,
       mode: 'llamacpp' as const,
@@ -123,6 +123,19 @@ describe('validateProviderSettings: llamacpp mode', () => {
       field: 'llamaCppModelPath',
       message: 'Managed mode requires a path to a .gguf model file.'
     })
+  })
+
+  it('allows managed mode without manual model path when catalog download is ready', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'llamacpp' as const,
+      llamaCppStartMode: 'managed' as const,
+      llamaCppServerPath: '',
+      llamaCppModelPath: '',
+      llamaCppCatalogModelId: 'qwen25-7b-instruct-q4-k-m',
+      llamaCppDownloadState: 'ready' as const
+    }
+    expect(validateProviderSettings(settings)).toEqual([])
   })
 
   it('does not require server/model paths when start mode is attach', () => {
@@ -162,5 +175,53 @@ describe('redactProviderSettings', () => {
   it('reports claudeApiKeySet as false when no key is stored', () => {
     const redacted = redactProviderSettings({ ...DEFAULT_PROVIDER_SETTINGS, claudeApiKey: '' })
     expect(redacted.claudeApiKeySet).toBe(false)
+  })
+
+  it('keeps imageGeneration fields without duplicating API key plaintext', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      openaiApiKey: 'sk-openai-secret',
+      imageGeneration: {
+        ...DEFAULT_PROVIDER_SETTINGS.imageGeneration,
+        enabled: true,
+        mode: 'openai' as const
+      }
+    }
+    const redacted = redactProviderSettings(settings)
+    expect(redacted.imageGeneration.enabled).toBe(true)
+    expect(JSON.stringify(redacted)).not.toContain('sk-openai-secret')
+  })
+})
+
+describe('validateProviderSettings: imageGeneration', () => {
+  it('does not require image keys when Enable is OFF', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'player2' as const,
+      imageGeneration: {
+        ...DEFAULT_PROVIDER_SETTINGS.imageGeneration,
+        enabled: false,
+        mode: 'openai' as const
+      }
+    }
+    expect(validateProviderSettings(settings)).toEqual([])
+  })
+
+  it('requires OpenAI key when image Enable ON and mode openai', () => {
+    const settings = {
+      ...DEFAULT_PROVIDER_SETTINGS,
+      mode: 'player2' as const,
+      openaiApiKey: '',
+      imageGeneration: {
+        ...DEFAULT_PROVIDER_SETTINGS.imageGeneration,
+        enabled: true,
+        mode: 'openai' as const,
+        openaiImageModel: 'gpt-image-1'
+      }
+    }
+    expect(validateProviderSettings(settings)).toContainEqual({
+      field: 'openaiApiKey',
+      message: 'OpenAI API key is required.'
+    })
   })
 })

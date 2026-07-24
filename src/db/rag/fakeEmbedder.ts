@@ -25,10 +25,12 @@ function resolveFixtureVector(
 
 export function createFakeEmbedder(options: FakeEmbedderOptions = {}): FakeEmbedder {
   let callCount = 0
+  const dimension = EMBEDDING_DIMENSION
 
   return {
     name: 'fake',
-    dimension: EMBEDDING_DIMENSION,
+    dimension,
+    modelId: 'fake-v1',
     get callCount() {
       return callCount
     },

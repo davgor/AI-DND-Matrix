@@ -24,6 +24,8 @@ import {
   persistPlayerCharacterIconAsset,
   writePlayerCharacterIconAsset
 } from './playerCharacterIconAsset'
+import { mergeSchedulerDeps } from './imageProviderResolve'
+import { IMAGE_GENERATION_NOT_READY_MESSAGE } from '../shared/settings/imageProviderSettings'
 
 const PLACEHOLDER_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
@@ -54,6 +56,7 @@ export interface ReplacePlayerCharacterPortraitInput {
 interface PlayerCharacterIconIpcDeps {
   db: Database.Database
   imageProvider: ImageProvider
+  imageProviderReady: boolean
   baseDir: string
 }
 
@@ -77,11 +80,12 @@ export function createPlayerCharacterIconIpcDeps(
   db: Database.Database,
   overrides?: Partial<PlayerCharacterIconIpcDeps>
 ): PlayerCharacterIconIpcDeps {
-  return {
+  return mergeSchedulerDeps(overrides, defaultImageProvider(), {
     db,
-    imageProvider: overrides?.imageProvider ?? defaultImageProvider(),
-    baseDir: overrides?.baseDir ?? defaultBaseDir()
-  }
+    imageProvider: defaultImageProvider(),
+    imageProviderReady: false,
+    baseDir: defaultBaseDir()
+  })
 }
 
 function buildRequest(input: GeneratePlayerCharacterIconInput): PlayerCharacterIconGenerateRequest {
@@ -106,6 +110,9 @@ export async function generatePlayerCharacterIconJob(
   deps: PlayerCharacterIconIpcDeps,
   input: GeneratePlayerCharacterIconInput
 ): Promise<GeneratePlayerCharacterIconResult> {
+  if (!deps.imageProviderReady) {
+    return { ok: false, message: IMAGE_GENERATION_NOT_READY_MESSAGE }
+  }
   if (!hasPlayerIconAppearancePrompt(input.appearancePrompt)) {
     return { ok: false, message: 'Appearance prompt is required.' }
   }

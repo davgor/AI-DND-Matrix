@@ -3,11 +3,16 @@ import type { Archetype } from '../engine/hp'
 import { inferArchetypeFromClassOrRole } from '../engine/archetypeInference'
 import type { StartingLoadoutInput } from '../engine/startingLoadout/validate'
 import type {
+  AppliedStartingLoadoutSnapshot,
   ApplyStartingLoadoutResult,
   StartingLoadoutOffer
 } from '../shared/startingLoadout/types'
 import { getCharacterById } from '../db/repositories/characters'
-import { applyStartingLoadout, buildStartingLoadoutOfferWithDiagnostics } from '../db/repositories/startingLoadout'
+import {
+  applyStartingLoadout,
+  buildStartingLoadoutOfferWithDiagnostics,
+  readAppliedStartingLoadoutSnapshot
+} from '../db/repositories/startingLoadout'
 import { getDb } from './db'
 
 export interface GetStartingLoadoutOfferInput {
@@ -15,7 +20,11 @@ export interface GetStartingLoadoutOfferInput {
 }
 
 export type GetStartingLoadoutOfferResult =
-  | { ok: true; offer: StartingLoadoutOffer }
+  | {
+      ok: true
+      offer: StartingLoadoutOffer
+      previousSelections?: AppliedStartingLoadoutSnapshot
+    }
   | {
       ok: false
       reason: 'not_found' | 'offer_unavailable'
@@ -41,7 +50,10 @@ export function getStartingLoadoutOffer(
       missingSpells: built.missingSpells
     }
   }
-  return { ok: true, offer: built.offer }
+  const previousSelections = readAppliedStartingLoadoutSnapshot(db, character.id)
+  return previousSelections
+    ? { ok: true, offer: built.offer, previousSelections }
+    : { ok: true, offer: built.offer }
 }
 
 export interface ApplyStartingLoadoutInput {

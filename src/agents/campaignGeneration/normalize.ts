@@ -41,10 +41,12 @@ import { isBucket } from '../../shared/catalogTaxonomy'
 const MIN_NPCS_PER_REGION_WHEN_NONZERO = 1
 const MIN_QUEST_HOOKS = 1
 const MAX_QUEST_HOOKS = 4
-const MIN_WORLD_SUMMARY_PARAGRAPHS = 3
-const MIN_WORLD_HISTORY_PARAGRAPHS = 5
+const MIN_WORLD_SUMMARY_PARAGRAPHS = 2
+/** 7B locals often land at 3 paras / ~9 sentences — 5×2=10 was rejecting usable history. */
+const MIN_WORLD_HISTORY_PARAGRAPHS = 4
 const MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH = 2
-const MIN_WORLD_HISTORY_SENTENCES_PER_PARAGRAPH = 3
+/** Aligned with summary — 7B locals rarely hit 3 sentences × N paragraphs cleanly. */
+const MIN_WORLD_HISTORY_SENTENCES_PER_PARAGRAPH = 2
 
 // ---------------------------------------------------------------------------
 // World normalization
@@ -253,6 +255,49 @@ export function coerceNpcTemperament(value: unknown): Temperament {
   return parseTemperament(value) ?? 'neutral'
 }
 
+/**
+ * Regroup existing sentences into the required paragraph shape.
+ * Returns undefined when there are not enough sentences — never invents filler.
+ */
+function reshapeProseToParagraphs(
+  text: string,
+  paragraphCount: number,
+  minSentencesPerParagraph: number
+): string | undefined {
+  const sentences = extractSentences(text)
+  const needed = paragraphCount * minSentencesPerParagraph
+  if (sentences.length < needed) {
+    return undefined
+  }
+  const paragraphs: string[] = []
+  let cursor = 0
+  for (let paragraphIndex = 0; paragraphIndex < paragraphCount; paragraphIndex += 1) {
+    const remainingParagraphs = paragraphCount - paragraphIndex
+    const remainingSentences = sentences.length - cursor
+    const take = Math.max(
+      minSentencesPerParagraph,
+      Math.floor(remainingSentences / remainingParagraphs)
+    )
+    paragraphs.push(sentences.slice(cursor, cursor + take).join(' '))
+    cursor += take
+  }
+  return paragraphs.join('\n\n')
+}
+
+function reshapeWorldField(
+  text: string,
+  paragraphCount: number,
+  minSentencesPerParagraph: number,
+  alreadyValid: (value: string) => boolean
+): string {
+  if (alreadyValid(text)) {
+    return text.trim()
+  }
+  return (
+    reshapeProseToParagraphs(text, paragraphCount, minSentencesPerParagraph) ?? text.trim()
+  )
+}
+
 export function normalizeGeneratedWorld(value: unknown): GeneratedWorld | undefined {
   if (typeof value !== 'object' || value === null) {
     return undefined
@@ -266,8 +311,18 @@ export function normalizeGeneratedWorld(value: unknown): GeneratedWorld | undefi
   }
   return {
     worldName,
-    worldSummary: worldSummary.trim(),
-    worldHistory: worldHistory.trim()
+    worldSummary: reshapeWorldField(
+      worldSummary,
+      MIN_WORLD_SUMMARY_PARAGRAPHS,
+      MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH,
+      meetsWorldSummaryProseStandards
+    ),
+    worldHistory: reshapeWorldField(
+      worldHistory,
+      MIN_WORLD_HISTORY_PARAGRAPHS,
+      MIN_WORLD_HISTORY_SENTENCES_PER_PARAGRAPH,
+      meetsWorldHistoryProseStandards
+    )
   }
 }
 
@@ -1275,6 +1330,63 @@ function hasMixedFactionKinds(factions: GeneratedFaction[]): boolean {
   return new Set(factions.map((faction) => faction.kind)).size >= 2
 }
 
+const FAITH_LINK_PATTERN =
+  /\b(temple|church|cult|priest|clergy|faith|deit|gods?|goddess|ritual|shrine|inquisit)\b/i
+
+function factionLooksFaithLinked(faction: GeneratedFaction): boolean {
+  if (faction.deityName) {
+    return true
+  }
+  const blob = [
+    faction.name,
+    faction.summary,
+    faction.motivation,
+    faction.publicFace,
+    faction.methods
+  ]
+    .filter((part): part is string => typeof part === 'string' && part.length > 0)
+    .join(' ')
+  return FAITH_LINK_PATTERN.test(blob)
+}
+
+function pickReligiousPromotionIndex(factions: GeneratedFaction[]): number {
+  const withDeity = factions.findIndex((faction) => Boolean(faction.deityName))
+  if (withDeity >= 0) {
+    return withDeity
+  }
+  const faithLinked = factions.findIndex((faction) => factionLooksFaithLinked(faction))
+  if (faithLinked >= 0) {
+    return faithLinked
+  }
+  return factions.length > 0 ? 0 : -1
+}
+
+function ensureReligiousFactionIfNeeded(
+  factions: GeneratedFactions,
+  deitiesPresent: boolean
+): GeneratedFactions {
+  if (!deitiesPresent || factions.factionPressure === 'light') {
+    return factions
+  }
+  if (factions.factions.some((faction) => faction.kind === 'religious')) {
+    return factions
+  }
+  const index = pickReligiousPromotionIndex(factions.factions)
+  if (index < 0) {
+    return factions
+  }
+  return {
+    ...factions,
+    factions: factions.factions.map((faction, factionIndex) =>
+      factionIndex === index ? { ...faction, kind: 'religious' } : faction
+    )
+  }
+}
+
+export interface NormalizeGeneratedFactionsOptions {
+  deitiesPresent?: boolean
+}
+
 function factionKeysAreUnique(factions: GeneratedFaction[]): boolean {
   const seen = new Set<string>()
   for (const faction of factions) {
@@ -1340,7 +1452,10 @@ function assembleNormalizedFactions(
   }
 }
 
-export function normalizeGeneratedFactions(value: unknown): GeneratedFactions | undefined {
+export function normalizeGeneratedFactions(
+  value: unknown,
+  options?: NormalizeGeneratedFactionsOptions
+): GeneratedFactions | undefined {
   const record = unwrapFactionsRecord(value)
   if (!record) {
     return undefined
@@ -1351,6 +1466,15 @@ export function normalizeGeneratedFactions(value: unknown): GeneratedFactions | 
   if (!pressure || !factionsSummary.trim()) {
     return undefined
   }
+  return finalizeNormalizedFactions(record, pressure, factionsSummary.trim(), options)
+}
+
+function finalizeNormalizedFactions(
+  record: Record<string, unknown>,
+  pressure: NonNullable<ReturnType<typeof parseFactionPressure>>,
+  factionsSummary: string,
+  options?: NormalizeGeneratedFactionsOptions
+): GeneratedFactions | undefined {
   const parsed = parseFactionList(record.factions ?? record.roster)
   const parsedRelations = parseFactionRelationList(
     record.relations ?? record.faction_relations ?? []
@@ -1358,7 +1482,8 @@ export function normalizeGeneratedFactions(value: unknown): GeneratedFactions | 
   if (!parsed || !parsedRelations) {
     return undefined
   }
-  return assembleNormalizedFactions(pressure, factionsSummary.trim(), parsed, parsedRelations)
+  const assembled = assembleNormalizedFactions(pressure, factionsSummary, parsed, parsedRelations)
+  return ensureReligiousFactionIfNeeded(assembled, options?.deitiesPresent === true)
 }
 
 function relationsInPressureBand(factions: GeneratedFactions): boolean {
@@ -1384,9 +1509,9 @@ function meetsReligiousFactionRequirement(
 
 export function isValidGeneratedFactions(
   value: unknown,
-  options?: { deitiesPresent?: boolean }
+  options?: NormalizeGeneratedFactionsOptions
 ): value is GeneratedFactions {
-  const factions = normalizeGeneratedFactions(value)
+  const factions = normalizeGeneratedFactions(value, options)
   if (!factions) {
     return false
   }

@@ -212,7 +212,7 @@ export function EquipmentSelectionForm(props: {
           disabled={props.submitting || !canConfirmEquipmentSelection(props.offer, props.state)}
           onClick={() => void props.onConfirm()}
         >
-          {props.submitting ? 'Equipping...' : 'Tell me about yourself'}
+          {props.submitting ? 'Equipping...' : 'Find your traveling companion'}
         </ProceedButton>
       </div>
     </div>

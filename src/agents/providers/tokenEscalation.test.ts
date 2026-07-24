@@ -158,6 +158,19 @@ describe('withTokenEscalation bounds', () => {
   })
 })
 
+describe('withTokenEscalation local ctx ceiling', () => {
+  it('honors an optional lower ceiling so local ctx clamps do not identical-retry', async () => {
+    const inner = truncatingProvider(Number.POSITIVE_INFINITY)
+    const provider = withTokenEscalation(inner, { ceiling: 4096 })
+
+    await expect(provider.generate('hello', { maxTokens: 4096 })).rejects.toBeInstanceOf(
+      ClaudeTruncationError
+    )
+    expect(inner.calls).toHaveLength(1)
+    expect(inner.calls[0]?.context?.maxTokens).toBe(4096)
+  })
+})
+
 describe('withTokenEscalation: usage aggregation on success', () => {
   it('aggregates inner onUsage snapshots and invokes the outer callback once on success', async () => {
     let attempt = 0

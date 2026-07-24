@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestDb } from './testUtils'
 import { createCampaign } from './repositories/campaigns'
 import { createCharacter, getCharacterById } from './repositories/characters'
-import { readGuidedCreationFields } from './repositories/guidedCreation'
+import { readGuidedCreationFields, setGuidedCreationPhase } from './repositories/guidedCreation'
 import { listCharacterItems } from './repositories/characterItems'
 import {
   applyStartingLoadout,
@@ -64,6 +64,39 @@ describe('applyStartingLoadout fighter', () => {
       spellKeys: ['rallying-strike']
     })
     expect(second).toEqual({ ok: false, reason: 'invalid_phase' })
+  })
+})
+
+describe('applyStartingLoadout replace-on-reapply', () => {
+  it('replaces prior starting gear when re-applied after phase revert', () => {
+    const db = createTestDb()
+    const { player } = seedFighter(db)
+    expect(
+      applyStartingLoadout(db, player.id, {
+        weaponName: 'Longsword',
+        armorName: 'Chain Hauberk',
+        offHandChoice: 'Wooden Shield',
+        spellKeys: ['rallying-strike']
+      })
+    ).toEqual({ ok: true })
+
+    setGuidedCreationPhase(db, player.id, 'equipment')
+
+    expect(
+      applyStartingLoadout(db, player.id, {
+        weaponName: 'Handaxe',
+        armorName: "Traveler's Leathers",
+        offHandChoice: STARTING_OFF_HAND_EMPTY,
+        spellKeys: ['rallying-strike']
+      })
+    ).toEqual({ ok: true })
+
+    expect(listCharacterItems(db, player.id).map((row) => row.item.name).sort()).toEqual(
+      ['Handaxe', "Traveler's Leathers"].sort()
+    )
+    expect(listEquippedAfterLoadout(db, player.id).map((row) => row.item.name).sort()).toEqual(
+      ['Handaxe', "Traveler's Leathers"].sort()
+    )
   })
 })
 

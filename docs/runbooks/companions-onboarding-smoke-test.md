@@ -38,7 +38,7 @@ Flow covered:
 
 1. Run `npm run dev` with a configured provider.
 2. Create a campaign; complete race, background, and equipment.
-3. Confirm equipment lands on **Traveling companion** (not identity interview).
+3. Confirm equipment with **Find your traveling companion**; land on **Traveling companion** (not identity interview).
 4. **Skip path:** click skip/continue with no companion → identity interview starts with empty roster.
 5. **Generate path:** enter a prompt, Generate, review preview, Accept → identity interview; companion name appears in DM grounding.
 6. Enter play; confirm companion roster bar under session chrome (name + role + letter avatar).

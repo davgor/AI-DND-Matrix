@@ -6,6 +6,8 @@ import { LlamaLocalSection } from './LlamaLocalSection'
 import { Player2Section } from './Player2Section'
 import { ProviderModeSelector } from './ProviderModeSelector'
 import { providerSectionKind } from './providerSectionKind'
+import { RagEmbedderSection } from './RagEmbedderSection'
+import { ImageGenerationSection } from './ImageGenerationSection'
 import { useSettings, type SettingsController } from './useSettings'
 import { LlmUsageSection } from './LlmUsageSection'
 import { useLlmUsageSettings } from './useLlmUsageSettings'
@@ -101,8 +103,13 @@ function ProviderSection(props: { controller: SettingsController }): JSX.Element
         draft={controller.draft}
         errors={controller.errors}
         result={controller.llamaRuntimeResult}
+        downloadProgressText={controller.llamaDownloadProgressText}
+        downloadProgressPercent={controller.llamaDownloadProgressPercent}
         onChange={controller.updateDraft}
         onCheckRuntime={controller.checkLlamaRuntime}
+        onDownloadModel={controller.downloadLlamaModel}
+        onCancelDownload={controller.cancelLlamaDownload}
+        onAcquireRuntime={controller.acquireLlamaRuntime}
       />
     )
   }
@@ -136,9 +143,79 @@ function canSave(controller: SettingsController): boolean {
     return false
   }
   if (controller.draft.mode === 'llamacpp') {
-    return controller.llamaRuntimeChecked
+    const catalogReady =
+      controller.draft.llamaCppCatalogModelId.trim() !== '' &&
+      controller.draft.llamaCppDownloadState === 'ready'
+    const hasServer = controller.draft.llamaCppServerPath.trim() !== ''
+    return controller.llamaRuntimeChecked || (catalogReady && hasServer)
   }
   return true
+}
+
+function SettingsPanelFooter(props: {
+  controller: SettingsController
+  currentVersion: string
+}): JSX.Element {
+  const { controller, currentVersion } = props
+  return (
+    <footer className="settings-footer">
+      <div className="settings-version-row">
+        <p className="settings-version" aria-label={`Application version ${currentVersion}`}>
+          Version {currentVersion}
+        </p>
+        <CheckForUpdatesButton />
+      </div>
+      <div className="settings-footer-actions">
+        <button type="button" onClick={controller.requestClose}>
+          Cancel
+        </button>
+        <button type="button" disabled={!canSave(controller)} onClick={() => void controller.save()}>
+          {controller.saving ? 'Saving...' : 'Save'}
+        </button>
+      </div>
+      {controller.draft.mode === 'llamacpp' && !controller.llamaRuntimeChecked && controller.dirty && (
+        <p className="settings-field-error">Run a successful runtime check before saving.</p>
+      )}
+    </footer>
+  )
+}
+
+function SettingsPanelBody(props: {
+  controller: SettingsController
+  llmUsage: ReturnType<typeof useLlmUsageSettings>
+  currentVersion: string
+}): JSX.Element {
+  const { controller, llmUsage, currentVersion } = props
+  return (
+    <>
+      {controller.confirmingDiscard && (
+        <DiscardConfirmation onConfirm={controller.confirmDiscard} onCancel={controller.cancelDiscard} />
+      )}
+      <ProviderModeSelector mode={controller.draft.mode} onChange={(mode) => controller.updateDraft({ mode })} />
+      <ProviderSection controller={controller} />
+      <RagEmbedderSection
+        draft={controller.draft}
+        openaiApiKeySet={controller.openaiApiKeySet}
+        geminiApiKeySet={controller.geminiApiKeySet}
+        downloadProgressText={controller.ragDownloadProgressText}
+        onChange={controller.updateDraft}
+        onDownloadModel={controller.downloadRagModel}
+      />
+      <ImageGenerationSection
+        draft={controller.draft}
+        openaiApiKeySet={controller.openaiApiKeySet}
+        geminiApiKeySet={controller.geminiApiKeySet}
+        grokApiKeySet={controller.grokApiKeySet}
+        onChange={controller.updateDraft}
+        onDownloadModel={async () => {
+          // Image catalog download IPC wired in epic 152.4 — placeholder until then.
+        }}
+      />
+      <LlmUsageSection controller={llmUsage} />
+      {controller.saveFailed && <p className="settings-field-error">Could not save settings. Please try again.</p>}
+      <SettingsPanelFooter controller={controller} currentVersion={currentVersion} />
+    </>
+  )
 }
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
@@ -155,32 +232,11 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
             &#10005;
           </button>
         </header>
-        {controller.confirmingDiscard && (
-          <DiscardConfirmation onConfirm={controller.confirmDiscard} onCancel={controller.cancelDiscard} />
-        )}
-        <ProviderModeSelector mode={controller.draft.mode} onChange={(mode) => controller.updateDraft({ mode })} />
-        <ProviderSection controller={controller} />
-        <LlmUsageSection controller={llmUsage} />
-        {controller.saveFailed && <p className="settings-field-error">Could not save settings. Please try again.</p>}
-        <footer className="settings-footer">
-          <div className="settings-version-row">
-            <p className="settings-version" aria-label={`Application version ${currentVersion}`}>
-              Version {currentVersion}
-            </p>
-            <CheckForUpdatesButton />
-          </div>
-          <div className="settings-footer-actions">
-            <button type="button" onClick={controller.requestClose}>
-              Cancel
-            </button>
-            <button type="button" disabled={!canSave(controller)} onClick={() => void controller.save()}>
-              {controller.saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-          {controller.draft.mode === 'llamacpp' && !controller.llamaRuntimeChecked && controller.dirty && (
-            <p className="settings-field-error">Run a successful runtime check before saving.</p>
-          )}
-        </footer>
+        <SettingsPanelBody
+          controller={controller}
+          llmUsage={llmUsage}
+          currentVersion={currentVersion}
+        />
       </div>
     </div>
   )

@@ -16,7 +16,49 @@ import type { CreateCampaignProgressCallback } from '../../shared/campaignCreate
 import type { DeathMode, RespawnRules } from '../../db/repositories/campaigns'
 import type { Provider } from '../providers/types'
 
-export class CampaignGenerationSchemaError extends Error {}
+export class CampaignGenerationSchemaError extends Error {
+  readonly failedAttempts: GenerationSchemaFailureAttempt[]
+
+  constructor(message: string, failedAttempts: GenerationSchemaFailureAttempt[] = []) {
+    super(message)
+    this.name = 'CampaignGenerationSchemaError'
+    this.failedAttempts = failedAttempts
+  }
+}
+
+/** Per-attempt payload when a stage exhausts schema retries. */
+export type GenerationSchemaFailureReason = 'unparseable' | 'normalize_failed' | 'invalid'
+
+export interface GenerationSchemaFailureAttempt {
+  attempt: number
+  raw: string
+  reason: GenerationSchemaFailureReason
+}
+
+/** Cap logged / attached raw bodies so local model dumps cannot blow the log. */
+export const SCHEMA_FAILURE_RAW_LOG_MAX_CHARS = 4000
+
+export function truncateSchemaFailureRaw(raw: string): string {
+  if (raw.length <= SCHEMA_FAILURE_RAW_LOG_MAX_CHARS) {
+    return raw
+  }
+  return `${raw.slice(0, SCHEMA_FAILURE_RAW_LOG_MAX_CHARS)}…[truncated ${raw.length - SCHEMA_FAILURE_RAW_LOG_MAX_CHARS} chars]`
+}
+
+export function formatSchemaFailureAttemptsLog(
+  error: CampaignGenerationSchemaError
+): string | undefined {
+  if (error.failedAttempts.length === 0) {
+    return undefined
+  }
+  const lines = error.failedAttempts.map((entry) => {
+    const body = truncateSchemaFailureRaw(entry.raw)
+    return `attempt ${entry.attempt}/${error.failedAttempts.length} reason=${entry.reason}\n${body}`
+  })
+  return [`Campaign generation schema failure details (${error.message}):`, ...lines].join(
+    '\n---\n'
+  )
+}
 
 export const MAX_GENERATION_ATTEMPTS = 3
 export const MAX_CAMPAIGN_SEED_ATTEMPTS = 5

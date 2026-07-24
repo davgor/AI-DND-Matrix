@@ -8,12 +8,16 @@ import {
   markSettingsIntroDismissed
 } from './settingsIntroStore'
 
-export function isDevForceShowPopup(): boolean {
-  return !app.isPackaged && process.env['SHOW_POPUP'] === 'true'
+export function isDevForceShowPopup(isPackaged: boolean = app.isPackaged): boolean {
+  // Unpackaged/dev builds always treat the user as first-time for the intro flow.
+  return !isPackaged
 }
 
-export function getSettingsIntroState(filePath: string): SettingsIntroState {
-  const devForceShow = isDevForceShowPopup()
+export function getSettingsIntroState(
+  filePath: string,
+  isPackaged: boolean = app.isPackaged
+): SettingsIntroState {
+  const devForceShow = isDevForceShowPopup(isPackaged)
   const dismissed = isSettingsIntroDismissed(filePath)
   return {
     devForceShow,
@@ -21,8 +25,11 @@ export function getSettingsIntroState(filePath: string): SettingsIntroState {
   }
 }
 
-export function dismissSettingsIntro(filePath: string): void {
-  if (!isDevForceShowPopup()) {
+export function dismissSettingsIntro(
+  filePath: string,
+  isPackaged: boolean = app.isPackaged
+): void {
+  if (!isDevForceShowPopup(isPackaged)) {
     markSettingsIntroDismissed(filePath)
   }
 }

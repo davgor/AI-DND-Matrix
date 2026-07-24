@@ -28,15 +28,16 @@ interface PendingChunkRow {
   text: string
 }
 
-const PENDING_BATCH_SQL = `
+const MISMATCH = `(rc.embedder_id IS NULL OR rc.embedder_id != ? OR rc.model_id IS NULL OR rc.model_id != ? OR rc.embedding_dim IS NULL OR rc.embedding_dim != ?)`
+
+const PENDING_MISSING_SQL = `
   SELECT 'world_facts' AS source_table, wf.id AS source_id, wf.region_id, NULL AS npc_id, wf.content AS text
   FROM world_facts wf
   WHERE wf.campaign_id = ?
     AND NOT EXISTS (
       SELECT 1 FROM rag_chunks rc
       WHERE rc.campaign_id = wf.campaign_id
-        AND rc.source_table = 'world_facts'
-        AND rc.source_id = wf.id
+        AND rc.source_table = 'world_facts' AND rc.source_id = wf.id
     )
   UNION ALL
   SELECT 'npc_memories', nm.id, n.region_id, nm.npc_id, nm.content
@@ -46,8 +47,7 @@ const PENDING_BATCH_SQL = `
     AND NOT EXISTS (
       SELECT 1 FROM rag_chunks rc
       WHERE rc.campaign_id = n.campaign_id
-        AND rc.source_table = 'npc_memories'
-        AND rc.source_id = nm.id
+        AND rc.source_table = 'npc_memories' AND rc.source_id = nm.id
     )
   UNION ALL
   SELECT 'region_history', rh.id, rh.region_id, NULL, rh.content
@@ -57,8 +57,63 @@ const PENDING_BATCH_SQL = `
     AND NOT EXISTS (
       SELECT 1 FROM rag_chunks rc
       WHERE rc.campaign_id = r.campaign_id
-        AND rc.source_table = 'region_history'
-        AND rc.source_id = rh.id
+        AND rc.source_table = 'region_history' AND rc.source_id = rh.id
+    )
+  LIMIT ?
+`
+
+const PENDING_STALE_SQL = `
+  SELECT 'world_facts' AS source_table, wf.id AS source_id, wf.region_id, NULL AS npc_id, wf.content AS text
+  FROM world_facts wf
+  WHERE wf.campaign_id = ?
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM rag_chunks rc
+        WHERE rc.campaign_id = wf.campaign_id
+          AND rc.source_table = 'world_facts' AND rc.source_id = wf.id
+      )
+      OR EXISTS (
+        SELECT 1 FROM rag_chunks rc
+        WHERE rc.campaign_id = wf.campaign_id
+          AND rc.source_table = 'world_facts' AND rc.source_id = wf.id
+          AND ${MISMATCH}
+      )
+    )
+  UNION ALL
+  SELECT 'npc_memories', nm.id, n.region_id, nm.npc_id, nm.content
+  FROM npc_memories nm
+  INNER JOIN npcs n ON n.id = nm.npc_id
+  WHERE n.campaign_id = ?
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM rag_chunks rc
+        WHERE rc.campaign_id = n.campaign_id
+          AND rc.source_table = 'npc_memories' AND rc.source_id = nm.id
+      )
+      OR EXISTS (
+        SELECT 1 FROM rag_chunks rc
+        WHERE rc.campaign_id = n.campaign_id
+          AND rc.source_table = 'npc_memories' AND rc.source_id = nm.id
+          AND ${MISMATCH}
+      )
+    )
+  UNION ALL
+  SELECT 'region_history', rh.id, rh.region_id, NULL, rh.content
+  FROM region_history rh
+  INNER JOIN regions r ON r.id = rh.region_id
+  WHERE r.campaign_id = ?
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM rag_chunks rc
+        WHERE rc.campaign_id = r.campaign_id
+          AND rc.source_table = 'region_history' AND rc.source_id = rh.id
+      )
+      OR EXISTS (
+        SELECT 1 FROM rag_chunks rc
+        WHERE rc.campaign_id = r.campaign_id
+          AND rc.source_table = 'region_history' AND rc.source_id = rh.id
+          AND ${MISMATCH}
+      )
     )
   LIMIT ?
 `
@@ -73,6 +128,11 @@ function ragBackfillReady(db: Database.Database): boolean {
   return row.c === 2
 }
 
+function ragHasEmbedderMeta(db: Database.Database): boolean {
+  const columns = db.prepare(`PRAGMA table_info(rag_chunks)`).all() as Array<{ name: string }>
+  return columns.some((column) => column.name === 'embedder_id')
+}
+
 function isBackfillComplete(db: Database.Database, campaignId: string): boolean {
   const row = db
     .prepare('SELECT completed_at FROM rag_backfill_state WHERE campaign_id = ?')
@@ -80,12 +140,33 @@ function isBackfillComplete(db: Database.Database, campaignId: string): boolean 
   return row?.completed_at != null
 }
 
+function embedderMetaArgs(embedder: Embedder): [string, string, number] {
+  return [embedder.name, embedder.modelId, embedder.dimension]
+}
+
 function fetchPendingBatch(
   db: Database.Database,
   campaignId: string,
+  embedder: Embedder,
   batchSize: number
 ): PendingChunkRow[] {
-  return db.prepare(PENDING_BATCH_SQL).all(campaignId, campaignId, campaignId, batchSize) as PendingChunkRow[]
+  if (!ragHasEmbedderMeta(db)) {
+    return db
+      .prepare(PENDING_MISSING_SQL)
+      .all(campaignId, campaignId, campaignId, batchSize) as PendingChunkRow[]
+  }
+  const meta = embedderMetaArgs(embedder)
+  return db
+    .prepare(PENDING_STALE_SQL)
+    .all(
+      campaignId,
+      ...meta,
+      campaignId,
+      ...meta,
+      campaignId,
+      ...meta,
+      batchSize
+    ) as PendingChunkRow[]
 }
 
 function markBackfillComplete(db: Database.Database, campaignId: string): void {
@@ -123,9 +204,9 @@ async function processBatch(
   batch: PendingChunkRow[],
   embedder: Embedder
 ): Promise<void> {
-  await Promise.all(
-    batch.map((row) => upsertPendingChunk(db, campaignId, row, embedder))
-  )
+  for (const row of batch) {
+    await upsertPendingChunk(db, campaignId, row, embedder)
+  }
 }
 
 export async function backfillCampaignRag(
@@ -143,7 +224,7 @@ export async function backfillCampaignRag(
 
   let processed = 0
   while (true) {
-    const batch = fetchPendingBatch(db, campaignId, batchSize)
+    const batch = fetchPendingBatch(db, campaignId, embedder, batchSize)
     if (batch.length === 0) {
       break
     }

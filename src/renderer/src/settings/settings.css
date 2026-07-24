@@ -97,6 +97,16 @@
   font-size: 12px;
 }
 
+.settings-check-verbose {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 8px 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 1.4;
+  max-height: 220px;
+  overflow: auto;
+}
+
 .settings-secret-badge {
   font-size: 11px;
   color: var(--color-success);
@@ -193,4 +203,138 @@
 
 .settings-usage-export {
   align-self: flex-start;
+}
+
+.settings-llama-catalog {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.settings-llama-catalog legend {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0 4px;
+}
+
+.settings-llama-catalog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-llama-catalog-entry {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  color: var(--text-primary);
+}
+
+.settings-llama-catalog-entry span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-llama-download-state {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-llama-download-state[data-state='ready'] {
+  color: var(--color-success);
+}
+
+.settings-llama-download-state[data-state='failed'] {
+  color: var(--color-error);
+}
+
+.settings-llama-download-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-llama-download-progress-bar {
+  width: 100%;
+  height: 10px;
+  accent-color: var(--color-accent, #3d7ea6);
+}
+
+.settings-llama-advanced {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+}
+
+.settings-llama-advanced summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.settings-llama-runtime-backend {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.85rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-llama-runtime-backend legend {
+  padding: 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-accent);
+}
+
+.settings-llama-runtime-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.settings-llama-runtime-option {
+  position: relative;
+  cursor: pointer;
+}
+
+.settings-llama-runtime-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-llama-runtime-option span {
+  display: inline-block;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.settings-llama-runtime-option input:checked + span {
+  border-color: var(--border-strong);
+  background: rgba(201, 166, 107, 0.16);
+  color: var(--text-primary);
+}
+
+.settings-llama-runtime-option input:focus-visible + span {
+  outline: 2px solid rgba(201, 166, 107, 0.35);
+  outline-offset: 2px;
+}
+
+.settings-llama-runtime-option:hover span {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
 }

@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { EditableField } from '../campaignReview/EditableField'
 import { CampaignReviewWorldContent } from '../campaignReview/CampaignReviewWorldContent'
 import { CampaignReviewStory } from '../campaignReview/CampaignReviewSections'
-import { CampaignReviewFactionsSection } from '../campaignReview/CampaignReviewFactionsSection'
+import {
+  CampaignReviewFactionsSection,
+  shouldShowFactionsSection
+} from '../campaignReview/CampaignReviewFactionsSection'
 import { CampaignReviewReadOnlyRegionCard } from '../campaignReview/CampaignReviewReadOnlyRegionCard'
 import { CampaignHubWorldPreview } from './CampaignHubWorldPreview'
 import { HubSessionRecapSection } from './HubSessionRecapSection'
@@ -130,7 +133,10 @@ describe('CampaignHubWorldPreview factions', () => {
     })
     const emptySection = findByType(empty, CampaignReviewFactionsSection)!
     expect(emptySection.props.readOnly).toBe(true)
-    expect(CampaignReviewFactionsSection(emptySection.props)).toBeNull()
+    expect(emptySection.props.factions).toEqual([])
+    expect(shouldShowFactionsSection(emptySection.props.factionsSummary, emptySection.props.factions)).toBe(
+      false
+    )
 
     const faction: Faction = {
       id: 'f1',
@@ -164,7 +170,8 @@ describe('CampaignHubWorldPreview factions', () => {
     })
     const section = findByType(populated, CampaignReviewFactionsSection)!
     expect(section.props.readOnly).toBe(true)
+    expect(section.props.onSaveSummary).toBeUndefined()
     expect(section.props.factions).toHaveLength(1)
-    expect(findByType(CampaignReviewFactionsSection(section.props)!, EditableField)).toBeUndefined()
+    expect(shouldShowFactionsSection(section.props.factionsSummary, section.props.factions)).toBe(true)
   })
 })

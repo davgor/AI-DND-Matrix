@@ -31,8 +31,8 @@ Flow:
 
 1. Run `npm run dev` with a configured provider.
 2. Create a campaign, complete mechanical character setup, click **Choose your gear**.
-3. Pick weapon, armor, off-hand (if shown), and spells; confirm with **Tell me about yourself**.
-4. Chat through identity until all four foundations complete; click **Help me set the stage**.
+3. Pick weapon, armor, off-hand (if shown), and spells; confirm with **Find your traveling companion**.
+4. On the traveling companion step, skip or accept a companion; then chat through identity until all four foundations complete; click **Help me set the stage**.
 5. Negotiate the opening scene until **Enter the world** appears.
 6. Confirm play view loads with the opening scene in DM exposition.
 7. Open the character sheet — equipped gear, known spells (spellbook), Who / Why / Where / What and opening scene should display.

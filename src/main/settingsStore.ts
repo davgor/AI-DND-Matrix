@@ -55,9 +55,18 @@ export function loadSettings(
     return fallback
   }
   const parsed = JSON.parse(readFileSync(filePath, 'utf-8')) as Partial<PersistedSettingsFile>
+  const rest = parsed.rest ?? {}
   return {
     ...fallback,
-    ...parsed.rest,
+    ...rest,
+    ragEmbedder: {
+      ...fallback.ragEmbedder,
+      ...(rest as { ragEmbedder?: ProviderSettings['ragEmbedder'] }).ragEmbedder
+    },
+    imageGeneration: {
+      ...fallback.imageGeneration,
+      ...(rest as { imageGeneration?: ProviderSettings['imageGeneration'] }).imageGeneration
+    },
     claudeApiKey: decryptKey(codec, parsed.claudeApiKeyEncrypted),
     openaiApiKey: decryptKey(codec, parsed.openaiApiKeyEncrypted),
     geminiApiKey: decryptKey(codec, parsed.geminiApiKeyEncrypted),

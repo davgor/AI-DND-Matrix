@@ -20,7 +20,8 @@ import type {
   EditNpcFaceTokenGenerationInput,
   EditEnemyTokenGenerationInput,
   GenerateRegionInput,
-  GenerateNpcInput
+  GenerateNpcInput,
+  GenerateBestiarySpeciesInput
 } from '../main/campaignEditIpc'
 import type { PlayAwareHubSnapshot } from '../shared/campaignHub/types'
 import type { SessionRecapResult } from '../shared/sessionRecap'
@@ -148,6 +149,10 @@ const campaigns = {
     input: GenerateNpcInput
   ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
     ipcRenderer.invoke('campaigns:generateNpc', input),
+  generateBestiarySpecies: (
+    input: GenerateBestiarySpeciesInput
+  ): Promise<{ ok: true; detail: CampaignDetail } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('campaigns:generateBestiarySpecies', input),
   generateRecap: (campaignId: string): Promise<string> =>
     ipcRenderer.invoke('campaigns:generateRecap', campaignId),
   getOrGenerateSessionRecap: (campaignId: string): Promise<SessionRecapResult> =>
@@ -354,7 +359,11 @@ const startup = {
 
 const startingLoadout = {
   getOffer: (input: { characterId: string }): Promise<
-    | { ok: true; offer: import('../shared/startingLoadout/types').StartingLoadoutOffer }
+    | {
+        ok: true
+        offer: import('../shared/startingLoadout/types').StartingLoadoutOffer
+        previousSelections?: import('../shared/startingLoadout/types').AppliedStartingLoadoutSnapshot
+      }
     | {
         ok: false
         reason: string
@@ -442,7 +451,82 @@ const settings = {
     model: string
   }): Promise<ConnectionCheckResult> => ipcRenderer.invoke('settings:testCloudConnection', input),
   checkLlamaRuntime: (config: ProviderSettings): Promise<ConnectionCheckResult> =>
-    ipcRenderer.invoke('settings:checkLlamaRuntime', config)
+    ipcRenderer.invoke('settings:checkLlamaRuntime', config),
+  startLlamaModelDownload: (
+    catalogModelId: string
+  ): Promise<{ ok: true; modelPath: string } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('llamacpp:startModelDownload', catalogModelId),
+  cancelLlamaModelDownload: (): Promise<void> => ipcRenderer.invoke('llamacpp:cancelModelDownload'),
+  discoverLlamaRuntime: (): Promise<{
+    presence: 'path' | 'userData' | 'missing'
+    serverPath: string | null
+  }> => ipcRenderer.invoke('llamacpp:discoverRuntime'),
+  acquireLlamaRuntime: (): Promise<
+    { ok: true; serverPath: string } | { ok: false; message: string; recoveryHint: string }
+  > => ipcRenderer.invoke('llamacpp:acquireRuntime'),
+  applyLlamaLifecycle: (): Promise<ConnectionCheckResult> =>
+    ipcRenderer.invoke('llamacpp:applyLifecycle'),
+  onLlamaDownloadProgress: (
+    listener: (payload: {
+      catalogModelId: string
+      phase: string
+      bytesReceived: number
+      bytesTotal: number | null
+      percent: number | null
+      errorMessage?: string
+    }) => void
+  ): (() => void) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      payload: {
+        catalogModelId: string
+        phase: string
+        bytesReceived: number
+        bytesTotal: number | null
+        percent: number | null
+        errorMessage?: string
+      }
+    ): void => {
+      listener(payload)
+    }
+    ipcRenderer.on('llamacpp:downloadProgress', handler)
+    return () => ipcRenderer.removeListener('llamacpp:downloadProgress', handler)
+  },
+  getRagEmbedderStatus: (): Promise<{
+    ragEmbedder: import('../shared/rag/embedderSettings').RagEmbedderSettings
+    catalog: readonly import('../shared/rag/localCatalog').RagLocalCatalogEntry[]
+    diskReady: boolean
+    ready: boolean
+    reason: string
+    openaiApiKeySet: boolean
+    geminiApiKeySet: boolean
+  }> => ipcRenderer.invoke('rag:getStatus'),
+  startRagModelDownload: (
+    catalogModelId?: string
+  ): Promise<{ ok: true; modelPath: string } | { ok: false; message: string }> =>
+    ipcRenderer.invoke('rag:startModelDownload', catalogModelId),
+  onRagDownloadProgress: (
+    listener: (payload: {
+      catalogModelId: string
+      receivedBytes: number
+      totalBytes: number | null
+      phase: string
+    }) => void
+  ): (() => void) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      payload: {
+        catalogModelId: string
+        receivedBytes: number
+        totalBytes: number | null
+        phase: string
+      }
+    ): void => {
+      listener(payload)
+    }
+    ipcRenderer.on('rag:downloadProgress', handler)
+    return () => ipcRenderer.removeListener('rag:downloadProgress', handler)
+  }
 }
 
 const llmUsage = {

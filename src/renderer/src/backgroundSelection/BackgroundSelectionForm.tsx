@@ -11,6 +11,7 @@ import { OnboardingBackButton } from '../onboarding/OnboardingBackButton'
 import {
   canConfirmBackgroundSelection,
   descriptionForSelection,
+  isBackgroundStoryGenerateDisabled,
   selectCustomBackground,
   type BackgroundSelectionState
 } from './backgroundSelectionLogic'
@@ -80,24 +81,12 @@ function BackgroundSelectionStorySection(props: {
       disabled={props.submitting}
       onChange={(value) => props.setState({ ...props.state, story: value })}
       onGenerateClick={props.onOpenGenerate}
-      generateDisabled={canGenerateBackgroundStory({
+      generateDisabled={isBackgroundStoryGenerateDisabled({
         state: props.state,
         submitting: props.submitting,
         isCustom: props.isCustom
       })}
     />
-  )
-}
-
-function canGenerateBackgroundStory(props: {
-  state: BackgroundSelectionState
-  submitting: boolean
-  isCustom: boolean
-}): boolean {
-  return (
-    Boolean(props.state.backgroundKey) &&
-    !props.submitting &&
-    (!props.isCustom || Boolean(props.state.customLabel.trim()))
   )
 }
 

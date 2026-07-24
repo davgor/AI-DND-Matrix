@@ -9,9 +9,11 @@ import {
 import { buildBackgroundApplyInput } from './backgroundSelectionApply'
 import {
   canConfirmBackgroundSelection,
+  canGenerateBackgroundStory,
   descriptionForSelection,
   hydrateBackgroundSelectionState,
   initialBackgroundSelectionState,
+  isBackgroundStoryGenerateDisabled,
   resolveInitialBackgroundSelectionState,
   selectBackground,
   selectCustomBackground
@@ -47,6 +49,44 @@ describe('backgroundSelectionLogic selection', () => {
     const custom = selectCustomBackground(initialBackgroundSelectionState())
     expect(canConfirmBackgroundSelection(custom)).toBe(false)
     expect(canConfirmBackgroundSelection({ ...custom, customLabel: 'River Smuggler' })).toBe(true)
+  })
+})
+
+describe('backgroundSelectionLogic generate gating (157)', () => {
+  it('enables Generate after a roster background is selected', () => {
+    const state = selectBackground(initialBackgroundSelectionState(), roster[0]!)
+    const args = { state, submitting: false, isCustom: false }
+    expect(canGenerateBackgroundStory(args)).toBe(true)
+    expect(isBackgroundStoryGenerateDisabled(args)).toBe(false)
+  })
+
+  it('disables Generate when no background is selected', () => {
+    const args = {
+      state: initialBackgroundSelectionState(),
+      submitting: false,
+      isCustom: false
+    }
+    expect(canGenerateBackgroundStory(args)).toBe(false)
+    expect(isBackgroundStoryGenerateDisabled(args)).toBe(true)
+  })
+
+  it('disables Generate while submitting or custom label is empty', () => {
+    const selected = selectBackground(initialBackgroundSelectionState(), roster[0]!)
+    expect(
+      isBackgroundStoryGenerateDisabled({ state: selected, submitting: true, isCustom: false })
+    ).toBe(true)
+
+    const custom = selectCustomBackground(initialBackgroundSelectionState())
+    expect(
+      isBackgroundStoryGenerateDisabled({ state: custom, submitting: false, isCustom: true })
+    ).toBe(true)
+    expect(
+      isBackgroundStoryGenerateDisabled({
+        state: { ...custom, customLabel: 'River Smuggler' },
+        submitting: false,
+        isCustom: true
+      })
+    ).toBe(false)
   })
 })
 

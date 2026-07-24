@@ -19,7 +19,7 @@ export function buildWorldSummaryFromHistoryPrompt(input: {
     WORLD_FANTASY_TONE_RULES,
     PROSE_CLARITY_RULES,
     FANTASY_TROPE_DIVERSITY_RULES,
-    'Write a fresh worldSummary hook for players: exactly three paragraphs separated by blank lines, each with at least two full sentences.',
+    'Write a fresh worldSummary hook for players: at least two paragraphs separated by blank lines, each with at least two full sentences.',
     'Distill present-day tensions and wonder from the history in plain English — a player hook, not a timeline recap.',
     'Respond ONLY with JSON:',
     '{"worldSummary":string}'

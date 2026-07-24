@@ -83,6 +83,28 @@ Settings UI (016) mirrors these fields; persisted settings override `.env` at ru
 - Keep the installer lean; store downloaded models/runtime under Electron `userData`.
 - Manual `winget install llama.cpp` / GitHub binary remains an advanced fallback, not the happy path.
 
+### userData asset layout (020.6)
+
+Relative to Electron `app.getPath('userData')` (or `.data/` in unpackaged dev):
+
+```
+{userData}/llamacpp/
+  models/{catalogModelId}.gguf   # curated downloads (020.18)
+  runtime/llama-server[.exe]     # acquired runtime (020.19)
+settings.json                    # persisted Settings including catalog id + download state
+```
+
+- Absolute BYO `llamaCppServerPath` / `llamaCppModelPath` still override when present on disk.
+- Reference catalog model for smoke: **Qwen2.5-7B-Instruct Q4_K_M** (≈8 GB+ VRAM or 16 GB+ RAM CPU fallback).
+- Resolution helpers live in `src/main/llamacpp/paths.ts` (`resolveLlamaCppAssetPaths`).
+- **Uninstall (Windows NSIS, 020.26):** the Setup uninstaller prompts to remove `userData/llamacpp` (default **Yes**). Campaign saves / settings outside that folder are kept. Auto-update / upgrade (`isUpdated`) skips the prompt so models survive version bumps. Portable `.exe` and macOS DMG have no NSIS uninstaller — delete `{userData}/llamacpp` manually if reclaiming disk.
+
+### Runtime discover / acquire (020.19)
+
+1. Discover: last-known Settings path → `userData/llamacpp/runtime/llama-server[.exe]` → PATH (`where` / `which`).
+2. Acquire (Windows v1): download pinned **Vulkan** zip by default (`resolveWindowsRuntimeZipUrl('vulkan')`), or CPU zip when Settings backend is `cpu`; extract with `tar`, install full package into `userData/llamacpp/runtime/`.
+3. Advanced fallback only: CUDA/HIP GitHub zips, `winget install llama.cpp`, or manual path — not required for the happy path.
+
 ## Risks and mitigations
 - Model load latency can be high:
   - mitigate with startup progress messaging and health polling (015 loading screen).

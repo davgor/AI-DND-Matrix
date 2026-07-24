@@ -36,7 +36,33 @@ interface RagChunkRow {
   embedding: Buffer
 }
 
+interface MetaFilter {
+  sql: string
+  args: unknown[]
+}
+
+interface LoadChunksArgs {
+  db: Database.Database
+  campaignId: string
+  meta: MetaFilter
+}
+
 const CHUNK_COLUMNS = 'source_table, source_id, text, embedding'
+
+function ragHasEmbedderMeta(db: Database.Database): boolean {
+  const columns = db.prepare(`PRAGMA table_info(rag_chunks)`).all() as Array<{ name: string }>
+  return columns.some((column) => column.name === 'embedder_id')
+}
+
+function buildMetaFilter(db: Database.Database, embedder: Embedder): MetaFilter {
+  if (!ragHasEmbedderMeta(db)) {
+    return { sql: '', args: [] }
+  }
+  return {
+    sql: ' AND embedder_id = ? AND model_id = ? AND embedding_dim = ?',
+    args: [embedder.name, embedder.modelId, embedder.dimension]
+  }
+}
 
 /**
  * Semantic retrieval over indexed rag_chunks for a campaign.
@@ -48,6 +74,8 @@ const CHUNK_COLUMNS = 'source_table, source_id, text, embedding'
  * - `npc` — requires `scopeIds.npcId`. Returns (a) chunks with `npc_id = npcId`, and
  *   (b) when `scopeIds.regionId` is set, `world_facts` chunks with that `region_id`.
  *   Optional `factionTag` is reserved for hybrid rank (**083.9**); not applied here.
+ *
+ * When embedder meta columns exist, only same-space vectors are scored.
  */
 export async function retrieveRelevantChunks(
   params: RetrieveRelevantChunksParams
@@ -58,7 +86,7 @@ export async function retrieveRelevantChunks(
     return []
   }
 
-  const rows = loadScopedChunks(db, campaignId, scope, scopeIds)
+  const rows = loadScopedChunks({ db, campaignId, scope, scopeIds, embedder })
   if (rows.length === 0) {
     return []
   }
@@ -79,20 +107,31 @@ export async function retrieveRelevantChunks(
   return scored.slice(0, k)
 }
 
-function loadScopedChunks(
-  db: Database.Database,
-  campaignId: string,
-  scope: RetrievalScope,
+function loadScopedChunks(input: {
+  db: Database.Database
+  campaignId: string
+  scope: RetrievalScope
   scopeIds: RetrievalScopeIds | undefined
-): RagChunkRow[] {
-  const loaders: Record<RetrievalScope, () => RagChunkRow[]> = {
-    campaign: () => loadCampaignChunks(db, campaignId),
-    region: () => loadRegionChunks(db, campaignId, requireScopeId(scopeIds?.regionId, 'regionId', 'region')),
-    character: () =>
-      loadCharacterChunks(db, campaignId, requireScopeId(scopeIds?.characterId, 'characterId', 'character')),
-    npc: () => loadNpcChunks(db, campaignId, scopeIds)
+  embedder: Embedder
+}): RagChunkRow[] {
+  const meta = buildMetaFilter(input.db, input.embedder)
+  const args: LoadChunksArgs = {
+    db: input.db,
+    campaignId: input.campaignId,
+    meta
   }
-  return loaders[scope]()
+  const loaders: Record<RetrievalScope, () => RagChunkRow[]> = {
+    campaign: () => loadCampaignChunks(args),
+    region: () =>
+      loadRegionChunks(args, requireScopeId(input.scopeIds?.regionId, 'regionId', 'region')),
+    character: () =>
+      loadCharacterChunks(
+        args,
+        requireScopeId(input.scopeIds?.characterId, 'characterId', 'character')
+      ),
+    npc: () => loadNpcChunks(args, input.scopeIds)
+  }
+  return loaders[input.scope]()
 }
 
 function requireScopeId(value: string | undefined, field: string, scope: string): string {
@@ -102,53 +141,44 @@ function requireScopeId(value: string | undefined, field: string, scope: string)
   return value
 }
 
-function loadCampaignChunks(db: Database.Database, campaignId: string): RagChunkRow[] {
-  return db
+function loadCampaignChunks(args: LoadChunksArgs): RagChunkRow[] {
+  return args.db
     .prepare(
       `SELECT ${CHUNK_COLUMNS}
        FROM rag_chunks
-       WHERE campaign_id = ?`
+       WHERE campaign_id = ?${args.meta.sql}`
     )
-    .all(campaignId) as RagChunkRow[]
+    .all(args.campaignId, ...args.meta.args) as RagChunkRow[]
 }
 
-function loadRegionChunks(
-  db: Database.Database,
-  campaignId: string,
-  regionId: string
-): RagChunkRow[] {
-  return db
+function loadRegionChunks(args: LoadChunksArgs, regionId: string): RagChunkRow[] {
+  return args.db
     .prepare(
       `SELECT ${CHUNK_COLUMNS}
        FROM rag_chunks
-       WHERE campaign_id = ? AND region_id = ?`
+       WHERE campaign_id = ? AND region_id = ?${args.meta.sql}`
     )
-    .all(campaignId, regionId) as RagChunkRow[]
+    .all(args.campaignId, regionId, ...args.meta.args) as RagChunkRow[]
 }
 
-function loadCharacterChunks(
-  db: Database.Database,
-  campaignId: string,
-  characterId: string
-): RagChunkRow[] {
-  return db
+function loadCharacterChunks(args: LoadChunksArgs, characterId: string): RagChunkRow[] {
+  return args.db
     .prepare(
       `SELECT ${CHUNK_COLUMNS}
        FROM rag_chunks
-       WHERE campaign_id = ? AND character_id = ?`
+       WHERE campaign_id = ? AND character_id = ?${args.meta.sql}`
     )
-    .all(campaignId, characterId) as RagChunkRow[]
+    .all(args.campaignId, characterId, ...args.meta.args) as RagChunkRow[]
 }
 
 function loadNpcChunks(
-  db: Database.Database,
-  campaignId: string,
+  args: LoadChunksArgs,
   scopeIds: RetrievalScopeIds | undefined
 ): RagChunkRow[] {
   const npcId = requireScopeId(scopeIds?.npcId, 'npcId', 'npc')
   const regionId = scopeIds?.regionId
   if (regionId) {
-    return db
+    return args.db
       .prepare(
         `SELECT ${CHUNK_COLUMNS}
          FROM rag_chunks
@@ -156,15 +186,15 @@ function loadNpcChunks(
            AND (
              npc_id = ?
              OR (source_table = 'world_facts' AND region_id = ?)
-           )`
+           )${args.meta.sql}`
       )
-      .all(campaignId, npcId, regionId) as RagChunkRow[]
+      .all(args.campaignId, npcId, regionId, ...args.meta.args) as RagChunkRow[]
   }
-  return db
+  return args.db
     .prepare(
       `SELECT ${CHUNK_COLUMNS}
        FROM rag_chunks
-       WHERE campaign_id = ? AND npc_id = ?`
+       WHERE campaign_id = ? AND npc_id = ?${args.meta.sql}`
     )
-    .all(campaignId, npcId) as RagChunkRow[]
+    .all(args.campaignId, npcId, ...args.meta.args) as RagChunkRow[]
 }

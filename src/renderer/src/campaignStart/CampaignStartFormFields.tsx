@@ -15,6 +15,7 @@ import {
   MIN_REGION_COUNT
 } from '../../../shared/campaignCreate/types'
 import { clampNpcsPerRegion, clampRegionCount } from '../../../shared/campaignCreate/validation'
+import { IMAGE_GENERATION_NOT_READY_MESSAGE } from '../../../shared/settings/imageProviderSettings'
 import { FieldRandomDiceButton, FieldWithRandomInputRow } from '../components/FieldRandomDiceButton'
 import { CampaignStartCountField, CampaignStartRespawnLocationField } from './CampaignStartRandomFields'
 import type { CampaignStartFlow } from './useCampaignStartFlow'
@@ -158,34 +159,43 @@ function CampaignStartDeathModeFields(props: { flow: CampaignStartFlow }): JSX.E
   )
 }
 
-function CampaignStartGenerativeTokensFields(props: { flow: CampaignStartFlow }): JSX.Element {
-  const { flow } = props
-  const disabled = flow.submitting
+function CampaignStartGenerativeTokensFields(props: {
+  flow: CampaignStartFlow
+  imageReady: boolean
+}): JSX.Element {
+  const { flow, imageReady } = props
+  const disabled = flow.submitting || !imageReady
   return (
-    <label className="campaign-start-checkbox-field">
-      <input
-        type="checkbox"
-        checked={flow.form.generativeTokensEnabled}
-        disabled={disabled}
-        onChange={(event) => flow.updateForm({ generativeTokensEnabled: event.target.checked })}
-      />
-      <span>
-        Use generative tokens?
-        <span className="campaign-start-field-hint">
-          Off by default. When on, speaking NPCs, AI companions, and combat creatures get async
-          portraits for Social / dossiers / roster (never blocks play). Local image models stay
-          optional.
+    <>
+      <label className="campaign-start-checkbox-field">
+        <input
+          type="checkbox"
+          checked={flow.form.generativeTokensEnabled}
+          disabled={disabled}
+          onChange={(event) => flow.updateForm({ generativeTokensEnabled: event.target.checked })}
+        />
+        <span>
+          Use generative tokens?
+          <span className="campaign-start-field-hint">
+            Off by default. When on, speaking NPCs, AI companions, and combat creatures get async
+            portraits for Social / dossiers / roster (never blocks play). Local image models stay
+            optional.
+          </span>
         </span>
-      </span>
-    </label>
+      </label>
+      {!imageReady ? (
+        <p className="campaign-start-field-hint">{IMAGE_GENERATION_NOT_READY_MESSAGE}</p>
+      ) : null}
+    </>
   )
 }
 
 export function CampaignStartFormFields(props: {
   flow: CampaignStartFlow
   isError: boolean
+  imageReady: boolean
 }): JSX.Element {
-  const { flow, isError } = props
+  const { flow, isError, imageReady } = props
   return (
     <>
       <h2 id="campaign-start-title">{isError ? 'Campaign creation failed' : 'New campaign'}</h2>
@@ -193,7 +203,7 @@ export function CampaignStartFormFields(props: {
       <CampaignStartIdentityFields flow={flow} />
       <CampaignStartGenerationFields flow={flow} />
       <CampaignStartDeathModeFields flow={flow} />
-      <CampaignStartGenerativeTokensFields flow={flow} />
+      <CampaignStartGenerativeTokensFields flow={flow} imageReady={imageReady} />
     </>
   )
 }

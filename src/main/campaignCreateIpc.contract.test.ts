@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { listBestiarySpecies } from '../db/repositories/bestiary'
 import {
   listFactionRelationsByCampaign,
@@ -11,9 +11,19 @@ import {
   buildCrimsonReachCascadingResponses,
   buildRealisticLlmCascadingSeedResponses,
   buildShieldHeroCascadingSeedResponses,
-  persistNpcEnrichmentResponses
+  persistNpcEnrichmentResponses,
+  REALISTIC_FACTIONS_BLOCK_DRIFT_RESPONSE
 } from '../test/fixtures/campaignGenerationFixtures'
 import { createCampaignFromRequest, resetCampaignCreateForTests } from './campaignCreateIpc'
+import { setGenerativeTokensGuardForTests } from './generativeTokensGuard'
+
+beforeEach(() => {
+  setGenerativeTokensGuardForTests(() => ({ ok: true }))
+})
+
+afterEach(() => {
+  setGenerativeTokensGuardForTests(null)
+})
 
 const GENERATION_FAILURE_MESSAGE =
   'The narrative engine returned an invalid campaign. Try again or simplify your premise.'
@@ -35,46 +45,66 @@ function providerForDefaultForm(): ReturnType<typeof createScriptedProvider> {
   ])
 }
 
+function expectDefaultFormCreateOk(
+  db: ReturnType<typeof createTestDb>,
+  result: Awaited<ReturnType<typeof createCampaignFromRequest>>
+): void {
+  expect(result.ok).toBe(true)
+  if (!result.ok) {
+    return
+  }
+  expect(result.detail.campaign?.name).toBe('Saga of Ashen Crown')
+  expect(result.detail.campaign?.worldName).toBe('Eldermere')
+  expect(result.detail.campaign?.worldSummary).toContain('desert caravan realm')
+  expect(result.detail.campaign?.pantheonSummary).toBeTruthy()
+  expect(result.detail.deities.length).toBeGreaterThanOrEqual(8)
+  expect(result.detail.deities.length).toBeLessThanOrEqual(12)
+  expect(result.detail.deities.filter((deity) => deity.isForgotten).length).toBeGreaterThanOrEqual(2)
+  const pressure = parseFactionPressure(result.detail.campaign?.factionPressure)
+  expect(pressure).toBeDefined()
+  const band = FACTION_PRESSURE_BANDS[pressure!]
+  const factions = listFactionsByCampaign(db, result.detail.campaign!.id)
+  expect(factions.length).toBeGreaterThanOrEqual(band.minFactions)
+  expect(factions.length).toBeLessThanOrEqual(band.maxFactions)
+  expect(result.detail.campaign?.factionsSummary?.trim().length).toBeGreaterThan(0)
+  expect(factions.some((faction) => faction.kind === 'religious')).toBe(true)
+  expect(factions.some((faction) => faction.deityId !== null)).toBe(true)
+  const relations = listFactionRelationsByCampaign(db, result.detail.campaign!.id)
+  expect(relations.length).toBeGreaterThanOrEqual(band.minRelations)
+  expect(relations.length).toBeLessThanOrEqual(band.maxRelations)
+  expect(result.detail.regions).toHaveLength(2)
+  expect(result.detail.npcs).toHaveLength(6)
+  expect(result.detail.storyThreads[0]?.title).toBe('The Missing Envoy')
+  const species = listBestiarySpecies(db, result.detail.campaign!.id)
+  expect(species.length).toBeGreaterThanOrEqual(3)
+  expect(species.every((entry) => entry.baseLore.trim().length > 0)).toBe(true)
+}
+
 describe('createCampaignFromRequest contract — default setup form', () => {
   it('succeeds for 2 regions, 3 NPCs, and standard death mode', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
     const result = await createCampaignFromRequest(db, providerForDefaultForm(), DEFAULT_CREATE_REQUEST)
-    expect(result.ok).toBe(true)
-    if (!result.ok) {
-      return
-    }
-    expect(result.detail.campaign?.name).toBe('Saga of Ashen Crown')
-    expect(result.detail.campaign?.worldName).toBe('Eldermere')
-    expect(result.detail.campaign?.worldSummary).toContain('desert caravan realm')
-    expect(result.detail.campaign?.pantheonSummary).toBeTruthy()
-    expect(result.detail.deities.length).toBeGreaterThanOrEqual(8)
-    expect(result.detail.deities.length).toBeLessThanOrEqual(12)
-    expect(result.detail.deities.filter((deity) => deity.isForgotten).length).toBeGreaterThanOrEqual(2)
-    const pressure = parseFactionPressure(result.detail.campaign?.factionPressure)
-    expect(pressure).toBeDefined()
-    const band = FACTION_PRESSURE_BANDS[pressure!]
-    const factions = listFactionsByCampaign(db, result.detail.campaign!.id)
-    expect(factions.length).toBeGreaterThanOrEqual(band.minFactions)
-    expect(factions.length).toBeLessThanOrEqual(band.maxFactions)
-    expect(result.detail.campaign?.factionsSummary?.trim().length).toBeGreaterThan(0)
-    expect(factions.some((faction) => faction.kind === 'religious')).toBe(true)
-    expect(factions.some((faction) => faction.deityId !== null)).toBe(true)
-    const relations = listFactionRelationsByCampaign(db, result.detail.campaign!.id)
-    expect(relations.length).toBeGreaterThanOrEqual(band.minRelations)
-    expect(relations.length).toBeLessThanOrEqual(band.maxRelations)
-    expect(result.detail.regions).toHaveLength(2)
-    expect(result.detail.npcs).toHaveLength(6)
-    expect(result.detail.storyThreads[0]?.title).toBe('The Missing Envoy')
-    const species = listBestiarySpecies(db, result.detail.campaign!.id)
-    expect(species.length).toBeGreaterThanOrEqual(3)
-    expect(species.every((entry) => entry.baseLore.trim().length > 0)).toBe(true)
+    expectDefaultFormCreateOk(db, result)
   })
 
   it('accepts realistic live-model response shapes', async () => {
     resetCampaignCreateForTests()
     const db = createTestDb()
     const result = await createCampaignFromRequest(db, providerForDefaultForm(), DEFAULT_CREATE_REQUEST)
+    expect(result.ok).toBe(true)
+  })
+
+  it('accepts labeled-block faction dumps with prose noise around tags (161.6)', async () => {
+    resetCampaignCreateForTests()
+    const db = createTestDb()
+    const responses = buildRealisticLlmCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
+    responses[3] = REALISTIC_FACTIONS_BLOCK_DRIFT_RESPONSE
+    const provider = createScriptedProvider([...responses, ...persistNpcEnrichmentResponses(6)])
+    const result = await createCampaignFromRequest(db, provider, {
+      ...DEFAULT_CREATE_REQUEST,
+      sessionId: 'contract-faction-block-drift'
+    })
     expect(result.ok).toBe(true)
   })
 })

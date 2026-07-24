@@ -8,6 +8,10 @@ import type {
 import { DEFAULT_PROVIDER_SETTINGS } from '../../../shared/settings/types'
 import { validateProviderSettings } from '../../../shared/settings/validation'
 import { buildSaveInput, isSettingsDirty, toDraftSettings } from './settingsDraft'
+import {
+  createLlamaSettingsActions,
+  subscribeLlamaDownloadProgress
+} from './useSettingsLlamaActions'
 
 export interface SettingsController {
   draft: ProviderSettings
@@ -25,6 +29,9 @@ export interface SettingsController {
   cloudConnectionResult: ConnectionCheckResult | null
   llamaRuntimeResult: ConnectionCheckResult | null
   llamaRuntimeChecked: boolean
+  llamaDownloadProgressText: string | null
+  llamaDownloadProgressPercent: number | null
+  ragDownloadProgressText: string | null
   updateDraft: (patch: Partial<ProviderSettings>) => void
   save: () => Promise<void>
   requestClose: () => void
@@ -33,6 +40,10 @@ export interface SettingsController {
   testPlayer2: () => Promise<void>
   testCloud: () => Promise<void>
   checkLlamaRuntime: () => Promise<void>
+  downloadLlamaModel: () => Promise<void>
+  cancelLlamaDownload: () => Promise<void>
+  acquireLlamaRuntime: () => Promise<void>
+  downloadRagModel: () => Promise<void>
 }
 
 interface ApiKeySetFlags {
@@ -53,6 +64,9 @@ interface SettingsState extends ApiKeySetFlags {
   cloudConnectionResult: ConnectionCheckResult | null
   llamaRuntimeResult: ConnectionCheckResult | null
   llamaRuntimeChecked: boolean
+  llamaDownloadProgressText: string | null
+  llamaDownloadProgressPercent: number | null
+  ragDownloadProgressText: string | null
   setBaseline: (settings: ProviderSettings) => void
   setDraft: React.Dispatch<React.SetStateAction<ProviderSettings>>
   setApiKeyFlags: (flags: ApiKeySetFlags) => void
@@ -64,6 +78,9 @@ interface SettingsState extends ApiKeySetFlags {
   setCloudConnectionResult: (result: ConnectionCheckResult | null) => void
   setLlamaRuntimeResult: (result: ConnectionCheckResult | null) => void
   setLlamaRuntimeChecked: (value: boolean) => void
+  setLlamaDownloadProgressText: (value: string | null) => void
+  setLlamaDownloadProgressPercent: (value: number | null) => void
+  setRagDownloadProgressText: (value: string | null) => void
 }
 
 function emptyKeyFlags(): ApiKeySetFlags {
@@ -109,6 +126,11 @@ function useSettingsState(): SettingsState {
   const [cloudConnectionResult, setCloudConnectionResult] = useState<ConnectionCheckResult | null>(null)
   const [llamaRuntimeResult, setLlamaRuntimeResult] = useState<ConnectionCheckResult | null>(null)
   const [llamaRuntimeChecked, setLlamaRuntimeChecked] = useState(false)
+  const [llamaDownloadProgressText, setLlamaDownloadProgressText] = useState<string | null>(null)
+  const [llamaDownloadProgressPercent, setLlamaDownloadProgressPercent] = useState<number | null>(
+    null
+  )
+  const [ragDownloadProgressText, setRagDownloadProgressText] = useState<string | null>(null)
 
   return {
     baseline,
@@ -122,6 +144,9 @@ function useSettingsState(): SettingsState {
     cloudConnectionResult,
     llamaRuntimeResult,
     llamaRuntimeChecked,
+    llamaDownloadProgressText,
+    llamaDownloadProgressPercent,
+    ragDownloadProgressText,
     setBaseline,
     setDraft,
     setApiKeyFlags,
@@ -132,7 +157,10 @@ function useSettingsState(): SettingsState {
     setPlayerConnectionResult,
     setCloudConnectionResult,
     setLlamaRuntimeResult,
-    setLlamaRuntimeChecked
+    setLlamaRuntimeChecked,
+    setLlamaDownloadProgressText,
+    setLlamaDownloadProgressPercent,
+    setRagDownloadProgressText
   }
 }
 
@@ -153,6 +181,62 @@ function useLoadSettingsOnMount(state: SettingsState): void {
     void load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+}
+
+function useLlamaDownloadProgressSubscription(state: SettingsState): void {
+  useEffect(() => {
+    return subscribeLlamaDownloadProgress(state)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+}
+
+function useRagDownloadProgressSubscription(state: SettingsState): void {
+  useEffect(() => {
+    return window.settings.onRagDownloadProgress((payload) => {
+      if (payload.phase === 'ready') {
+        state.setRagDownloadProgressText('Download complete.')
+        return
+      }
+      if (payload.phase === 'failed') {
+        state.setRagDownloadProgressText('Download failed.')
+        return
+      }
+      if (payload.totalBytes && payload.totalBytes > 0) {
+        const pct = Math.min(100, Math.round((payload.receivedBytes / payload.totalBytes) * 100))
+        state.setRagDownloadProgressText(`Downloading… ${pct}%`)
+        return
+      }
+      state.setRagDownloadProgressText('Downloading…')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+}
+
+async function downloadRagModel(state: SettingsState): Promise<void> {
+  const catalogId = state.draft.ragEmbedder.localCatalogModelId
+  state.setRagDownloadProgressText('Downloading…')
+  state.setDraft((current) => ({
+    ...current,
+    ragEmbedder: { ...current.ragEmbedder, localDownloadState: 'downloading' }
+  }))
+  const result = await window.settings.startRagModelDownload(catalogId)
+  if (result.ok) {
+    state.setDraft((current) => ({
+      ...current,
+      ragEmbedder: {
+        ...current.ragEmbedder,
+        localDownloadState: 'ready',
+        localModelPath: result.modelPath
+      }
+    }))
+    state.setRagDownloadProgressText('Download complete.')
+    return
+  }
+  state.setDraft((current) => ({
+    ...current,
+    ragEmbedder: { ...current.ragEmbedder, localDownloadState: 'failed' }
+  }))
+  state.setRagDownloadProgressText(result.message)
 }
 
 function currentKeyFlags(state: SettingsState): ApiKeySetFlags {
@@ -184,6 +268,11 @@ async function performSave(state: SettingsState): Promise<void> {
       geminiApiKeySet: redacted.geminiApiKeySet,
       grokApiKeySet: redacted.grokApiKeySet
     })
+    if (nextDraft.mode === 'llamacpp') {
+      const applyResult = await window.settings.applyLlamaLifecycle()
+      state.setLlamaRuntimeResult(applyResult)
+      state.setLlamaRuntimeChecked(applyResult.ok)
+    }
   } catch {
     state.setSaveFailed(true)
   } finally {
@@ -191,9 +280,41 @@ async function performSave(state: SettingsState): Promise<void> {
   }
 }
 
+function createConnectionActions(state: SettingsState): {
+  testPlayer2: () => Promise<void>
+  testCloud: () => Promise<void>
+  checkLlamaRuntime: () => Promise<void>
+} {
+  return {
+    async testPlayer2(): Promise<void> {
+      state.setPlayerConnectionResult(
+        await window.settings.testPlayer2Connection(state.draft.player2BaseUrl)
+      )
+    },
+    async testCloud(): Promise<void> {
+      const credentials = cloudCredentials(state.draft)
+      if (!credentials) {
+        return
+      }
+      state.setCloudConnectionResult(await window.settings.testCloudConnection(credentials))
+    },
+    async checkLlamaRuntime(): Promise<void> {
+      const result = await window.settings.checkLlamaRuntime(state.draft)
+      state.setLlamaRuntimeResult(result)
+      state.setLlamaRuntimeChecked(result.ok)
+    }
+  }
+}
+
 function useSettingsActions(state: SettingsState, onClose: () => void) {
   function updateDraft(patch: Partial<ProviderSettings>): void {
-    state.setDraft((current) => ({ ...current, ...patch }))
+    state.setDraft((current) => ({
+      ...current,
+      ...patch,
+      ragEmbedder: patch.ragEmbedder
+        ? { ...current.ragEmbedder, ...patch.ragEmbedder }
+        : current.ragEmbedder
+    }))
     state.setErrors([])
     state.setSaveFailed(false)
     state.setLlamaRuntimeChecked(false)
@@ -214,39 +335,23 @@ function useSettingsActions(state: SettingsState, onClose: () => void) {
     onClose()
   }
 
-  async function testPlayer2(): Promise<void> {
-    state.setPlayerConnectionResult(await window.settings.testPlayer2Connection(state.draft.player2BaseUrl))
-  }
-
-  async function testCloud(): Promise<void> {
-    const credentials = cloudCredentials(state.draft)
-    if (!credentials) {
-      return
-    }
-    state.setCloudConnectionResult(await window.settings.testCloudConnection(credentials))
-  }
-
-  async function checkLlamaRuntime(): Promise<void> {
-    const result = await window.settings.checkLlamaRuntime(state.draft)
-    state.setLlamaRuntimeResult(result)
-    state.setLlamaRuntimeChecked(result.ok)
-  }
-
   return {
     updateDraft,
     save: () => performSave(state),
     requestClose,
     confirmDiscard,
     cancelDiscard: () => state.setConfirmingDiscard(false),
-    testPlayer2,
-    testCloud,
-    checkLlamaRuntime
+    ...createConnectionActions(state),
+    ...createLlamaSettingsActions(state),
+    downloadRagModel: () => downloadRagModel(state)
   }
 }
 
 export function useSettings(onClose: () => void): SettingsController {
   const state = useSettingsState()
   useLoadSettingsOnMount(state)
+  useLlamaDownloadProgressSubscription(state)
+  useRagDownloadProgressSubscription(state)
   const actions = useSettingsActions(state, onClose)
   const flags = currentKeyFlags(state)
   const draftValid = validateProviderSettings(state.draft, validationContext(flags)).length === 0
@@ -267,6 +372,9 @@ export function useSettings(onClose: () => void): SettingsController {
     cloudConnectionResult: state.cloudConnectionResult,
     llamaRuntimeResult: state.llamaRuntimeResult,
     llamaRuntimeChecked: state.llamaRuntimeChecked,
+    llamaDownloadProgressText: state.llamaDownloadProgressText,
+    llamaDownloadProgressPercent: state.llamaDownloadProgressPercent,
+    ragDownloadProgressText: state.ragDownloadProgressText,
     ...actions
   }
 }

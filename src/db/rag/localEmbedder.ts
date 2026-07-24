@@ -64,12 +64,18 @@ export function embedHashedText(text: string): number[] {
   return l2Normalize(bag)
 }
 
-export function createLocalEmbedder(): Embedder {
+export function createLexicalEmbedder(): Embedder {
   return {
-    name: 'local',
+    name: 'lexical',
     dimension: EMBEDDING_DIMENSION,
+    modelId: 'hashed-bow-v1',
     async embed(texts: string[]): Promise<number[][]> {
       return texts.map(embedHashedText)
     }
   }
+}
+
+/** @deprecated Prefer createLexicalEmbedder — same hashed bag-of-words stand-in. */
+export function createLocalEmbedder(): Embedder {
+  return createLexicalEmbedder()
 }

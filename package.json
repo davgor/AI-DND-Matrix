@@ -22,12 +22,14 @@
     "pretest": "npm run rebuild:node",
     "test": "vitest run",
     "terminology:check": "node scripts/terminology-check.mjs",
+    "external-downloads:check": "node scripts/check-external-downloads.mjs",
     "deadcode": "node scripts/deadcode-check.mjs",
     "deadcode:refresh": "node scripts/deadcode-refresh.mjs",
     "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
     "rebuild:node": "npm rebuild better-sqlite3"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.7.2",
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
     "electron-log": "^5.4.4",
@@ -51,6 +53,9 @@
     "typescript": "^5.5.2",
     "vite": "^7.3.6",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "sharp": ">=0.35.0"
   },
   "build": {
     "appId": "com.davgor.aidndmatrix",
@@ -94,7 +99,8 @@
       "oneClick": true,
       "perMachine": false,
       "allowElevation": true,
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "include": "build/installer.nsh"
     },
     "portable": {
       "artifactName": "${productName}-${version}-Portable.${ext}"

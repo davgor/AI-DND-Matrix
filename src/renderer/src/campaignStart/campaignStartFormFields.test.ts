@@ -15,4 +15,12 @@ describe('CampaignStartFormFields generation defaults', () => {
   it('defaults generative tokens to OFF', () => {
     expect(DEFAULT_CAMPAIGN_SETUP_FORM.generativeTokensEnabled).toBe(false)
   })
+
+  it('keeps Use generative tokens? on the campaign start form only (153.1)', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const startFields = readFileSync(join(__dirname, 'CampaignStartFormFields.tsx'), 'utf8')
+    expect(startFields).toContain('Use generative tokens?')
+    expect(startFields).toContain('generativeTokensEnabled')
+  })
 })

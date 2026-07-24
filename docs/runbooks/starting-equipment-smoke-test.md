@@ -27,8 +27,8 @@ Flow:
 1. Run `npm run dev` with a configured provider.
 2. Create a campaign and complete mechanical character setup; click **Choose your gear**.
 3. Select weapon, armor, and off-hand options. If you pick a two-handed weapon, confirm shield/second-weapon options disable.
-4. For casters, pick the required number of spells; confirm **Tell me about yourself** stays disabled until all picks are made.
-5. Confirm equipment; guided identity should start.
+4. For casters, pick the required number of spells; confirm **Find your traveling companion** stays disabled until all picks are made.
+5. Confirm equipment; traveling companion step should start (then identity after skip/accept).
 6. Open character sheet during identity — equipped weapon/armor and AC should reflect choices; spellbook should list starting spells.
 7. Restart the app before confirming equipment — you should return to the equipment page.
 8. Complete guided creation and enter play — gear and spells should persist.

@@ -115,47 +115,20 @@ describe('testPlayer2Connection', () => {
   })
 })
 
-describe('checkLlamaRuntimeConfig', () => {
-  it('reports ok when an attach-mode health check returns 200', async () => {
-    const result = await checkLlamaRuntimeConfig(
-      { ...DEFAULT_PROVIDER_SETTINGS, llamaCppStartMode: 'attach', llamaCppBaseUrl: 'http://127.0.0.1:8080' },
-      { fetchHealth: async () => 200 }
-    )
-    expect(result.ok).toBe(true)
-  })
-
-  it('reports a typed failure when an attach-mode health check is unreachable', async () => {
-    const result = await checkLlamaRuntimeConfig(
-      { ...DEFAULT_PROVIDER_SETTINGS, llamaCppStartMode: 'attach', llamaCppBaseUrl: 'http://127.0.0.1:8080' },
-      { fetchHealth: async () => 0 }
-    )
-    expect(result.ok).toBe(false)
-  })
-
-  it('reports a failure for managed mode when the server or model path does not exist', async () => {
+describe('checkLlamaRuntimeConfig re-export', () => {
+  it('still exposes checkLlamaRuntimeConfig from settingsIpc for callers', async () => {
     const result = await checkLlamaRuntimeConfig(
       {
         ...DEFAULT_PROVIDER_SETTINGS,
-        llamaCppStartMode: 'managed',
-        llamaCppServerPath: '/does/not/exist/llama-server',
-        llamaCppModelPath: '/does/not/exist/model.gguf'
+        llamaCppStartMode: 'attach',
+        llamaCppBaseUrl: 'http://127.0.0.1:8080'
       },
-      { pathExists: () => false }
-    )
-    expect(result.ok).toBe(false)
-    expect(result.message).toContain('not found')
-  })
-
-  it('reports ok for managed mode when both paths exist', async () => {
-    const result = await checkLlamaRuntimeConfig(
       {
-        ...DEFAULT_PROVIDER_SETTINGS,
-        llamaCppStartMode: 'managed',
-        llamaCppServerPath: '/real/llama-server',
-        llamaCppModelPath: '/real/model.gguf'
-      },
-      { pathExists: () => true }
+        fetchHealth: async () => ({ status: 200 }),
+        pingChat: async () => ({ ok: true, status: 200, latencyMs: 1, preview: 'pong' })
+      }
     )
     expect(result.ok).toBe(true)
+    expect(result.message).toMatch(/LLM ping/i)
   })
 })

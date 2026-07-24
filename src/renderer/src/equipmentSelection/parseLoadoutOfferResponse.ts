@@ -1,7 +1,14 @@
-import type { StartingLoadoutOffer } from '../../../shared/startingLoadout/types'
+import type {
+  AppliedStartingLoadoutSnapshot,
+  StartingLoadoutOffer
+} from '../../../shared/startingLoadout/types'
 
 type LoadoutOfferResponse =
-  | { ok: true; offer: StartingLoadoutOffer }
+  | {
+      ok: true
+      offer: StartingLoadoutOffer
+      previousSelections?: AppliedStartingLoadoutSnapshot
+    }
   | {
       ok: false
       reason: string
@@ -13,12 +20,27 @@ function isStartingLoadoutOffer(value: object): value is StartingLoadoutOffer {
   return 'archetype' in value && 'weapons' in value && 'spellPickCount' in value
 }
 
+function isAppliedSnapshot(value: unknown): value is AppliedStartingLoadoutSnapshot {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+  return 'weaponName' in value && 'armorName' in value && 'spellKeys' in value
+}
+
 export function parseLoadoutOfferResponse(result: unknown): LoadoutOfferResponse {
   if (!result || typeof result !== 'object') {
     return { ok: false, reason: 'invalid_response' }
   }
   if ('ok' in result) {
-    return result as LoadoutOfferResponse
+    const wrapped = result as LoadoutOfferResponse
+    if (
+      wrapped.ok &&
+      wrapped.previousSelections !== undefined &&
+      !isAppliedSnapshot(wrapped.previousSelections)
+    ) {
+      return { ok: true, offer: wrapped.offer }
+    }
+    return wrapped
   }
   if (isStartingLoadoutOffer(result)) {
     return { ok: true, offer: result }

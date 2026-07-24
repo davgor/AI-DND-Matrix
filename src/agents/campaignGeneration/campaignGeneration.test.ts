@@ -9,10 +9,14 @@ import { listQuestHooksByRegion } from '../../db/repositories/worldFacts'
 import { createScriptedProvider } from '../providers/mockHarness'
 import type { ScriptedResponse } from '../providers/mockHarness'
 import type { Provider } from '../providers/types'
+import { LlamaCppTruncationError } from '../providers/llamacpp'
+import { tryParseJson } from '../jsonResponse'
 import { buildAvailableRaceOptions } from '../raceLore'
 import {
   CampaignGenerationSchemaError,
   MAX_GENERATION_ATTEMPTS,
+  SCHEMA_FAILURE_RAW_LOG_MAX_CHARS,
+  formatSchemaFailureAttemptsLog,
   generateAdditionalRegion,
   generateAndPersistCampaign,
   generateCampaignSeed,
@@ -23,6 +27,7 @@ import {
 import {
   buildAdditionalRegionPrompt,
   buildCanonRecallPrompt,
+  buildFactionsGenerationPrompt,
   buildPantheonGenerationPrompt,
   buildRegionsGenerationPrompt,
   buildSingleNpcPrompt,
@@ -49,15 +54,22 @@ import {
   VALID_FACTIONS_RESPONSE,
   EMPTY_CANON_RESPONSE,
   VALID_PANTHEON_RESPONSE,
+  LIVE_SPLIT_WORLD_JSON_DUMP,
+  LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND,
   buildCascadingSeedResponses,
   buildShieldHeroCascadingSeedResponses,
   makeBestiarySeedResponse,
   makeNpcs,
   makeRegion,
   RACE_LORE_RESPONSE,
-  SETUP_INPUT
+  SETUP_INPUT,
+  ADDITIONAL_REGION_PARSED,
+  additionalRegionLabeledBlocks,
+  regionsLabeledBlocks,
+  storyLabeledBlocks,
+  singleNpcLabeledBlocks,
+  worldLabeledBlocks
 } from '../../test/fixtures/campaignGenerationFixtures'
-import type { GeneratedNpc, GeneratedRegion } from '.'
 import type { CreateCampaignStage } from '../../shared/campaignCreate/types'
 import {
   countParagraphs,
@@ -73,6 +85,7 @@ import {
   normalizeRaceKeyForRoster
 } from './normalize'
 import { meetsProseJargonStandards } from './proseJargonGuard'
+import { meetsWorldTropeDiversity } from './tropeGuard'
 
 const SPEAKING_STYLE_FIXTURE_RESPONSE = JSON.stringify({
   specimen: "I keep my voice low and my bargains lower — that's how you survive here.",
@@ -103,8 +116,8 @@ const VORATH_STACKED_SUMMARY =
 
 describe('normalizeGeneratedWorld', () => {
   it('counts single-newline paragraph breaks from live models', () => {
-    expect(countParagraphs(REALISTIC_LLM_WORLD.world_summary as string)).toBeGreaterThanOrEqual(3)
-    expect(countParagraphs(REALISTIC_LLM_WORLD.world_history as string)).toBeGreaterThanOrEqual(5)
+    expect(countParagraphs(REALISTIC_LLM_WORLD.world_summary as string)).toBeGreaterThanOrEqual(2)
+    expect(countParagraphs(REALISTIC_LLM_WORLD.world_history as string)).toBeGreaterThanOrEqual(4)
     expect(isValidGeneratedWorld(REALISTIC_LLM_WORLD)).toBe(true)
   })
 
@@ -117,6 +130,58 @@ describe('normalizeGeneratedWorld', () => {
     const normalized = normalizeGeneratedWorld(shortWorld)
     expect(normalized?.worldSummary).toContain('mountain pass')
     expect(isValidGeneratedWorld(shortWorld)).toBe(false)
+  })
+})
+
+describe('normalizeGeneratedWorld live short local dumps (165)', () => {
+  it('accepts a near-miss history dump that was one sentence short of the old 5×2 bar', () => {
+    const liveAttempt2 = {
+      worldName: 'Mistmarsh',
+      worldSummary: [
+        'In the lawless desert city of Mistmarsh, where strange lights rise from the old quarries at dusk, the people live in constant vigilance. The harsh winds and ever-shifting sands of the desert encircle the city, a place of forgotten gods and unending struggle.',
+        'Each day, worshippers from the diverse pantheon seek solace and guidance, hoping to navigate the treacherous landscape with the aid of the living deities, while the forgotten ones still whisper their ancient secrets in the shadows. The quarries, once the heart of the city, now glow with a spectral light at night, drawing both awe and fear from the inhabitants.',
+        'The quarries are said to be haunted by the spirits of those who toiled there, their cries for justice echoing through the ruins. The city itself is a collection of crumbling buildings and bustling markets, where guilds of merchants and artisans compete for power and resources.'
+      ].join('\n\n'),
+      worldHistory: [
+        'In the dawn of time, the city of Mistmarsh was founded by a coalition of desert tribes, united under the banner of the pantheon of living gods. Kaela, the Stormbringer, granted protection from the harsh storms and wars that plagued the land, while Nara, the Hearthkeeper, provided solace and sustenance through the hearth and home.',
+        'Zorak, the Wavebreaker, ensured the city\'s prosperity through trade, and Vaelen, the Wraithmaster, protected the city from the secrets and dangers that lay hidden. However, with the rise of Thalor, the Trickster, and the decline of the forgotten gods, the city began to unravel.',
+        'Thalor\'s chaos and misrule led to factionalism and instability, while the forgotten gods, Xylar and Zylara, faded into obscurity, their memories and power vanishing with the sands of time. The quarries, once a symbol of strength and stability, became a site of forgotten lore and eerie power.',
+        'In recent epochs, the city has faced numerous threats, from bandit raids to a plague that ravaged the population. The guilds, each aligned with one of the pantheon\'s deities, struggle for control, leading to a cycle of power plays and alliances. The present feels unstable, with the old order crumbling and new dangers lurking in the misty sands, waiting to be uncovered.'
+      ].join('\n\n')
+    }
+    const normalized = normalizeGeneratedWorld(liveAttempt2)
+    expect(normalized).toBeDefined()
+    expect(isValidGeneratedWorld(normalized)).toBe(true)
+    expect(meetsWorldTropeDiversity(normalized!, 'strange lights rise from the old quarries at dusk')).toBe(
+      true
+    )
+  })
+})
+
+describe('live local split world JSON dump (020.32)', () => {
+  it('still parses the captured two-object Qwen dump via tryParseJson (interim JSON path)', () => {
+    const parsed = tryParseJson(LIVE_SPLIT_WORLD_JSON_DUMP)
+    const normalized = normalizeGeneratedWorld(parsed)
+    expect(normalized?.worldName).toBe('Aetheris')
+    expect(normalized?.worldHistory).toContain('Gornath')
+    expect(isValidGeneratedWorld(normalized)).toBe(true)
+  })
+
+  it('accepts the same world content as labeled blocks through generateCampaignWorld (161.4)', async () => {
+    const normalized = normalizeGeneratedWorld(tryParseJson(LIVE_SPLIT_WORLD_JSON_DUMP))
+    expect(normalized).toBeDefined()
+    const blocks = worldLabeledBlocks({
+      worldName: normalized!.worldName,
+      worldSummary: normalized!.worldSummary,
+      worldHistory: normalized!.worldHistory
+    })
+    const provider = createScriptedProvider([blocks])
+    const world = await generateCampaignWorld(
+      provider,
+      'The party is hired to investigate strange lights rise from the old quarries at dusk in a ruined monastery ruled by a mercenary company.'
+    )
+    expect(world.worldName).toBe('Aetheris')
+    expect(world.worldSummary.length).toBeGreaterThan(40)
   })
 })
 
@@ -183,8 +248,58 @@ describe('normalizeGeneratedFactions: trimming', () => {
     }
     expect(isValidGeneratedFactions(thin, { deitiesPresent: true })).toBe(false)
   })
+})
 
-  it('rejects medium rosters without religious factions when deities exist', () => {
+describe('normalizeGeneratedFactions religious promote (020.33)', () => {
+  it('promotes a faith-linked faction to religious when medium pressure and deities exist', () => {
+    const noReligiousKind = {
+      factionPressure: 'medium',
+      factionsSummary: 'Stormbringers and Weavers vie for influence.',
+      factions: [
+        {
+          key: 'stormbringers',
+          name: 'Stormbringers',
+          kind: 'civic',
+          summary: 'Mages who harness storms and bargain with storm gods.',
+          deityName: 'Kaelon'
+        },
+        { key: 'weavers', name: 'Weavers', kind: 'mercantile', summary: 'Trade guilds.' },
+        { key: 'hunters', name: 'Hunters', kind: 'military', summary: 'Border patrols.' }
+      ],
+      relations: [
+        { factionAKey: 'stormbringers', factionBKey: 'weavers', stance: 'tense' },
+        { factionAKey: 'weavers', factionBKey: 'hunters', stance: 'rival' }
+      ]
+    }
+    const normalized = normalizeGeneratedFactions(noReligiousKind, { deitiesPresent: true })
+    expect(normalized?.factions.find((faction) => faction.key === 'stormbringers')?.kind).toBe(
+      'religious'
+    )
+    expect(isValidGeneratedFactions(noReligiousKind, { deitiesPresent: true })).toBe(true)
+  })
+})
+
+describe('normalizeGeneratedFactions live dump (020.33)', () => {
+  it('accepts the live Qwen medium dump after religious-kind coercion', () => {
+    expect(
+      isValidGeneratedFactions(LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND, {
+        deitiesPresent: false
+      })
+    ).toBe(true)
+    const normalized = normalizeGeneratedFactions(LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND, {
+      deitiesPresent: true
+    })
+    expect(normalized?.factions.some((faction) => faction.kind === 'religious')).toBe(true)
+    expect(
+      isValidGeneratedFactions(LIVE_MEDIUM_FACTIONS_MISSING_RELIGIOUS_KIND, {
+        deitiesPresent: true
+      })
+    ).toBe(true)
+  })
+})
+
+describe('normalizeGeneratedFactions secular medium (020.33)', () => {
+  it('leaves secular medium rosters alone when no deities are present', () => {
     const noFaith = {
       factionPressure: 'medium',
       factionsSummary: 'Secular courts only.',
@@ -198,8 +313,12 @@ describe('normalizeGeneratedFactions: trimming', () => {
         { factionAKey: 'b', factionBKey: 'c', stance: 'tense' }
       ]
     }
-    expect(isValidGeneratedFactions(noFaith, { deitiesPresent: true })).toBe(false)
     expect(isValidGeneratedFactions(noFaith, { deitiesPresent: false })).toBe(true)
+    expect(
+      normalizeGeneratedFactions(noFaith, { deitiesPresent: false })?.factions.every(
+        (faction) => faction.kind !== 'religious'
+      )
+    ).toBe(true)
   })
 })
 
@@ -418,14 +537,14 @@ describe('generateCampaignSeed NPC slot retries', () => {
     const provider = createScriptedProvider([
       EMPTY_CANON_RESPONSE,
       VALID_PANTHEON_RESPONSE,
-      JSON.stringify(VALID_WORLD),
+      worldLabeledBlocks(VALID_WORLD),
       VALID_FACTIONS_RESPONSE,
-      JSON.stringify({ regions }),
-      JSON.stringify({ npc: firstNpc }),
-      JSON.stringify({ npc: duplicateNpc }),
-      JSON.stringify({ npc: uniqueNpc }),
+      regionsLabeledBlocks(regions),
+      singleNpcLabeledBlocks('Ashen Crown Bazaar', firstNpc),
+      singleNpcLabeledBlocks('Ashen Crown Bazaar', duplicateNpc),
+      singleNpcLabeledBlocks('Ashen Crown Bazaar', uniqueNpc),
       makeBestiarySeedResponse(),
-      JSON.stringify({ storyThread: { title: 'Arc', state: 'starting', summary: 'S' } })
+      storyLabeledBlocks({ title: 'Arc', summary: 'S' })
     ])
     const result = await generateCampaignSeed(provider, 'premise', { regionCount: 1, npcsPerRegion: 2 })
     expect(result.npcs).toHaveLength(2)
@@ -546,14 +665,49 @@ describe('generateCampaignSeed edge counts (054.3)', () => {
   })
 })
 
+describe('buildFactionsGenerationPrompt skeleton fill (161.3)', () => {
+  it('does not require raw JSON from the model', () => {
+    const prompt = buildFactionsGenerationPrompt(
+      'A desert caravan city.',
+      {
+        worldName: 'Eldermere',
+        worldSummary: 'Desert caravans.',
+        worldHistory: 'Old dunes.'
+      },
+      {
+        pantheonSummary: 'Tide and ash gods.',
+        deities: [
+          {
+            name: 'Vhalor',
+            epithet: '',
+            domains: ['tides'],
+            tenets: ['Keep oaths'],
+            blurb: 'A tide judge.',
+            isForgotten: false
+          }
+        ]
+      }
+    )
+    expect(prompt).not.toContain('Respond ONLY with a single JSON object')
+    expect(prompt).toContain('Do NOT emit JSON')
+    expect(prompt).toContain('{{FACTIONS_SUMMARY}}')
+    expect(prompt).toContain('Never emit a literal tag named TOKEN')
+    expect(prompt).not.toContain('<<<TOKEN>>>')
+  })
+})
+
 describe('buildWorldGenerationPrompt', () => {
   it('asks for world name, summary, and history only', () => {
     const prompt = buildWorldGenerationPrompt('A marsh kingdom')
     expect(prompt).toContain('worldName')
-    expect(prompt).toContain('Tyria')
+    expect(prompt).toContain('{{WORLD_NAME}}')
     expect(prompt).toContain('science fiction')
-    expect(prompt).toContain('five paragraphs')
-    expect(prompt).toContain('three full sentences')
+    expect(prompt).toContain('four paragraphs')
+    expect(prompt).toContain('two full sentences')
+    expect(prompt).toContain('Do NOT emit JSON')
+    expect(prompt).toContain('{{WORLD_NAME}}')
+    expect(prompt).toContain('<<<WORLD_NAME>>>')
+    expect(prompt).toContain('{{WORLD_NAME}} line headers')
     expect(prompt).not.toContain('"regions"')
   })
 
@@ -666,7 +820,11 @@ describe('buildPantheonGenerationPrompt (059)', () => {
     })
     expect(prompt).toContain('The Three Heroes')
     expect(prompt).toContain('Prefer the known deity')
-    expect(prompt).toContain('8–12')
+    expect(prompt).toContain('Do NOT emit JSON')
+    expect(prompt).toContain('{{PANTHEON_SUMMARY}}')
+    expect(prompt).toContain('{{DEITY_0_NAME}}')
+    expect(prompt).toContain('<<<DEITY_0>>>')
+    expect(prompt).toContain('The engine loads your strings into the JSON skeleton')
   })
 })
 
@@ -714,7 +872,7 @@ describe('generateCampaignWorld prose guard', () => {
       ...VALID_WORLD,
       worldSummary: `${VALID_WORLD.worldSummary}\n\nA kraken rules the deeps beneath every harbor.`
     }
-    const provider = createScriptedProvider([JSON.stringify(badWorld), JSON.stringify(VALID_WORLD)])
+    const provider = createScriptedProvider([worldLabeledBlocks(badWorld), worldLabeledBlocks(VALID_WORLD)])
     const world = await generateCampaignWorld(provider, 'A quiet farming valley')
     expect(world.worldSummary).not.toMatch(/kraken/i)
   })
@@ -724,7 +882,7 @@ describe('generateCampaignWorld prose guard', () => {
       ...VALID_WORLD,
       worldSummary: VORATH_STACKED_SUMMARY
     }
-    const provider = createScriptedProvider([JSON.stringify(badWorld), JSON.stringify(VALID_WORLD)])
+    const provider = createScriptedProvider([worldLabeledBlocks(badWorld), worldLabeledBlocks(VALID_WORLD)])
     const world = await generateCampaignWorld(provider, 'A quiet farming valley')
     expect(meetsProseJargonStandards(world.worldSummary)).toBe(true)
   })
@@ -775,6 +933,90 @@ describe('generateCampaignSeed schema rejection + retry (007.4, generation half)
     )
     expect(provider.calls.length).toBeGreaterThanOrEqual(MAX_GENERATION_ATTEMPTS)
   })
+
+  it('does not restart the full seed when a stage hits output truncation', async () => {
+    const calls: string[] = []
+    const provider: Provider = {
+      async generate(prompt: string): Promise<string> {
+        calls.push(prompt)
+        throw new LlamaCppTruncationError('truncated at max_tokens')
+      }
+    }
+    await expect(generateCampaignSeed(provider, 'x', { regionCount: 1, npcsPerRegion: 1 })).rejects.toBeInstanceOf(
+      LlamaCppTruncationError
+    )
+    // Canon truncates up to MAX_GENERATION_ATTEMPTS, then aborts — no ×5 outer restart.
+    expect(calls.length).toBe(MAX_GENERATION_ATTEMPTS)
+  })
+})
+
+describe('generateCampaignSeed world schema fail-fast (020.30)', () => {
+  it('does not restart the full seed when world schema fails after stage retries', async () => {
+    const calls: string[] = []
+    const provider: Provider = {
+      async generate(prompt: string): Promise<string> {
+        calls.push(prompt)
+        if (prompt.includes('knownPlaces') || prompt.includes('recognizedSetting')) {
+          return EMPTY_CANON_RESPONSE
+        }
+        if (prompt.includes('pantheonSummary') || prompt.includes('isForgotten')) {
+          return VALID_PANTHEON_RESPONSE
+        }
+        return 'not a valid world payload'
+      }
+    }
+    await expect(
+      generateCampaignSeed(provider, 'A quiet farming valley', { regionCount: 1, npcsPerRegion: 1 })
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof CampaignGenerationSchemaError && /valid world schema/i.test(error.message)
+    )
+    // canon + pantheon + world×3 — not ×5 full seed restarts.
+    expect(calls.length).toBe(2 + MAX_GENERATION_ATTEMPTS)
+  })
+})
+
+describe('generateWithRetries schema failure diagnostics (020.31)', () => {
+  it('attaches truncated raw responses and reasons to CampaignGenerationSchemaError', async () => {
+    const huge = `not-json-${'x'.repeat(5000)}`
+    const missingBlocks = ['<<<WORLD_NAME>>>', 'OnlyName', '<<</WORLD_NAME>>>'].join('\n')
+    const provider = createScriptedProvider(['not json at all', missingBlocks, huge])
+    let caught: unknown
+    try {
+      await generateCampaignWorld(provider, 'A quiet farming valley')
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(CampaignGenerationSchemaError)
+    const schemaError = caught as CampaignGenerationSchemaError
+    expect(schemaError.failedAttempts).toHaveLength(MAX_GENERATION_ATTEMPTS)
+    expect(schemaError.failedAttempts[0]).toMatchObject({
+      attempt: 1,
+      reason: 'unparseable',
+      raw: 'not json at all'
+    })
+    expect(schemaError.failedAttempts[1]).toMatchObject({
+      attempt: 2,
+      reason: 'unparseable'
+    })
+    expect(schemaError.failedAttempts[2]?.reason).toBe('unparseable')
+    expect(schemaError.failedAttempts[2]?.raw.length).toBeLessThanOrEqual(
+      SCHEMA_FAILURE_RAW_LOG_MAX_CHARS + 40
+    )
+    expect(schemaError.failedAttempts[2]?.raw).toContain('[truncated')
+  })
+
+  it('formats schema failure attempts for the main log', () => {
+    const error = new CampaignGenerationSchemaError('DM agent did not return a valid world schema after retries', [
+      { attempt: 1, reason: 'unparseable', raw: 'nope' },
+      { attempt: 2, reason: 'invalid', raw: '{"worldName":"X"}' }
+    ])
+    const formatted = formatSchemaFailureAttemptsLog(error)
+    expect(formatted).toContain('valid world schema')
+    expect(formatted).toContain('reason=unparseable')
+    expect(formatted).toContain('nope')
+    expect(formatted).toContain('reason=invalid')
+  })
 })
 
 describe('normalizeAdditionalRegion', () => {
@@ -806,17 +1048,14 @@ describe('generateAdditionalRegion', () => {
     expect(result.npcs.every((npc) => npc.regionName === 'Mistfen Crossing')).toBe(true)
   })
 
-  it('accepts human-readable alignment labels and string canSpeak from the model', async () => {
-    const payload = {
-      region: makeRegion('Ashmere Ossuary', 'death'),
-      npcs: makeNpcs('Ashmere Ossuary', 'Ash').map((npc) => ({
-        ...npc,
-        alignment: 'True Neutral',
-        temperament: 'Cautious',
-        canSpeak: 'true'
-      }))
-    }
-    const provider = createScriptedProvider([JSON.stringify(payload)])
+  it('accepts human-readable alignment labels from labeled blocks', async () => {
+    const region = makeRegion('Ashmere Ossuary', 'death')
+    const npcs = makeNpcs('Ashmere Ossuary', 'Ash').map((npc) => ({
+      ...npc,
+      alignment: 'True Neutral',
+      temperament: 'Cautious'
+    }))
+    const provider = createScriptedProvider([additionalRegionLabeledBlocks(region, npcs)])
     const result = await generateAdditionalRegion(
       provider,
       'A kingdom where death is sacred',
@@ -830,11 +1069,8 @@ describe('generateAdditionalRegion', () => {
   })
 
   it('allows zero NPCs when npcCount is 0', async () => {
-    const payload = JSON.stringify({
-      region: makeRegion('Silent Moor', 'fog'),
-      npcs: []
-    })
-    const provider = createScriptedProvider([payload])
+    const region = makeRegion('Silent Moor', 'fog')
+    const provider = createScriptedProvider([additionalRegionLabeledBlocks(region, [])])
     const result = await generateAdditionalRegion(
       provider,
       'A flooded kingdom.',
@@ -848,21 +1084,17 @@ describe('generateAdditionalRegion', () => {
 
 describe('generateSingleNpc', () => {
   it('returns one NPC tied to the target region', async () => {
-    const payload = JSON.stringify({
-      npc: {
-        name: 'Rook Vale',
-        role: 'hermit',
-        backstory: 'Rook keeps to the fog.',
-        disposition: 'gruff',
-        regionName: 'Oakhollow',
-        temperament: 'cautious',
-        canSpeak: true,
-        alignment: 'true_neutral',
-        race: 'human',
-        background: 'hermit',
-        gender: 'unspecified',
-        class: 'commoner'
-      }
+    const payload = singleNpcLabeledBlocks('Oakhollow', {
+      name: 'Rook Vale',
+      role: 'hermit',
+      backstory: 'Rook keeps to the fog.',
+      disposition: 'gruff',
+      temperament: 'cautious',
+      alignment: 'true_neutral',
+      race: 'human',
+      background: 'hermit',
+      gender: 'unspecified',
+      class: 'commoner'
     })
     const provider = createScriptedProvider([payload, SPEAKING_STYLE_FIXTURE_RESPONSE])
     const result = await generateSingleNpc(provider, {
@@ -952,10 +1184,7 @@ describe('persistRegionWithNpcs', () => {
     const seedResponses = buildCascadingSeedResponses({ regionCount: 2, npcsPerRegion: 3 })
     const provider = createScriptedProvider([...seedResponses, ...persistSpeakingNpcResponses(6)])
     const campaign = await generateAndPersistCampaign(db, provider, SETUP_INPUT)
-    const additional = JSON.parse(ADDITIONAL_REGION) as {
-      region: GeneratedRegion
-      npcs: GeneratedNpc[]
-    }
+    const additional = ADDITIONAL_REGION_PARSED
     const reviewProvider = createScriptedProvider([...persistSpeakingNpcResponsesRaceReady(3)])
     await persistRegionWithNpcs({
       db,
@@ -1007,7 +1236,7 @@ function createConcurrencyTrackingProvider(responses: ScriptedResponse[]): Concu
 }
 
 function shortfallNpcPayload(regionName: string, name: string): string {
-  return JSON.stringify({ npc: { ...makeNpcs(regionName, 'Fill')[0]!, name } })
+  return singleNpcLabeledBlocks(regionName, { ...makeNpcs(regionName, 'Fill')[0]!, name })
 }
 
 /** World + one region + all initial NPC slots failing + story, so the shortfall fill owns every slot. */
@@ -1015,12 +1244,12 @@ function buildShortfallSeedPrelude(region: ReturnType<typeof makeRegion>, npcsPe
   return [
     EMPTY_CANON_RESPONSE,
     VALID_PANTHEON_RESPONSE,
-    JSON.stringify(VALID_WORLD),
+    worldLabeledBlocks(VALID_WORLD),
     VALID_FACTIONS_RESPONSE,
-    JSON.stringify({ regions: [region] }),
+    regionsLabeledBlocks([region]),
     ...Array.from({ length: npcsPerRegion * MAX_GENERATION_ATTEMPTS }, () => 'invalid npc slot response'),
     makeBestiarySeedResponse(),
-    JSON.stringify({ storyThread: { title: 'Shortfall Arc', state: 'starting', summary: 'Fill the cast.' } })
+    storyLabeledBlocks({ title: 'Shortfall Arc', summary: 'Fill the cast.' })
   ]
 }
 

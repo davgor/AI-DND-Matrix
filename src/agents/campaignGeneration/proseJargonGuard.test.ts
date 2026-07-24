@@ -26,6 +26,11 @@ describe('proseJargonGuard', () => {
     expect(meetsProseJargonStandards(prose)).toBe(true)
   })
 
+  it('allows two mild hyphen compounds in one live region sentence (168)', async () => {
+    const { liveRegionsDualHyphenRecentHistory } = await import('./liveRegionsDumps')
+    expect(meetsProseJargonStandards(liveRegionsDualHyphenRecentHistory())).toBe(true)
+  })
+
   it('allows VALID_WORLD fixture prose used in generation tests', async () => {
     const { VALID_WORLD } = await import('../../test/fixtures/campaignGenerationFixtures')
     expect(meetsProseJargonStandards(VALID_WORLD.worldSummary)).toBe(true)

@@ -56,6 +56,7 @@ describe('CampaignHub obituary blocking', () => {
       sessionRecap: { status: 'ready', text: 'Previously, you held the pass.' },
       lastPlayed: 'Jun 1, 2026',
       actionsDisabled: true,
+      imageProviderMismatch: false,
       obituaryCharacterId: 'dead-1',
       worldHistoryOpen: false,
       onViewWorldHistory: () => {},

@@ -6,6 +6,13 @@ export const SETTINGS_INTRO_PROVIDER_OPTIONS = [
   { id: 'llamacpp', label: 'Local llama.cpp', default: false }
 ] as const
 
+export type SettingsIntroWizardStep =
+  | 'askLocal'
+  | 'askBackend'
+  | 'setup'
+  | 'askImage'
+  | 'providerFallback'
+
 export interface SettingsIntroState {
   shouldShow: boolean
   devForceShow: boolean

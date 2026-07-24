@@ -66,6 +66,7 @@ function buildDeps(
     getCampaign: (id) => getCampaignById(db, id),
     getSpecies: (id) => getBestiarySpeciesById(db, id),
     imageProvider,
+    imageProviderReady: true,
     baseDir,
     logger
   }

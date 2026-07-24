@@ -13,9 +13,10 @@ import {
   type CompanionAppearanceTraits
 } from '../shared/partyMembers/types'
 import { persistCompanionFaceTokenAsset } from './companionFaceTokenAsset'
+import { mergeSchedulerDeps } from './imageProviderResolve'
 import { logger } from './logger'
 
-export interface CompanionFaceTokenSchedulerLogger {
+interface CompanionFaceTokenSchedulerLogger {
   warn(message: string, ...args: unknown[]): void
   error(message: string, ...args: unknown[]): void
 }
@@ -25,16 +26,17 @@ export interface CompanionFaceTokenSchedulerDeps {
   getCampaign: (campaignId: string) => Campaign | undefined
   getCompanion: (companionId: string) => Character | undefined
   imageProvider: ImageProvider
+  imageProviderReady: boolean
   baseDir: string
   logger: CompanionFaceTokenSchedulerLogger
 }
 
-export interface EnqueueCompanionFaceTokenJobInput {
+interface EnqueueCompanionFaceTokenJobInput {
   campaignId: string
   companionId: string
 }
 
-export type EnqueueCompanionFaceTokenJobResult = 'enqueued' | 'skipped'
+type EnqueueCompanionFaceTokenJobResult = 'enqueued' | 'skipped'
 
 /** 1×1 PNG — v1 default so toggle ON persists a real asset without cloud/llamacpp. */
 const PLACEHOLDER_PNG_BASE64 =
@@ -119,6 +121,9 @@ function shouldScheduleCompanionFaceToken(
   deps: CompanionFaceTokenSchedulerDeps,
   input: EnqueueCompanionFaceTokenJobInput
 ): boolean {
+  if (!deps.imageProviderReady) {
+    return false
+  }
   const campaign = deps.getCampaign(input.campaignId)
   const companion = deps.getCompanion(input.companionId)
   if (!campaign || !companion || companion.kind !== 'ai_party_member') {
@@ -184,19 +189,15 @@ export function createCompanionFaceTokenSchedulerDeps(
   db: Database.Database,
   overrides?: Partial<CompanionFaceTokenSchedulerDeps>
 ): CompanionFaceTokenSchedulerDeps {
-  const merged: CompanionFaceTokenSchedulerDeps = {
+  return mergeSchedulerDeps(overrides, mockPlaceholderImageProvider, {
     db,
     getCampaign: (id) => getCampaignById(db, id),
     getCompanion: (id) => getCharacterById(db, id),
     imageProvider: mockPlaceholderImageProvider,
-    baseDir: '',
-    logger,
-    ...overrides
-  }
-  if (!merged.baseDir) {
-    merged.baseDir = resolveDefaultCompanionFaceTokenBaseDir()
-  }
-  return merged
+    imageProviderReady: false,
+    baseDir: resolveDefaultCompanionFaceTokenBaseDir(),
+    logger
+  })
 }
 
 function resolveDefaultCompanionFaceTokenBaseDir(): string {

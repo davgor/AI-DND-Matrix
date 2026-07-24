@@ -1,24 +1,224 @@
-import type { ConnectionCheckResult, ProviderSettings, SettingsValidationError } from '../../../shared/settings/types'
+import { LLAMACPP_MODEL_CATALOG } from '../../../shared/settings/llamaCppCatalog'
+import type {
+  ConnectionCheckResult,
+  LlamaCppDownloadState,
+  ProviderSettings,
+  SettingsValidationError
+} from '../../../shared/settings/types'
 
-export interface LlamaLocalSectionProps {
+interface LlamaLocalSectionProps {
   draft: ProviderSettings
   errors: SettingsValidationError[]
   result: ConnectionCheckResult | null
+  downloadProgressText?: string | null
+  downloadProgressPercent?: number | null
+  runtimeStatusText?: string | null
   onChange: (patch: Partial<ProviderSettings>) => void
   onCheckRuntime: () => Promise<void>
+  onDownloadModel?: () => Promise<void>
+  onCancelDownload?: () => Promise<void>
+  onAcquireRuntime?: () => Promise<void>
 }
 
 function fieldError(errors: SettingsValidationError[], field: string): string | undefined {
   return errors.find((error) => error.field === field)?.message
 }
 
-function ManagedModeFields(props: LlamaLocalSectionProps): JSX.Element {
+function downloadStateLabel(state: LlamaCppDownloadState): string {
+  switch (state) {
+    case 'ready':
+      return 'Ready'
+    case 'downloading':
+      return 'Downloading…'
+    case 'failed':
+      return 'Failed'
+    default:
+      return 'Not downloaded'
+  }
+}
+
+function catalogEntryRow(
+  entry: (typeof LLAMACPP_MODEL_CATALOG)[number],
+  draft: ProviderSettings,
+  onChange: (patch: Partial<ProviderSettings>) => void
+): JSX.Element {
+  const selected = draft.llamaCppCatalogModelId === entry.id
+  const state = selected ? draft.llamaCppDownloadState : 'idle'
+  return (
+    <li key={entry.id}>
+      <label className="settings-llama-catalog-entry">
+        <input
+          type="radio"
+          name="llama-catalog-model"
+          checked={selected}
+          onChange={() =>
+            onChange({
+              llamaCppCatalogModelId: entry.id,
+              llamaCppDownloadState: selected ? draft.llamaCppDownloadState : 'idle'
+            })
+          }
+        />
+        <span>
+          <strong>{entry.label}</strong>
+          <span className="settings-help-text">
+            {entry.approxDownloadSize} · {entry.vramHint}
+          </span>
+          {selected && (
+            <span className="settings-llama-download-state" data-state={state}>
+              {downloadStateLabel(state)}
+            </span>
+          )}
+        </span>
+      </label>
+    </li>
+  )
+}
+
+function catalogFieldset(props: LlamaLocalSectionProps): JSX.Element {
+  return (
+    <fieldset className="settings-llama-catalog" aria-label="Recommended models">
+      <legend>Recommended models</legend>
+      <ul className="settings-llama-catalog-list">
+        {LLAMACPP_MODEL_CATALOG.map((entry) =>
+          catalogEntryRow(entry, props.draft, props.onChange)
+        )}
+      </ul>
+    </fieldset>
+  )
+}
+
+const RUNTIME_BACKEND_OPTIONS: Array<{
+  value: ProviderSettings['llamaCppRuntimeBackend']
+  id: string
+  label: string
+}> = [
+  { value: 'vulkan', id: 'settings-llama-runtime-gpu', label: 'GPU (Vulkan) — recommended' },
+  { value: 'cpu', id: 'settings-llama-runtime-cpu', label: 'CPU' }
+]
+
+function runtimeBackendFields(props: LlamaLocalSectionProps): JSX.Element {
+  const backend = props.draft.llamaCppRuntimeBackend
+  return (
+    <fieldset className="settings-llama-runtime-backend" aria-label="Runtime backend">
+      <legend>Runtime backend</legend>
+      <div
+        className="settings-llama-runtime-options"
+        role="radiogroup"
+        aria-label="Runtime backend"
+      >
+        {RUNTIME_BACKEND_OPTIONS.map((option) => (
+          <label key={option.value} className="settings-llama-runtime-option" htmlFor={option.id}>
+            <input
+              id={option.id}
+              type="radio"
+              name="settings-llama-runtime-backend"
+              value={option.value}
+              checked={backend === option.value}
+              onChange={() => props.onChange({ llamaCppRuntimeBackend: option.value })}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+      <p className="settings-help-text">
+        Pick GPU or CPU, then Acquire runtime. Re-acquire after switching. NVIDIA CUDA / AMD HIP
+        builds remain an advanced BYO path.
+      </p>
+    </fieldset>
+  )
+}
+
+function downloadActions(props: LlamaLocalSectionProps): JSX.Element {
+  const canDownload = props.draft.llamaCppCatalogModelId.trim().length > 0
+  const downloading = props.draft.llamaCppDownloadState === 'downloading'
+  return (
+    <div className="settings-llama-actions">
+      {runtimeBackendFields(props)}
+      <button
+        type="button"
+        disabled={!canDownload || downloading}
+        onClick={() => void props.onDownloadModel?.()}
+      >
+        {downloading ? 'Downloading…' : 'Download model'}
+      </button>
+      {downloading && (
+        <button type="button" onClick={() => void props.onCancelDownload?.()}>
+          Cancel download
+        </button>
+      )}
+      <button type="button" onClick={() => void props.onAcquireRuntime?.()}>
+        Acquire runtime
+      </button>
+    </div>
+  )
+}
+
+function downloadProgressBar(props: LlamaLocalSectionProps): JSX.Element | null {
+  const downloading = props.draft.llamaCppDownloadState === 'downloading'
+  if (!downloading && !props.downloadProgressText) {
+    return null
+  }
+  const percent = props.downloadProgressPercent
+  return (
+    <div className="settings-llama-download-progress" aria-live="polite">
+      {downloading && (
+        <progress
+          className="settings-llama-download-progress-bar"
+          max={100}
+          value={percent == null ? undefined : percent}
+          aria-label="Model download progress"
+        />
+      )}
+      {props.downloadProgressText && (
+        <p className="settings-help-text">{props.downloadProgressText}</p>
+      )}
+    </div>
+  )
+}
+
+function statusTexts(props: LlamaLocalSectionProps): JSX.Element | null {
+  if (!props.runtimeStatusText) {
+    return null
+  }
+  return <p className="settings-help-text">{props.runtimeStatusText}</p>
+}
+
+function startupModeFields(props: LlamaLocalSectionProps): JSX.Element {
+  const baseUrlError = fieldError(props.errors, 'llamaCppBaseUrl')
+  return (
+    <>
+      <label htmlFor="settings-llama-start-mode">Startup mode</label>
+      <select
+        id="settings-llama-start-mode"
+        value={props.draft.llamaCppStartMode}
+        onChange={(event) =>
+          props.onChange({
+            llamaCppStartMode: event.target.value as ProviderSettings['llamaCppStartMode']
+          })
+        }
+      >
+        <option value="attach">Attach (llama-server already running)</option>
+        <option value="managed">Managed (app launches llama-server)</option>
+      </select>
+      <label htmlFor="settings-llama-base-url">Base URL</label>
+      <input
+        id="settings-llama-base-url"
+        type="text"
+        placeholder="http://127.0.0.1:8080"
+        value={props.draft.llamaCppBaseUrl}
+        onChange={(event) => props.onChange({ llamaCppBaseUrl: event.target.value })}
+      />
+      {baseUrlError && <p className="settings-field-error">{baseUrlError}</p>}
+    </>
+  )
+}
+
+function managedPathFields(props: LlamaLocalSectionProps): JSX.Element {
   return (
     <>
       <p className="settings-help-text">
-        Don&apos;t have llama-server yet? Install it with <code>winget install llama.cpp</code> (Windows) or
-        download a release from the llama.cpp GitHub releases page, then point the fields below at the
-        executable and a .gguf model file.
+        Prefer a recommended model above. Advanced paths below are for BYO installs (
+        <code>winget install llama.cpp</code> or a GitHub release).
       </p>
       <label htmlFor="settings-llama-server-path">llama-server executable path</label>
       <input
@@ -44,39 +244,53 @@ function ManagedModeFields(props: LlamaLocalSectionProps): JSX.Element {
   )
 }
 
-export function LlamaLocalSection(props: LlamaLocalSectionProps): JSX.Element {
-  const baseUrlError = fieldError(props.errors, 'llamaCppBaseUrl')
-
+function advancedPaths(props: LlamaLocalSectionProps): JSX.Element | null {
+  if (props.draft.llamaCppStartMode !== 'managed') {
+    return null
+  }
+  const advancedOpen =
+    props.draft.llamaCppServerPath.trim().length > 0 ||
+    props.draft.llamaCppModelPath.trim().length > 0
   return (
-    <section className="settings-section" aria-label="Local llama.cpp runtime">
-      <h3>Local llama.cpp runtime</h3>
-      <label htmlFor="settings-llama-start-mode">Startup mode</label>
-      <select
-        id="settings-llama-start-mode"
-        value={props.draft.llamaCppStartMode}
-        onChange={(event) =>
-          props.onChange({ llamaCppStartMode: event.target.value as ProviderSettings['llamaCppStartMode'] })
-        }
-      >
-        <option value="attach">Attach (llama-server already running)</option>
-        <option value="managed">Managed (app launches llama-server)</option>
-      </select>
-      <label htmlFor="settings-llama-base-url">Base URL</label>
-      <input
-        id="settings-llama-base-url"
-        type="text"
-        placeholder="http://127.0.0.1:8080"
-        value={props.draft.llamaCppBaseUrl}
-        onChange={(event) => props.onChange({ llamaCppBaseUrl: event.target.value })}
-      />
-      {baseUrlError && <p className="settings-field-error">{baseUrlError}</p>}
-      {props.draft.llamaCppStartMode === 'managed' && <ManagedModeFields {...props} />}
+    <details className="settings-llama-advanced" open={advancedOpen}>
+      <summary>Advanced: manual server &amp; model paths</summary>
+      {managedPathFields(props)}
+    </details>
+  )
+}
+
+function runtimeCheckRow(props: LlamaLocalSectionProps): JSX.Element {
+  return (
+    <>
       <button type="button" onClick={() => void props.onCheckRuntime()}>
         Check runtime
       </button>
       {props.result && (
-        <p className={props.result.ok ? 'settings-check-ok' : 'settings-check-failed'}>{props.result.message}</p>
+        <pre
+          className={
+            props.result.ok
+              ? 'settings-check-ok settings-check-verbose'
+              : 'settings-check-failed settings-check-verbose'
+          }
+        >
+          {props.result.message}
+        </pre>
       )}
+    </>
+  )
+}
+
+export function LlamaLocalSection(props: LlamaLocalSectionProps): JSX.Element {
+  return (
+    <section className="settings-section" aria-label="Local llama.cpp runtime">
+      <h3>Local llama.cpp</h3>
+      {catalogFieldset(props)}
+      {downloadActions(props)}
+      {downloadProgressBar(props)}
+      {statusTexts(props)}
+      {startupModeFields(props)}
+      {advancedPaths(props)}
+      {runtimeCheckRow(props)}
     </section>
   )
 }

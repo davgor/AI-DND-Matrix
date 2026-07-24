@@ -69,6 +69,8 @@ ACT="/c/Users/davgo/AppData/Local/Microsoft/WinGet/Packages/nektos.act_Microsoft
 2. Launch the real app (`env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron.cmd .` after `npm run build`, or `npm run dev`) and actually exercise the new code path inside it — not just confirm the window opens. For DB/native-module code with no UI hook yet, temporarily wire a minimal call into `main/index.ts` (e.g. run migrations + one repository round-trip, `console.log` the result), confirm it inside the running app via the log output or a CDP `Runtime.evaluate` check, then revert the temporary wiring before finishing.
 3. `npm test` afterward to confirm `pretest`'s `npm rebuild better-sqlite3` correctly restores the Node-ABI build and the suite still passes — proving the dev/test ABI round-trip stays intact, not just that it worked once.
 
+If `npm rebuild better-sqlite3` / `npm test` fails because Electron or `electron-vite` still holds `better_sqlite3.node`, follow delivery-standards: **kill the locking repo processes yourself** (do not ask the user to close the app), then retry.
+
 Skip this step only for tickets that add no native module and don't touch `main`/`preload` (e.g. most `/engine` logic, pure UI components, ticket-board/docs work) — say so rather than running it pointlessly.
 
 ## 5. Check off acceptance criteria and close out the ticket

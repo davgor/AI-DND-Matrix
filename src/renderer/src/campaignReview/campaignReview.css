@@ -37,12 +37,13 @@
   max-width: 60ch;
 }
 
+.campaign-review-pantheon,
+.campaign-review-factions,
+.campaign-review-bestiary,
 .campaign-review-story {
   margin-bottom: 28px;
-}
-
-.campaign-review-bestiary {
-  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
 }
 
 .campaign-review-bestiary-list {
@@ -186,15 +187,13 @@
   margin-bottom: 28px;
 }
 
-.campaign-review-pantheon {
-  margin-bottom: 28px;
-}
-
 .campaign-review-pantheon h2 {
   margin: 0 0 12px;
 }
 
-.campaign-review-view-pantheon {
+.campaign-review-view-pantheon,
+.campaign-review-view-factions,
+.campaign-review-view-bestiary {
   padding: 8px 12px;
 }
 
@@ -202,13 +201,170 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: min(60vh, 520px);
   overflow: auto;
   margin: 12px 0;
 }
 
-.campaign-review-factions {
-  margin-bottom: 28px;
+.campaign-review-pantheon-modal {
+  max-height: min(90vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-review-pantheon-modal .campaign-review-pantheon-body {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.campaign-review-pantheon-modal .campaign-review-modal-actions {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.campaign-review-factions-modal {
+  max-height: min(90vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-review-factions-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  margin: 12px 0;
+}
+
+.campaign-review-factions-modal .campaign-review-modal-actions {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.campaign-review-bestiary-modal {
+  max-height: min(90vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+
+.campaign-review-bestiary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin: 12px 0;
+}
+
+.campaign-review-bestiary-modal .campaign-review-modal-actions {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.campaign-review-bestiary-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.campaign-review-bestiary-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font-family: inherit;
+}
+
+.campaign-review-bestiary-origin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.campaign-review-bestiary-filter {
+  padding: 6px 12px;
+}
+
+.campaign-review-bestiary-filter.is-active {
+  font-weight: 600;
+}
+
+.campaign-review-bestiary-card {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.campaign-review-bestiary-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.campaign-review-bestiary-card-header h3 {
+  margin: 0;
+}
+
+.campaign-review-bestiary-origin {
+  font-size: 0.85em;
+  opacity: 0.85;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.24));
+  padding: 2px 8px;
+}
+
+.campaign-review-bestiary-meta {
+  margin: 4px 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+}
+
+.campaign-review-bestiary-lore {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.campaign-review-faction-card {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+}
+
+.campaign-review-faction-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.campaign-review-faction-card-header h3 {
+  margin: 0;
+}
+
+.campaign-review-faction-detail-block {
+  margin-top: 10px;
+}
+
+.campaign-review-faction-detail-text {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.campaign-review-faction-relation-summary {
+  margin: 4px 0 0;
+  opacity: 0.9;
+  line-height: 1.45;
 }
 
 .campaign-review-factions h2 {
@@ -372,7 +528,10 @@
   padding: 24px 16px 24px calc(var(--app-sidebar-width, 220px) + 12px);
 }
 
-.campaign-review-overlay--content-width .campaign-review-world-history-modal {
+.campaign-review-overlay--content-width .campaign-review-world-history-modal,
+.campaign-review-overlay--content-width .campaign-review-pantheon-modal,
+.campaign-review-overlay--content-width .campaign-review-factions-modal,
+.campaign-review-overlay--content-width .campaign-review-bestiary-modal {
   width: 100%;
   max-width: none;
   margin: 0;

@@ -1,4 +1,6 @@
 import { FANTASY_TROPE_DIVERSITY_RULES } from './prompts'
+import { SKELETON_FILL_PROMPT_RULES } from '../skeletonFill'
+import { buildBestiarySkeletonJson } from './createStageSkeletons'
 import type {
   GeneratedBestiaryFoe,
   GeneratedBestiaryRoster,
@@ -58,7 +60,7 @@ function formatWorldContextLines(world: GeneratedWorld): string[] {
   ]
 }
 
-export function premiseNeedsSignatureFoes(premisePrompt: string): boolean {
+function premiseNeedsSignatureFoes(premisePrompt: string): boolean {
   return SIGNATURE_PREMISE_RE.test(premisePrompt)
 }
 
@@ -141,11 +143,16 @@ export function buildBestiaryStagePrompt(
     regionSummaries,
     ...deityLines,
     ...signatureLines,
-    `Propose a small prepped bestiary roster of ${MIN_PREPPED_BESTIARY_SPECIES}–${MAX_PREPPED_BESTIARY_SPECIES} foe species that fit this world.`,
-    'Each foe needs a fiction name, optional catalog buckets/tags, and 1–2 paragraphs of base lore.',
+    `Fill a prepped bestiary roster of exactly ${MIN_PREPPED_BESTIARY_SPECIES} foe species that fit this world.`,
+    'Each foe needs a fiction name, catalog buckets/tags as raw JSON arrays, and 1–2 paragraphs of base lore.',
     'Do NOT invent HP, AC, attack bonus, or damage — combat numbers come from catalog retrieve later.',
     FANTASY_TROPE_DIVERSITY_RULES,
-    'Respond ONLY with a single JSON object:',
-    '{"foes":[{"name":string,"buckets"?:string[],"tags"?:string[],"lore":string}]}'
+    SKELETON_FILL_PROMPT_RULES,
+    'JSON skeleton (engine-owned — fill placeholders only):',
+    buildBestiarySkeletonJson(MIN_PREPPED_BESTIARY_SPECIES)
   ].join('\n')
+}
+
+export function buildBestiaryStageSkeleton(): string {
+  return buildBestiarySkeletonJson(MIN_PREPPED_BESTIARY_SPECIES)
 }

@@ -71,7 +71,8 @@ describe('createProviderRegistry', () => {
       grokApiKey: 'grok-key',
       grokModel: 'grok-3',
       player2BaseUrl: 'http://127.0.0.1:4315',
-      llamaCppBaseUrl: 'http://127.0.0.1:8080'
+      llamaCppBaseUrl: 'http://127.0.0.1:8080',
+      llamaCppCtxSize: 8192
     })
 
     expect(registry.claude).toBeDefined()
@@ -80,5 +81,23 @@ describe('createProviderRegistry', () => {
     expect(registry.grok).toBeDefined()
     expect(registry.player2).toBeDefined()
     expect(registry.llamacpp).toBeDefined()
+  })
+
+  it('wires llamacpp to a dedicated adapter instance (not the player2 factory result alias)', () => {
+    const registry = createProviderRegistry({
+      claudeApiKey: 'test-key',
+      claudeModel: 'claude-test',
+      openaiApiKey: 'openai-key',
+      openaiModel: 'gpt-4.1-mini',
+      geminiApiKey: 'gemini-key',
+      geminiModel: 'gemini-2.5-flash',
+      grokApiKey: 'grok-key',
+      grokModel: 'grok-3',
+      player2BaseUrl: 'http://127.0.0.1:4315',
+      llamaCppBaseUrl: 'http://127.0.0.1:8080',
+      llamaCppCtxSize: 8192
+    })
+
+    expect(registry.llamacpp).not.toBe(registry.player2)
   })
 })

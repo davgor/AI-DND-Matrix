@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
+import { isValidGeneratedFactions } from './campaignGeneration/normalize'
 import {
   generateJsonWithRetry,
   MAX_SCHEMA_ATTEMPTS,
   tryParseJson
 } from './jsonResponse'
 import { createScriptedProvider } from './providers/mockHarness'
+import {
+  LIVE_FACTIONS_MASHED_RELATIONS_JSON,
+  LIVE_FACTIONS_MISSING_COMMAS_JSON
+} from '../test/fixtures/liveFactionsJsonDumps'
 
-describe('tryParseJson', () => {
+describe('tryParseJson basics', () => {
   it('parses plain JSON', () => {
     expect(tryParseJson('{"a":1}')).toEqual({ a: 1 })
   })
@@ -28,6 +33,54 @@ describe('tryParseJson', () => {
 
   it('returns undefined for genuinely malformed input', () => {
     expect(tryParseJson('not json at all')).toBeUndefined()
+  })
+})
+
+describe('tryParseJson multi-object and repair', () => {
+  it('merges consecutive top-level JSON objects (local world split dump)', () => {
+    const raw = [
+      '{"worldName":"Aeloria","worldSummary":"Summary paragraph one. Summary paragraph two."}',
+      '',
+      '{"worldHistory":"History paragraph one. History paragraph two."}'
+    ].join('\n')
+    expect(tryParseJson(raw)).toEqual({
+      worldName: 'Aeloria',
+      worldSummary: 'Summary paragraph one. Summary paragraph two.',
+      worldHistory: 'History paragraph one. History paragraph two.'
+    })
+  })
+
+  it('keeps a single object when prose wraps one JSON blob', () => {
+    const raw = 'Sure:\n{"worldName":"Tyria","worldSummary":"A.","worldHistory":"B."}\nDone.'
+    expect(tryParseJson(raw)).toEqual({
+      worldName: 'Tyria',
+      worldSummary: 'A.',
+      worldHistory: 'B.'
+    })
+  })
+
+  it('repairs missing commas before the next property (live factions dump)', () => {
+    const parsed = tryParseJson(LIVE_FACTIONS_MISSING_COMMAS_JSON) as {
+      factions: Array<{ key: string; deityName?: string }>
+    }
+    expect(parsed?.factions?.find((f) => f.key === 'temple_guilds')?.deityName).toBe('Vhalor')
+    expect(isValidGeneratedFactions(parsed, { deitiesPresent: true })).toBe(true)
+  })
+
+  it('splits mashed array objects when a duplicate key restarts a peer (live relations dump)', () => {
+    const parsed = tryParseJson(LIVE_FACTIONS_MASHED_RELATIONS_JSON) as {
+      relations: Array<{ factionAKey: string; factionBKey: string }>
+    }
+    expect(parsed?.relations).toHaveLength(2)
+    expect(parsed.relations[0]).toMatchObject({
+      factionAKey: 'rune_guild',
+      factionBKey: 'storm_priests'
+    })
+    expect(parsed.relations[1]).toMatchObject({
+      factionAKey: 'merchant_consortium',
+      factionBKey: 'ancient_temple'
+    })
+    expect(isValidGeneratedFactions(parsed, { deitiesPresent: true })).toBe(true)
   })
 })
 

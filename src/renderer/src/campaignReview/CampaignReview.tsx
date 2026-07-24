@@ -10,13 +10,12 @@ import { CampaignReviewFooter, CampaignReviewStory } from './CampaignReviewSecti
 import { CampaignReviewWorldSection } from './CampaignReviewWorldSection'
 import { CampaignReviewPantheonSection } from './CampaignReviewPantheonSection'
 import { CampaignReviewFactionsSection } from './CampaignReviewFactionsSection'
-import { CampaignReviewGenerativeTokensToggle } from './CampaignReviewGenerativeTokensToggle'
 import { CampaignReviewBestiarySection } from './CampaignReviewBestiarySection'
 import { createCampaignReviewSavers } from './campaignReviewSavers'
 import { useCampaignRaces } from './useCampaignRaces'
 import './campaignReview.css'
 
-export interface CampaignReviewProps {
+interface CampaignReviewProps {
   detail: CampaignDetail
   onDetailChange: (detail: CampaignDetail) => void
   onContinue: () => void
@@ -74,26 +73,13 @@ function CampaignReviewFactionsBlock(props: {
   )
 }
 
-function CampaignReviewGenerativeTokensBlock(props: {
-  enabled: boolean
-  onChange: (enabled: boolean) => void
-}): JSX.Element {
-  return (
-    <CampaignReviewGenerativeTokensToggle
-      enabled={props.enabled}
-      onChange={(enabled) => {
-        void props.onChange(enabled)
-      }}
-    />
-  )
-}
-
 function CampaignReviewMainSections(props: {
   detail: CampaignDetail
   campaignId: string
   regionBlocks: ReturnType<typeof buildRegionBlocks>
   campaignRaces: ReturnType<typeof useCampaignRaces>
   savers: ReturnType<typeof createCampaignReviewSavers>
+  onDetailChange: (detail: CampaignDetail) => void
   onGenerateNpc: (regionId: string) => void
 }): JSX.Element {
   return (
@@ -119,8 +105,12 @@ function CampaignReviewMainSections(props: {
         deities={props.detail.deities}
         onSaveSummary={props.savers.saveFactionsSummary}
       />
+      <CampaignReviewBestiarySection
+        campaignId={props.campaignId}
+        entries={props.detail.bestiary}
+        onDetailChange={props.onDetailChange}
+      />
       <CampaignReviewStory storyThreads={props.detail.storyThreads} />
-      <CampaignReviewBestiarySection entries={props.detail.bestiary} />
       <CampaignReviewRegions
         regionBlocks={props.regionBlocks}
         campaignRaces={props.campaignRaces}
@@ -145,18 +135,13 @@ export function CampaignReview(props: CampaignReviewProps): JSX.Element {
   return (
     <div className="campaign-review">
       <CampaignReviewHeader campaignName={detail.campaign?.name} />
-      {detail.campaign ? (
-        <CampaignReviewGenerativeTokensBlock
-          enabled={detail.campaign.generativeTokensEnabled === true}
-          onChange={savers.saveGenerativeTokens}
-        />
-      ) : null}
       <CampaignReviewMainSections
         detail={detail}
         campaignId={campaignId}
         regionBlocks={regionBlocks}
         campaignRaces={campaignRaces}
         savers={savers}
+        onDetailChange={props.onDetailChange}
         onGenerateNpc={setGenerateNpcRegionId}
       />
       <CampaignReviewFooter
