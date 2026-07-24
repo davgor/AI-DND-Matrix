@@ -1,6 +1,6 @@
 /** Engine-owned pantheon JSON skeleton for campaign create (161.4). */
 
-const PANTHEON_SKELETON_DEITY_COUNT = 10
+export const PANTHEON_SKELETON_DEITY_COUNT = 10
 const FORGOTTEN_TAIL_COUNT = 2
 
 export function buildPantheonSkeletonJson(): string {

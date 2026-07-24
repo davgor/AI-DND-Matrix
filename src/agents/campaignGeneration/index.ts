@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import { tryParseJson } from '../jsonResponse'
 import { fillSkeleton } from '../skeletonFill'
+import { fillPantheonSkeleton } from './pantheonRetrieve'
 import type { Provider } from '../providers/types'
 import { isTruncationError } from '../providers/tokenEscalation'
 import { ProviderUnreachableError } from '../providers/withRetry'
@@ -99,13 +100,13 @@ export * from './persist'
 export * from './flaggedNpc'
 export * from './worldSummaryRegen'
 
-const WORLD_MAX_TOKENS = 2048
+const WORLD_MAX_TOKENS = 4096
 const CANON_MAX_TOKENS = 2048
 const PANTHEON_MAX_TOKENS = 4096
 const FACTIONS_MAX_TOKENS = 4096
-const REGIONS_MAX_TOKENS = 4096
+const REGIONS_MAX_TOKENS = 8192
 const STORY_THREAD_MAX_TOKENS = 2048
-const ADDITIONAL_REGION_MAX_TOKENS = 4096
+const ADDITIONAL_REGION_MAX_TOKENS = 8192
 const SINGLE_NPC_MAX_TOKENS = 4096
 
 type GenerationParseMode = 'json' | 'skeleton'
@@ -136,6 +137,10 @@ function recordSchemaAttemptFailure(
   })
 }
 
+function isPantheonSkeleton(skeleton: string): boolean {
+  return skeleton.includes('{{PANTHEON_SUMMARY}}') && skeleton.includes('{{DEITY_0_NAME}}')
+}
+
 /** Parse LLM raw text: JSON blob path, or skeleton fill → JSON.parse. */
 export function parseGenerationRaw(
   raw: string,
@@ -148,15 +153,19 @@ export function parseGenerationRaw(
   if (!skeleton) {
     return undefined
   }
-  const filled = fillSkeleton(skeleton, raw)
-  if (!filled.ok) {
-    return undefined
+  // Pantheon: retrieve deity strings from loose labeled forms, then engine-load skeleton.
+  const filled = isPantheonSkeleton(skeleton)
+    ? fillPantheonSkeleton(raw)
+    : fillSkeleton(skeleton, raw)
+  if (filled.ok) {
+    try {
+      return JSON.parse(filled.jsonText) as unknown
+    } catch {
+      // Fall through to JSON blob recovery below.
+    }
   }
-  try {
-    return JSON.parse(filled.jsonText) as unknown
-  } catch {
-    return undefined
-  }
+  // Models sometimes ignore skeleton fill and emit a JSON object (regions live dumps).
+  return tryParseJson(raw)
 }
 
 interface GenerateWithRetriesInput<T> {

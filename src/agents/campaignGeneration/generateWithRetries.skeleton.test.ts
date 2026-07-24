@@ -57,6 +57,15 @@ describe('parseGenerationRaw (161.2)', () => {
     const missing = ['<<<NAME>>>', 'Ashmere', '<<</NAME>>>'].join('\n')
     expect(parseGenerationRaw(missing, 'skeleton', TINY_SKELETON)).toBeUndefined()
   })
+
+  it('falls back to a JSON object when skeleton fill fails (live regions dump)', () => {
+    const jsonDump = JSON.stringify({
+      regions: [{ name: 'Riverlands', description: 'Rivers converge.' }]
+    })
+    expect(parseGenerationRaw(jsonDump, 'skeleton', TINY_SKELETON)).toEqual({
+      regions: [{ name: 'Riverlands', description: 'Rivers converge.' }]
+    })
+  })
 })
 
 describe('generateWithRetries skeleton success (161.2)', () => {

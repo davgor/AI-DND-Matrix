@@ -28,7 +28,7 @@ Stage helpers select `parseMode: 'skeleton'` via `generateWithRetries` (or `pars
 
 **Fixtures:** cascading seed builders must queue **labeled-block** responses matching the engine skeleton for each migrated stage (see `formatLabeledBlocks` / `*LabeledBlocks` in `campaignGenerationFixtures.ts`). Keep object fixtures only for normalize unit tests that feed parsed objects directly.
 
-**Failure modes:** missing/unknown/malformed tags → `unparseable`; filled JSON that fails normalize → `normalize_failed`; normalize OK but validator rejects → `invalid`. Truncated raw dumps still attach via **020.31** logging.
+**Failure modes:** missing required strings after retrieve → `unparseable`; **retrieve** accepts `<<<TOKEN>>>` blocks (lenient next-open/EOF) and `{{TOKEN}}` section headers; **pantheon** also uses composite `<<<DEITY_N>>>` retrieve (`pantheonRetrieve.ts`); filled JSON that fails normalize → `normalize_failed`; normalize OK but validator rejects → `invalid`. Truncated raw dumps still attach via **020.31** logging.
 
 ---
 

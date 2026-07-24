@@ -1,7 +1,7 @@
 import { extractSentences, splitParagraphs } from './normalize'
 
 /** No single sentence should read like a hyphenated word salad. */
-const MAX_HYPHEN_COMPOUNDS_PER_SENTENCE = 1
+const MAX_HYPHEN_COMPOUNDS_PER_SENTENCE = 2
 
 /** Keep compounds sparse even across a full paragraph. */
 const MAX_HYPHEN_COMPOUNDS_PER_PARAGRAPH = 2

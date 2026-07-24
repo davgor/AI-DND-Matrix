@@ -8,6 +8,7 @@ import {
 } from '../agents/providers/tokenEscalation'
 import { clampLlamaCompletionMaxTokens } from '../agents/providers/llamacpp'
 import { withRetry, type RetryOptions } from '../agents/providers/withRetry'
+import { withSharedSerialQueue } from '../agents/providers/withSerialQueue'
 import { withUsageRecording } from '../agents/providers/withUsageRecording'
 import type { Provider } from '../agents/providers/types'
 import {
@@ -114,9 +115,13 @@ export function buildAgentProvider(): Provider {
     withRetry(selectProvider(resolved.agentProvider, registry), logger, retryOptionsFor(resolved)),
     escalationOptions
   )
+  // 166: llama-server often 500s under concurrent completions; queue outside retry
+  // so one logical generate (including backoff) finishes before the next starts.
+  const gated =
+    resolved.agentProvider === 'llamacpp' ? withSharedSerialQueue(escalated) : escalated
   const defaultModelId =
     resolved.agentProvider === 'claude' ? resolved.claudeModel : resolved.agentProvider
-  return withUsageRecording(escalated, {
+  return withUsageRecording(gated, {
     getDb,
     providerName: resolved.agentProvider,
     defaultModelId,
@@ -124,6 +129,9 @@ export function buildAgentProvider(): Provider {
     logInsertError: (message, error) => logger.error(message, error)
   })
 }
+
+/** Cloud providers recover quickly; local llama needs longer pauses after HTTP 500. */
+const LLAMACPP_RETRY_BASE_DELAY_MS = 750
 
 function retryOptionsFor(resolved: {
   agentProvider: string
@@ -134,7 +142,7 @@ function retryOptionsFor(resolved: {
   }
   return {
     maxAttempts: 3,
-    baseDelayMs: 50,
+    baseDelayMs: LLAMACPP_RETRY_BASE_DELAY_MS,
     diagnostics: {
       providerName: 'llamacpp',
       hostPort: hostPortFromBaseUrl(resolved.llamaCppBaseUrl),

@@ -80,10 +80,10 @@ Pin the local reference stack (runtime binary, API shape, reference model id, VR
 
 #### Acceptance criteria
 
-- [ ] Research doc checked in with recommended local runtime + one reference catalog model (size, VRAM, RAM)
-- [ ] Player2 image capability and path documented (or explicitly “unavailable → drop from v1 selectable list”)
-- [ ] Cloud vendor endpoints and auth headers summarized for adapter implementers
-- [ ] Recommended idle-unload timer default documented (cold start acceptable)
+- [x] Research doc checked in with recommended local runtime + one reference catalog model (size, VRAM, RAM)
+- [x] Player2 image capability and path documented (or explicitly “unavailable → drop from v1 selectable list”)
+- [x] Cloud vendor endpoints and auth headers summarized for adapter implementers
+- [x] Recommended idle-unload timer default documented (cold start acceptable)
 
 ### 152.2 — Settings image-provider types, defaults, persistence
 
@@ -91,9 +91,9 @@ Add `ImageProviderSettings` (mode, enable flag, per-provider fields, local catal
 
 #### Acceptance criteria
 
-- [ ] Round-trip persist/load unit tests for image settings
-- [ ] Redaction rules for any secrets (reuse cloud keys; do not duplicate plaintext in logs)
-- [ ] Defaults keep generative painting OFF on fresh install
+- [x] Round-trip persist/load unit tests for image settings
+- [x] Redaction rules for any secrets (reuse cloud keys; do not duplicate plaintext in logs)
+- [x] Defaults keep generative painting OFF on fresh install
 
 ### 152.3 — Cloud + Player2 `ImageProvider` adapters
 
@@ -101,9 +101,9 @@ Implement adapters that satisfy `ImageProvider.generateImage` for each v1-select
 
 #### Acceptance criteria
 
-- [ ] Unit tests with mocked HTTP for success + typed failure categories (`provider_unavailable`, `timeout`, `policy_rejection`, etc.)
-- [ ] Adapters map bytes/mime into `ImageGenerateSuccess`
-- [ ] Claude has no adapter
+- [x] Unit tests with mocked HTTP for success + typed failure categories (`provider_unavailable`, `timeout`, `policy_rejection`, etc.)
+- [x] Adapters map bytes/mime into `ImageGenerateSuccess`
+- [x] Claude has no adapter
 
 ### 152.4 — Local curated catalog + in-app download
 
@@ -111,9 +111,9 @@ Settings catalog for local image weights (size / VRAM hints). Download manager w
 
 #### Acceptance criteria
 
-- [ ] Catalog entry for the 152.1 reference model
-- [ ] Download progress + failure recovery tested
-- [ ] Assets land under documented `userData` layout
+- [x] Catalog entry for the 152.1 reference model
+- [x] Download progress + failure recovery tested
+- [x] Assets land under documented `userData` layout
 
 ### 152.5 — Local runtime acquire + lifecycle (idle unload)
 
@@ -123,11 +123,11 @@ Discover/acquire the local image runtime into `userData`; managed start/stop/hea
 
 #### Acceptance criteria
 
-- [ ] Lifecycle unit tests: start, health ready, stop, typed errors when missing
-- [ ] Apply from Settings boots managed runtime when Local + Enable ON (or deferred until first job — document choice; cold start OK either way)
-- [ ] Idle timer stops runtime only when queue depth is 0; tests prove no stop while jobs pending/in flight
-- [ ] After idle stop, next `generateImage` cold-starts successfully
-- [ ] Lean-installer constraint documented (no fat runtime in `.exe`)
+- [x] Lifecycle unit tests: start, health ready, stop, typed errors when missing
+- [x] Apply from Settings boots managed runtime when Local + Enable ON (or deferred until first job — document choice; cold start OK either way)
+- [x] Idle timer stops runtime only when queue depth is 0; tests prove no stop while jobs pending/in flight
+- [x] After idle stop, next `generateImage` cold-starts successfully
+- [x] Lean-installer constraint documented (no fat runtime in `.exe`)
 
 ### 152.6 — Settings UI: provider select, download, enable
 
@@ -135,9 +135,9 @@ Renderer Settings section: provider radios/select, cloud key reuse / Player2 URL
 
 #### Acceptance criteria
 
-- [ ] Component tests cover provider switch + enable disabled until validation passes
-- [ ] Local download controls mirror LLM section patterns (progress, Ready)
-- [ ] Copy states Claude is LLM-only and not listed as an image provider
+- [x] Component tests cover provider switch + enable disabled until validation passes
+- [x] Local download controls mirror LLM section patterns (progress, Ready)
+- [x] Copy states Claude is LLM-only and not listed as an image provider
 
 ### 152.7 — Readiness helper + validation
 
@@ -145,9 +145,9 @@ Single shared helper: `isImageGenerationReady(settings) → boolean` (+ reason c
 
 #### Acceptance criteria
 
-- [ ] Unit tests for each mode: ready / missing key / missing download / runtime down / Enable OFF
-- [ ] IPC or settings snapshot exposes readiness to renderer without leaking secrets
-- [ ] Idle-stopped local runtime still counts as **ready** for gating (Enable ON + assets present); cold start happens on demand — “not ready” is config/Enable, not “currently unloaded”
+- [x] Unit tests for each mode: ready / missing key / missing download / runtime down / Enable OFF
+- [x] IPC or settings snapshot exposes readiness to renderer without leaking secrets
+- [x] Idle-stopped local runtime still counts as **ready** for gating (Enable ON + assets present); cold start happens on demand — “not ready” is config/Enable, not “currently unloaded”
 
 ### 152.8 — Wire token schedulers to configured provider
 
@@ -155,9 +155,9 @@ Replace production `mockPlaceholderImageProvider` defaults in NPC / creature / c
 
 #### Acceptance criteria
 
-- [ ] Scheduler tests prove real provider is invoked when ready; no enqueue path relies on 1×1 placeholder as success paint when Enable ON
-- [ ] When not ready, enqueue is skipped (defense in depth even if UI gated)
-- [ ] Failure still non-blocking with existing fallbacks
+- [x] Scheduler tests prove real provider is invoked when ready; no enqueue path relies on 1×1 placeholder as success paint when Enable ON
+- [x] When not ready, enqueue is skipped (defense in depth even if UI gated)
+- [x] Failure still non-blocking with existing fallbacks
 
 ### 152.9 — Gate campaign + character generative controls (+ hub Resume)
 
@@ -167,12 +167,12 @@ Campaign start + Campaign Review **Use generative tokens?** disabled when not re
 
 #### Acceptance criteria
 
-- [ ] Renderer tests: control disabled + helper text when not ready; enabled when ready
-- [ ] Cannot persist `generativeTokensEnabled: true` on create/edit when not ready (server-side guard)
-- [ ] PC icon Generate/Regenerate disabled when not ready
-- [ ] Hub shows **“Campaign requires an image provider”** when campaign generative tokens ON and image provider OFF/not ready
-- [ ] Hub character **Resume** is disabled (greyed out) in that mismatch state; re-enabled when ready or campaign flag off
-- [ ] Component tests cover mismatch / cleared-mismatch Resume behavior
+- [x] Renderer tests: control disabled + helper text when not ready; enabled when ready
+- [x] Cannot persist `generativeTokensEnabled: true` on create/edit when not ready (server-side guard)
+- [x] PC icon Generate/Regenerate disabled when not ready
+- [x] Hub shows **“Campaign requires an image provider”** when campaign generative tokens ON and image provider OFF/not ready
+- [x] Hub character **Resume** is disabled (greyed out) in that mismatch state; re-enabled when ready or campaign flag off
+- [x] Component tests cover mismatch / cleared-mismatch Resume behavior
 
 ### 152.10 — Dual-load / VRAM UX hints
 
@@ -180,8 +180,8 @@ When LLM mode is Local (GPU) and image mode is Local, Settings shows an explicit
 
 #### Acceptance criteria
 
-- [ ] Warning visible only for the dual-local GPU case (unit/component test)
-- [ ] Hint text references research ballparks (not a hard block)
+- [x] Warning visible only for the dual-local GPU case (unit/component test)
+- [x] Hint text references research ballparks (not a hard block)
 
 ### 152.11 — Manual smoke runbook
 
@@ -189,10 +189,10 @@ When LLM mode is Local (GPU) and image mode is Local, Settings shows an explicit
 
 #### Acceptance criteria
 
-- [ ] Runbook checked in and linked from epic / README runbooks list if one exists
-- [ ] Steps match shipped Settings labels
-- [ ] Hub Resume-gate steps included
-- [ ] Prompt decline and idle-unload cold-start steps included
+- [x] Runbook checked in and linked from epic / README runbooks list if one exists
+- [x] Steps match shipped Settings labels
+- [x] Hub Resume-gate steps included
+- [x] Prompt decline and idle-unload cold-start steps included
 
 ### 152.12 — Delivery gate
 
@@ -200,9 +200,9 @@ Full verification for the epic.
 
 #### Acceptance criteria
 
-- [ ] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
-- [ ] `act` workflows `pr-checks.yml` and `deadcode.yml` succeed
-- [ ] All 152.x criteria checked; epic moved to `board/done/`
+- [x] `npm test`, `npm run lint`, `npm run build`, `npm run deadcode` pass
+- [x] `act` workflows `pr-checks.yml` and `deadcode.yml` succeed
+- [x] All 152.x criteria checked; epic moved to `board/done/`
 
 ### 152.13 — Post–local-LLM local image provider prompt
 
@@ -214,8 +214,8 @@ After Local LLM setup completes (first-run intro / Settings local happy path fro
 
 #### Acceptance criteria
 
-- [ ] Prompt appears only after Local LLM setup success (unit/component or flow test)
-- [ ] Decline leaves image Enable OFF and does not start image download
-- [ ] Accept starts local image onboarding rails
-- [ ] Explicit decline is not re-prompted every app launch (unless documented dev exception)
-- [ ] Smoke runbook covers accept and decline
+- [x] Prompt appears only after Local LLM setup success (unit/component or flow test)
+- [x] Decline leaves image Enable OFF and does not start image download
+- [x] Accept starts local image onboarding rails
+- [x] Explicit decline is not re-prompted every app launch (unless documented dev exception)
+- [x] Smoke runbook covers accept and decline

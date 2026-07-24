@@ -41,10 +41,11 @@ import { isBucket } from '../../shared/catalogTaxonomy'
 const MIN_NPCS_PER_REGION_WHEN_NONZERO = 1
 const MIN_QUEST_HOOKS = 1
 const MAX_QUEST_HOOKS = 4
-const MIN_WORLD_SUMMARY_PARAGRAPHS = 3
-const MIN_WORLD_HISTORY_PARAGRAPHS = 5
+const MIN_WORLD_SUMMARY_PARAGRAPHS = 2
+/** 7B locals often land at 3 paras / ~9 sentences — 5×2=10 was rejecting usable history. */
+const MIN_WORLD_HISTORY_PARAGRAPHS = 4
 const MIN_WORLD_SUMMARY_SENTENCES_PER_PARAGRAPH = 2
-/** Aligned with summary — 7B locals rarely hit 3 sentences × 5 paragraphs cleanly. */
+/** Aligned with summary — 7B locals rarely hit 3 sentences × N paragraphs cleanly. */
 const MIN_WORLD_HISTORY_SENTENCES_PER_PARAGRAPH = 2
 
 // ---------------------------------------------------------------------------

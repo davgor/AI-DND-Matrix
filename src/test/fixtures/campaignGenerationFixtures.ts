@@ -258,18 +258,24 @@ export function pantheonLabeledBlocks(pantheon: {
     blurb: string
   }>
 }): string {
-  const values: Record<string, string> = {
-    PANTHEON_SUMMARY: pantheon.pantheonSummary
-  }
+  const parts = [
+    `<<<PANTHEON_SUMMARY>>>\n${pantheon.pantheonSummary}\n<<</PANTHEON_SUMMARY>>>`
+  ]
   for (let index = 0; index < 10; index += 1) {
     const deity = pantheon.deities[index] ?? PANTHEON_SKELETON_FILLER[index - pantheon.deities.length]!
-    values[`DEITY_${index}_NAME`] = deity.name
-    values[`DEITY_${index}_EPITHET`] = deity.epithet
-    values[`DEITY_${index}_DOMAINS`] = deity.domains.join(', ')
-    values[`DEITY_${index}_TENETS`] = deity.tenets.join(', ')
-    values[`DEITY_${index}_BLURB`] = deity.blurb
+    parts.push(
+      [
+        `<<<DEITY_${index}>>>`,
+        `name: ${deity.name}`,
+        `epithet: ${deity.epithet}`,
+        `domains: ${deity.domains.join(', ')}`,
+        `tenets: ${deity.tenets.join(', ')}`,
+        `blurb: ${deity.blurb}`,
+        `<<</DEITY_${index}>>>`
+      ].join('\n')
+    )
   }
-  return formatLabeledBlocks(values)
+  return parts.join('\n')
 }
 
 export const VALID_PANTHEON_RESPONSE = pantheonLabeledBlocks({

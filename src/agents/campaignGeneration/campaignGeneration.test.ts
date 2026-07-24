@@ -85,6 +85,7 @@ import {
   normalizeRaceKeyForRoster
 } from './normalize'
 import { meetsProseJargonStandards } from './proseJargonGuard'
+import { meetsWorldTropeDiversity } from './tropeGuard'
 
 const SPEAKING_STYLE_FIXTURE_RESPONSE = JSON.stringify({
   specimen: "I keep my voice low and my bargains lower — that's how you survive here.",
@@ -115,8 +116,8 @@ const VORATH_STACKED_SUMMARY =
 
 describe('normalizeGeneratedWorld', () => {
   it('counts single-newline paragraph breaks from live models', () => {
-    expect(countParagraphs(REALISTIC_LLM_WORLD.world_summary as string)).toBeGreaterThanOrEqual(3)
-    expect(countParagraphs(REALISTIC_LLM_WORLD.world_history as string)).toBeGreaterThanOrEqual(5)
+    expect(countParagraphs(REALISTIC_LLM_WORLD.world_summary as string)).toBeGreaterThanOrEqual(2)
+    expect(countParagraphs(REALISTIC_LLM_WORLD.world_history as string)).toBeGreaterThanOrEqual(4)
     expect(isValidGeneratedWorld(REALISTIC_LLM_WORLD)).toBe(true)
   })
 
@@ -132,47 +133,28 @@ describe('normalizeGeneratedWorld', () => {
   })
 })
 
-const BLOB_WORLD_HISTORY_TOPICS = [
-  'Titans raised the first ridge walls before mortal kingdoms had names',
-  'Forge clans sealed pacts in ore and blood along the high passes',
-  'Sword-lords carved marches from the wreck of the Godwrought War',
-  'Veiled restorers quieted the passes but left unfinished watchtowers',
-  'River seers now dream of maps that rewrite themselves after every storm',
-  'Salt merchants bought noble titles with dredged crowns from drowned vaults',
-  'Beacon fires went dark when the Compact’s tithe wars emptied the towers',
-  'Explorer crews returned with cursed ore and missing manifests',
-  'Smuggler princes claim the drowned still vote on every treaty',
-  'Festival markets bloom beside famine roads while beacon chains relight too late'
-]
-
-function buildSentenceBlobWorld(): {
-  worldName: string
-  worldSummary: string
-  worldHistory: string
-} {
-  const worldSummary = [
-    'Calderin is a highland basin ringed by wind-cut mesas and dry riverbeds.',
-    'Caravan towers mark the only reliable wells between the salt flats and the timber line.',
-    'Herders still move flocks along the ridge roads each spring.',
-    'Toll keepers argue with free riders over which spring belongs to which clan.',
-    'Border forts are understaffed after the last raid season.',
-    'Everyone knows the next drought will decide who keeps their grazing rights.'
-  ].join(' ')
-  const worldHistory = BLOB_WORLD_HISTORY_TOPICS.map((topic) => `${topic}.`).join(' ')
-  return { worldName: 'Calderin', worldSummary, worldHistory }
-}
-
-describe('normalizeGeneratedWorld reshape', () => {
-  it('reshapes enough sentences into required paragraphs without inventing filler', () => {
-    const blobWorld = buildSentenceBlobWorld()
-    const normalized = normalizeGeneratedWorld(blobWorld)
+describe('normalizeGeneratedWorld live short local dumps (165)', () => {
+  it('accepts a near-miss history dump that was one sentence short of the old 5×2 bar', () => {
+    const liveAttempt2 = {
+      worldName: 'Mistmarsh',
+      worldSummary: [
+        'In the lawless desert city of Mistmarsh, where strange lights rise from the old quarries at dusk, the people live in constant vigilance. The harsh winds and ever-shifting sands of the desert encircle the city, a place of forgotten gods and unending struggle.',
+        'Each day, worshippers from the diverse pantheon seek solace and guidance, hoping to navigate the treacherous landscape with the aid of the living deities, while the forgotten ones still whisper their ancient secrets in the shadows. The quarries, once the heart of the city, now glow with a spectral light at night, drawing both awe and fear from the inhabitants.',
+        'The quarries are said to be haunted by the spirits of those who toiled there, their cries for justice echoing through the ruins. The city itself is a collection of crumbling buildings and bustling markets, where guilds of merchants and artisans compete for power and resources.'
+      ].join('\n\n'),
+      worldHistory: [
+        'In the dawn of time, the city of Mistmarsh was founded by a coalition of desert tribes, united under the banner of the pantheon of living gods. Kaela, the Stormbringer, granted protection from the harsh storms and wars that plagued the land, while Nara, the Hearthkeeper, provided solace and sustenance through the hearth and home.',
+        'Zorak, the Wavebreaker, ensured the city\'s prosperity through trade, and Vaelen, the Wraithmaster, protected the city from the secrets and dangers that lay hidden. However, with the rise of Thalor, the Trickster, and the decline of the forgotten gods, the city began to unravel.',
+        'Thalor\'s chaos and misrule led to factionalism and instability, while the forgotten gods, Xylar and Zylara, faded into obscurity, their memories and power vanishing with the sands of time. The quarries, once a symbol of strength and stability, became a site of forgotten lore and eerie power.',
+        'In recent epochs, the city has faced numerous threats, from bandit raids to a plague that ravaged the population. The guilds, each aligned with one of the pantheon\'s deities, struggle for control, leading to a cycle of power plays and alliances. The present feels unstable, with the old order crumbling and new dangers lurking in the misty sands, waiting to be uncovered.'
+      ].join('\n\n')
+    }
+    const normalized = normalizeGeneratedWorld(liveAttempt2)
     expect(normalized).toBeDefined()
     expect(isValidGeneratedWorld(normalized)).toBe(true)
-    expect(countParagraphs(normalized!.worldSummary)).toBe(3)
-    expect(countParagraphs(normalized!.worldHistory)).toBe(5)
-    expect(normalized!.worldSummary).toContain('highland basin')
-    expect(normalized!.worldHistory).toContain('Titans raised')
-    expect(normalized!.worldSummary).not.toMatch(/travelers still tell/i)
+    expect(meetsWorldTropeDiversity(normalized!, 'strange lights rise from the old quarries at dusk')).toBe(
+      true
+    )
   })
 })
 
@@ -709,7 +691,8 @@ describe('buildFactionsGenerationPrompt skeleton fill (161.3)', () => {
     expect(prompt).not.toContain('Respond ONLY with a single JSON object')
     expect(prompt).toContain('Do NOT emit JSON')
     expect(prompt).toContain('{{FACTIONS_SUMMARY}}')
-    expect(prompt).toContain('<<<TOKEN>>>')
+    expect(prompt).toContain('Never emit a literal tag named TOKEN')
+    expect(prompt).not.toContain('<<<TOKEN>>>')
   })
 })
 
@@ -719,10 +702,12 @@ describe('buildWorldGenerationPrompt', () => {
     expect(prompt).toContain('worldName')
     expect(prompt).toContain('{{WORLD_NAME}}')
     expect(prompt).toContain('science fiction')
-    expect(prompt).toContain('five paragraphs')
+    expect(prompt).toContain('four paragraphs')
     expect(prompt).toContain('two full sentences')
     expect(prompt).toContain('Do NOT emit JSON')
     expect(prompt).toContain('{{WORLD_NAME}}')
+    expect(prompt).toContain('<<<WORLD_NAME>>>')
+    expect(prompt).toContain('{{WORLD_NAME}} line headers')
     expect(prompt).not.toContain('"regions"')
   })
 
@@ -838,6 +823,8 @@ describe('buildPantheonGenerationPrompt (059)', () => {
     expect(prompt).toContain('Do NOT emit JSON')
     expect(prompt).toContain('{{PANTHEON_SUMMARY}}')
     expect(prompt).toContain('{{DEITY_0_NAME}}')
+    expect(prompt).toContain('<<<DEITY_0>>>')
+    expect(prompt).toContain('The engine loads your strings into the JSON skeleton')
   })
 })
 

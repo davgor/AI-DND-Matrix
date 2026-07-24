@@ -77,8 +77,8 @@ const WORLD_PROSE_RULES = [
   WORLD_FANTASY_TONE_RULES,
   PROSE_CLARITY_RULES,
   FANTASY_TROPE_DIVERSITY_RULES,
-  'worldSummary: exactly three paragraphs separated by blank lines — each paragraph at least two full sentences. Player-facing hook for what the world is, how people live, and what tensions define it today.',
-  `worldHistory: a one-pager hook of exactly five paragraphs separated by blank lines — deep past, founding myths, old conflicts, recent epochs, and why the present feels unstable. ${WORLD_PARAGRAPH_SHAPE_RULES}`
+  'worldSummary: at least two paragraphs separated by blank lines — each paragraph at least two full sentences. Player-facing hook for what the world is, how people live, and what tensions define it today.',
+  `worldHistory: a one-pager hook of at least four paragraphs separated by blank lines — deep past, founding myths, old conflicts, and why the present feels unstable. ${WORLD_PARAGRAPH_SHAPE_RULES}`
 ].join('\n')
 
 export const NPC_NAMING_RULES = [
@@ -252,8 +252,19 @@ export function buildWorldGenerationPrompt(
     pantheon
       ? "The world's history, cultures, temples, and conflicts must stay consistent with the pantheon above."
       : '',
-    SKELETON_FILL_PROMPT_RULES,
-    'JSON skeleton (engine-owned — fill placeholders only; include worldName, worldSummary, and worldHistory together):',
+    'Do NOT emit JSON. Return strings for WORLD_NAME (short proper name), WORLD_SUMMARY, and WORLD_HISTORY.',
+    'Preferred shape — open and close each field before starting the next:',
+    '<<<WORLD_NAME>>>',
+    'Mistmarsh',
+    '<<</WORLD_NAME>>>',
+    '<<<WORLD_SUMMARY>>>',
+    'three short paragraphs…',
+    '<<</WORLD_SUMMARY>>>',
+    '<<<WORLD_HISTORY>>>',
+    'five short paragraphs…',
+    '<<</WORLD_HISTORY>>>',
+    'Do not leave summary/history prose outside tags. The engine also accepts {{WORLD_NAME}} line headers.',
+    'Engine-owned skeleton (for reference — return labeled strings, not this JSON):',
     buildWorldSkeletonJson()
   ]
     .filter((line) => line.length > 0)
@@ -265,12 +276,30 @@ export function buildWorldGenerationSkeleton(): string {
 }
 
 const PANTHEON_RULES = [
-  'Fill only the {{TOKEN}} placeholders — the engine already fixed deity count and isForgotten flags.',
+  'The engine already fixed deity count (10) and isForgotten flags — do not emit JSON.',
   'Generate a wide-ranging pantheon with diverse domains (war, death, harvest, sea, knowledge, trickery, hearth, storms, and others — no roster of five war gods).',
   'Include a mix of major and minor powers across the slots.',
-  'Slots marked isForgotten true are powers lost to time — still fill name/domains/tenets/blurb for them.',
-  'Each deity: name, epithet (may be empty), domains as a comma-separated list (1+), tenets as a comma-separated list of 2–4 short imperatives, and a ~1-paragraph blurb.',
-  'pantheonSummary: 2–3 short paragraphs on how divinity works here, how faiths relate, and what was lost.'
+  'Slots marked isForgotten true on the skeleton are powers lost to time — still fill those deity blocks.',
+  'Emit <<<PANTHEON_SUMMARY>>> (2–3 short paragraphs on how divinity works here, how faiths relate, and what was lost).',
+  'Emit one <<<DEITY_N>>> block per slot (DEITY_0 through DEITY_9) with these labeled lines inside:',
+  'name: …',
+  'epithet: … (may be empty)',
+  'domains: comma-separated list (1+)',
+  'tenets: comma-separated list of 2–4 short imperatives',
+  'blurb: ~1 paragraph',
+  'Prefer <<</DEITY_N>>> closes; if you omit closes, start the next <<<DEITY_N>>> (or end the reply) so the engine can split blocks.',
+  'The engine loads your strings into the JSON skeleton.'
+].join('\n')
+
+const PANTHEON_BLOCK_EXAMPLE = [
+  'Example deity block shape:',
+  '<<<DEITY_0>>>',
+  'name: Aldorin',
+  'epithet: The Wind-Treader',
+  'domains: storms, sea, knowledge',
+  'tenets: seek knowledge, embrace change, navigate storms, honor the sea',
+  'blurb: Aldorin guides scholars and sailors through squalls and secrets.',
+  '<<</DEITY_0>>>'
 ].join('\n')
 
 export function buildPantheonGenerationPrompt(
@@ -281,7 +310,7 @@ export function buildPantheonGenerationPrompt(
     canon.knownDeities.length > 0 || canon.recognizedSetting
       ? [
           ...formatCanonContextLines(canon),
-          'Prefer the known deity/religion names above as DEITY_N_NAME values (exact spelling) before inventing fillers.',
+          'Prefer the known deity/religion names above as DEITY_N name values (exact spelling) before inventing fillers.',
           'Invent additional gods only to fill remaining slots and forgotten powers when the known list is thin.',
           'Do not invent fake "canon" gods that pretend to be from the setting when you do not know them.'
         ]
@@ -293,9 +322,9 @@ export function buildPantheonGenerationPrompt(
     premisePrompt,
     ...knownDeityPreference,
     PANTHEON_RULES,
+    PANTHEON_BLOCK_EXAMPLE,
     PROSE_CLARITY_RULES,
-    SKELETON_FILL_PROMPT_RULES,
-    'JSON skeleton (engine-owned — fill placeholders only):',
+    'Do NOT emit JSON. Engine-owned skeleton (for reference — return labeled blocks, not this JSON):',
     buildPantheonSkeletonJson()
   ].join('\n')
 }
@@ -463,8 +492,21 @@ export function buildRegionsGenerationPrompt(
     'Ground every region in the world context above — geography, history, and tone must fit.',
     REGION_PROSE_RULES,
     NPC_NAMING_RULES,
-    SKELETON_FILL_PROMPT_RULES,
-    'JSON skeleton (engine-owned — fill placeholders only):',
+    'Do NOT emit JSON. Fill REGION_0_*, REGION_1_*, … with labeled blocks (open and close each field).',
+    'Use REGION_0_NAME for the first region and REGION_1_NAME for the second — do not reuse REGION_0_ for later regions.',
+    'Quests must be REGION_N_QUEST_0 and REGION_N_QUEST_1 (two separate blocks), not a single POTENTIAL_QUESTS block.',
+    'History field name is HISTORY_BACKSTORY (not BACKSTORIY).',
+    'Example:',
+    '<<<REGION_0_NAME>>>',
+    'Riverlands',
+    '<<</REGION_0_NAME>>>',
+    '<<<REGION_0_DESCRIPTION>>>',
+    'two short paragraphs…',
+    '<<</REGION_0_DESCRIPTION>>>',
+    '<<<REGION_0_QUEST_0>>>',
+    'Recover a looted temple relic.',
+    '<<</REGION_0_QUEST_0>>>',
+    'Engine-owned skeleton (for reference):',
     buildRegionsSkeletonJson(counts.regionCount)
   ].join('\n')
 }
